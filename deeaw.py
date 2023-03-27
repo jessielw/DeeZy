@@ -131,7 +131,7 @@ def main():
     if not output_dir.exists():
         output_dir.mkdir(exist_ok=True)
         
-    # strip spaces from output name
+    # strip spaces from output name since xml/dee.exe has issues with spacing
     stripped_file_output = str(Path(args.output).name).replace(" ", "")
 
     # Create wav_filepath for the intermediate file
@@ -154,7 +154,7 @@ def main():
     xml_input_file_name = xml_input.find("file_name")
     xml_input_file_name.text = os.path.basename(Path(wav_file_path))
     xml_input_file_path = xml_input.find("storage/local/path")
-    xml_input_file_path.text = os.path.basename(Path(wav_file_path))
+    xml_input_file_path.text = str(output_dir)
 
     xml_output = xml_root.find("output/ac3")
     xml_output_file_name = xml_output.find("file_name")
@@ -200,8 +200,12 @@ def main():
     os.remove(updated_template_file)
     os.remove(wav_file_path)
     
+    # rename output file to what ever original defined output was
+    # TODO: Add an optional switch?
+    Path(output_dir / stripped_file_output).replace(Path(args.output))
+    
     # TODO: Get rid of os module in favor of pathlib
-    # 
+    # TODO: Add script to build program for us in repo
 
 
 if __name__ == '__main__':
