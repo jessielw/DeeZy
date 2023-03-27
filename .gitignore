@@ -1,0 +1,13 @@
+.idea/
+.venv/
+apps/
+__pycache__/
+env/
+config.ini
+packages/tmdb_key.py
+packages/user_pw_key.py
+*.bin
+*.exe
+*.zip
+packages/github_token.py
+*.db
