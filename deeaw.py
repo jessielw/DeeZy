@@ -9,74 +9,91 @@ from pymediainfo import MediaInfo
 
 def validate_channels(value: int):
     """Ensure we are utilizing the correct amount of channels"""
-    
-    # TODO: This might only be used if we set a bhdstudio switch or something? 
-    # Since dee can handle ddp and even greater channels, if we're wanting to expand on this? 
+
+    # TODO: This might only be used if we set a bhdstudio switch or something?
+    # Since dee can handle ddp and even greater channels, if we're wanting to expand on this?
     valid_channels = [1, 2, 6]
     if value not in valid_channels:
         raise argparse.ArgumentTypeError(
-            f'Invalid number of channels. Valid options: {valid_channels}')
-        
+            f"Invalid number of channels. Valid options: {valid_channels}"
+        )
+
 
 def process_job(cmd: list):
     """Process jobs"""
-    
+
     # TODO: Handle total progress from output here?
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) as proc:
+    with subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True
+    ) as proc:
         for line in proc.stdout:
             print(line.strip())
 
 
 def main():
     # Define paths to ffmpeg and dee
-    # TODO: Consider adding switch to accept FFMPEG path insted of bundling? 
-    ffmpeg_path = Path(Path.cwd() / 'apps/ffmpeg/ffmpeg.exe')
-    dee_path = Path(Path.cwd() / 'apps/dee/dee.exe')
+    # TODO: Consider adding switch to accept FFMPEG path insted of bundling?
+    ffmpeg_path = Path(Path.cwd() / "apps/ffmpeg/ffmpeg.exe")
+    dee_path = Path(Path.cwd() / "apps/dee/dee.exe")
 
     # Check that the required paths exist
     for exe_path in [ffmpeg_path, dee_path]:
         if not Path(exe_path).is_file():
-            raise ValueError(f'{str(Path(exe_path).name)} path not found')
+            raise ValueError(f"{str(Path(exe_path).name)} path not found")
 
     # Parse the command line arguments
-    parser = argparse.ArgumentParser(description='A command line tool.')
-    parser.add_argument('-i', '--input', type=str,
-                        required=True, help='The input file path.')
-    parser.add_argument('-o', '--output', type=str,
-                        required=True, help='The output file path.')
-    parser.add_argument('-c', '--channels', type=int,
-                        required=True, help='The number of channels. Valid options: 1, 2, 6.')
-    parser.add_argument('-b', '--bitrate', type=int,
-                        required=True, help='The bitrate in Kbps.')
-    parser.add_argument('-t', '--track-index', type=int,
-                        default=0, help='The index of the audio track to use.')
-    parser.add_argument('-d', '--delay', type=int, default=0,
-                        help='The delay in milliseconds.')
+    parser = argparse.ArgumentParser(description="A command line tool.")
+    parser.add_argument(
+        "-i", "--input", type=str, required=True, help="The input file path."
+    )
+    parser.add_argument(
+        "-o", "--output", type=str, required=True, help="The output file path."
+    )
+    parser.add_argument(
+        "-c",
+        "--channels",
+        type=int,
+        required=True,
+        help="The number of channels. Valid options: 1, 2, 6.",
+    )
+    parser.add_argument(
+        "-b", "--bitrate", type=int, required=True, help="The bitrate in Kbps."
+    )
+    parser.add_argument(
+        "-t",
+        "--track-index",
+        type=int,
+        default=0,
+        help="The index of the audio track to use.",
+    )
+    parser.add_argument(
+        "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
+    )
     args = parser.parse_args()
-    
+
     validate_channels(args.channels)
 
     # Check that the input file exists
     if not os.path.exists(args.input):
-        raise ValueError(f'Input file not found: {args.input}')
+        raise ValueError(f"Input file not found: {args.input}")
 
     # Parse file with MediaInfo
     media_info_source = MediaInfo.parse(args.input)
-    
+
     # get selected track information (appending 1 to the track assuming there is video)
     # TODO: Add logic to correctly parse this and append the correct number depending on type of input
     track_info = media_info_source.tracks[args.track_index + 1]
-    
+
     # get sampling rate
     # TODO: Ensure we are dealing with this properly in the event it's missing
     try:
         sample_rate = track_info.sampling_rate
     except AttributeError:
-        sample_rate = None  
+        sample_rate = None
 
     # get channel(s)
     channels = track_info.channel_s
-    
+
     # get bit depth
     # TODO: Ensure we are dealing with this properly in the event it's missing
     try:
@@ -101,22 +118,28 @@ def main():
 
     matrix_encoding_arg = ""
     if args.channels == 2:
-        matrix_encoding_arg = f'[a:{args.track_index}]aresample=matrix_encoding=dplii'
+        matrix_encoding_arg = f"[a:{args.track_index}]aresample=matrix_encoding=dplii"
 
     resample_args = []
     if resample:
         resample_args = [
-            '-filter_complex', f'[a:{args.track_index}]aresample=resampler=soxr',
+            "-filter_complex",
+            f"[a:{args.track_index}]aresample=resampler=soxr",
             matrix_encoding_arg,
-            '-ar', sample_rate,
-            '-precision', '28',
-            '-cutoff', '1',
-            '-dither_scale', '0']
+            "-ar",
+            sample_rate,
+            "-precision",
+            "28",
+            "-cutoff",
+            "1",
+            "-dither_scale",
+            "0",
+        ]
     else:
-        resample_args = ['-filter_complex', matrix_encoding_arg]
+        resample_args = ["-filter_complex", matrix_encoding_arg]
 
     # Work out if we need to do downmix
-    downmix_config = 'off'
+    downmix_config = "off"
     if args.channels > channels:
         raise ValueError("Upmixing is not supported.")
     elif args.channels == 1:
@@ -130,7 +153,7 @@ def main():
     output_dir = Path(args.output).parent
     if not output_dir.exists():
         output_dir.mkdir(exist_ok=True)
-        
+
     # strip spaces from output name since xml/dee.exe has issues with spacing
     stripped_file_output = str(Path(args.output).name).replace(" ", "")
 
@@ -138,7 +161,7 @@ def main():
     wav_file_path = os.path.splitext(args.input)[0] + ".wav"
 
     # Get the path to the template.xml file
-    template_path = Path(Path.cwd() / 'runtime/template.xml')
+    template_path = Path(Path.cwd() / "runtime/template.xml")
     # Load the contents of the template.xml file into the dee_config variable
     xml_dee_config = ET.parse(template_path)
     xml_root = xml_dee_config.getroot()
@@ -167,7 +190,9 @@ def main():
     xml_temp_path.text = str(output_dir)
 
     # Save out the updated template
-    updated_template_file = Path(output_dir / Path(Path(args.input).name).with_suffix(".xml"))
+    updated_template_file = Path(
+        output_dir / Path(Path(args.input).name).with_suffix(".xml")
+    )
     if os.path.exists(updated_template_file):
         os.remove(updated_template_file)
     xml_dee_config.write(updated_template_file)
@@ -175,43 +200,50 @@ def main():
     # Call ffmpeg to generate the wav file
     ffmpeg_cmd = [
         str(ffmpeg_path),
-        '-y',
-        '-drc_scale', '0',
-        '-i', args.input,
-        '-c', f'pcm_s{bits_per_sample}le',
+        "-y",
+        "-drc_scale",
+        "0",
+        "-i",
+        args.input,
+        "-c",
+        f"pcm_s{bits_per_sample}le",
         *(resample_args),
-        '-rf64', 'always',
-        wav_file_path
+        "-rf64",
+        "always",
+        wav_file_path,
     ]
     process_job(ffmpeg_cmd)
 
     # Call dee to generate the encode file
     dee_cm = [
         str(dee_path),
-        '--progress-interval', '500',
-        '--diagnostics-interval', '90000',
-        '-x', updated_template_file,
-        '--disable-xml-validation'
+        "--progress-interval",
+        "500",
+        "--diagnostics-interval",
+        "90000",
+        "-x",
+        updated_template_file,
+        "--disable-xml-validation",
     ]
     process_job(dee_cm)
-    
+
     # Clean up temp files
     # TODO: Add an optional switch?
     os.remove(updated_template_file)
     os.remove(wav_file_path)
-    
+
     # rename output file to what ever original defined output was
     # TODO: Add an optional switch?
     Path(output_dir / stripped_file_output).replace(Path(args.output))
-    
+
     # TODO: Get rid of os module in favor of pathlib
     # TODO: Add script to build program for us in repo
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # check if we're running via script or bundled
     if Path(sys.argv[0]).suffix == ".exe":
         os.chdir(os.path.dirname(sys.executable))
-        
+
     # start main
     main()
