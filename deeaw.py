@@ -1,9 +1,9 @@
 import argparse
 import os
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
-import sys
 from pymediainfo import MediaInfo
 
 
@@ -74,7 +74,7 @@ def main():
     validate_channels(args.channels)
 
     # Check that the input file exists
-    if not os.path.exists(args.input):
+    if not Path(args.input).exists():
         raise ValueError(f"Input file not found: {args.input}")
 
     # Parse file with MediaInfo
@@ -154,11 +154,12 @@ def main():
     if not output_dir.exists():
         output_dir.mkdir(exist_ok=True)
 
-    # strip spaces from output name since xml/dee.exe has issues with spacing
-    stripped_file_output = str(Path(args.output).name).replace(" ", "")
+    # clean spaces from output name since xml/dee.exe has issues with spacing
+    cleaned_output_file_name = str(Path(args.output).name).replace(" ", "_")
 
     # Create wav_filepath for the intermediate file
-    wav_file_path = os.path.splitext(args.input)[0] + ".wav"
+    extensions = "".join(Path(args).output.suffixes)
+    wav_file_name = cleaned_output_file_name.replace(extensions, ".wav")
 
     # Get the path to the template.xml file
     template_path = Path(Path.cwd() / "runtime/template.xml")
@@ -175,13 +176,13 @@ def main():
 
     xml_input = xml_root.find("input/audio/wav")
     xml_input_file_name = xml_input.find("file_name")
-    xml_input_file_name.text = os.path.basename(Path(wav_file_path))
+    xml_input_file_name.text = wav_file_name
     xml_input_file_path = xml_input.find("storage/local/path")
     xml_input_file_path.text = str(output_dir)
 
     xml_output = xml_root.find("output/ac3")
     xml_output_file_name = xml_output.find("file_name")
-    xml_output_file_name.text = os.path.basename(stripped_file_output)
+    xml_output_file_name.text = cleaned_output_file_name
     xml_output_file_path = xml_output.find("storage/local/path")
     xml_output_file_path.text = str(output_dir)
 
@@ -190,12 +191,11 @@ def main():
     xml_temp_path.text = str(output_dir)
 
     # Save out the updated template
-    updated_template_file = Path(
-        output_dir / Path(Path(args.input).name).with_suffix(".xml")
-    )
-    if os.path.exists(updated_template_file):
-        os.remove(updated_template_file)
-    xml_dee_config.write(updated_template_file)
+    updated_template_file = Path(output_dir / cleaned_output_file_name.replace(extensions, ".xml"))
+    
+    if updated_template_file.exists():
+        updated_template_file.unlink()
+    xml_dee_config.write(str(updated_template_file))
 
     # Call ffmpeg to generate the wav file
     ffmpeg_cmd = [
@@ -210,7 +210,7 @@ def main():
         *(resample_args),
         "-rf64",
         "always",
-        wav_file_path,
+        wav_file_name,
     ]
     process_job(ffmpeg_cmd)
 
@@ -229,21 +229,19 @@ def main():
 
     # Clean up temp files
     # TODO: Add an optional switch?
-    os.remove(updated_template_file)
-    os.remove(wav_file_path)
+    Path(updated_template_file).unlink()
+    Path(wav_file_name).unlink()
 
-    # rename output file to what ever original defined output was
+    # rename output file to whatever original defined output was
     # TODO: Add an optional switch?
-    Path(output_dir / stripped_file_output).replace(Path(args.output))
-
-    # TODO: Get rid of os module in favor of pathlib
-    # TODO: Add script to build program for us in repo
+    Path(output_dir / cleaned_output_file_name).replace(Path(args.output))
 
 
 if __name__ == "__main__":
     # check if we're running via script or bundled
+    # TODO: Clarify why we need this?
     if Path(sys.argv[0]).suffix == ".exe":
-        os.chdir(os.path.dirname(sys.executable))
+        os.chdir(Path(sys.executable).parent)
 
     # start main
     main()
