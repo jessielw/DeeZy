@@ -1,35 +1,42 @@
 import argparse
-import json
 import os
 import subprocess
 import xml.etree.ElementTree as ET
+from pathlib import Path
+import sys
+from pymediainfo import MediaInfo
 
 
-def validate_channels(value):
+def validate_channels(value: int):
+    """Ensure we are utilizing the correct amount of channels"""
+    
+    # TODO: This might only be used if we set a bhdstudio switch or something? 
+    # Since dee can handle ddp and even greater channels, if we're wanting to expand on this? 
     valid_channels = [1, 2, 6]
     if value not in valid_channels:
         raise argparse.ArgumentTypeError(
             f'Invalid number of channels. Valid options: {valid_channels}')
+        
+
+def process_job(cmd: list):
+    """Process jobs"""
+    
+    # TODO: Handle total progress from output here?
+    with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) as proc:
+        for line in proc.stdout:
+            print(line.strip())
 
 
 def main():
-    # Get the absolute path to the "runtime" folder
-    dirname = os.path.dirname(__file__)
-    runtime_folder = os.path.join(dirname, 'runtime')
-
-    # Load the configuration file
-    with open(os.path.join(runtime_folder, 'config.json')) as f:
-        config = json.load(f)
-
-    # Convert the relative paths to absolute paths
-    config['ffmpeg_path'] = os.path.abspath(os.path.join(dirname, config['ffmpeg_path']))
-    config['ffprobe_path'] = os.path.abspath(os.path.join(dirname, config['ffprobe_path']))
-    config['dee_path'] = os.path.abspath(os.path.join(dirname, config['dee_path']))
+    # Define paths to ffmpeg and dee
+    # TODO: Consider adding switch to accept FFMPEG path insted of bundling? 
+    ffmpeg_path = Path(Path.cwd() / 'apps/ffmpeg/ffmpeg.exe')
+    dee_path = Path(Path.cwd() / 'apps/dee/dee.exe')
 
     # Check that the required paths exist
-    for key, value in config.items():
-        if not os.path.exists(value):
-            raise ValueError(f'{key} path not found: {value}')
+    for exe_path in [ffmpeg_path, dee_path]:
+        if not Path(exe_path).is_file():
+            raise ValueError(f'{str(Path(exe_path).name)} path not found')
 
     # Parse the command line arguments
     parser = argparse.ArgumentParser(description='A command line tool.')
@@ -53,26 +60,29 @@ def main():
     if not os.path.exists(args.input):
         raise ValueError(f'Input file not found: {args.input}')
 
-    # Call ffprobe to get information about the audio stream
-    ffprobe_cmd = [
-        config["ffprobe_path"],
-        "-v", "quiet",
-        "-select_streams", f"a:{args.track_index}",
-        "-print_format", "json",
-        "-show_format",
-        "-show_streams",
-        args.input
-    ]
+    # Parse file with MediaInfo
+    media_info_source = MediaInfo.parse(args.input)
+    
+    # get selected track information (appending 1 to the track assuming there is video)
+    # TODO: Add logic to correctly parse this and append the correct number depending on type of input
+    track_info = media_info_source.tracks[args.track_index + 1]
+    
+    # get sampling rate
+    # TODO: Ensure we are dealing with this properly in the event it's missing
+    try:
+        sample_rate = track_info.sampling_rate
+    except AttributeError:
+        sample_rate = None  
 
-    info_string = subprocess.check_output(ffprobe_cmd, encoding='utf-8')
-    info = json.loads(info_string)
-
-    # Extract info from the result
-    sample_rate = int(info["streams"][0].get("sample_rate"))
-    channels = int(info["streams"][0].get("channels"))
-    duration = float(info["streams"][0].get("duration", -1))
-    bits_per_sample = int(info["streams"][0].get(
-        "bits_per_sample", info["streams"][0].get("bits_per_raw_sample", 32)))
+    # get channel(s)
+    channels = track_info.channel_s
+    
+    # get bit depth
+    # TODO: Ensure we are dealing with this properly in the event it's missing
+    try:
+        bits_per_sample = track_info.bit_depth
+    except AttributeError:
+        bits_per_sample = None
 
     if bits_per_sample not in [16, 24, 32]:
         if bits_per_sample < 16:
@@ -117,17 +127,18 @@ def main():
         downmix_config = "5.1"
 
     # Create the directory for the output file if it doesn't exist
-    output_dir = os.path.dirname(args.output)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        output = os.path.abspath(args.output)
+    output_dir = Path(args.output).parent
+    if not output_dir.exists():
+        output_dir.mkdir(exist_ok=True)
+        
+    # strip spaces from output name
+    stripped_file_output = str(Path(args.output).name).replace(" ", "")
 
     # Create wav_filepath for the intermediate file
     wav_file_path = os.path.splitext(args.input)[0] + ".wav"
 
     # Get the path to the template.xml file
-    template_path = os.path.join(os.path.dirname(
-        __file__), 'runtime', 'template.xml')
+    template_path = Path(Path.cwd() / 'runtime/template.xml')
     # Load the contents of the template.xml file into the dee_config variable
     xml_dee_config = ET.parse(template_path)
     xml_root = xml_dee_config.getroot()
@@ -141,29 +152,29 @@ def main():
 
     xml_input = xml_root.find("input/audio/wav")
     xml_input_file_name = xml_input.find("file_name")
-    xml_input_file_name.text = os.path.basename(wav_file_path)
+    xml_input_file_name.text = os.path.basename(Path(wav_file_path))
     xml_input_file_path = xml_input.find("storage/local/path")
-    xml_input_file_path.text = os.path.dirname(wav_file_path)
+    xml_input_file_path.text = os.path.basename(Path(wav_file_path))
 
     xml_output = xml_root.find("output/ac3")
     xml_output_file_name = xml_output.find("file_name")
-    xml_output_file_name.text = os.path.basename(args.output)
+    xml_output_file_name.text = os.path.basename(stripped_file_output)
     xml_output_file_path = xml_output.find("storage/local/path")
-    xml_output_file_path.text = os.path.dirname(args.output)
+    xml_output_file_path.text = str(output_dir)
 
     xml_temp = xml_root.find("misc/temp_dir")
     xml_temp_path = xml_temp.find("path")
-    xml_temp_path.text = os.path.dirname(args.output)
+    xml_temp_path.text = str(output_dir)
 
     # Save out the updated template
-    updated_template_file = os.path.splitext(args.input)[0] + '.xml'
+    updated_template_file = Path(output_dir / Path(Path(args.input).name).with_suffix(".xml"))
     if os.path.exists(updated_template_file):
         os.remove(updated_template_file)
     xml_dee_config.write(updated_template_file)
 
     # Call ffmpeg to generate the wav file
     ffmpeg_cmd = [
-        config['ffmpeg_path'],
+        str(ffmpeg_path),
         '-y',
         '-drc_scale', '0',
         '-i', args.input,
@@ -172,28 +183,31 @@ def main():
         '-rf64', 'always',
         wav_file_path
     ]
-
-    with subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) as proc:
-        for line in proc.stdout:
-            print(line.strip())
+    process_job(ffmpeg_cmd)
 
     # Call dee to generate the encode file
     dee_cm = [
-        config['dee_path'],
+        str(dee_path),
         '--progress-interval', '500',
         '--diagnostics-interval', '90000',
         '-x', updated_template_file,
         '--disable-xml-validation'
     ]
-
-    with subprocess.Popen(dee_cm, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) as proc:
-        for line in proc.stdout:
-            print(line.strip())
-
+    process_job(dee_cm)
+    
     # Clean up temp files
+    # TODO: Add an optional switch?
     os.remove(updated_template_file)
     os.remove(wav_file_path)
+    
+    # TODO: Get rid of os module in favor of pathlib
+    # 
 
 
 if __name__ == '__main__':
+    # check if we're running via script or bundled
+    if Path(sys.argv[0]).suffix == ".exe":
+        os.chdir(os.path.dirname(sys.executable))
+        
+    # start main
     main()
