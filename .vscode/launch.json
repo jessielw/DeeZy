@@ -11,24 +11,6 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
-        },
-        {
-            "name": "Python: Current File (Test)",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "args": [
-                "-i",
-                "C:\\Users\\batem\\Desktop\\input.dtshd",
-                "-o",
-                "C:\\Users\\batem\\Desktop\\pyo.ac3",
-                "-c",
-                "2",
-                "-b",
-                "448"
-            ]
         }
     ]
 }
