@@ -10,13 +10,34 @@ from pymediainfo import MediaInfo
 def validate_channels(value: int):
     """Ensure we are utilizing the correct amount of channels"""
 
-    # TODO: This might only be used if we set a bhdstudio switch or something?
-    # Since dee can handle ddp and even greater channels, if we're wanting to expand on this?
     valid_channels = [1, 2, 6]
     if value not in valid_channels:
         raise argparse.ArgumentTypeError(
             f"Invalid number of channels. Valid options: {valid_channels}"
         )
+
+
+def determine_track_index(media_info: object, track_index: int):
+    """
+    Detects count of video streams and adds them to the total track index.
+    This way we can dynamically detect the correct track index all the time.
+
+    Args:
+        media_info (object): pymediainfo object
+        track_index (int): track index from args
+
+    Returns:
+        (int): Returns integer of index needed to send to FFMPEG via -map 0:[int]
+    """
+
+    # detect count of video streams from source
+    num_video_streams = media_info.general_tracks[0].count_of_video_streams
+
+    # add the number of video streams to the track index and return the value
+    if num_video_streams and int(num_video_streams) >= 1:
+        track_index += int(num_video_streams)
+
+    return track_index
 
 
 def process_job(cmd: list):
@@ -32,7 +53,7 @@ def process_job(cmd: list):
 
 def main():
     # Define paths to ffmpeg and dee
-    # TODO: Consider adding switch to accept FFMPEG path insted of bundling?
+    # TODO: Consider adding switch to accept FFMPEG path instead of bundling?
     ffmpeg_path = Path(Path.cwd() / "apps/ffmpeg/ffmpeg.exe")
     dee_path = Path(Path.cwd() / "apps/dee/dee.exe")
 
@@ -71,6 +92,7 @@ def main():
     )
     args = parser.parse_args()
 
+    # validate channels
     validate_channels(args.channels)
 
     # Check that the input file exists
@@ -80,9 +102,13 @@ def main():
     # Parse file with MediaInfo
     media_info_source = MediaInfo.parse(args.input)
 
-    # get selected track information (appending 1 to the track assuming there is video)
-    # TODO: Add logic to correctly parse this and append the correct number depending on type of input
-    track_info = media_info_source.tracks[args.track_index + 1]
+    # get track index
+    get_track_index = determine_track_index(
+        media_info=media_info_source, track_index=int(args.track_index)
+    )
+    
+    # parse track for information
+    track_info = media_info_source.tracks[get_track_index]
 
     # get sampling rate
     # TODO: Ensure we are dealing with this properly in the event it's missing
@@ -138,16 +164,16 @@ def main():
     else:
         resample_args = ["-filter_complex", matrix_encoding_arg]
 
-    # Work out if we need to do downmix
-    downmix_config = "off"
+    # Work out if we need to do down-mix
+    down_mix_config = "off"
     if args.channels > channels:
-        raise ValueError("Upmixing is not supported.")
+        raise ValueError("Up-mixing is not supported.")
     elif args.channels == 1:
-        downmix_config = "mono"
+        down_mix_config = "mono"
     elif args.channels == 2:
-        downmix_config = "stereo"
+        down_mix_config = "stereo"
     elif args.channels == 6:
-        downmix_config = "5.1"
+        down_mix_config = "5.1"
 
     # Create the directory for the output file if it doesn't exist
     output_dir = Path(args.output).parent
@@ -169,10 +195,10 @@ def main():
 
     # Update the template values
     xml_pcm_to_ddp = xml_root.find("filter/audio/pcm_to_ddp")
-    xml_downmix_config_elem = xml_pcm_to_ddp.find("downmix_config")
-    xml_downmix_config_elem.text = downmix_config
-    xml_downmix_config_elem = xml_pcm_to_ddp.find("data_rate")
-    xml_downmix_config_elem.text = str(args.bitrate)
+    xml_down_mix_config_elem = xml_pcm_to_ddp.find("downmix_config")
+    xml_down_mix_config_elem.text = down_mix_config
+    xml_down_mix_config_elem = xml_pcm_to_ddp.find("data_rate")
+    xml_down_mix_config_elem.text = str(args.bitrate)
 
     xml_input = xml_root.find("input/audio/wav")
     xml_input_file_name = xml_input.find("file_name")
@@ -191,8 +217,10 @@ def main():
     xml_temp_path.text = str(output_dir)
 
     # Save out the updated template
-    updated_template_file = Path(output_dir / cleaned_output_file_name.replace(extensions, ".xml"))
-    
+    updated_template_file = Path(
+        output_dir / cleaned_output_file_name.replace(extensions, ".xml")
+    )
+
     if updated_template_file.exists():
         updated_template_file.unlink()
     xml_dee_config.write(str(updated_template_file))
@@ -245,3 +273,10 @@ if __name__ == "__main__":
 
     # start main
     main()
+
+    # testing
+    # media_info_source = MediaInfo.parse(
+    #     r"C:\Users\jlw_4\OneDrive\Desktop\test\Hollywood.Chainsaw.Hookers.1988.88FILMS.BluRay.1080p.DTS-HD.MA.5.1.AVC.REMUX-GHOSTFACE_track5_[eng]_DELAY 0ms.ac3"
+    # )
+    # test = determine_track_index(media_info_source, 1)
+    # print(test)
