@@ -1,46 +1,15 @@
 import sys
 import argparse
-import subprocess
 import xml.etree.ElementTree as ET
-import re
+from re import sub
 from pathlib import Path
 from pymediainfo import MediaInfo
-from packages.utils import get_working_dir, determine_track_index
-
-def validate_channels(value):
-    """Ensure we are utilizing the correct amount of channels"""
-
-    valid_channels = [1, 2, 6]
-    if not value.isdigit():
-        raise argparse.ArgumentTypeError(
-            f"Invalid input channels. Value must be an integer."
-        )
-    value = int(value)
-    if value not in valid_channels:
-        raise argparse.ArgumentTypeError(
-            f"Invalid number of channels. Valid options: {valid_channels}"
-        )
-    return value
-
-def validate_trackindex(value):
-    """Check that the supplied track index is """
-
-    # Check if the input is valid
-    if value.isdigit():
-        return int(value)
-    # If the input is invalid, return the default value
-    return 0
-
-
-def process_job(cmd: list):
-    """Process jobs"""
-
-    # TODO: Handle total progress from output here?
-    with subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True
-    ) as proc:
-        for line in proc.stdout:
-            print(line.strip())
+from packages.utils import (
+    get_working_dir,
+    validate_track_index,
+    validate_channels,
+    process_job,
+)
 
 
 def main(base_wd):
@@ -75,7 +44,7 @@ def main(base_wd):
     parser.add_argument(
         "-t",
         "--track-index",
-        type=validate_trackindex,
+        type=validate_track_index,
         default=0,
         help="The index of the audio track to use.",
     )
@@ -83,7 +52,11 @@ def main(base_wd):
         "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
     )
     parser.add_argument(
-        "-k", "--keep-temp", type=bool, default=False, help="Keeps the temp files after finishing (usually a wav and an xml for DEE)."
+        "-k",
+        "--keep-temp",
+        type=bool,
+        default=False,
+        help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
     )
     args = parser.parse_args()
 
@@ -103,7 +76,7 @@ def main(base_wd):
         sample_rate = track_info.sampling_rate
     except AttributeError:
         sample_rate = sys.maxsize
-        
+
     if sample_rate == None:
         sample_rate = sys.maxsize
 
@@ -115,7 +88,7 @@ def main(base_wd):
         bits_per_sample = track_info.bit_depth
     except AttributeError:
         bits_per_sample = sys.maxsize
-    
+
     if bits_per_sample == None:
         bits_per_sample = sys.maxsize
 
@@ -176,10 +149,10 @@ def main(base_wd):
         output_dir.mkdir(exist_ok=True)
 
     # clean spaces from output name since xml/dee.exe has issues with spacing
-    cleaned_output_file_name = re.sub(r"\s+", "_", str(Path(args.output).name))
+    cleaned_output_file_name = sub(r"\s+", "_", str(Path(args.output).name))
 
-    # Create wav_filepath for the intermediate file
-    wav_file_name = cleaned_output_file_name.replace(Path(args.output).suffixes[-1], ".wav")
+    # Create wav file name for the intermediate file
+    wav_file_name = Path(cleaned_output_file_name).with_suffix(".wav")
 
     # Get the path to the template.xml file
     template_path = Path(base_wd / "runtime/template.xml")
@@ -196,7 +169,7 @@ def main(base_wd):
 
     xml_input = xml_root.find("input/audio/wav")
     xml_input_file_name = xml_input.find("file_name")
-    xml_input_file_name.text = wav_file_name
+    xml_input_file_name.text = str(wav_file_name)
     xml_input_file_path = xml_input.find("storage/local/path")
     xml_input_file_path.text = str(output_dir)
 
@@ -211,8 +184,8 @@ def main(base_wd):
     xml_temp_path.text = str(output_dir)
 
     # Save out the updated template
-    updated_template_file = Path(
-        output_dir / cleaned_output_file_name.replace(Path(args.output).suffixes[-1], ".xml")
+    updated_template_file = Path(output_dir / cleaned_output_file_name).with_suffix(
+        ".xml"
     )
 
     if updated_template_file.exists():
