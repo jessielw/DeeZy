@@ -6,10 +6,17 @@
 	],
 	"settings": {
 		"cSpell.words": [
+			"aresample",
+			"bhdstudio",
 			"deeaw",
+			"dplii",
+			"Kbps",
 			"onefile",
 			"pyinstaller",
-			"pyinstallers"
+			"pyinstallers",
+			"pymediainfo",
+			"resampler",
+			"soxr"
 		]
 	}
 }
