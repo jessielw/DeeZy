@@ -7,6 +7,23 @@ from pathlib import Path
 from pymediainfo import MediaInfo
 
 
+def get_working_dir():
+    """
+    Used to determine the correct working directory automatically.
+    This way we can utilize files/relative paths easily.
+
+    Returns:
+        (Path): Current working directory
+    """
+    # we're in a pyinstaller.exe bundle
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys.executable).parent
+
+    # we're running from a *.py file
+    else:
+        return Path.cwd()
+
+
 def validate_channels(value: int):
     """Ensure we are utilizing the correct amount of channels"""
 
@@ -51,11 +68,11 @@ def process_job(cmd: list):
             print(line.strip())
 
 
-def main():
+def main(base_wd):
     # Define paths to ffmpeg and dee
     # TODO: Consider adding switch to accept FFMPEG path instead of bundling?
-    ffmpeg_path = Path(Path.cwd() / "apps/ffmpeg/ffmpeg.exe")
-    dee_path = Path(Path.cwd() / "apps/dee/dee.exe")
+    ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
+    dee_path = Path(base_wd / "apps/dee/dee.exe")
 
     # Check that the required paths exist
     for exe_path in [ffmpeg_path, dee_path]:
@@ -106,7 +123,7 @@ def main():
     get_track_index = determine_track_index(
         media_info=media_info_source, track_index=int(args.track_index)
     )
-    
+
     # parse track for information
     track_info = media_info_source.tracks[get_track_index]
 
@@ -188,7 +205,7 @@ def main():
     wav_file_name = cleaned_output_file_name.replace(extensions, ".wav")
 
     # Get the path to the template.xml file
-    template_path = Path(Path.cwd() / "runtime/template.xml")
+    template_path = Path(base_wd / "runtime/template.xml")
     # Load the contents of the template.xml file into the dee_config variable
     xml_dee_config = ET.parse(template_path)
     xml_root = xml_dee_config.getroot()
@@ -266,17 +283,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # check if we're running via script or bundled
-    # TODO: Clarify why we need this?
-    if Path(sys.argv[0]).suffix == ".exe":
-        os.chdir(Path(sys.executable).parent)
-
-    # start main
-    main()
-
-    # testing
-    # media_info_source = MediaInfo.parse(
-    #     r"C:\Users\jlw_4\OneDrive\Desktop\test\Hollywood.Chainsaw.Hookers.1988.88FILMS.BluRay.1080p.DTS-HD.MA.5.1.AVC.REMUX-GHOSTFACE_track5_[eng]_DELAY 0ms.ac3"
-    # )
-    # test = determine_track_index(media_info_source, 1)
-    # print(test)
+    main(base_wd=get_working_dir())
