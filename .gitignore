@@ -11,3 +11,4 @@ packages/user_pw_key.py
 *.zip
 packages/github_token.py
 *.db
+/pyinstaller_build
