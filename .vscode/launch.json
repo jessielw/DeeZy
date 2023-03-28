@@ -11,6 +11,25 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Python: Test",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [ 
+                "-i",
+                "C:\\Users\\jlw_4\\OneDrive\\Desktop\\test\\Hollywood.Chainsaw.Hookers.1988.88FILMS.BluRay.1080p.DTS-HD.MA.5.1.AVC.REMUX-GHOSTFACE.mkv",
+                "-o",
+                "C:\\Users\\jlw_4\\OneDrive\\Desktop\\test\\testing.ac3",
+                "-c",
+                "2",
+                "-b",
+                "448",
+                "-t",
+                "1"],
+            "justMyCode": true
         }
     ]
 }
