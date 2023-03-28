@@ -1,19 +1,35 @@
+import sys
 import argparse
 import subprocess
 import xml.etree.ElementTree as ET
+import re
 from pathlib import Path
 from pymediainfo import MediaInfo
 from packages.utils import get_working_dir, determine_track_index
 
-
-def validate_channels(value: int):
+def validate_channels(value):
     """Ensure we are utilizing the correct amount of channels"""
 
     valid_channels = [1, 2, 6]
+    if not value.isdigit():
+        raise argparse.ArgumentTypeError(
+            f"Invalid input channels. Value must be an integer."
+        )
+    value = int(value)
     if value not in valid_channels:
         raise argparse.ArgumentTypeError(
             f"Invalid number of channels. Valid options: {valid_channels}"
         )
+    return value
+
+def validate_trackindex(value):
+    """Check that the supplied track index is """
+
+    # Check if the input is valid
+    if value.isdigit():
+        return int(value)
+    # If the input is invalid, return the default value
+    return 0
 
 
 def process_job(cmd: list):
@@ -49,7 +65,7 @@ def main(base_wd):
     parser.add_argument(
         "-c",
         "--channels",
-        type=int,
+        type=validate_channels,
         required=True,
         help="The number of channels. Valid options: 1, 2, 6.",
     )
@@ -59,17 +75,17 @@ def main(base_wd):
     parser.add_argument(
         "-t",
         "--track-index",
-        type=int,
+        type=validate_trackindex,
         default=0,
         help="The index of the audio track to use.",
     )
     parser.add_argument(
         "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
     )
+    parser.add_argument(
+        "-k", "--keep-temp", type=bool, default=False, help="Keeps the temp files after finishing (usually a wav and an xml for DEE)."
+    )
     args = parser.parse_args()
-
-    # validate channels
-    validate_channels(args.channels)
 
     # Check that the input file exists
     if not Path(args.input).exists():
@@ -78,30 +94,30 @@ def main(base_wd):
     # Parse file with MediaInfo
     media_info_source = MediaInfo.parse(args.input)
 
-    # get track index
-    get_track_index = determine_track_index(
-        media_info=media_info_source, track_index=int(args.track_index)
-    )
-
     # parse track for information
-    track_info = media_info_source.tracks[get_track_index]
+    # +1 because the first track is always "general"
+    track_info = media_info_source.tracks[args.track_index + 1]
 
     # get sampling rate
-    # TODO: Ensure we are dealing with this properly in the event it's missing
     try:
         sample_rate = track_info.sampling_rate
     except AttributeError:
-        sample_rate = None
+        sample_rate = sys.maxsize
+        
+    if sample_rate == None:
+        sample_rate = sys.maxsize
 
     # get channel(s)
     channels = track_info.channel_s
 
     # get bit depth
-    # TODO: Ensure we are dealing with this properly in the event it's missing
     try:
         bits_per_sample = track_info.bit_depth
     except AttributeError:
-        bits_per_sample = None
+        bits_per_sample = sys.maxsize
+    
+    if bits_per_sample == None:
+        bits_per_sample = sys.maxsize
 
     if bits_per_sample not in [16, 24, 32]:
         if bits_per_sample < 16:
@@ -137,13 +153,16 @@ def main(base_wd):
             "-dither_scale",
             "0",
         ]
-    else:
+    elif args.channels == 2:
         resample_args = ["-filter_complex", matrix_encoding_arg]
+    else:
+        resample_args = []
 
     # Work out if we need to do down-mix
-    down_mix_config = "off"
     if args.channels > channels:
         raise ValueError("Up-mixing is not supported.")
+    elif args.channels == channels:
+        down_mix_config = "off"
     elif args.channels == 1:
         down_mix_config = "mono"
     elif args.channels == 2:
@@ -157,11 +176,10 @@ def main(base_wd):
         output_dir.mkdir(exist_ok=True)
 
     # clean spaces from output name since xml/dee.exe has issues with spacing
-    cleaned_output_file_name = str(Path(args.output).name).replace(" ", "_")
+    cleaned_output_file_name = re.sub(r"\s+", "_", str(Path(args.output).name))
 
     # Create wav_filepath for the intermediate file
-    extensions = "".join(Path(args).output.suffixes)
-    wav_file_name = cleaned_output_file_name.replace(extensions, ".wav")
+    wav_file_name = cleaned_output_file_name.replace(Path(args.output).suffixes[-1], ".wav")
 
     # Get the path to the template.xml file
     template_path = Path(base_wd / "runtime/template.xml")
@@ -194,7 +212,7 @@ def main(base_wd):
 
     # Save out the updated template
     updated_template_file = Path(
-        output_dir / cleaned_output_file_name.replace(extensions, ".xml")
+        output_dir / cleaned_output_file_name.replace(Path(args.output).suffixes[-1], ".xml")
     )
 
     if updated_template_file.exists():
@@ -214,7 +232,7 @@ def main(base_wd):
         *(resample_args),
         "-rf64",
         "always",
-        wav_file_name,
+        str(Path(output_dir / wav_file_name)),
     ]
     process_job(ffmpeg_cmd)
 
@@ -226,18 +244,17 @@ def main(base_wd):
         "--diagnostics-interval",
         "90000",
         "-x",
-        updated_template_file,
+        str(updated_template_file),
         "--disable-xml-validation",
     ]
     process_job(dee_cm)
 
     # Clean up temp files
-    # TODO: Add an optional switch?
-    Path(updated_template_file).unlink()
-    Path(wav_file_name).unlink()
+    if not args.keep_temp:
+        Path(updated_template_file).unlink()
+        Path(output_dir / wav_file_name).unlink()
 
     # rename output file to whatever original defined output was
-    # TODO: Add an optional switch?
     Path(output_dir / cleaned_output_file_name).replace(Path(args.output))
 
 
