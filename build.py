@@ -8,19 +8,21 @@ def build_app():
     pyinstaller_folder = Path(Path(__file__).parent / "pyinstaller_build")
     pyinstaller_folder.mkdir(exist_ok=True)
 
-    # define full path to deeaw.py before changing directory
+    # define paths before changing directory
     deeaw_script = Path(Path.cwd() / "deeaw.py")
+    icon_path = Path(Path.cwd() / "icon" / "icon.ico")
 
     # change directory so we output all of pyinstallers files in it's own folder
     os.chdir(pyinstaller_folder)
 
     # run pyinstaller command
-    command = ["pyinstaller.exe", "--onefile", str(deeaw_script)]
-    run(command)
+    build_job = run(
+        ["pyinstaller.exe", "--onefile", f"--icon={str(icon_path)}", str(deeaw_script)]
+    )
 
     # ensure output of exe
-    success = "Did not complete succesfully"
-    if Path(Path("dist") / "deeaw.exe").is_file():
+    success = "Did not complete successfully"
+    if Path(Path("dist") / "deeaw.exe").is_file() and str(build_job.returncode) == "0":
         success = f'\nSuccess!\nPath to exe: {str(Path.cwd() / (Path(Path("dist") / "deeaw.exe")))}'
 
     # change directory back to original directory
