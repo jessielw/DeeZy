@@ -13,7 +13,7 @@ from packages.utils import (
 from packages._version import program_name, __version__
 
 
-def main(base_wd):
+def main(base_wd: Path):
     # Define paths to ffmpeg and dee
     # TODO: Consider adding switch to accept FFMPEG path instead of bundling?
     ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
