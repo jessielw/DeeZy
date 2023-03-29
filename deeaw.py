@@ -8,6 +8,7 @@ from packages.utils import (
     get_working_dir,
     validate_track_index,
     validate_channels,
+    validate_bitrate,
     process_job,
 )
 from packages._version import program_name, __version__
@@ -63,6 +64,9 @@ def main(base_wd: Path):
         "-v", "--version", action="version", version=f"{program_name} {__version__}"
     )
     args = parser.parse_args()
+
+    # validate correct bitrate for channels input
+    validate_bitrate(arg_parser=parser, arguments=args)
 
     # Check that the input file exists
     if not Path(args.input).exists():

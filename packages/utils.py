@@ -1,8 +1,9 @@
 from pathlib import Path
 import sys
-from argparse import ArgumentTypeError
+from argparse import ArgumentTypeError, ArgumentParser
 import subprocess
 from packages._version import program_name, __version__, developed_by
+from packages.bitrates import allowed_bitrates
 
 
 def get_working_dir():
@@ -60,6 +61,34 @@ def validate_track_index(value: any):
         return int(value)
     # If the input is invalid, return the default value
     return 0
+
+
+def validate_bitrate(arg_parser: ArgumentParser, arguments: ArgumentParser.parse_args):
+    """
+    Validate bitrate input based on channel input.
+    If an invalid input is detected, raise a parser error that will update
+    the user with valid options and exit the program automatically.
+
+    Args:
+        arg_parser (ArgumentParser): Parser instance
+        arguments (ArgumentParser.parse_args): Parsed arguments from parser instance
+    """
+
+    if arguments.channels == 1:
+        if arguments.bitrate not in allowed_bitrates.get("dd_10"):
+            arg_parser.error(
+                message=f"Invalid bitrate for channel input of 1 (mono).\nValid choices: {', '.join(str(v) for v in allowed_bitrates.get('dd_10'))}"
+            )
+    elif arguments.channels == 2:
+        if arguments.bitrate not in allowed_bitrates.get("dd_20"):
+            arg_parser.error(
+                message=f"Invalid bitrate for channel input of 2 (stereo).\nValid choices: {', '.join(str(v) for v in allowed_bitrates.get('dd_20'))}"
+            )
+    elif arguments.channels == 6:
+        if arguments.bitrate not in allowed_bitrates.get("dd_51"):
+            arg_parser.error(
+                message=f"Invalid bitrate for channel input of 6 (5.1).\nValid choices: {', '.join(str(v) for v in allowed_bitrates.get('dd_51'))}"
+            )
 
 
 def process_job(cmd: list, banner: bool = False):
