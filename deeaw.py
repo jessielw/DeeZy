@@ -115,17 +115,10 @@ def main(base_wd: Path):
         sample_rate = 48000
         resample = True
 
-    matrix_encoding_arg = ""
-    if args.channels == 2:
-        matrix_encoding_arg = "aresample=matrix_encoding=dplii"
-
-    resample_args = []
     if resample:
         resample_args = [
             "-af",
-            "aresample=resampler=soxr"
-            if matrix_encoding_arg == ""
-            else f"aresample=resampler=soxr,{matrix_encoding_arg}",
+            "aresample=resampler=soxr",
             "-ar",
             str(sample_rate),
             "-precision",
@@ -135,8 +128,6 @@ def main(base_wd: Path):
             "-dither_scale",
             "0",
         ]
-    elif args.channels == 2:
-        resample_args = ["-af", matrix_encoding_arg]
     else:
         resample_args = []
 
