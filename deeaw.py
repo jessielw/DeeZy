@@ -116,7 +116,7 @@ def main(base_wd: Path):
         resample = True
 
     matrix_encoding_arg = ""
-    if args.channels == 2:
+    if args.channels == 1 or args.channels == 2:
         matrix_encoding_arg = f"[a:{args.track_index}]aresample=matrix_encoding=dplii"
 
     resample_args = []
@@ -134,7 +134,7 @@ def main(base_wd: Path):
             "-dither_scale",
             "0",
         ]
-    elif args.channels == 2:
+    elif args.channels == 1 or args.channels == 2:
         resample_args = ["-filter_complex", matrix_encoding_arg]
     else:
         resample_args = []
