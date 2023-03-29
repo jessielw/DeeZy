@@ -2,6 +2,7 @@ from pathlib import Path
 import sys
 from argparse import ArgumentTypeError
 import subprocess
+from packages._version import program_name, __version__, developed_by
 
 
 def get_working_dir():
@@ -61,11 +62,15 @@ def validate_track_index(value: any):
     return 0
 
 
-def process_job(cmd: list):
+def process_job(cmd: list, banner: bool = False):
     """Process jobs"""
 
     with subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True
     ) as proc:
+        print("####################")
+        if banner:
+            print(f"{program_name} {__version__}\nDeveloped by: {developed_by}\n")
         for line in proc.stdout:
             print(line.strip())
+        print("####################\n")
