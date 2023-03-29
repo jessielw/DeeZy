@@ -10,6 +10,7 @@ from packages.utils import (
     validate_channels,
     process_job,
 )
+from packages._version import program_name, __version__
 
 
 def main(base_wd):
@@ -57,6 +58,9 @@ def main(base_wd):
         type=bool,
         default=False,
         help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
+    )
+    parser.add_argument(
+        "-v", "--version", action="version", version=f"{program_name} {__version__}"
     )
     args = parser.parse_args()
 
