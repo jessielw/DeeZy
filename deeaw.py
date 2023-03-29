@@ -116,17 +116,18 @@ def main(base_wd: Path):
         resample = True
 
     matrix_encoding_arg = ""
-    if args.channels == 1 or args.channels == 2:
-        matrix_encoding_arg = f"[a:{args.track_index}]aresample=matrix_encoding=dplii"
+    if args.channels == 2:
+        matrix_encoding_arg = "aresample=matrix_encoding=dplii"
 
     resample_args = []
     if resample:
         resample_args = [
-            "-filter_complex",
-            f"[a:{args.track_index}]aresample=resampler=soxr",
-            matrix_encoding_arg,
+            "-af",
+            "aresample=resampler=soxr"
+            if matrix_encoding_arg == ""
+            else f"aresample=resampler=soxr,{matrix_encoding_arg}",
             "-ar",
-            sample_rate,
+            str(sample_rate),
             "-precision",
             "28",
             "-cutoff",
@@ -134,8 +135,8 @@ def main(base_wd: Path):
             "-dither_scale",
             "0",
         ]
-    elif args.channels == 1 or args.channels == 2:
-        resample_args = ["-filter_complex", matrix_encoding_arg]
+    elif args.channels == 2:
+        resample_args = ["-af", matrix_encoding_arg]
     else:
         resample_args = []
 
@@ -207,9 +208,11 @@ def main(base_wd: Path):
         "-drc_scale",
         "0",
         "-i",
-        args.input,
+        str(Path(args.input)),
+        "-map",
+        f"0:{str(args.track_index)}",
         "-c",
-        f"pcm_s{bits_per_sample}le",
+        f"pcm_s{str(bits_per_sample)}le",
         *(resample_args),
         "-rf64",
         "always",
