@@ -209,9 +209,13 @@ def main(base_wd):
         *(resample_args),
         "-rf64",
         "always",
+        "-hide_banner",
+        "-v",
+        "quiet",
+        "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    process_job(ffmpeg_cmd)
+    process_job(ffmpeg_cmd, banner=True)
 
     # Call dee to generate the encode file
     dee_cm = [
@@ -220,11 +224,13 @@ def main(base_wd):
         "500",
         "--diagnostics-interval",
         "90000",
+        "--verbose",
+        "info",
         "-x",
         str(updated_template_file),
         "--disable-xml-validation",
     ]
-    process_job(dee_cm)
+    process_job(dee_cm, banner=False)
 
     # Clean up temp files
     if not args.keep_temp:
