@@ -9,9 +9,10 @@ from packages.utils import (
     validate_track_index,
     validate_channels,
     validate_bitrate,
-    process_job,
 )
 from packages._version import program_name, __version__
+from packages.xml import generate_xml
+from packages.progress import process_ffmpeg, process_dee, display_banner
 
 
 def main(base_wd: Path):
@@ -61,6 +62,13 @@ def main(base_wd: Path):
         help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
     )
     parser.add_argument(
+        "-p",
+        "--progress-mode",
+        choices=["standard", "debug"],
+        default="standard",
+        help="Sets progress output mode verbosity.",
+    )
+    parser.add_argument(
         "-v", "--version", action="version", version=f"{program_name} {__version__}"
     )
     args = parser.parse_args()
@@ -78,6 +86,12 @@ def main(base_wd: Path):
     # parse track for information
     # +1 because the first track is always "general"
     track_info = media_info_source.tracks[args.track_index + 1]
+
+    # get track duration and convert to a float if not None
+    # we need duration to calculate percentage for FFMPEG
+    duration = track_info.duration
+    if duration:
+        duration = float(duration)
 
     # get sampling rate
     try:
@@ -115,18 +129,12 @@ def main(base_wd: Path):
         sample_rate = 48000
         resample = True
 
-    matrix_encoding_arg = ""
-    if args.channels == 1 or args.channels == 2:
-        matrix_encoding_arg = f"[a:{args.track_index}]aresample=matrix_encoding=dplii"
-
-    resample_args = []
     if resample:
         resample_args = [
-            "-filter_complex",
-            f"[a:{args.track_index}]aresample=resampler=soxr",
-            matrix_encoding_arg,
+            "-af",
+            "aresample=resampler=soxr",
             "-ar",
-            sample_rate,
+            str(sample_rate),
             "-precision",
             "28",
             "-cutoff",
@@ -134,12 +142,12 @@ def main(base_wd: Path):
             "-dither_scale",
             "0",
         ]
-    elif args.channels == 1 or args.channels == 2:
-        resample_args = ["-filter_complex", matrix_encoding_arg]
     else:
         resample_args = []
 
     # Work out if we need to do down-mix
+    # We only set preferred mode for 2 (stereo) to dplii
+    preferred_down_mix_mode = "not_indicated"
     if args.channels > channels:
         raise ValueError("Up-mixing is not supported.")
     elif args.channels == channels:
@@ -148,6 +156,7 @@ def main(base_wd: Path):
         down_mix_config = "mono"
     elif args.channels == 2:
         down_mix_config = "stereo"
+        preferred_down_mix_mode = "ltrt-pl2"
     elif args.channels == 6:
         down_mix_config = "5.1"
 
@@ -156,49 +165,22 @@ def main(base_wd: Path):
     if not output_dir.exists():
         output_dir.mkdir(exist_ok=True)
 
-    # clean spaces from output name since xml/dee.exe has issues with spacing
-    cleaned_output_file_name = sub(r"\s+", "_", str(Path(args.output).name))
+    # Define .wav and .ac3 file names (not full path)
+    wav_file_name = str(Path(Path(args.output).name).with_suffix(".wav"))
+    ac3_file_name = str(Path(Path(args.output).name).with_suffix(".ac3"))
 
-    # Create wav file name for the intermediate file
-    wav_file_name = Path(cleaned_output_file_name).with_suffix(".wav")
-
-    # Get the path to the template.xml file
-    template_path = Path(base_wd / "runtime/template.xml")
-    # Load the contents of the template.xml file into the dee_config variable
-    xml_dee_config = ET.parse(template_path)
-    xml_root = xml_dee_config.getroot()
-
-    # Update the template values
-    xml_pcm_to_ddp = xml_root.find("filter/audio/pcm_to_ddp")
-    xml_down_mix_config_elem = xml_pcm_to_ddp.find("downmix_config")
-    xml_down_mix_config_elem.text = down_mix_config
-    xml_down_mix_config_elem = xml_pcm_to_ddp.find("data_rate")
-    xml_down_mix_config_elem.text = str(args.bitrate)
-
-    xml_input = xml_root.find("input/audio/wav")
-    xml_input_file_name = xml_input.find("file_name")
-    xml_input_file_name.text = str(wav_file_name)
-    xml_input_file_path = xml_input.find("storage/local/path")
-    xml_input_file_path.text = str(output_dir)
-
-    xml_output = xml_root.find("output/ac3")
-    xml_output_file_name = xml_output.find("file_name")
-    xml_output_file_name.text = cleaned_output_file_name
-    xml_output_file_path = xml_output.find("storage/local/path")
-    xml_output_file_path.text = str(output_dir)
-
-    xml_temp = xml_root.find("misc/temp_dir")
-    xml_temp_path = xml_temp.find("path")
-    xml_temp_path.text = str(output_dir)
-
-    # Save out the updated template
-    updated_template_file = Path(output_dir / cleaned_output_file_name).with_suffix(
-        ".xml"
+    # generate xml file and return path
+    update_xml = generate_xml(
+        down_mix_config=down_mix_config,
+        preferred_down_mix_mode=preferred_down_mix_mode,
+        bitrate=str(args.bitrate),
+        wav_file_name=wav_file_name,
+        ac3_file_name=ac3_file_name,
+        output_dir=output_dir,
     )
 
-    if updated_template_file.exists():
-        updated_template_file.unlink()
-    xml_dee_config.write(str(updated_template_file))
+    # display banner to console
+    display_banner()
 
     # Call ffmpeg to generate the wav file
     ffmpeg_cmd = [
@@ -207,19 +189,20 @@ def main(base_wd: Path):
         "-drc_scale",
         "0",
         "-i",
-        args.input,
+        str(Path(args.input)),
+        "-map",
+        f"0:{str(args.track_index)}",
         "-c",
-        f"pcm_s{bits_per_sample}le",
+        f"pcm_s{str(bits_per_sample)}le",
         *(resample_args),
         "-rf64",
         "always",
         "-hide_banner",
         "-v",
-        "quiet",
         "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    process_job(ffmpeg_cmd, banner=True)
+    process_ffmpeg(ffmpeg_cmd, args.progress_mode, duration)
 
     # Call dee to generate the encode file
     dee_cm = [
@@ -229,20 +212,16 @@ def main(base_wd: Path):
         "--diagnostics-interval",
         "90000",
         "--verbose",
-        "info",
         "-x",
-        str(updated_template_file),
+        str(update_xml),
         "--disable-xml-validation",
     ]
-    process_job(dee_cm, banner=False)
+    process_dee(dee_cm, args.progress_mode)
 
     # Clean up temp files
     if not args.keep_temp:
-        Path(updated_template_file).unlink()
+        Path(update_xml).unlink()
         Path(output_dir / wav_file_name).unlink()
-
-    # rename output file to whatever original defined output was
-    Path(output_dir / cleaned_output_file_name).replace(Path(args.output))
 
 
 if __name__ == "__main__":

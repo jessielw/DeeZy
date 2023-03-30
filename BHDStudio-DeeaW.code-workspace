@@ -6,6 +6,7 @@
 	],
 	"settings": {
 		"cSpell.words": [
+			"areresample",
 			"aresample",
 			"bhdstudio",
 			"bitrates",
@@ -14,13 +15,15 @@
 			"downmix",
 			"dplii",
 			"Kbps",
+			"ltrt",
 			"MEIPASS",
 			"onefile",
 			"pyinstaller",
 			"pyinstallers",
 			"pymediainfo",
 			"resampler",
-			"soxr"
+			"soxr",
+			"xmltodict"
 		]
 	}
 }

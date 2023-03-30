@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+xml_audio_base = """<?xml version="1.0"?>
 <job_config>
   <input>
     <audio>
@@ -52,7 +52,7 @@
           <loro_surround_mix_level>-3</loro_surround_mix_level>  
           <ltrt_center_mix_level>-3</ltrt_center_mix_level>    
           <ltrt_surround_mix_level>-3</ltrt_surround_mix_level>  
-          <preferred_downmix_mode>loro</preferred_downmix_mode>  
+          <preferred_downmix_mode>not_indicated</preferred_downmix_mode>  
         </downmix>
         <allow_hybrid_downmix>false</allow_hybrid_downmix>   
         <embedded_timecodes>
@@ -78,4 +78,4 @@
       <path>-</path>
     </temp_dir>
   </misc>
-</job_config>
+</job_config>"""
