@@ -1,8 +1,6 @@
 from pathlib import Path
 import sys
 from argparse import ArgumentTypeError, ArgumentParser
-import subprocess
-from packages._version import program_name, __version__, developed_by
 from packages.bitrates import allowed_bitrates
 
 
@@ -89,17 +87,3 @@ def validate_bitrate(arg_parser: ArgumentParser, arguments: ArgumentParser.parse
             arg_parser.error(
                 message=f"Invalid bitrate for channel input of 6 (5.1).\nValid choices: {', '.join(str(v) for v in allowed_bitrates.get('dd_51'))}"
             )
-
-
-def process_job(cmd: list, banner: bool = False):
-    """Process jobs"""
-
-    with subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True
-    ) as proc:
-        if banner:
-            print("####################")
-            print(f"{program_name} {__version__}\nDeveloped by: {developed_by}\n")
-        for line in proc.stdout:
-            print(line.strip())
-        print("####################\n")
