@@ -25,7 +25,7 @@ xml_audio_base = """<?xml version="1.0"?>
             <speech_threshold>20</speech_threshold>
           </measure_only>
         </loudness>
-        <encoder_mode>dd</encoder_mode>
+        <encoder_mode>-</encoder_mode>
         <bitstream_mode>complete_main</bitstream_mode>
         <downmix_config>off</downmix_config>
         <data_rate>-</data_rate>

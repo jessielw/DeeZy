@@ -7,8 +7,8 @@ from pymediainfo import MediaInfo
 from packages.utils import (
     get_working_dir,
     validate_track_index,
-    validate_channels,
-    validate_bitrate,
+    validate_bitrate_with_channels_and_format,
+    validate_channels_with_format
 )
 from packages._version import program_name, __version__
 from packages.xml import generate_xml
@@ -37,12 +37,20 @@ def main(base_wd: Path):
     parser.add_argument(
         "-c",
         "--channels",
-        type=validate_channels,
+        choices=[1, 2, 6, 8],
+        type=int,
         required=True,
-        help="The number of channels. Valid options: 1, 2, 6.",
+        help="The number of channels.",
     )
     parser.add_argument(
         "-b", "--bitrate", type=int, required=True, help="The bitrate in Kbps."
+    )
+    parser.add_argument(
+        "-f", "--format", 
+        choices=["dd", "ddp"],
+        type=str, 
+        default="dd",
+        help="The file format."
     )
     parser.add_argument(
         "-t",
@@ -57,8 +65,7 @@ def main(base_wd: Path):
     parser.add_argument(
         "-k",
         "--keep-temp",
-        type=bool,
-        default=False,
+        action='store_true',
         help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
     )
     parser.add_argument(
@@ -73,8 +80,9 @@ def main(base_wd: Path):
     )
     args = parser.parse_args()
 
-    # validate correct bitrate for channels input
-    validate_bitrate(arg_parser=parser, arguments=args)
+    # validate correct bitrate, channel count and format
+    validate_channels_with_format(arg_parser=parser, arguments=args)
+    validate_bitrate_with_channels_and_format(arg_parser=parser, arguments=args)
 
     # Check that the input file exists
     if not Path(args.input).exists():
@@ -130,9 +138,13 @@ def main(base_wd: Path):
         resample = True
 
     if resample:
+        if channels == 8:
+            channel_swap = 'pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,'
+        else:
+            channel_swap = ''
         resample_args = [
             "-af",
-            "aresample=resampler=soxr",
+            f"{channel_swap}aresample=resampler=soxr",
             "-ar",
             str(sample_rate),
             "-precision",
@@ -144,6 +156,11 @@ def main(base_wd: Path):
         ]
     else:
         resample_args = []
+        
+    if channels == 8 and not resample_args:
+        channel_swap_args = ['-af', f'pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5']
+    else:
+        channel_swap_args = []
 
     # Work out if we need to do down-mix
     # We only set preferred mode for 2 (stereo) to dplii
@@ -159,23 +176,29 @@ def main(base_wd: Path):
         preferred_down_mix_mode = "ltrt-pl2"
     elif args.channels == 6:
         down_mix_config = "5.1"
+    elif args.channels == 8:
+        down_mix_config = "7.1"
+    else:
+        raise Exception("Unsupported channel count")
 
     # Create the directory for the output file if it doesn't exist
     output_dir = Path(args.output).parent
     if not output_dir.exists():
         output_dir.mkdir(exist_ok=True)
 
-    # Define .wav and .ac3 file names (not full path)
+    # Define .wav and .ac3/.ec3 file names (not full path)
     wav_file_name = str(Path(Path(args.output).name).with_suffix(".wav"))
-    ac3_file_name = str(Path(Path(args.output).name).with_suffix(".ac3"))
+    output_file_name = str(Path(args.output).name)
 
     # generate xml file and return path
     update_xml = generate_xml(
         down_mix_config=down_mix_config,
         preferred_down_mix_mode=preferred_down_mix_mode,
         bitrate=str(args.bitrate),
+        format=args.format,
+        channels=args.channels,
         wav_file_name=wav_file_name,
-        ac3_file_name=ac3_file_name,
+        output_file_name=output_file_name,
         output_dir=output_dir,
     )
 
@@ -194,6 +217,7 @@ def main(base_wd: Path):
         f"0:{str(args.track_index)}",
         "-c",
         f"pcm_s{str(bits_per_sample)}le",
+        *(channel_swap_args),
         *(resample_args),
         "-rf64",
         "always",

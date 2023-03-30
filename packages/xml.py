@@ -1,5 +1,5 @@
-from pathlib import Path
 import xmltodict
+from pathlib import Path
 from packages.xml_base import xml_audio_base
 from typing import Union
 
@@ -8,18 +8,21 @@ def generate_xml(
     down_mix_config: str,
     preferred_down_mix_mode: str,
     bitrate: str,
+    format: str,
+    channels: int,
     wav_file_name: str,
-    ac3_file_name: str,
+    output_file_name: str,
     output_dir: Union[Path, str],
 ):
     """Handles the parsing/creation of XML file for dee
 
     Args:
-        down_mix_config (str): Down mix type ('off', 'mono', 'stereo', '5.1')
+        down_mix_config (str): Down mix type ("off', 'mono', 'stereo', '5.1')
         preferred_down_mix_mode (str): Accepts 'ltrt-pl2' otherwise it's disabled
         bitrate (str): Bitrate in the format of '448'
+        format (str): File format, in short hand terms; "dd", "ddp" etc
         wav_file_name (str): File name only
-        ac3_file_name (str): File name only
+        output_file_name (str): File name only
         output_dir (Union[Path, str]): File path only
 
     Returns:
@@ -46,16 +49,30 @@ def generate_xml(
     ] = f'"{str(output_dir)}"'
 
     # xml ac3 config
-    xml_base["job_config"]["output"]["ac3"]["file_name"] = f'"{ac3_file_name}"'
+    xml_base["job_config"]["output"]["ac3"]["file_name"] = f'"{output_file_name}"'
     xml_base["job_config"]["output"]["ac3"]["storage"]["local"][
         "path"
     ] = f'"{str(output_dir)}"'
 
     # xml temp path config
     xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
+    
+    # file format
+    if (format == "dd"):
+        xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "dd"
+    elif (format == "ddp"):
+        if (channels == 8):
+            xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "ddp71"
+        else:
+            xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "ddp"
+        xml_base["job_config"]["output"]["ec3"] = xml_base["job_config"]["output"]["ac3"]
+        del xml_base["job_config"]["output"]["ac3"]
+    else:
+        raise Exception("Unknown file format.")
+        
 
     # Save out the updated template (use ac3 output with xml suffix)
-    updated_template_file = Path(output_dir / Path(ac3_file_name)).with_suffix(".xml")
+    updated_template_file = Path(output_dir / Path(output_file_name)).with_suffix(".xml")
 
     # delete xml output template if one already exists
     if updated_template_file.exists():
