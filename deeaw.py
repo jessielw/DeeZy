@@ -1,14 +1,12 @@
 import sys
 import argparse
-import xml.etree.ElementTree as ET
-from re import sub
 from pathlib import Path
 from pymediainfo import MediaInfo
 from packages.utils import (
     get_working_dir,
     validate_track_index,
     validate_bitrate_with_channels_and_format,
-    validate_channels_with_format
+    validate_channels_with_format,
 )
 from packages._version import program_name, __version__
 from packages.xml import generate_xml
@@ -46,11 +44,12 @@ def main(base_wd: Path):
         "-b", "--bitrate", type=int, required=True, help="The bitrate in Kbps."
     )
     parser.add_argument(
-        "-f", "--format", 
+        "-f",
+        "--format",
         choices=["dd", "ddp"],
-        type=str, 
+        type=str,
         default="dd",
-        help="The file format."
+        help="The file format.",
     )
     parser.add_argument(
         "-t",
@@ -65,7 +64,7 @@ def main(base_wd: Path):
     parser.add_argument(
         "-k",
         "--keep-temp",
-        action='store_true',
+        action="store_true",
         help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
     )
     parser.add_argument(
@@ -139,9 +138,9 @@ def main(base_wd: Path):
 
     if resample:
         if channels == 8:
-            channel_swap = 'pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,'
+            channel_swap = "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
         else:
-            channel_swap = ''
+            channel_swap = ""
         resample_args = [
             "-af",
             f"{channel_swap}aresample=resampler=soxr",
@@ -156,9 +155,12 @@ def main(base_wd: Path):
         ]
     else:
         resample_args = []
-        
+
     if channels == 8 and not resample_args:
-        channel_swap_args = ['-af', f'pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5']
+        channel_swap_args = [
+            "-af",
+            f"pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+        ]
     else:
         channel_swap_args = []
 

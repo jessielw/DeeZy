@@ -56,23 +56,30 @@ def generate_xml(
 
     # xml temp path config
     xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
-    
+
     # file format
-    if (format == "dd"):
+    if format == "dd":
         xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "dd"
-    elif (format == "ddp"):
-        if (channels == 8):
-            xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "ddp71"
+    elif format == "ddp":
+        if channels == 8:
+            xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
+                "encoder_mode"
+            ] = "ddp71"
         else:
-            xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "ddp"
-        xml_base["job_config"]["output"]["ec3"] = xml_base["job_config"]["output"]["ac3"]
+            xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
+                "encoder_mode"
+            ] = "ddp"
+        xml_base["job_config"]["output"]["ec3"] = xml_base["job_config"]["output"][
+            "ac3"
+        ]
         del xml_base["job_config"]["output"]["ac3"]
     else:
         raise Exception("Unknown file format.")
-        
 
     # Save out the updated template (use ac3 output with xml suffix)
-    updated_template_file = Path(output_dir / Path(output_file_name)).with_suffix(".xml")
+    updated_template_file = Path(output_dir / Path(output_file_name)).with_suffix(
+        ".xml"
+    )
 
     # delete xml output template if one already exists
     if updated_template_file.exists():
