@@ -97,8 +97,8 @@ def process_job(cmd: list, banner: bool = False):
     with subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True
     ) as proc:
-        print("####################")
         if banner:
+            print("####################")
             print(f"{program_name} {__version__}\nDeveloped by: {developed_by}\n")
         for line in proc.stdout:
             print(line.strip())
