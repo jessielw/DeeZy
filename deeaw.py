@@ -9,10 +9,10 @@ from packages.utils import (
     validate_track_index,
     validate_channels,
     validate_bitrate,
-    process_job,
 )
 from packages._version import program_name, __version__
 from packages.xml import generate_xml
+from packages.progress import process_ffmpeg, process_dee
 
 
 def main(base_wd: Path):
@@ -62,6 +62,13 @@ def main(base_wd: Path):
         help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
     )
     parser.add_argument(
+        "-p",
+        "--progress-mode",
+        choices=["quiet", "debug"],
+        default="quiet",
+        help="Sets progress output mode verbosity.",
+    )
+    parser.add_argument(
         "-v", "--version", action="version", version=f"{program_name} {__version__}"
     )
     args = parser.parse_args()
@@ -79,6 +86,12 @@ def main(base_wd: Path):
     # parse track for information
     # +1 because the first track is always "general"
     track_info = media_info_source.tracks[args.track_index + 1]
+
+    # get track duration and convert to a float if not None
+    # we need duration to calculate percentage for FFMPEG
+    duration = track_info.duration
+    if duration:
+        duration = float(duration)
 
     # get sampling rate
     try:
@@ -183,11 +196,10 @@ def main(base_wd: Path):
         "always",
         "-hide_banner",
         "-v",
-        "quiet",
         "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    process_job(ffmpeg_cmd, banner=True)
+    process_ffmpeg(ffmpeg_cmd, args.progress_mode, duration)
 
     # Call dee to generate the encode file
     dee_cm = [
@@ -197,12 +209,11 @@ def main(base_wd: Path):
         "--diagnostics-interval",
         "90000",
         "--verbose",
-        "info",
         "-x",
         str(update_xml),
         "--disable-xml-validation",
     ]
-    process_job(dee_cm, banner=False)
+    process_dee(dee_cm, args.progress_mode)
 
     # Clean up temp files
     if not args.keep_temp:
