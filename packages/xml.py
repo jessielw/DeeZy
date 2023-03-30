@@ -34,6 +34,11 @@ def generate_xml(
     ] = down_mix_config
     xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["data_rate"] = str(bitrate)
 
+    # xml down mix config mode
+    xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
+        "preferred_downmix_mode"
+    ] = preferred_down_mix_mode
+
     # xml wav config
     xml_base["job_config"]["input"]["audio"]["wav"]["file_name"] = f'"{wav_file_name}"'
     xml_base["job_config"]["input"]["audio"]["wav"]["storage"]["local"][
@@ -45,11 +50,6 @@ def generate_xml(
     xml_base["job_config"]["output"]["ac3"]["storage"]["local"][
         "path"
     ] = f'"{str(output_dir)}"'
-
-    # xml down mix config mode
-    xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
-        "preferred_downmix_mode"
-    ] = preferred_down_mix_mode
 
     # xml temp path config
     xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
