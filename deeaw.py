@@ -12,7 +12,7 @@ from packages.utils import (
 )
 from packages._version import program_name, __version__
 from packages.xml import generate_xml
-from packages.progress import process_ffmpeg, process_dee
+from packages.progress import process_ffmpeg, process_dee, display_banner
 
 
 def main(base_wd: Path):
@@ -64,8 +64,8 @@ def main(base_wd: Path):
     parser.add_argument(
         "-p",
         "--progress-mode",
-        choices=["quiet", "debug"],
-        default="quiet",
+        choices=["standard", "debug"],
+        default="standard",
         help="Sets progress output mode verbosity.",
     )
     parser.add_argument(
@@ -178,6 +178,9 @@ def main(base_wd: Path):
         ac3_file_name=ac3_file_name,
         output_dir=output_dir,
     )
+
+    # display banner to console
+    display_banner()
 
     # Call ffmpeg to generate the wav file
     ffmpeg_cmd = [

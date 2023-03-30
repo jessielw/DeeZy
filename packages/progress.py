@@ -4,7 +4,7 @@ from typing import Union
 from re import search
 
 
-def _display_banner():
+def display_banner():
     """Generate and display the banner"""
     print(f"{program_name} {__version__}\nDeveloped by: {developed_by}\n")
 
@@ -38,28 +38,27 @@ def process_ffmpeg(cmd: list, progress_mode: str, duration: Union[float, None]):
 
     Args:
         cmd (list): Base FFMPEG command list
-        progress_mode (str): Options are "quiet" or "debug"
-        duration (Union[float, None]): Can be None or duration in milliseconds
+        progress_mode (str): Options are "standard" or "debug"
+        duration (Union[float, None]): Can be None or duration in milliseconds.
+        If set to None the generic FFMPEG output will be displayed.
+        If duration is passed then we can calculate the total progress for FFMPEG.
     """
-    # display banner
-    _display_banner()
-
     # inject verbosity level into cmd list depending on progress_mode
     inject = cmd.index("-v") + 1
-    if progress_mode == "quiet":
+    if progress_mode == "standard":
         cmd.insert(inject, "quiet")
     elif progress_mode == "debug":
         cmd.insert(inject, "debug")
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-        if progress_mode == "quiet":
+        if progress_mode == "standard":
             print("---- Step 1 of 3 ---- [FFMPEG]")
 
         for line in proc.stdout:
 
             # Some audio formats actually do not have a "duration" in their raw containers,
             # if this is the case we will default ffmpeg to it's generic output string.
-            if duration and progress_mode == "quiet":
+            if duration and progress_mode == "standard":
 
                 # we need to wait for size= to prevent any errors
                 if "size=" in line:
@@ -94,12 +93,12 @@ def process_dee(cmd: list, progress_mode: str):
 
     Args:
         cmd (list): Base DEE cmd list
-        progress_mode (str): Options are "quiet" or "debug"
+        progress_mode (str): Options are "standard" or "debug"
     """
 
     # inject verbosity level into cmd list depending on progress_mode
     inject = cmd.index("--verbose") + 1
-    if progress_mode == "quiet":
+    if progress_mode == "standard":
         cmd.insert(inject, "info")
     elif progress_mode == "debug":
         cmd.insert(inject, "debug")
@@ -108,13 +107,13 @@ def process_dee(cmd: list, progress_mode: str):
     last_number = 0
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-        if progress_mode == "quiet":
+        if progress_mode == "standard":
             print("---- Step 2 of 3 ---- [DEE measure]")
 
         for line in proc.stdout:
 
             # If progress mode is quiet let's clean up progress output
-            if progress_mode == "quiet":
+            if progress_mode == "standard":
 
                 # We need to wait for size= to prevent any errors
                 if "Stage progress" in line:
