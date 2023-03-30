@@ -7,7 +7,6 @@ from pymediainfo import MediaInfo
 from packages.utils import (
     get_working_dir,
     validate_track_index,
-    validate_channels,
     validate_bitrate_with_channels_and_format,
     validate_channels_with_format
 )
@@ -41,7 +40,7 @@ def main(base_wd: Path):
         choices=[1, 2, 6, 8],
         type=int,
         required=True,
-        help="The number of channels. Valid options: 1, 2, 6.",
+        help="The number of channels.",
     )
     parser.add_argument(
         "-b", "--bitrate", type=int, required=True, help="The bitrate in Kbps."

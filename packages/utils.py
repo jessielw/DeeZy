@@ -21,27 +21,6 @@ def get_working_dir():
         return Path.cwd()
 
 
-def validate_channels(value: any):
-    """Ensure we are utilizing the correct amount of channels.
-
-    Args:
-        value (any): Can be any input
-
-    Returns:
-        int: Input as an integer
-    """
-
-    valid_channels = [1, 2, 6, 8]
-    if not value.isdigit():
-        raise ArgumentTypeError(f"Invalid input channels. Value must be an integer.")
-    value = int(value)
-    if value not in valid_channels:
-        raise ArgumentTypeError(
-            f"Invalid number of channels. Valid options: {valid_channels}"
-        )
-    return value
-
-
 def validate_track_index(value: any):
     """
     Determines if the input is a valid number.
