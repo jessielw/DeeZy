@@ -52,16 +52,13 @@ def process_ffmpeg(cmd: list, progress_mode: str, duration: Union[float, None]):
         cmd.insert(inject, "debug")
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-        # NOTE:
-        # Some audio formats actually do not have a "duration" in their raw containers,
-        # if this is the case we will default ffmpeg to it's generic output string and
-        # not print the steps to stdout.
-        if duration and progress_mode == "quiet":
+        if progress_mode == "quiet":
             print("---- Step 1 of 3 ---- [FFMPEG]")
 
         for line in proc.stdout:
 
-            # Refer to note above
+            # Some audio formats actually do not have a "duration" in their raw containers,
+            # if this is the case we will default ffmpeg to it's generic output string.
             if duration and progress_mode == "quiet":
 
                 # we need to wait for size= to prevent any errors
