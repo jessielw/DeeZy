@@ -42,6 +42,14 @@ def main(base_wd: Path):
         help="The number of channels.",
     )
     parser.add_argument(
+        "-s",
+        "--stereo-down-mix",
+        choices=["standard", "dplii"],
+        type=str,
+        default="standard",
+        help="Down mix method for stereo.",
+    )
+    parser.add_argument(
         "-b", "--bitrate", type=int, required=True, help="The bitrate in Kbps."
     )
     parser.add_argument(
@@ -139,7 +147,7 @@ def main(base_wd: Path):
 
     if resample:
         channel_swap = ""
-        if channels == 2:
+        if channels == 2 and args.stereo_down_mix == "dplii":
             channel_swap = "aresample=matrix_encoding=dplii,"
         elif channels == 8:
             channel_swap = "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
@@ -159,7 +167,7 @@ def main(base_wd: Path):
     else:
         resample_args = []
 
-    if channels == 2 and not resample_args:
+    if channels == 2 and not resample_args and args.stereo_down_mix == "dplii":
         channel_swap_args = ["-af", "aresample=matrix_encoding=dplii"]
     elif channels == 8 and not resample_args:
         channel_swap_args = [
@@ -172,10 +180,15 @@ def main(base_wd: Path):
     # Work out if we need to do down-mix
     if args.channels > channels:
         raise ArgumentTypeError("Up-mixing is not supported.")
-    elif args.channels == channels or args.channels == 2:
+    elif args.channels == channels:
         down_mix_config = "off"
     elif args.channels == 1:
         down_mix_config = "mono"
+    elif args.channels == 2:
+        if args.stereo_down_mix == "standard":
+            down_mix_config = "stereo"
+        elif args.stereo_down_mix == "dplii":
+            down_mix_config = "off"
     elif args.channels == 6:
         down_mix_config = "5.1"
     elif args.channels == 8:
@@ -207,7 +220,7 @@ def main(base_wd: Path):
     display_banner()
 
     # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
-    if args.channels == 2:
+    if args.channels == 2 and args.stereo_down_mix == "dplii":
         ffmpeg_ac = ["-ac", "2"]
     else:
         ffmpeg_ac = []
