@@ -138,12 +138,12 @@ def main(base_wd: Path):
         resample = True
 
     if resample:
+        channel_swap = ""
         if channels == 2:
             channel_swap = "aresample=matrix_encoding=dplii,"
         elif channels == 8:
             channel_swap = "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
-        else:
-            channel_swap = ""
+
         resample_args = [
             "-af",
             f"{channel_swap}aresample=resampler=soxr",
@@ -206,6 +206,12 @@ def main(base_wd: Path):
     # display banner to console
     display_banner()
 
+    # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
+    if args.channels == 2:
+        ffmpeg_ac = ["-ac", "2"]
+    else:
+        ffmpeg_ac = []
+
     # Call ffmpeg to generate the wav file
     ffmpeg_cmd = [
         str(ffmpeg_path),
@@ -216,6 +222,7 @@ def main(base_wd: Path):
         str(Path(args.input)),
         "-map",
         f"0:{str(args.track_index)}",
+        *(ffmpeg_ac),
         "-c",
         f"pcm_s{str(bits_per_sample)}le",
         *(channel_swap_args),
