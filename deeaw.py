@@ -1,5 +1,6 @@
 import sys
 import argparse
+from argparse import ArgumentTypeError
 from pathlib import Path
 from pymediainfo import MediaInfo
 from packages.utils import (
@@ -85,7 +86,7 @@ def main(base_wd: Path):
 
     # Check that the input file exists
     if not Path(args.input).exists():
-        raise ValueError(f"Input file not found: {args.input}")
+        raise ArgumentTypeError(f"Input file not found: {args.input}")
 
     # Parse file with MediaInfo
     media_info_source = MediaInfo.parse(args.input)
@@ -137,7 +138,9 @@ def main(base_wd: Path):
         resample = True
 
     if resample:
-        if channels == 8:
+        if channels == 2:
+            channel_swap = "aresample=matrix_encoding=dplii,"
+        elif channels == 8:
             channel_swap = "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
         else:
             channel_swap = ""
@@ -156,32 +159,31 @@ def main(base_wd: Path):
     else:
         resample_args = []
 
-    if channels == 8 and not resample_args:
+    if channels == 2 and not resample_args:
+        channel_swap_args = ["-af", "aresample=matrix_encoding=dplii"]
+    elif channels == 8 and not resample_args:
         channel_swap_args = [
             "-af",
-            f"pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+            "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
         ]
     else:
         channel_swap_args = []
 
     # Work out if we need to do down-mix
-    # We only set preferred mode for 2 (stereo) to dplii
-    preferred_down_mix_mode = "not_indicated"
     if args.channels > channels:
-        raise ValueError("Up-mixing is not supported.")
+        raise ArgumentTypeError("Up-mixing is not supported.")
     elif args.channels == channels:
         down_mix_config = "off"
     elif args.channels == 1:
         down_mix_config = "mono"
     elif args.channels == 2:
         down_mix_config = "stereo"
-        preferred_down_mix_mode = "ltrt-pl2"
     elif args.channels == 6:
         down_mix_config = "5.1"
     elif args.channels == 8:
         down_mix_config = "7.1"
     else:
-        raise Exception("Unsupported channel count")
+        raise ArgumentTypeError("Unsupported channel count")
 
     # Create the directory for the output file if it doesn't exist
     output_dir = Path(args.output).parent
@@ -195,7 +197,6 @@ def main(base_wd: Path):
     # generate xml file and return path
     update_xml = generate_xml(
         down_mix_config=down_mix_config,
-        preferred_down_mix_mode=preferred_down_mix_mode,
         bitrate=str(args.bitrate),
         format=args.format,
         channels=args.channels,
