@@ -2,6 +2,7 @@ from subprocess import Popen, PIPE, STDOUT
 from packages._version import program_name, __version__, developed_by
 from typing import Union
 from re import search
+from argparse import ArgumentTypeError
 
 
 def display_banner():
@@ -73,6 +74,9 @@ def process_ffmpeg(cmd: list, progress_mode: str, duration: Union[float, None]):
             else:
                 print(line.strip())
 
+        if proc.returncode != 0:
+            ArgumentTypeError("There was an FFMPEG error. Please re-run in debug mode.")
+
 
 def _filter_dee_progress(line: str):
     """Filters dee's total progress output
@@ -112,6 +116,10 @@ def process_dee(cmd: list, progress_mode: str):
 
         for line in proc.stdout:
 
+            # check for all dee errors
+            if "] ERROR: " in line:
+                raise ArgumentTypeError(f"There was a DEE error: {line}")
+
             # If progress mode is quiet let's clean up progress output
             if progress_mode == "standard":
 
@@ -134,3 +142,6 @@ def process_dee(cmd: list, progress_mode: str):
                     last_number = progress
             else:
                 print(line.strip())
+
+        if proc.returncode != 0:
+            ArgumentTypeError("There was an DEE error. Please re-run in debug mode.")
