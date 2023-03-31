@@ -172,12 +172,10 @@ def main(base_wd: Path):
     # Work out if we need to do down-mix
     if args.channels > channels:
         raise ArgumentTypeError("Up-mixing is not supported.")
-    elif args.channels == channels:
+    elif args.channels == channels or args.channels == 2:
         down_mix_config = "off"
     elif args.channels == 1:
         down_mix_config = "mono"
-    elif args.channels == 2:
-        down_mix_config = "stereo"
     elif args.channels == 6:
         down_mix_config = "5.1"
     elif args.channels == 8:
