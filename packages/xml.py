@@ -6,7 +6,6 @@ from typing import Union
 
 def generate_xml(
     down_mix_config: str,
-    preferred_down_mix_mode: str,
     bitrate: str,
     format: str,
     channels: int,
@@ -18,7 +17,6 @@ def generate_xml(
 
     Args:
         down_mix_config (str): Down mix type ("off', 'mono', 'stereo', '5.1')
-        preferred_down_mix_mode (str): Accepts 'ltrt-pl2' otherwise it's disabled
         bitrate (str): Bitrate in the format of '448'
         format (str): File format, in short hand terms; "dd", "ddp" etc
         wav_file_name (str): File name only
@@ -36,11 +34,6 @@ def generate_xml(
         "downmix_config"
     ] = down_mix_config
     xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["data_rate"] = str(bitrate)
-
-    # xml down mix config mode
-    xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
-        "preferred_downmix_mode"
-    ] = preferred_down_mix_mode
 
     # xml wav config
     xml_base["job_config"]["input"]["audio"]["wav"]["file_name"] = f'"{wav_file_name}"'
@@ -85,7 +78,7 @@ def generate_xml(
     if updated_template_file.exists():
         updated_template_file.unlink()
 
-    # # write new xml template for dee
+    # write new xml template for dee
     with open(updated_template_file, "w", encoding="utf-8") as xml_out:
         xml_out.write(xmltodict.unparse(xml_base, pretty=True, indent="  "))
 
