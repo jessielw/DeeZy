@@ -80,8 +80,8 @@ def main(base_wd: Path):
     args = parser.parse_args()
 
     # validate correct bitrate, channel count and format
-    validate_channels_with_format(arg_parser=parser, arguments=args)
-    validate_bitrate_with_channels_and_format(arg_parser=parser, arguments=args)
+    validate_channels_with_format(arguments=args)
+    validate_bitrate_with_channels_and_format(arguments=args)
 
     # Check that the input file exists
     if not Path(args.input).exists():
