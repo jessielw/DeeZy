@@ -209,7 +209,7 @@ def main(base_wd: Path):
     update_xml = generate_xml(
         down_mix_config=down_mix_config,
         bitrate=str(args.bitrate),
-        format=args.format,
+        dd_format=args.format,
         channels=args.channels,
         wav_file_name=wav_file_name,
         output_file_name=output_file_name,
