@@ -10,7 +10,7 @@ from packages.utils import (
     validate_channels_with_format,
 )
 from packages._version import program_name, __version__
-from packages.xml import generate_xml
+from packages.xml import generate_xml_dd
 from packages.progress import process_ffmpeg, process_dee, display_banner
 
 
@@ -69,6 +69,12 @@ def main(base_wd: Path):
     )
     parser.add_argument(
         "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
+    )
+    parser.add_argument(
+        "-n",
+        "--normalize",
+        action="store_true",
+        help="Normalize audio for DDP",
     )
     parser.add_argument(
         "-k",
@@ -206,11 +212,12 @@ def main(base_wd: Path):
     output_file_name = str(Path(args.output).name)
 
     # generate xml file and return path
-    update_xml = generate_xml(
+    update_xml = generate_xml_dd(
         down_mix_config=down_mix_config,
         bitrate=str(args.bitrate),
         dd_format=args.format,
         channels=args.channels,
+        normalize=args.normalize,
         wav_file_name=wav_file_name,
         output_file_name=output_file_name,
         output_dir=output_dir,

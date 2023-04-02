@@ -4,11 +4,12 @@ from packages.xml_base import xml_audio_base_ddp
 from typing import Union
 
 
-def generate_xml(
+def generate_xml_dd(
     down_mix_config: str,
     bitrate: str,
     dd_format: str,
     channels: int,
+    normalize: bool,
     wav_file_name: str,
     output_file_name: str,
     output_dir: Union[Path, str],
@@ -19,6 +20,8 @@ def generate_xml(
         down_mix_config (str): Down mix type ("off', 'mono', 'stereo', '5.1')
         bitrate (str): Bitrate in the format of '448'
         dd_format (str): File format, in short hand terms; "dd", "ddp" etc
+        channels: (int): Channels in the format of 1, 2 etc
+        normalize: (bool): True or False, if set to True we will normalize loudness
         wav_file_name (str): File name only
         output_file_name (str): File name only
         output_dir (Union[Path, str]): File path only
@@ -55,16 +58,18 @@ def generate_xml(
         xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "dd"
     elif dd_format == "ddp":
 
-        # Remove measure_only, add measure_and_correct, with default present of atsc_a85
-        del xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
-            "measure_only"
-        ]
-        xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
-            "measure_and_correct"
-        ] = {}
-        xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
-            "measure_and_correct"
-        ]["preset"] = "atsc_a85"
+        # if ddp and normalize is true, adjust template to normalize audio
+        if normalize:
+            # Remove measure_only, add measure_and_correct, with default present of atsc_a85
+            del xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
+                "measure_only"
+            ]
+            xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
+                "measure_and_correct"
+            ] = {}
+            xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
+                "measure_and_correct"
+            ]["preset"] = "atsc_a85"
 
         if channels == 8:
             xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
