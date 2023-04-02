@@ -51,7 +51,7 @@ xml_audio_base_ddp = """<?xml version="1.0"?>
           <loro_surround_mix_level>-3</loro_surround_mix_level>
           <ltrt_center_mix_level>-3</ltrt_center_mix_level>
           <ltrt_surround_mix_level>-3</ltrt_surround_mix_level>
-          <preferred_downmix_mode>not_indicated</preferred_downmix_mode>
+          <preferred_downmix_mode>-</preferred_downmix_mode>
         </downmix>
         <allow_hybrid_downmix>false</allow_hybrid_downmix>
         <embedded_timecodes>

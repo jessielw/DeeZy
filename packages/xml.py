@@ -1,6 +1,6 @@
 import xmltodict
 from pathlib import Path
-from packages.xml_base import xml_audio_base_ddp
+from packages.xml_base import xml_audio_base_ddp, xml_audio_base_atmos
 from typing import Union
 
 
@@ -52,6 +52,17 @@ def generate_xml_dd(
 
     # xml temp path config
     xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
+
+    # set down mix mode
+    if channels == 1:
+        downmix_mode = "not_indicated"
+    elif channels == 2:
+        downmix_mode = "ltrt"
+    elif channels >= 6:
+        downmix_mode = "loro"
+    xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
+        "preferred_downmix_mode"
+    ] = downmix_mode
 
     # file format
     if dd_format == "dd":
