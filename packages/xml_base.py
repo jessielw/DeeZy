@@ -117,7 +117,6 @@ xml_audio_base_atmos = """<?xml version="1.0"?>
           <line_mode_drc_profile>music_light</line_mode_drc_profile>
           <rf_mode_drc_profile>music_light</rf_mode_drc_profile>
         </drc>
-        <downmix_config>off</downmix_config>
         <downmix>
           <loro_center_mix_level>-3</loro_center_mix_level>
           <loro_surround_mix_level>-3</loro_surround_mix_level>
