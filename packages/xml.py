@@ -91,19 +91,21 @@ def generate_xml_dd(
     elif channels == 2:
         if stereo_down_mix == "standard":
             downmix_mode = "ltrt"
-        elif stereo_down_mix == "dplii":
+        elif stereo_down_mix == "dplii" and dd_format == "ddp":
             downmix_mode = "ltrt-pl2"
+        elif stereo_down_mix == "dplii" and dd_format == "dd":
+            downmix_mode = None
     elif channels >= 6:
         downmix_mode = "loro"
 
-    # if encoder is ddp update downmix mode
-    if dd_format == "ddp":
+    # if downmix_mode is not None update the XML entry
+    if downmix_mode:
         xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
             "preferred_downmix_mode"
         ] = downmix_mode
 
-    # if encoder is dd delete downmix entry from XML
-    elif dd_format == "dd":
+    # if downmix_mode is None delete XML entry completely
+    elif not downmix_mode:
         del xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"]
 
     # xml bit rate config
