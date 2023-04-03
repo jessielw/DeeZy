@@ -10,7 +10,7 @@ from packages.utils import (
     validate_channels_with_format,
 )
 from packages._version import program_name, __version__
-from packages.xml import generate_xml
+from packages.xml import generate_xml_dd
 from packages.progress import process_ffmpeg, process_dee, display_banner
 
 
@@ -69,6 +69,12 @@ def main(base_wd: Path):
     )
     parser.add_argument(
         "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
+    )
+    parser.add_argument(
+        "-n",
+        "--normalize",
+        action="store_true",
+        help="Normalize audio for DDP.",
     )
     parser.add_argument(
         "-k",
@@ -147,7 +153,7 @@ def main(base_wd: Path):
 
     if resample:
         channel_swap = ""
-        if channels == 2 and args.stereo_down_mix == "dplii":
+        if channels == 2 and args.stereo_down_mix == "dplii" and args.format == "dd":
             channel_swap = "aresample=matrix_encoding=dplii,"
         elif channels == 8:
             channel_swap = "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
@@ -167,7 +173,12 @@ def main(base_wd: Path):
     else:
         resample_args = []
 
-    if channels == 2 and not resample_args and args.stereo_down_mix == "dplii":
+    if (
+        channels == 2
+        and not resample_args
+        and args.stereo_down_mix == "dplii"
+        and args.format == "dd"
+    ):
         channel_swap_args = ["-af", "aresample=matrix_encoding=dplii"]
     elif channels == 8 and not resample_args:
         channel_swap_args = [
@@ -185,10 +196,10 @@ def main(base_wd: Path):
     elif args.channels == 1:
         down_mix_config = "mono"
     elif args.channels == 2:
-        if args.stereo_down_mix == "standard":
-            down_mix_config = "stereo"
-        elif args.stereo_down_mix == "dplii":
+        if args.stereo_down_mix == "dplii" and args.format == "dd":
             down_mix_config = "off"
+        else:
+            down_mix_config = "stereo"
     elif args.channels == 6:
         down_mix_config = "5.1"
     elif args.channels == 8:
@@ -206,11 +217,13 @@ def main(base_wd: Path):
     output_file_name = str(Path(args.output).name)
 
     # generate xml file and return path
-    update_xml = generate_xml(
+    update_xml = generate_xml_dd(
         down_mix_config=down_mix_config,
+        stereo_down_mix=args.stereo_down_mix,
         bitrate=str(args.bitrate),
-        format=args.format,
+        dd_format=args.format,
         channels=args.channels,
+        normalize=args.normalize,
         wav_file_name=wav_file_name,
         output_file_name=output_file_name,
         output_dir=output_dir,
@@ -220,7 +233,7 @@ def main(base_wd: Path):
     display_banner()
 
     # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
-    if args.channels == 2 and args.stereo_down_mix == "dplii":
+    if args.channels == 2 and args.stereo_down_mix == "dplii" and args.format == "dd":
         ffmpeg_ac = ["-ac", "2"]
     else:
         ffmpeg_ac = []

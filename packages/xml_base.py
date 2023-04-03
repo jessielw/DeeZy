@@ -1,4 +1,4 @@
-xml_audio_base = """<?xml version="1.0"?>
+xml_audio_base_ddp = """<?xml version="1.0"?>
 <job_config>
   <input>
     <audio>
@@ -30,11 +30,11 @@ xml_audio_base = """<?xml version="1.0"?>
         <downmix_config>off</downmix_config>
         <data_rate>-</data_rate>
         <timecode_frame_rate>not_indicated</timecode_frame_rate>
-        <start>00:00:00.0</start>
+        <start>first_frame_of_action</start>
         <end>end_of_file</end>
         <time_base>file_position</time_base>
         <prepend_silence_duration>0.0</prepend_silence_duration>
-        <append_silence_duration>0.0</append_silence_duration>
+        <append_silence_duration>0.0</append_silence_duration> 
         <lfe_on>true</lfe_on>
         <dolby_surround_mode>not_indicated</dolby_surround_mode>
         <dolby_surround_ex_mode>no</dolby_surround_ex_mode>
@@ -43,18 +43,17 @@ xml_audio_base = """<?xml version="1.0"?>
           <line_mode_drc_profile>music_light</line_mode_drc_profile>
           <rf_mode_drc_profile>music_light</rf_mode_drc_profile>
         </drc>
-		    <custom_dialnorm>0</custom_dialnorm>
         <lfe_lowpass_filter>true</lfe_lowpass_filter>
-        <surround_90_degree_phase_shift>false</surround_90_degree_phase_shift>
-        <surround_3db_attenuation>false</surround_3db_attenuation>
+        <surround_90_degree_phase_shift>true</surround_90_degree_phase_shift>
+        <surround_3db_attenuation>true</surround_3db_attenuation>
         <downmix>
           <loro_center_mix_level>-3</loro_center_mix_level>
-          <loro_surround_mix_level>-3</loro_surround_mix_level>  
-          <ltrt_center_mix_level>-3</ltrt_center_mix_level>    
-          <ltrt_surround_mix_level>-3</ltrt_surround_mix_level>  
-          <preferred_downmix_mode>not_indicated</preferred_downmix_mode>  
+          <loro_surround_mix_level>-3</loro_surround_mix_level>
+          <ltrt_center_mix_level>-3</ltrt_center_mix_level>
+          <ltrt_surround_mix_level>-3</ltrt_surround_mix_level>
+          <preferred_downmix_mode>-</preferred_downmix_mode>
         </downmix>
-        <allow_hybrid_downmix>false</allow_hybrid_downmix>   
+        <allow_hybrid_downmix>false</allow_hybrid_downmix>
         <embedded_timecodes>
           <starting_timecode>off</starting_timecode>
           <frame_rate>auto</frame_rate>
@@ -71,6 +70,76 @@ xml_audio_base = """<?xml version="1.0"?>
         </local>
       </storage>
     </ac3>
+  </output>
+  <misc>
+    <temp_dir>
+      <clean_temp>true</clean_temp>
+      <path>-</path>
+    </temp_dir>
+  </misc>
+</job_config>"""
+
+xml_audio_base_atmos = """<?xml version="1.0"?>
+<job_config>
+  <input>
+    <audio>
+      <wav version="1">
+        <file_name>-</file_name>
+        <timecode_frame_rate>not_indicated</timecode_frame_rate>
+        <offset>auto</offset>
+        <ffoa>auto</ffoa>
+        <storage>
+          <local>
+            <path>-</path>
+          </local>
+        </storage>
+      </wav>
+    </audio>
+  </input>
+  <filter>
+    <audio>
+      <encode_to_atmos_ddp version="1">
+        <loudness>
+          <measure_only>
+            <metering_mode>1770-4</metering_mode>
+            <dialogue_intelligence>true</dialogue_intelligence>
+            <speech_threshold>20</speech_threshold>
+          </measure_only>
+        </loudness>
+        <data_rate>-</data_rate>
+        <timecode_frame_rate>not_indicated</timecode_frame_rate>
+        <start>first_frame_of_action</start>
+        <end>end_of_file</end>
+        <time_base>file_position</time_base>
+        <prepend_silence_duration>0.0</prepend_silence_duration>
+        <append_silence_duration>0.0</append_silence_duration>
+        <drc>
+          <line_mode_drc_profile>music_light</line_mode_drc_profile>
+          <rf_mode_drc_profile>music_light</rf_mode_drc_profile>
+        </drc>
+        <downmix>
+          <loro_center_mix_level>-3</loro_center_mix_level>
+          <loro_surround_mix_level>-3</loro_surround_mix_level>
+          <ltrt_center_mix_level>-3</ltrt_center_mix_level>
+          <ltrt_surround_mix_level>-3</ltrt_surround_mix_level>
+          <preferred_downmix_mode>-</preferred_downmix_mode>
+        </downmix>
+        <custom_trims>
+          <surround_trim_5_1>auto</surround_trim_5_1>
+          <height_trim_5_1>auto</height_trim_5_1>
+        </custom_trims>
+      </encode_to_atmos_ddp>
+    </audio>
+  </filter>
+  <output>
+    <ec3 version="1">
+      <file_name>-</file_name>
+      <storage>
+        <local>
+          <path>-</path>
+        </local>
+      </storage>
+    </ec3>
   </output>
   <misc>
     <temp_dir>
