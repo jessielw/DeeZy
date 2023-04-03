@@ -10,7 +10,7 @@ from packages.utils import (
     validate_channels_with_format,
 )
 from packages._version import program_name, __version__
-from packages.xml import generate_xml_dd
+from packages.xml import generate_xml_dd, generate_xml_atmos
 from packages.progress import process_ffmpeg, process_dee, display_banner
 
 
@@ -74,7 +74,7 @@ def main(base_wd: Path):
         "-n",
         "--normalize",
         action="store_true",
-        help="Normalize audio for DDP",
+        help="Normalize audio for DDP/Atmos.",
     )
     parser.add_argument(
         "-k",
@@ -212,16 +212,27 @@ def main(base_wd: Path):
     output_file_name = str(Path(args.output).name)
 
     # generate xml file and return path
-    update_xml = generate_xml_dd(
-        down_mix_config=down_mix_config,
-        bitrate=str(args.bitrate),
-        dd_format=args.format,
-        channels=args.channels,
-        normalize=args.normalize,
-        wav_file_name=wav_file_name,
-        output_file_name=output_file_name,
-        output_dir=output_dir,
-    )
+    if args.format == "dd" or args.format == "ddp":
+        update_xml = generate_xml_dd(
+            down_mix_config=down_mix_config,
+            bitrate=str(args.bitrate),
+            dd_format=args.format,
+            channels=args.channels,
+            normalize=args.normalize,
+            wav_file_name=wav_file_name,
+            output_file_name=output_file_name,
+            output_dir=output_dir,
+        )
+    elif args.format == "atmos":
+        update_xml = generate_xml_atmos(
+            down_mix_config=down_mix_config,
+            bitrate=str(args.bitrate),
+            channels=args.channels,
+            normalize=args.normalize,
+            wav_file_name=wav_file_name,
+            output_file_name=output_file_name,
+            output_dir=output_dir,
+        )
 
     # display banner to console
     display_banner()
