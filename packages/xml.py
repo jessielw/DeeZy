@@ -38,6 +38,7 @@ def _save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
 
 def generate_xml_dd(
     down_mix_config: str,
+    stereo_down_mix: str,
     bitrate: str,
     dd_format: str,
     channels: int,
@@ -50,6 +51,7 @@ def generate_xml_dd(
 
     Args:
         down_mix_config (str): Down mix type ("off', 'mono', 'stereo', '5.1')
+        stereo_down_mix (str): Can be "standard" or "dplii"
         bitrate (str): Bitrate in the format of '448'
         dd_format (str): File format, in short hand terms; "dd", "ddp" etc
         channels: (int): Channels in the format of 1, 2 etc
@@ -87,7 +89,10 @@ def generate_xml_dd(
     if channels == 1:
         downmix_mode = "not_indicated"
     elif channels == 2:
-        downmix_mode = "ltrt"
+        if stereo_down_mix == "standard":
+            downmix_mode = "ltrt"
+        elif stereo_down_mix == "dplii":
+            downmix_mode = "ltrt-pl2"
     elif channels >= 6:
         downmix_mode = "loro"
     xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
@@ -147,6 +152,7 @@ def generate_xml_dd(
 
 def generate_xml_atmos(
     down_mix_config: str,
+    stereo_down_mix: str,
     bitrate: str,
     channels: int,
     normalize: bool,
@@ -158,6 +164,7 @@ def generate_xml_atmos(
 
     Args:
         down_mix_config (str): Down mix type ("off', 'mono', 'stereo', '5.1')
+        stereo_down_mix (str): Can be "standard" or "dplii"
         bitrate (str): Bitrate in the format of '448'
         channels: (int): Channels in the format of 1, 2 etc
         normalize: (bool): True or False, if set to True we will normalize loudness
@@ -194,7 +201,10 @@ def generate_xml_atmos(
     if channels == 1:
         downmix_mode = "not_indicated"
     elif channels == 2:
-        downmix_mode = "ltrt"
+        if stereo_down_mix == "standard":
+            downmix_mode = "ltrt"
+        elif stereo_down_mix == "dplii":
+            downmix_mode = "ltrt-pl2"
     elif channels >= 6:
         downmix_mode = "loro"
     xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
