@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 from argparse import ArgumentParser, ArgumentTypeError
-from packages.bitrates import allowed_bitrates
+from packages.ddp_bitrates import allowed_bitrates
 from xmltodict import unparse
 
 
