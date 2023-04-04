@@ -3,14 +3,14 @@ import argparse
 from argparse import ArgumentTypeError
 from pathlib import Path
 from pymediainfo import MediaInfo
-from packages.utils import (
+from packages.shared_utils import (
     get_working_dir,
     validate_track_index,
-    validate_bitrate_with_channels_and_format,
     validate_channels_with_format,
+    validate_bitrate_with_channels_and_format,
 )
 from packages._version import program_name, __version__
-from packages.xml import generate_xml_dd
+from packages.ddp_utils import generate_xml_dd
 from packages.progress import process_ffmpeg, process_dee, display_banner
 
 
@@ -38,7 +38,6 @@ def main(base_wd: Path):
         "--channels",
         choices=[1, 2, 6, 8],
         type=int,
-        required=True,
         help="The number of channels.",
     )
     parser.add_argument(
@@ -55,7 +54,7 @@ def main(base_wd: Path):
     parser.add_argument(
         "-f",
         "--format",
-        choices=["dd", "ddp"],
+        choices=["dd", "ddp", "atmos"],
         type=str,
         default="dd",
         help="The file format.",
