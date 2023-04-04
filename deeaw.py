@@ -3,15 +3,15 @@ import argparse
 from argparse import ArgumentTypeError
 from pathlib import Path
 from pymediainfo import MediaInfo
-from packages.shared_utils import (
+from packages.shared.shared_utils import (
     get_working_dir,
     validate_track_index,
     validate_channels_with_format,
     validate_bitrate_with_channels_and_format,
 )
-from packages._version import program_name, __version__
-from packages.ddp_utils import generate_xml_dd
-from packages.progress import process_ffmpeg, process_dee, display_banner
+from packages.shared._version import program_name, __version__
+from packages.dd_ddp.ddp_utils import generate_xml_dd
+from packages.shared.progress import process_ffmpeg, process_dee, display_banner
 
 
 def main(base_wd: Path):

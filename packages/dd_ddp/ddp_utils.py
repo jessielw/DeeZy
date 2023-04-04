@@ -1,7 +1,7 @@
 import xmltodict
 from pathlib import Path
-from packages.xml_base_s import xml_audio_base_ddp
-from packages.shared_utils import save_xml
+from packages.dd_ddp.xml_base import xml_audio_base_ddp
+from packages.shared.shared_utils import save_xml
 from typing import Union
 from argparse import ArgumentTypeError
 

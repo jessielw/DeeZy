@@ -1,5 +1,5 @@
 from subprocess import Popen, PIPE, STDOUT
-from packages._version import program_name, __version__, developed_by
+from packages.shared._version import program_name, __version__, developed_by
 from typing import Union
 from re import search
 from argparse import ArgumentTypeError

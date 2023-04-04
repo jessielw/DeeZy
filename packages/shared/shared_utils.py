@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 from argparse import ArgumentParser, ArgumentTypeError
-from packages.ddp_bitrates import allowed_bitrates
+from packages.dd_ddp import dd_ddp_bitrates
 from xmltodict import unparse
 
 
@@ -112,22 +112,22 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
     if arguments.format != "atmos":
         if arguments.format == "dd":
             if arguments.channels == 1:
-                valid_bitrates = allowed_bitrates.get("dd_10")
+                valid_bitrates = dd_ddp_bitrates.get("dd_10")
             elif arguments.channels == 2:
-                valid_bitrates = allowed_bitrates.get("dd_20")
+                valid_bitrates = dd_ddp_bitrates.get("dd_20")
             elif arguments.channels == 6:
-                valid_bitrates = allowed_bitrates.get("dd_51")
+                valid_bitrates = dd_ddp_bitrates.get("dd_51")
             else:
                 raise ArgumentTypeError("Invalid channel count.")
         elif arguments.format == "ddp":
             if arguments.channels == 1:
-                valid_bitrates = allowed_bitrates.get("ddp_10")
+                valid_bitrates = dd_ddp_bitrates.get("ddp_10")
             elif arguments.channels == 2:
-                valid_bitrates = allowed_bitrates.get("ddp_20")
+                valid_bitrates = dd_ddp_bitrates.get("ddp_20")
             elif arguments.channels == 6:
-                valid_bitrates = allowed_bitrates.get("ddp_51")
+                valid_bitrates = dd_ddp_bitrates.get("ddp_51")
             elif arguments.channels == 8:
-                valid_bitrates = allowed_bitrates.get("ddp_71_standard")
+                valid_bitrates = dd_ddp_bitrates.get("ddp_71_standard")
             else:
                 raise ArgumentTypeError("Invalid channel count.")
         else:
