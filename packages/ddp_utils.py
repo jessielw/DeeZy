@@ -1,39 +1,9 @@
 import xmltodict
 from pathlib import Path
-from packages.xml_base import xml_audio_base_ddp, xml_audio_base_atmos
+from packages.xml_base_s import xml_audio_base_ddp
+from packages.shared_utils import save_xml
 from typing import Union
 from argparse import ArgumentTypeError
-
-
-def _save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
-    """Creates/Deletes old XML files for use with DEE
-
-    Args:
-        output_dir (Path): Full output directory
-        output_file_name (Path): File name
-        xml_base (dict): XML generated dictionary
-
-    Returns:
-        Path: Path to XML file for DEE
-    """
-    # Save out the updated template (use filename output with xml suffix)
-    updated_template_file = Path(output_dir / Path(output_file_name)).with_suffix(
-        ".xml"
-    )
-
-    # delete xml output template if one already exists
-    if updated_template_file.exists():
-        updated_template_file.unlink()
-
-    # write new xml template for dee
-    with open(updated_template_file, "w", encoding="utf-8") as xml_out:
-        xml_out.write(xmltodict.unparse(xml_base, pretty=True, indent="  "))
-
-    # check to ensure template file was created
-    if updated_template_file.exists():
-        return updated_template_file
-    else:
-        raise ArgumentTypeError("XML file could not be created")
 
 
 def generate_xml_dd(
@@ -152,7 +122,7 @@ def generate_xml_dd(
         raise ArgumentTypeError("Unknown file format.")
 
     # create XML and return path to XML
-    updated_template_file = _save_xml(
+    updated_template_file = save_xml(
         output_dir=output_dir, output_file_name=output_file_name, xml_base=xml_base
     )
 
