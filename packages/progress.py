@@ -117,7 +117,7 @@ def process_dee(cmd: list, progress_mode: str):
         for line in proc.stdout:
 
             # check for all dee errors
-            if "] ERROR: " in line:
+            if "ERROR" in line:
                 raise ArgumentTypeError(f"There was a DEE error: {line}")
 
             # If progress mode is quiet let's clean up progress output
