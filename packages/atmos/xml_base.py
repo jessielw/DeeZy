@@ -2,7 +2,7 @@ xml_audio_base_atmos = """<?xml version="1.0"?>
 <job_config>
   <input>
     <audio>
-      <wav version="1">
+      <thd version="1">
         <file_name>-</file_name>
         <timecode_frame_rate>not_indicated</timecode_frame_rate>
         <offset>auto</offset>
@@ -12,40 +12,23 @@ xml_audio_base_atmos = """<?xml version="1.0"?>
             <path>-</path>
           </local>
         </storage>
-      </wav>
+      </thd>
     </audio>
   </input>
   <filter>
     <audio>
       <encode_to_atmos_ddp version="1">
-        <loudness>
-          <measure_only>
-            <metering_mode>1770-4</metering_mode>
-            <dialogue_intelligence>true</dialogue_intelligence>
-            <speech_threshold>20</speech_threshold>
-          </measure_only>
-        </loudness>
-        <data_rate>-</data_rate>
+        <input_channel_layout>7.1.2</input_channel_layout>
+        <data_rate>1500</data_rate>
         <timecode_frame_rate>not_indicated</timecode_frame_rate>
         <start>first_frame_of_action</start>
         <end>end_of_file</end>
         <time_base>file_position</time_base>
         <prepend_silence_duration>0.0</prepend_silence_duration>
         <append_silence_duration>0.0</append_silence_duration>
-        <drc>
-          <line_mode_drc_profile>music_light</line_mode_drc_profile>
-          <rf_mode_drc_profile>music_light</rf_mode_drc_profile>
-        </drc>
-        <downmix>
-          <loro_center_mix_level>-3</loro_center_mix_level>
-          <loro_surround_mix_level>-3</loro_surround_mix_level>
-          <ltrt_center_mix_level>-3</ltrt_center_mix_level>
-          <ltrt_surround_mix_level>-3</ltrt_surround_mix_level>
-          <preferred_downmix_mode>-</preferred_downmix_mode>
-        </downmix>
         <custom_trims>
-          <surround_trim_5_1>auto</surround_trim_5_1>
-          <height_trim_5_1>auto</height_trim_5_1>
+          <surround_trim_5_1>0.0</surround_trim_5_1>
+          <height_trim_5_1>0.0</height_trim_5_1>
         </custom_trims>
       </encode_to_atmos_ddp>
     </audio>

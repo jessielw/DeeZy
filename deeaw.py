@@ -11,6 +11,7 @@ from packages.shared.shared_utils import (
 )
 from packages.shared._version import program_name, __version__
 from packages.dd_ddp.ddp_utils import generate_xml_dd
+from packages.atmos.atmos_utils import generate_xml_atmos
 from packages.shared.progress import process_ffmpeg, process_dee, display_banner
 
 
@@ -152,10 +153,17 @@ def main(base_wd: Path):
 
     if resample:
         channel_swap = ""
-        if channels == 2 and args.stereo_down_mix == "dplii" and args.format == "dd":
-            channel_swap = "aresample=matrix_encoding=dplii,"
-        elif channels == 8:
-            channel_swap = "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
+        if args.format != "atmos":
+            if (
+                channels == 2
+                and args.stereo_down_mix == "dplii"
+                and args.format == "dd"
+            ):
+                channel_swap = "aresample=matrix_encoding=dplii,"
+            elif channels == 8:
+                channel_swap = (
+                    "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
+                )
 
         resample_args = [
             "-af",
@@ -179,7 +187,7 @@ def main(base_wd: Path):
         and args.format == "dd"
     ):
         channel_swap_args = ["-af", "aresample=matrix_encoding=dplii"]
-    elif channels == 8 and not resample_args:
+    elif channels == 8 and not resample_args and args.format != "atmos":
         channel_swap_args = [
             "-af",
             "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
@@ -188,23 +196,24 @@ def main(base_wd: Path):
         channel_swap_args = []
 
     # Work out if we need to do down-mix
-    if args.channels > channels:
-        raise ArgumentTypeError("Up-mixing is not supported.")
-    elif args.channels == channels:
-        down_mix_config = "off"
-    elif args.channels == 1:
-        down_mix_config = "mono"
-    elif args.channels == 2:
-        if args.stereo_down_mix == "dplii" and args.format == "dd":
+    if args.format != "atmos":
+        if args.channels > channels:
+            raise ArgumentTypeError("Up-mixing is not supported.")
+        elif args.channels == channels:
             down_mix_config = "off"
+        elif args.channels == 1:
+            down_mix_config = "mono"
+        elif args.channels == 2:
+            if args.stereo_down_mix == "dplii" and args.format == "dd":
+                down_mix_config = "off"
+            else:
+                down_mix_config = "stereo"
+        elif args.channels == 6:
+            down_mix_config = "5.1"
+        elif args.channels == 8:
+            down_mix_config = "7.1"
         else:
-            down_mix_config = "stereo"
-    elif args.channels == 6:
-        down_mix_config = "5.1"
-    elif args.channels == 8:
-        down_mix_config = "7.1"
-    else:
-        raise ArgumentTypeError("Unsupported channel count")
+            raise ArgumentTypeError("Unsupported channel count")
 
     # Create the directory for the output file if it doesn't exist
     output_dir = Path(args.output).parent
@@ -216,17 +225,26 @@ def main(base_wd: Path):
     output_file_name = str(Path(args.output).name)
 
     # generate xml file and return path
-    update_xml = generate_xml_dd(
-        down_mix_config=down_mix_config,
-        stereo_down_mix=args.stereo_down_mix,
-        bitrate=str(args.bitrate),
-        dd_format=args.format,
-        channels=args.channels,
-        normalize=args.normalize,
-        wav_file_name=wav_file_name,
-        output_file_name=output_file_name,
-        output_dir=output_dir,
-    )
+    if args.format == "dd" or args.format == "ddp":
+        update_xml = generate_xml_dd(
+            down_mix_config=down_mix_config,
+            stereo_down_mix=args.stereo_down_mix,
+            bitrate=str(args.bitrate),
+            dd_format=args.format,
+            channels=args.channels,
+            normalize=args.normalize,
+            wav_file_name=wav_file_name,
+            output_file_name=output_file_name,
+            output_dir=output_dir,
+        )
+    elif args.format == "atmos":
+        update_xml = generate_xml_atmos(
+            bitrate=str(args.bitrate),
+            normalize=args.normalize,
+            wav_file_name=wav_file_name,
+            output_file_name=output_file_name,
+            output_dir=output_dir,
+        )
 
     # display banner to console
     display_banner()
@@ -234,6 +252,9 @@ def main(base_wd: Path):
     # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
     if args.channels == 2 and args.stereo_down_mix == "dplii" and args.format == "dd":
         ffmpeg_ac = ["-ac", "2"]
+    elif args.format == "atmos":
+        atmos_channels = str(track_info.format_additionalfeatures).split("-")[0]
+        ffmpeg_ac = ["-ac", atmos_channels]
     else:
         ffmpeg_ac = []
 
@@ -259,7 +280,7 @@ def main(base_wd: Path):
         "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    process_ffmpeg(ffmpeg_cmd, args.progress_mode, duration)
+    # process_ffmpeg(ffmpeg_cmd, args.progress_mode, duration)
 
     # Call dee to generate the encode file
     dee_cm = [

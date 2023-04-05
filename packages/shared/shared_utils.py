@@ -2,7 +2,7 @@ from pathlib import Path
 import sys
 from argparse import ArgumentParser, ArgumentTypeError
 from packages.dd_ddp import dd_ddp_bitrates
-from xmltodict import unparse
+import xmltodict
 
 
 def get_working_dir():
@@ -44,7 +44,7 @@ def save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
 
     # write new xml template for dee
     with open(updated_template_file, "w", encoding="utf-8") as xml_out:
-        xml_out.write(unparse(xml_base, pretty=True, indent="  "))
+        xml_out.write(xmltodict.unparse(xml_base, pretty=True, indent="  "))
 
     # check to ensure template file was created
     if updated_template_file.exists():
