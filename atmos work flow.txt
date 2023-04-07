@@ -1,0 +1,25 @@
+tests:
+ffmpeg -i "1.01_L.wav" -i "1.02_R.wav" -i "1.03_C.wav" -i "1.04_LFE.wav" -i "1.05_Ls.wav" -i "1.06_Rs.wav" -i "1.07_Ltf.wav" -i "1.08_Rtf.wav" -i "1.09_Ltr.wav" -i "1.10_Rtr.wav" -c pcm_s32le -filter_complex "join=inputs=10:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-SL|7.0-SR|8.0-BC|9.0-TC" 5.1.4.w64
+
+
+ffmpeg -i "1.01_L.wav" -i "1.02_R.wav" -i "1.03_C.wav" -i "1.04_LFE.wav" -i "1.05_Ls.wav" -i "1.06_Rs.wav" -i "1.07_Ltf.wav" -i "1.08_Rtf.wav" -i "1.09_Ltr.wav" -i "1.10_Rtr.wav" -c pcm_s32le -filter_complex "join=inputs=10:channel_layout=5.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-TBL|7.0-TBR|8.0-TFL|9.0-TFR" 5.1.4.w64
+
+
+ffmpeg -i "12_Channel_ID 1.wav" -i "12_Channel_ID 2.wav" -i "12_Channel_ID 3.wav" -i "12_Channel_ID 4.wav" -i "12_Channel_ID 5.wav" -i "12_Channel_ID 6.wav" -i "12_Channel_ID 7.wav" -i "12_Channel_ID 8.wav" -i "12_Channel_ID 9.wav" -i "12_Channel_ID 10.wav" -i "12_Channel_ID 11.wav" -i "12_Channel_ID 12.wav" -c pcm_s32le -filter_complex "join=inputs=12:channel_layout=7.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-SL|7.0-SR|8.0-TFL|9.0-TFR|10.0-TBL|11.0-TBR" 7.1.4.wav
+
+
+
+working commands:
+
+run python script for 5.1.4 from truehd track to create 10 wav files
+
+convert 10 wavs for 5.1.4 to single w64:   ( pcm_24le is the only working format )
+ffmpeg -i "1.01_L.wav" -i "1.02_R.wav" -i "1.03_C.wav" -i "1.04_LFE.wav" -i "1.05_Ls.wav" -i "1.06_Rs.wav" -i "1.07_Ltf.wav" -i "1.08_Rtf.wav" -i "1.09_Ltr.wav" -i "1.10_Rtr.wav" -c pcm_s24le -filter_complex "join=inputs=10:channel_layout=5.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-TBL|7.0-TBR|8.0-TFL|9.0-TFR" 5.1.4.w64
+
+convert w64 to caf:
+ffmpeg -i 5.1.4.w64 -c:a copy -f caf "C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\script waves\5.1.4.caf"
+
+must rename caf to x.atmos.audio after conversion
+
+copy 5.1.4 template atmos mezz files over with correct names 
+modify top atmos mezz with updated information from source file
