@@ -62,7 +62,7 @@ def generate_truehd_decode_command(
             'filesrc', f'location={prepare_file_path(input_file)}', '!',
             'dlbtruehdparse', 'align-major-sync=false', '!',
             'dlbaudiodecbin', 'truehddec-presentation=16', f'out-ch-config={out_channel_config_id}', '!',
-            'deinterleave', 'name=d', f'd.src_{int(channel_id) + 1}', '!',
+            'deinterleave', 'name=d', f'd.src_{str(channel_id)}', '!',
             'wavenc', '!',
             'filesink', f'location={prepare_file_path(output_wav_s)}'
         ]
