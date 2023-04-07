@@ -303,4 +303,9 @@ def main(base_wd: Path):
 
 
 if __name__ == "__main__":
-    main(base_wd=get_working_dir())
+    # main(base_wd=get_working_dir())
+    
+    from packages.atmos.atmos_decoder import atmos_decode
+    atmos_decode(r"E:\programming\BHDStudio-DEEWrapper\apps\drp\gst-launch-1.0.exe", 
+             r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv",
+             "1")
