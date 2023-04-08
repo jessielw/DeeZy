@@ -57,6 +57,8 @@ def generate_truehd_decode_command(
     It utilizes Dolby Reference Players plugins with gstreamer to decode.
     Gstreamer is very picky when it comes to the file paths, so we need
     to use Path().as_posix() for both "location" commands.  
+    
+    For "d.src_" we're subtracting 1 from the channel because we need to start at 0.
 
     Args:
         gst_launch_exe (Path): Full path to gst-launch-1.0.exe
@@ -162,39 +164,31 @@ def create_atmos_audio(ffmpeg, w64_path):
         return atmos_file_path
     
     
-def create_mezz_files(temp_dir, atmos_audio_file, fps):
-    mezz_templates = "apps\drp\channel_layouts\5.1.4"
+def create_mezz_files(temp_dir, atmos_audio_file, fps: str = "not_indicated"):
+    mezz_templates = Path(r"E:\programming\BHDStudio-DEEWrapper\apps\drp\channel_layouts\5.1.4").glob("*.*")
     
     # base name
     base_name = Path(Path(atmos_audio_file).name).with_suffix("")
     
-    # copy templates
+    # copy and rename templates
     for template in mezz_templates:
-        shutil.copy(src=Path(template), dst=Path(temp_dir))
-        
-    # discover templates/rename templates
-    for template_file in Path(temp_dir).glob("*.*"):
-        if "output.atmos" in str(Path(template_file).name):   
-            original_name = Path(template_file).name
-            new_name = str(original_name).replace("output", str(base_name))
-            Path(template_file).replace(new_name)
+        if "output.atmos" in template.name:
+            copied_template_name = template.name.replace("output.atmos", str(base_name))
+            shutil.copy(src=Path(template), dst=Path(temp_dir) / copied_template_name)
             
-    # modify atmos mezz
-    main_mezz = base_name.with_suffix(".atmos")
+    # define main mezz file
+    main_mezz = Path(Path(atmos_audio_file).parent) / Path(str(base_name) + "audio").with_suffix(".atmos")
     
-    # we need to modify lines with data
-    with open(main_mezz, "rt") as atmos_in:
+    # read template into memory, replacing values, and then write new file with the updated values
+    with open(main_mezz, 'rt') as atmos_in, open(main_mezz.with_suffix('.new'), 'wt') as atmos_out:
         mezz_to_memory = atmos_in.read()
-        
-        mezz_to_memory = mezz_to_memory.replace("metadata: output.atmos.metadata", f"metadata: {str(base_name)}.atmos.metadata").replace("audio: output.atmos.audio", f"audio: {str(base_name)}.atmos.audio").replace("fps: 29.97", f"fps: {str(fps)}")
-    
-    # delete empty template
-    main_mezz.unlink()
-    
-    # create new template with correct data data
-    with open(main_mezz, "wt") as atmos_out:
+        mezz_to_memory = mezz_to_memory.replace('metadata: output.atmos.metadata', f'metadata: {str(base_name.with_suffix(""))}.atmos.metadata').replace('audio: output.atmos.audio', f'audio: {str(base_name.with_suffix(""))}.atmos.audio').replace('fps: 29.97', f'fps: {str(fps)}')
         atmos_out.write(mezz_to_memory)
-        
+
+    # delete empty template and rename the new file to the original file name
+    main_mezz.unlink()
+    main_mezz.with_suffix('.new').replace(main_mezz)
+
     # return mezz file location
     if main_mezz.is_file():
         return main_mezz
@@ -206,16 +200,16 @@ def atmos_decode(gst_launch_exe, input_file, ffmpeg_thd_track):
     _check_disk_space(input_file)
     
     # create temp directory
-    temp_dir = create_temp_dir(input_file)
-    # temp_dir = Path(r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp")
+    # temp_dir = create_temp_dir(input_file)
+    temp_dir = Path(r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp")
     
     # demux true hd atmos track
-    demuxed_thd = demux_true_hd(input_file, temp_dir, ffmpeg_thd_track)
-    if not demuxed_thd:
-        #TODO We need to fall back or something here?
-        pass
+    # demuxed_thd = demux_true_hd(input_file, temp_dir, ffmpeg_thd_track)
+    # if not demuxed_thd:
+    #     #TODO We need to fall back or something here?
+    #     pass
     
-    # demuxed_thd = Path(r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp\extracted_thd.mlp")
+    demuxed_thd = Path(r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp\extracted_thd.mlp")
     
     # check to ensure valid truehd
     check_for_thd(demuxed_thd)
@@ -235,39 +229,52 @@ def atmos_decode(gst_launch_exe, input_file, ffmpeg_thd_track):
     output_wav_s_list = []
     
     # process the channels 1 by 1
-    for channel_count, channel_name in enumerate(channel_names, start=1):
+    # processes = []
+    # for channel_count, channel_name in enumerate(channel_names):
         
-        # generate wav name
-        output_wav_s = Path(temp_dir / f'{str(channel_count)}_{channel_name}').with_suffix(".wav")
+    #     # generate wav name
+    #     output_wav_s = Path(temp_dir / f'{str(channel_count)}_{channel_name}').with_suffix(".wav")
 
-        # generate command
-        command = generate_truehd_decode_command(Path(gst_launch_exe), Path(demuxed_thd), Path(output_wav_s), channel_count, channel_id)
+    #     # generate command
+    #     command = generate_truehd_decode_command(Path(gst_launch_exe), Path(demuxed_thd), Path(output_wav_s), channel_count, channel_id)
 
-        # decode
-        with Popen(command, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-            for line in proc.stdout:
-                print(line)
+        
+    #     # temp
+    #     processes.append(Popen(command))
+    #     output_wav_s_list.append(output_wav_s)
+    #     #
+    # for process in processes:
+    #     process.wait()
+    
+    # print(processes)
+    # print("\n\n\n")
+    # print(output_wav_s_list)
+        
+        # # decode
+        # with Popen(command, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
+        #     for line in proc.stdout:
+        #         print(line)
                 
-                # if there are any errors we need to break from this and fall back
-                if "ERROR" in line:
-                    error = True
-                    break
+        #         # if there are any errors we need to break from this and fall back
+        #         if "ERROR" in line:
+        #             error = True
+        #             break
                 
-                # if no errors are detected decode the channels 1 by 1 updating progress for each channel
-                else:
-                    generate_progress = f"Decoding channel {str(channel_count)} of {str(len(channel_names))}"
-                    if progress_var != generate_progress:
-                        progress_var = generate_progress
-                        print(generate_progress)
+        #         # if no errors are detected decode the channels 1 by 1 updating progress for each channel
+        #         else:
+        #             generate_progress = f"Decoding channel {str(channel_count)} of {str(len(channel_names))}"
+        #             if progress_var != generate_progress:
+        #                 progress_var = generate_progress
+        #                 print(generate_progress)
         
         # if there was any errors detected, break from the for loop and fall back
-        if error:
-            #TODO we need to fall back here?
-            break
+        # if error:
+        #     #TODO we need to fall back here?
+        #     break
         
         # if there was no error add wav files to list to be used later
-        else:
-            output_wav_s_list.append(output_wav_s)
+        # else:
+        #     output_wav_s_list.append(output_wav_s)
     
     # testing list, delete later
     # output_wav_s_list = []
@@ -278,10 +285,10 @@ def atmos_decode(gst_launch_exe, input_file, ffmpeg_thd_track):
         
     if not error:
         # generate combined wav
-        generate_w64 = combine_all_wav_s(temp_dir, output_wav_s_list)
+        # generate_w64 = combine_all_wav_s("ffmpeg", temp_dir, output_wav_s_list)
         
         # generate atmos audio file
-        generate_atmos_audio_file = create_atmos_audio(generate_w64)
+        # generate_atmos_audio_file = create_atmos_audio("ffmpeg", r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp\combined_wav.w64")
         
         # create atmos mezz files
-        create_mezz_files(temp_dir, generate_atmos_audio_file, "FAKEFPS_FIX")
+        create_mezz_files(temp_dir, r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp\combined_wav.atmos.audio", "FAKEFPS_FIX")
