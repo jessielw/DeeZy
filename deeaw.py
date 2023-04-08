@@ -12,6 +12,7 @@ from packages.shared.shared_utils import (
 from packages.shared._version import program_name, __version__
 from packages.dd_ddp.ddp_utils import generate_xml_dd
 from packages.atmos.atmos_utils import generate_xml_atmos
+from packages.atmos.atmos_decoder import atmos_decode
 from packages.shared.progress import process_ffmpeg, process_dee, display_banner
 
 
@@ -115,11 +116,15 @@ def main(base_wd: Path):
     # Parse file with MediaInfo
     media_info_source = MediaInfo.parse(args.input)
 
+    # attempt to get FPS from video track if it's present
+    fps = "not_indicated"
+    for mi_track in media_info_source.tracks:
+        if mi_track.track_type == "Video":
+            fps = mi_track.frame_rate
+
     # parse track for information
     # +1 because the first track is always "general"
     track_info = media_info_source.tracks[args.track_index + 1]
-    
-    #TODO: We need to ensure that track is trudhd/ATMOS if we use Atmos
 
     # get track duration and convert to a float if not None
     # we need duration to calculate percentage for FFMPEG
@@ -248,15 +253,37 @@ def main(base_wd: Path):
             wav_file_name=wav_file_name,
             output_file_name=output_file_name,
             output_dir=output_dir,
+            fps=fps,
         )
     elif args.format == "atmos":
-        update_xml = generate_xml_atmos(
-            bitrate=str(args.bitrate),
-            normalize=args.normalize,
-            wav_file_name=wav_file_name,
-            output_file_name=output_file_name,
-            output_dir=output_dir,
-        )
+        # ensure input file has atmos
+        if "Atmos" in track_info.commercial_name:
+            # decode atmos
+            decode_atmos = atmos_decode(
+                gst_launch=gst_launch_path,
+                mkvextract=mkvextract_path,
+                ffmpeg=ffmpeg_path,
+                input_file=Path(args.input),
+                track_number=args.track_index,
+                atmos_decode_speed=args.atmos_decode_speed,
+                source_fps=fps,
+                duration=duration,
+                progress_mode=args.progress_mode,
+            )
+
+            # pass decoded atmos mezz file xml function
+            update_xml = generate_xml_atmos(
+                bitrate=str(args.bitrate),
+                atmos_mezz_file_name=Path(decode_atmos).name,
+                atmos_mezz_file_dir=Path(decode_atmos).parent,
+                wav_file_name=wav_file_name,
+                output_file_name=output_file_name,
+                output_dir=output_dir,
+                fps=fps,
+            )
+        else:
+            # TODO Add a fall back method?
+            raise ArgumentTypeError("Input track does not have Atmos.")
 
     # display banner to console
     display_banner()
@@ -292,7 +319,7 @@ def main(base_wd: Path):
         "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    # process_ffmpeg(ffmpeg_cmd, args.progress_mode, duration)
+    process_ffmpeg(ffmpeg_cmd, args.progress_mode, duration)
 
     # Call dee to generate the encode file
     dee_cm = [
@@ -315,17 +342,5 @@ def main(base_wd: Path):
 
 
 if __name__ == "__main__":
-    # main(base_wd=get_working_dir())
-    base_wd = get_working_dir()
-    ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
-    mkvextract_path = Path(base_wd / "apps/mkvextract/mkvextract.exe")
-    dee_path = Path(base_wd / "apps/dee/dee.exe")
-    gst_launch_path = Path(base_wd / "apps/drp/gst-launch-1.0.exe")
-    
-    from packages.atmos.atmos_decoder import atmos_decode
-    # atmos_decode(r"E:\programming\BHDStudio-DEEWrapper\apps\drp\gst-launch-1.0.exe", 
-    #          r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv",
-    #          "1")
-    atmos_decode(gst_launch=gst_launch_path, mkvextract=mkvextract_path, ffmpeg=ffmpeg_path, 
-                 input_file=r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv",
-                 track_number=1, atmos_decode_speed="multi")
+    main(base_wd=get_working_dir())
+
