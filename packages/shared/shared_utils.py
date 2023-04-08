@@ -135,8 +135,8 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
             raise ArgumentTypeError("Unknown file format.")
 
         if arguments.bitrate not in valid_bitrates:
-            ArgumentTypeError.error(
-                message=f"Invalid bitrate for input channel count and file type: {arguments.format} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}"
+            ArgumentTypeError(
+                f"Invalid bitrate for input channel count and file type: {arguments.format} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}"
             )
 
 
