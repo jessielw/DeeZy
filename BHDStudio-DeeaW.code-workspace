@@ -35,6 +35,7 @@
 			"pymediainfo",
 			"resampler",
 			"soxr",
+			"timecode",
 			"truehd",
 			"truehddec",
 			"wavenc",
