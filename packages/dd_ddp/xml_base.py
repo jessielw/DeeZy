@@ -4,7 +4,7 @@ xml_audio_base_ddp = """<?xml version="1.0"?>
     <audio>
       <wav version="1">
         <file_name>-</file_name>
-        <timecode_frame_rate>not_indicated</timecode_frame_rate>
+        <timecode_frame_rate>-</timecode_frame_rate>
         <offset>auto</offset>
         <ffoa>auto</ffoa>
         <storage>
@@ -22,14 +22,14 @@ xml_audio_base_ddp = """<?xml version="1.0"?>
           <measure_only>
             <metering_mode>1770-3</metering_mode>
             <dialogue_intelligence>true</dialogue_intelligence>
-            <speech_threshold>20</speech_threshold>
+            <speech_threshold>15</speech_threshold>
           </measure_only>
         </loudness>
         <encoder_mode>-</encoder_mode>
         <bitstream_mode>complete_main</bitstream_mode>
         <downmix_config>off</downmix_config>
         <data_rate>-</data_rate>
-        <timecode_frame_rate>not_indicated</timecode_frame_rate>
+        <timecode_frame_rate>-</timecode_frame_rate>
         <start>first_frame_of_action</start>
         <end>end_of_file</end>
         <time_base>file_position</time_base>
@@ -45,7 +45,7 @@ xml_audio_base_ddp = """<?xml version="1.0"?>
         </drc>
         <lfe_lowpass_filter>true</lfe_lowpass_filter>
         <surround_90_degree_phase_shift>true</surround_90_degree_phase_shift>
-        <surround_3db_attenuation>true</surround_3db_attenuation>
+        <surround_3db_attenuation>false</surround_3db_attenuation>
         <downmix>
           <loro_center_mix_level>-3</loro_center_mix_level>
           <loro_surround_mix_level>-3</loro_surround_mix_level>
