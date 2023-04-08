@@ -17,8 +17,25 @@ from packages.shared.progress import process_ffmpeg, process_dee, display_banner
 
 
 def auto_fallback(
-    reason, ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args, track_info
+    reason: str,
+    ffmpeg_path: Path,
+    mkvextract_path: Path,
+    dee_path: Path,
+    gst_launch_path: Path,
+    args: argparse.ArgumentParser.parse_args,
+    track_info: object,
 ):
+    """Falls back to hardcoded settings, currently only for Atmos
+
+    Args:
+        reason (str): String of the reason why we're falling back to print to console
+        ffmpeg_path (Path): Path to ffmpeg
+        mkvextract_path (Path): Path to mkvextract
+        dee_path (Path): Path to DEE
+        gst_launch_path (Path): Path to gst_launch
+        args (argparse.ArgumentParser.parse_args): Parsed args object
+        track_info (object): Track input mediainfo object
+    """
     if track_info.channel_s >= 8:
         setattr(args, "channels", 8)
         setattr(args, "bitrate", "768")
