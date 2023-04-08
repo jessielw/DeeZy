@@ -16,94 +16,35 @@ from packages.atmos.atmos_decoder import atmos_decode
 from packages.shared.progress import process_ffmpeg, process_dee, display_banner
 
 
-def main(base_wd: Path):
-    # Define paths to ffmpeg, dee, and mkvextract
-    # TODO: Consider adding switch to accept FFMPEG/mkvextract path instead of bundling?
-    ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
-    mkvextract_path = Path(base_wd / "apps/mkvextract/mkvextract.exe")
-    dee_path = Path(base_wd / "apps/dee/dee.exe")
-    gst_launch_path = Path(base_wd / "apps/drp/gst-launch-1.0.exe")
+def auto_fallback(
+    reason, ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args, track_info
+):
+    if track_info.channel_s >= 8:
+        setattr(args, "channels", 8)
+        setattr(args, "bitrate", "768")
+        setattr(args, "format", "ddp")
+        channel_string = "7.1"
+    elif track_info.channel_s == 6:
+        setattr(args, "channels", 6)
+        setattr(args, "bitrate", "640")
+        setattr(args, "format", "dd")
+        channel_string = "5.1"
+    elif track_info.channel_s < 6:
+        setattr(args, "channels", 2)
+        setattr(args, "bitrate", "448")
+        setattr(args, "format", "dd")
+        setattr(args, "stereo-down-mix", "dplii")
+        channel_string = "2.0 DDPLII"
 
-    # Check that the required paths exist
-    for exe_path in [ffmpeg_path, dee_path, mkvextract_path, gst_launch_path]:
-        if not Path(exe_path).is_file():
-            raise ValueError(f"{str(Path(exe_path).name)} path not found")
+    print(
+        f"Falling back to {str(args.format).upper()} {channel_string} {args.bitrate}Kbps... Reason: {reason}"
+    )
+    process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
 
-    # Parse the command line arguments
-    parser = argparse.ArgumentParser(description="A command line tool.")
-    parser.add_argument(
-        "-i", "--input", type=str, required=True, help="The input file path."
-    )
-    parser.add_argument(
-        "-o", "--output", type=str, required=True, help="The output file path."
-    )
-    parser.add_argument(
-        "-c",
-        "--channels",
-        choices=[1, 2, 6, 8],
-        type=int,
-        help="The number of channels.",
-    )
-    parser.add_argument(
-        "-s",
-        "--stereo-down-mix",
-        choices=["standard", "dplii"],
-        type=str,
-        default="standard",
-        help="Down mix method for stereo.",
-    )
-    parser.add_argument(
-        "-b", "--bitrate", type=int, required=True, help="The bitrate in Kbps."
-    )
-    parser.add_argument(
-        "-f",
-        "--format",
-        choices=["dd", "ddp", "atmos"],
-        type=str,
-        default="dd",
-        help="The file format.",
-    )
-    parser.add_argument(
-        "-a",
-        "--atmos-decode-speed",
-        choices=["single", "multi"],
-        type=str,
-        default="multi",
-        help="Decode 1 atmos at a time or all at once.",
-    )
-    parser.add_argument(
-        "-t",
-        "--track-index",
-        type=validate_track_index,
-        default=0,
-        help="The index of the audio track to use.",
-    )
-    parser.add_argument(
-        "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
-    )
-    parser.add_argument(
-        "-n",
-        "--normalize",
-        action="store_true",
-        help="Normalize audio for DDP.",
-    )
-    parser.add_argument(
-        "-k",
-        "--keep-temp",
-        action="store_true",
-        help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
-    )
-    parser.add_argument(
-        "-p",
-        "--progress-mode",
-        choices=["standard", "debug"],
-        default="standard",
-        help="Sets progress output mode verbosity.",
-    )
-    parser.add_argument(
-        "-v", "--version", action="version", version=f"{program_name} {__version__}"
-    )
-    args = parser.parse_args()
+
+def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args):
+    # display banner to console
+    display_banner()
 
     # validate correct bitrate, channel count and format
     validate_channels_with_format(arguments=args)
@@ -272,20 +213,41 @@ def main(base_wd: Path):
             )
 
             # pass decoded atmos mezz file xml function
-            update_xml = generate_xml_atmos(
-                bitrate=str(args.bitrate),
-                atmos_mezz_file_name=Path(decode_atmos).name,
-                atmos_mezz_file_dir=Path(decode_atmos).parent,
-                output_file_name=output_file_name,
-                output_dir=output_dir,
-                fps=fps,
-            )
+            if decode_atmos:
+                update_xml = generate_xml_atmos(
+                    bitrate=str(args.bitrate),
+                    atmos_mezz_file_name=Path(decode_atmos).name,
+                    atmos_mezz_file_dir=Path(decode_atmos).parent,
+                    output_file_name=output_file_name,
+                    output_dir=output_dir,
+                    fps=fps,
+                )
+            else:
+                if args.atmos_fall_back:
+                    auto_fallback(
+                        "Source Atmos data is corrupt/invalid",
+                        ffmpeg_path,
+                        mkvextract_path,
+                        dee_path,
+                        gst_launch_path,
+                        args,
+                        track_info,
+                    )
+                else:
+                    raise ArgumentTypeError("Source Atmos data is corrupt/invalid")
         else:
-            # TODO Add a fall back method?
-            raise ArgumentTypeError("Input track does not have Atmos.")
-
-    # display banner to console
-    display_banner()
+            if args.atmos_fall_back:
+                auto_fallback(
+                    "Source Atmos data is corrupt/invalid",
+                    ffmpeg_path,
+                    mkvextract_path,
+                    dee_path,
+                    gst_launch_path,
+                    args,
+                    track_info,
+                )
+            else:
+                raise ArgumentTypeError("Source Atmos data is corrupt/invalid")
 
     # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
     if args.channels == 2 and args.stereo_down_mix == "dplii" and args.format == "dd":
@@ -340,6 +302,110 @@ def main(base_wd: Path):
     if not args.keep_temp:
         Path(update_xml).unlink()
         Path(output_dir / wav_file_name).unlink()
+
+
+def main(base_wd: Path):
+    # Define paths to ffmpeg, dee, and mkvextract
+    # TODO: Consider adding switch to accept FFMPEG/mkvextract path instead of bundling?
+    ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
+    mkvextract_path = Path(base_wd / "apps/mkvextract/mkvextract.exe")
+    dee_path = Path(base_wd / "apps/dee/dee.exe")
+    gst_launch_path = Path(base_wd / "apps/drp/gst-launch-1.0.exe")
+
+    # Check that the required paths exist
+    for exe_path in [ffmpeg_path, dee_path, mkvextract_path, gst_launch_path]:
+        if not Path(exe_path).is_file():
+            raise ValueError(f"{str(Path(exe_path).name)} path not found")
+
+    # Parse the command line arguments
+    parser = argparse.ArgumentParser(description="A command line tool.")
+    parser.add_argument(
+        "-i", "--input", type=str, required=True, help="The input file path."
+    )
+    parser.add_argument(
+        "-o", "--output", type=str, required=True, help="The output file path."
+    )
+    parser.add_argument(
+        "-c",
+        "--channels",
+        choices=[1, 2, 6, 8],
+        type=int,
+        help="The number of channels.",
+    )
+    parser.add_argument(
+        "-s",
+        "--stereo-down-mix",
+        choices=["standard", "dplii"],
+        type=str,
+        default="standard",
+        help="Down mix method for stereo.",
+    )
+    parser.add_argument(
+        "-b", "--bitrate", type=int, required=True, help="The bitrate in Kbps."
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["dd", "ddp", "atmos"],
+        type=str,
+        default="dd",
+        help="The file format.",
+    )
+    parser.add_argument(
+        "-a",
+        "--atmos-decode-speed",
+        choices=["single", "multi"],
+        type=str,
+        default="multi",
+        help="Decode 1 atmos at a time or all at once.",
+    )
+    parser.add_argument(
+        "-r",
+        "--atmos-fall-back",
+        default="store_true",
+        help="In the event Atmos data is invalid, automatically fall back to the next best potential settings",
+    )
+    parser.add_argument(
+        "-t",
+        "--track-index",
+        type=validate_track_index,
+        default=0,
+        help="The index of the audio track to use.",
+    )
+    parser.add_argument(
+        "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
+    )
+    parser.add_argument(
+        "-n",
+        "--normalize",
+        action="store_true",
+        help="Normalize audio for DDP.",
+    )
+    parser.add_argument(
+        "-k",
+        "--keep-temp",
+        action="store_true",
+        help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
+    )
+    parser.add_argument(
+        "-p",
+        "--progress-mode",
+        choices=["standard", "debug"],
+        default="standard",
+        help="Sets progress output mode verbosity.",
+    )
+    parser.add_argument(
+        "-v", "--version", action="version", version=f"{program_name} {__version__}"
+    )
+    args = parser.parse_args()
+
+    process_input(
+        ffmpeg_path=ffmpeg_path,
+        mkvextract_path=mkvextract_path,
+        dee_path=dee_path,
+        gst_launch_path=gst_launch_path,
+        args=args,
+    )
 
 
 if __name__ == "__main__":
