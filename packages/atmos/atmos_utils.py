@@ -313,11 +313,11 @@ def create_atmos_audio_file(
     combine_job = process_ffmpeg(
         cmd=combine_cmd, progress_mode=progress_mode, steps=False, duration=duration
     )
-    if combine_job == 0 and atmos_file_path.is_file():
+    if combine_job and atmos_file_path.is_file():
         # clean up single channel files
-        # print("Deleting channel files")
-        # for channel_file in output_wav_s_list:
-        #     Path(channel_file).unlink()
+        print("Deleting channel files")
+        for channel_file in output_wav_s_list:
+            Path(channel_file).unlink()
 
         # return path to atmos audio file
         return atmos_file_path
