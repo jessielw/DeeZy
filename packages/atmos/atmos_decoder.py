@@ -2,47 +2,12 @@ from pathlib import Path, PosixPath
 from typing import Union
 from argparse import ArgumentTypeError
 from packages.atmos import atmos_channels
+from packages.atmos.atmos_utils import create_temp_dir, demux_true_hd, confirm_thd_track, AtmosDecodeMulti, atmos_decode_job_single
+from packages.shared.shared_utils import check_disk_space
 from subprocess import PIPE, STDOUT, Popen, run
 import shutil
+import concurrent.futures
 
-
-def _check_disk_space(input_file: Path):
-    """
-    Check for input file's free space, rounding to nearest whole number.
-    If there isn't at least 50 GB of space free, raise an ArgumentTypeError.
-
-    Args:
-        input_file (Path): Input file path
-    """
-    
-    # get free space in bytes
-    free_space_cwd = shutil.disk_usage(Path(input_file)).free
-    
-    # convert to GB's
-    free_space_gb = round(free_space_cwd / (1024 ** 3))
-    
-    # check to ensure at least 50 GB's is free
-    if free_space_gb < 50:
-        raise ArgumentTypeError("There isn't enough free space to decode Dolby Atmos")
-
-
-def create_temp_dir(input_file):
-    """
-    Create a temporary directory for handling atmos files, 
-    deleting old ones if they already exist.
-
-    Args:
-        input_file (Path): Input file path to create temp directory beside it.
-
-    Returns:
-        Path: Temporary directory
-    """
-    temp_dir = Path(Path(input_file).parent / "atmos_temp")
-    if temp_dir.exists():
-        shutil.rmtree(path=temp_dir)
-
-    temp_dir.mkdir()
-    return temp_dir
 
 
 def generate_truehd_decode_command(
@@ -79,38 +44,6 @@ def generate_truehd_decode_command(
         'deinterleave', 'name=d', f'd.src_{str(current_channel_id)}', '!',
         'wavenc', '!', 'filesink', f'location={str(output_wav_s.as_posix())}'
     ]
-
-
-def demux_true_hd(input_file: Path, temp_dir: Path, mkv_track_num: int):
-    """We utilize mkvextract.exe to extract the THD/MLP file to the temporary directory.
-
-    Args:
-        input_file (Path): Path to the input file
-        temp_dir (Path): Temporary directory where files will be processed
-        mkv_track_num (int): mkvextract's "tracks" number (FFMPEG base tracks including video)
-
-    Returns:
-        Path: Full path to the extracted thd/mlp file
-    """
-    # generate name
-    output_name = Path(temp_dir / "extracted_thd.mlp")
-    
-    # extract truehd file
-    extract_true_hd_track = run(["apps/mkvextract/mkvextract.exe", str(input_file), "tracks", f'{str(mkv_track_num)}:{str(output_name)}'])
-    
-    # check for valid output
-    if extract_true_hd_track.returncode == 0 and output_name.is_file():
-        return output_name
-
-
-def check_for_thd(input_file: Path): 
-    with Path(input_file).open('rb') as f:
-        first_bytes = f.read(10)
-        truehd_sync_word = 0xF8726FBA.to_bytes(4, 'big')
-        
-        if truehd_sync_word not in first_bytes:
-            # TODO Maybe fall back?
-            raise ArgumentTypeError('Source file must be in untouched TrueHD format')
         
         
 def combine_all_wav_s(ffmpeg, temp_dir, output_wav_s_list):
@@ -193,97 +126,89 @@ def create_mezz_files(temp_dir, atmos_audio_file, fps: str = "not_indicated"):
     if main_mezz.is_file():
         return main_mezz
     
+    
 
 
-def atmos_decode(gst_launch_exe, input_file, ffmpeg_thd_track):
+# def atmos_decode_job_multi(subprocess_jobs_list: list): 
+#     def handle_output(pipe):
+#         for line in iter(pipe.readline, b''):
+#             # Do something with the output
+#             print(line.strip())
+    
+#     # Iterate over the subprocesses and read their output in real-time
+#     for job in subprocess_jobs_list:
+#         handle_output(job.stdout)
+
+#     # Wait for the subprocesses to complete
+#     for job in subprocess_jobs_list:
+#         job.wait()
+        
+
+            
+
+def generate_atmos_decode_jobs(gst_launch_exe: Path, temp_dir: Path, demuxed_thd: Path, channel_id: int, channel_names: list, atmos_decode_speed: str):    
+    jobs_list = []
+    output_wav_s_list = []
+    for channel_count, channel_name in enumerate(channel_names): 
+        # generate wav name
+        output_wav_s = Path(temp_dir / f'{str(channel_count)}_{channel_name}').with_suffix(".wav")
+         # generate command
+        command = generate_truehd_decode_command(Path(gst_launch_exe), Path(demuxed_thd), Path(output_wav_s), channel_count, channel_id)
+
+        # depending on atmos decode speed we'll either append only the command or subprocess objects
+        if atmos_decode_speed == "single":
+            jobs_list.append(command)
+        elif atmos_decode_speed == "multi":
+            jobs_list.append(Popen(command, stdout=PIPE, stderr=STDOUT, universal_newlines=True))
+            
+        # add output wav's to a list to keep track of them
+        output_wav_s_list.append(output_wav_s)
+    
+    # send the list to to the function for processing the list
+    if atmos_decode_speed == "single":
+        decode_error = atmos_decode_job_single(jobs_list=jobs_list)
+    elif atmos_decode_speed == "multi":
+        decode_error = AtmosDecodeMulti(subprocess_jobs_list=jobs_list).error  
+        
+    # check to ensure no error happened during decode and return wav list
+    if not decode_error:
+        return output_wav_s_list
+    else:
+        return None
+        
+
+
+def atmos_decode(gst_launch: Path,
+                 mkvextract: Path,
+                 ffmpeg: Path,
+                 input_file: Path,
+                 track_number: int,
+                 atmos_decode_speed: str):
     # check for free space
-    _check_disk_space(input_file)
+    check_disk_space(drive_path=Path(input_file), free_space=50)
     
     # create temp directory
-    # temp_dir = create_temp_dir(input_file)
+    # temp_dir = create_temp_dir(dir_path=Path(input_file).parent, temp_folder="atmos_temp")
     temp_dir = Path(r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp")
     
     # demux true hd atmos track
-    # demuxed_thd = demux_true_hd(input_file, temp_dir, ffmpeg_thd_track)
+    # demuxed_thd = demux_true_hd(input_file=Path(input_file), temp_dir=temp_dir, mkvextract=Path(mkvextract), mkv_track_num=track_number)
     # if not demuxed_thd:
-    #     #TODO We need to fall back or something here?
-    #     pass
-    
+    #     raise ArgumentTypeError("There was an error extracting the TrueHD/MLP track.")
+    # demuxed_thd = Path(r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv")
     demuxed_thd = Path(r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp\extracted_thd.mlp")
-    
     # check to ensure valid truehd
-    check_for_thd(demuxed_thd)
+    confirm_thd_track(thd_file=demuxed_thd)
     
     # get needed channel layout (since we're only looking to support 5.1.4 for now it'll be hard coded)
-    channel_layout = atmos_channels["5.1.4"]
-    channel_id = channel_layout["id"]
-    channel_names = channel_layout["names"]
-
-    # define an error variable incase we need to break from the loop
-    error = False
+    channel_id = atmos_channels["5.1.4"]["id"]
+    channel_names = atmos_channels["5.1.4"]["names"]
     
-    # define progress variable
-    progress_var = ""
+    # decode
+    decode_job = generate_atmos_decode_jobs(gst_launch_exe=Path(gst_launch), temp_dir=temp_dir, demuxed_thd=demuxed_thd, channel_id=channel_id, channel_names=channel_names, atmos_decode_speed=atmos_decode_speed)
     
-    # create a list of output_wav files
-    output_wav_s_list = []
-    
-    # process the channels 1 by 1
-    # processes = []
-    # for channel_count, channel_name in enumerate(channel_names):
-        
-    #     # generate wav name
-    #     output_wav_s = Path(temp_dir / f'{str(channel_count)}_{channel_name}').with_suffix(".wav")
-
-    #     # generate command
-    #     command = generate_truehd_decode_command(Path(gst_launch_exe), Path(demuxed_thd), Path(output_wav_s), channel_count, channel_id)
-
-        
-    #     # temp
-    #     processes.append(Popen(command))
-    #     output_wav_s_list.append(output_wav_s)
-    #     #
-    # for process in processes:
-    #     process.wait()
-    
-    # print(processes)
-    # print("\n\n\n")
-    # print(output_wav_s_list)
-        
-        # # decode
-        # with Popen(command, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-        #     for line in proc.stdout:
-        #         print(line)
-                
-        #         # if there are any errors we need to break from this and fall back
-        #         if "ERROR" in line:
-        #             error = True
-        #             break
-                
-        #         # if no errors are detected decode the channels 1 by 1 updating progress for each channel
-        #         else:
-        #             generate_progress = f"Decoding channel {str(channel_count)} of {str(len(channel_names))}"
-        #             if progress_var != generate_progress:
-        #                 progress_var = generate_progress
-        #                 print(generate_progress)
-        
-        # if there was any errors detected, break from the for loop and fall back
-        # if error:
-        #     #TODO we need to fall back here?
-        #     break
-        
-        # if there was no error add wav files to list to be used later
-        # else:
-        #     output_wav_s_list.append(output_wav_s)
-    
-    # testing list, delete later
-    # output_wav_s_list = []
-    # for x in Path(r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR").glob("*.wav"):
-    #     output_wav_s_list.append(x)
-        
-    # print(output_wav_s_list)
-        
-    if not error:
+    if decode_job:
+        pass
         # generate combined wav
         # generate_w64 = combine_all_wav_s("ffmpeg", temp_dir, output_wav_s_list)
         
@@ -291,4 +216,4 @@ def atmos_decode(gst_launch_exe, input_file, ffmpeg_thd_track):
         # generate_atmos_audio_file = create_atmos_audio("ffmpeg", r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp\combined_wav.w64")
         
         # create atmos mezz files
-        create_mezz_files(temp_dir, r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp\combined_wav.atmos.audio", "FAKEFPS_FIX")
+        # create_mezz_files(temp_dir, r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\atmos_temp\combined_wav.atmos.audio", "FAKEFPS_FIX")
