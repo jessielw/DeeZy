@@ -77,8 +77,8 @@ def process_ffmpeg(
 
         if proc.returncode != 0:
             ArgumentTypeError("There was an FFMPEG error. Please re-run in debug mode.")
-        elif proc.returncode == 0:
-            return proc.returncode
+
+    return True
 
 
 def _filter_dee_progress(line: str):
