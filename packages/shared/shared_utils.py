@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import shutil
 from argparse import ArgumentParser, ArgumentTypeError
 from packages.dd_ddp import dd_ddp_bitrates
 import xmltodict
@@ -137,3 +138,26 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
             ArgumentTypeError.error(
                 message=f"Invalid bitrate for input channel count and file type: {arguments.format} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}"
             )
+
+
+def check_disk_space(drive_path: Path, free_space: int):
+    """
+    Check for free space at the drive path, rounding to nearest whole number.
+    If there isn't at least "free_space" GB of space free, raise an ArgumentTypeError.
+
+    Args:
+        drive_path (Path): Path to check
+        free_space (int): Minimum space (GB)
+    """
+
+    # get free space in bytes
+    free_space_cwd = shutil.disk_usage(Path(drive_path)).free
+
+    # convert to GB's
+    free_space_gb = round(free_space_cwd / (1024**3))
+
+    # check to ensure at least 50 GB's is free
+    if free_space_gb < int(free_space):
+        raise ArgumentTypeError("There isn't enough free space to decode Dolby Atmos")
+    else:
+        return True
