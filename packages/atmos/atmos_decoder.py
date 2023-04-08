@@ -95,3 +95,5 @@ def atmos_decode(
         # if mezz files are created successfully return them for DEE
         if mezz_file:
             return mezz_file
+    else:
+        return False
