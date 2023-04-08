@@ -16,13 +16,15 @@ from packages.shared.progress import process_ffmpeg, process_dee, display_banner
 
 
 def main(base_wd: Path):
-    # Define paths to ffmpeg and dee
-    # TODO: Consider adding switch to accept FFMPEG path instead of bundling?
+    # Define paths to ffmpeg, dee, and mkvextract
+    # TODO: Consider adding switch to accept FFMPEG/mkvextract path instead of bundling?
     ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
+    mkvextract_path = Path(base_wd / "apps/mkvextract/mkvextract.exe")
     dee_path = Path(base_wd / "apps/dee/dee.exe")
+    gst_launch_path = Path(base_wd / "apps/drp/gst-launch-1.0.exe")
 
     # Check that the required paths exist
-    for exe_path in [ffmpeg_path, dee_path]:
+    for exe_path in [ffmpeg_path, dee_path, mkvextract_path, gst_launch_path]:
         if not Path(exe_path).is_file():
             raise ValueError(f"{str(Path(exe_path).name)} path not found")
 
@@ -59,6 +61,14 @@ def main(base_wd: Path):
         type=str,
         default="dd",
         help="The file format.",
+    )
+    parser.add_argument(
+        "-a",
+        "--atmos-decode-speed",
+        choices=["single", "multi"],
+        type=str,
+        default="multi",
+        help="Decode 1 atmos at a time or all at once.",
     )
     parser.add_argument(
         "-t",
@@ -108,6 +118,8 @@ def main(base_wd: Path):
     # parse track for information
     # +1 because the first track is always "general"
     track_info = media_info_source.tracks[args.track_index + 1]
+    
+    #TODO: We need to ensure that track is trudhd/ATMOS if we use Atmos
 
     # get track duration and convert to a float if not None
     # we need duration to calculate percentage for FFMPEG
@@ -304,8 +316,16 @@ def main(base_wd: Path):
 
 if __name__ == "__main__":
     # main(base_wd=get_working_dir())
+    base_wd = get_working_dir()
+    ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
+    mkvextract_path = Path(base_wd / "apps/mkvextract/mkvextract.exe")
+    dee_path = Path(base_wd / "apps/dee/dee.exe")
+    gst_launch_path = Path(base_wd / "apps/drp/gst-launch-1.0.exe")
     
     from packages.atmos.atmos_decoder import atmos_decode
-    atmos_decode(r"E:\programming\BHDStudio-DEEWrapper\apps\drp\gst-launch-1.0.exe", 
-             r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv",
-             "1")
+    # atmos_decode(r"E:\programming\BHDStudio-DEEWrapper\apps\drp\gst-launch-1.0.exe", 
+    #          r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv",
+    #          "1")
+    atmos_decode(gst_launch=gst_launch_path, mkvextract=mkvextract_path, ffmpeg=ffmpeg_path, 
+                 input_file=r"C:\Users\jlw_4\OneDrive\Desktop\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv",
+                 track_number=1, atmos_decode_speed="multi")
