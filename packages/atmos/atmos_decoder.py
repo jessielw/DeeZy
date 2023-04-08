@@ -27,13 +27,15 @@ def _check_disk_space(input_file: Path):
 
 
 def create_temp_dir(input_file):
-    """Create a temporary directory for handling atmos files
+    """
+    Create a temporary directory for handling atmos files, 
+    deleting old ones if they already exist.
 
     Args:
-        input_file (_type_): _description_
+        input_file (Path): Input file path to create temp directory beside it.
 
     Returns:
-        _type_: _description_
+        Path: Temporary directory
     """
     temp_dir = Path(Path(input_file).parent / "atmos_temp")
     if temp_dir.exists():
@@ -41,46 +43,65 @@ def create_temp_dir(input_file):
 
     temp_dir.mkdir()
     return temp_dir
-    
-
-def prepare_file_path(source: Path) -> str:
-    return str(source.as_posix())
-
 
 
 def generate_truehd_decode_command(
             gst_launch_exe: Path,
             input_file: Path,
             output_wav_s: Path,
-            channel_id: int,
-            out_channel_config_id: int
+            current_channel_id: int,
+            total_channel_s: int
     ):
+    """
+    Creates the decoding command needed to decode atmos. 
+    It utilizes Dolby Reference Players plugins with gstreamer to decode.
+    Gstreamer is very picky when it comes to the file paths, so we need
+    to use Path().as_posix() for both "location" commands.  
 
-        return [
-            str(Path(gst_launch_exe).absolute()),
-            '--gst-plugin-path', f'{str(Path(gst_launch_exe.parent.absolute() / "gst-plugins"))}',
-            'filesrc', f'location={prepare_file_path(input_file)}', '!',
-            'dlbtruehdparse', 'align-major-sync=false', '!',
-            'dlbaudiodecbin', 'truehddec-presentation=16', f'out-ch-config={out_channel_config_id}', '!',
-            'deinterleave', 'name=d', f'd.src_{str(channel_id)}', '!',
-            'wavenc', '!',
-            'filesink', f'location={prepare_file_path(output_wav_s)}'
-        ]
+    Args:
+        gst_launch_exe (Path): Full path to gst-launch-1.0.exe
+        input_file (Path): Input path to the THD/MLP Atmos file
+        output_wav_s (Path): Location where we will put the split WAV files
+        current_channel_id (int): Current channel out of the total channels
+        total_channel_s (int): Total channels to decode to
+
+    Returns:
+        list: Full command to be executed buy subprocess
+    """
+    return [
+        str(Path(gst_launch_exe).absolute()),
+        '--gst-plugin-path', f'{str(Path(gst_launch_exe.parent.absolute() / "gst-plugins"))}',
+        'filesrc', f'location={str(input_file.as_posix())}', '!',
+        'dlbtruehdparse', 'align-major-sync=false', '!',
+        'dlbaudiodecbin', 'truehddec-presentation=16', f'out-ch-config={total_channel_s}', '!',
+        'deinterleave', 'name=d', f'd.src_{str(current_channel_id)}', '!',
+        'wavenc', '!', 'filesink', f'location={str(output_wav_s.as_posix())}'
+    ]
 
 
-def demux_true_hd(input_file, temp_dir, ffmpeg_thd_track):
+def demux_true_hd(input_file: Path, temp_dir: Path, mkv_track_num: int):
+    """We utilize mkvextract.exe to extract the THD/MLP file to the temporary directory.
+
+    Args:
+        input_file (Path): Path to the input file
+        temp_dir (Path): Temporary directory where files will be processed
+        mkv_track_num (int): mkvextract's "tracks" number (FFMPEG base tracks including video)
+
+    Returns:
+        Path: Full path to the extracted thd/mlp file
+    """
     # generate name
     output_name = Path(temp_dir / "extracted_thd.mlp")
     
     # extract truehd file
-    extract_true_hd_track = run(["apps/mkvextract/mkvextract.exe", str(input_file), "tracks", f'{str(ffmpeg_thd_track)}:{str(output_name)}'])
+    extract_true_hd_track = run(["apps/mkvextract/mkvextract.exe", str(input_file), "tracks", f'{str(mkv_track_num)}:{str(output_name)}'])
     
     # check for valid output
     if extract_true_hd_track.returncode == 0 and output_name.is_file():
         return output_name
 
 
-def check_for_thd(input_file: Union[Path, str]): 
+def check_for_thd(input_file: Path): 
     with Path(input_file).open('rb') as f:
         first_bytes = f.read(10)
         truehd_sync_word = 0xF8726FBA.to_bytes(4, 'big')
