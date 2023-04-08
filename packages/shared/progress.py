@@ -34,15 +34,18 @@ def _convert_ffmpeg_to_percent(line: str, duration: float):
         return percent
 
 
-def process_ffmpeg(cmd: list, progress_mode: str, duration: Union[float, None]):
+def process_ffmpeg(
+    cmd: list, progress_mode: str, steps: bool, duration: Union[float, None]
+):
     """Processes file with FFMPEG while generating progress depending on progress_mode.
 
     Args:
         cmd (list): Base FFMPEG command list
         progress_mode (str): Options are "standard" or "debug"
-        duration (Union[float, None]): Can be None or duration in milliseconds.
-        If set to None the generic FFMPEG output will be displayed.
-        If duration is passed then we can calculate the total progress for FFMPEG.
+        steps (bool): True or False, to disable updating encode steps
+        duration (Union[float, None]): Can be None or duration in milliseconds
+        If set to None the generic FFMPEG output will be displayed
+        If duration is passed then we can calculate the total progress for FFMPEG
     """
     # inject verbosity level into cmd list depending on progress_mode
     inject = cmd.index("-v") + 1
@@ -52,15 +55,13 @@ def process_ffmpeg(cmd: list, progress_mode: str, duration: Union[float, None]):
         cmd.insert(inject, "debug")
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-        if progress_mode == "standard":
+        if progress_mode == "standard" and steps:
             print("---- Step 1 of 3 ---- [FFMPEG]")
 
         for line in proc.stdout:
-
             # Some audio formats actually do not have a "duration" in their raw containers,
             # if this is the case we will default ffmpeg to it's generic output string.
             if duration and progress_mode == "standard":
-
                 # we need to wait for size= to prevent any errors
                 if "size=" in line:
                     percentage = _convert_ffmpeg_to_percent(line, duration)
@@ -76,6 +77,8 @@ def process_ffmpeg(cmd: list, progress_mode: str, duration: Union[float, None]):
 
         if proc.returncode != 0:
             ArgumentTypeError("There was an FFMPEG error. Please re-run in debug mode.")
+        elif proc.returncode == 0:
+            return proc.returncode
 
 
 def _filter_dee_progress(line: str):
@@ -115,14 +118,12 @@ def process_dee(cmd: list, progress_mode: str):
             print("---- Step 2 of 3 ---- [DEE measure]")
 
         for line in proc.stdout:
-
             # check for all dee errors
             if "ERROR " in line:
                 raise ArgumentTypeError(f"There was a DEE error: {line}")
 
             # If progress mode is quiet let's clean up progress output
             if progress_mode == "standard":
-
                 # We need to wait for size= to prevent any errors
                 if "Stage progress" in line:
                     progress = _filter_dee_progress(line)
