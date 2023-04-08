@@ -318,7 +318,9 @@ def main(base_wd: Path):
         "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    process_ffmpeg(cmd=ffmpeg_cmd, progress_mode=args.progress_mode, steps=True, duration=duration)
+    process_ffmpeg(
+        cmd=ffmpeg_cmd, progress_mode=args.progress_mode, steps=True, duration=duration
+    )
 
     # Call dee to generate the encode file
     dee_cm = [
@@ -342,4 +344,3 @@ def main(base_wd: Path):
 
 if __name__ == "__main__":
     main(base_wd=get_working_dir())
-
