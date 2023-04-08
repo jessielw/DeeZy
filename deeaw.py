@@ -379,7 +379,7 @@ def main(base_wd: Path):
     parser.add_argument(
         "-r",
         "--atmos-fall-back",
-        default="store_true",
+        action="store_true",
         help="In the event Atmos data is invalid, automatically fall back to the next best potential settings",
     )
     parser.add_argument(
