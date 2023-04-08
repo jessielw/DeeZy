@@ -85,7 +85,7 @@ def atmos_decode(
         )
 
         # create atmos mezz files (currently just hard coded channel layout)
-        create_mezz_files(
+        mezz_file = create_mezz_files(
             temp_dir=temp_dir,
             atmos_audio_file=Path(generate_atmos_audio_file),
             template_dir=Path(Path(gst_launch).parent / "channel_layouts" / "5.1.4"),
@@ -93,5 +93,5 @@ def atmos_decode(
         )
 
         # if mezz files are created successfully return them for DEE
-        if create_mezz_files:
-            return create_mezz_files
+        if mezz_file:
+            return mezz_file
