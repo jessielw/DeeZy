@@ -242,26 +242,26 @@ def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
             else:
                 if args.atmos_fall_back:
                     auto_fallback(
-                        "Source Atmos data is corrupt/invalid",
-                        ffmpeg_path,
-                        mkvextract_path,
-                        dee_path,
-                        gst_launch_path,
-                        args,
-                        track_info,
+                        reason="Source Atmos data is corrupt/invalid",
+                        ffmpeg_path=ffmpeg_path,
+                        mkvextract_path=mkvextract_path,
+                        dee_path=dee_path,
+                        gst_launch_path=gst_launch_path,
+                        args=args,
+                        track_info=track_info,
                     )
                 else:
                     raise ArgumentTypeError("Source Atmos data is corrupt/invalid")
         else:
             if args.atmos_fall_back:
                 auto_fallback(
-                    "Source Atmos data is corrupt/invalid",
-                    ffmpeg_path,
-                    mkvextract_path,
-                    dee_path,
-                    gst_launch_path,
-                    args,
-                    track_info,
+                    reason="Source Atmos data is corrupt/invalid",
+                    ffmpeg_path=ffmpeg_path,
+                    mkvextract_path=mkvextract_path,
+                    dee_path=dee_path,
+                    gst_launch_path=gst_launch_path,
+                    args=args,
+                    track_info=track_info,
                 )
             else:
                 raise ArgumentTypeError("Source Atmos data is corrupt/invalid")
