@@ -16,6 +16,7 @@ def generate_xml_dd(
     wav_file_name: str,
     output_file_name: str,
     output_dir: Union[Path, str],
+    fps: str,
 ):
     """Handles the parsing/creation of XML file for DEE encoding (DD/DDP)
 
@@ -29,6 +30,7 @@ def generate_xml_dd(
         wav_file_name (str): File name only
         output_file_name (str): File name only
         output_dir (Union[Path, str]): File path only
+        fps (str): FPS of video input if it exists
 
     Returns:
         Path: Returns the correct path to the created template file
@@ -47,6 +49,10 @@ def generate_xml_dd(
     xml_base["job_config"]["output"]["ac3"]["storage"]["local"][
         "path"
     ] = f'"{str(output_dir)}"'
+
+    # update fps sections
+    xml_base["job_config"]["input"]["audio"]["wav"]["timecode_frame_rate"] = fps
+    xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["timecode_frame_rate"] = fps
 
     # xml temp path config
     xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
@@ -85,7 +91,6 @@ def generate_xml_dd(
     if dd_format == "dd":
         xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "dd"
     elif dd_format == "ddp":
-
         # if ddp and normalize is true, set template to normalize audio
         if normalize:
             # Remove measure_only, add measure_and_correct, with default preset of atsc_a85
