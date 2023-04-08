@@ -3,89 +3,11 @@ from typing import Union
 import xmltodict
 from packages.atmos.xml_base import xml_audio_base_atmos
 from packages.shared.shared_utils import save_xml
+from packages.shared.progress import process_ffmpeg
 from pathlib import Path
 import shutil
 from subprocess import run, Popen, STDOUT, PIPE
 import concurrent.futures
-
-
-def generate_xml_atmos(
-    bitrate: str,
-    normalize: bool,
-    wav_file_name: str,
-    output_file_name: str,
-    output_dir: Union[Path, str],
-):
-    """Handles the parsing/creation of XML file for DEE encoding (atmos)
-    Args:
-        bitrate (str): Bitrate in the format of '448'
-        normalize: (bool): True or False, if set to True we will normalize loudness
-        wav_file_name (str): File name only
-        output_file_name (str): File name only
-        output_dir (Union[Path, str]): File path only
-    Returns:
-        Path: Returns the correct path to the created template file
-    """
-    # Update the xml template values
-    xml_base = xmltodict.parse(xml_audio_base_atmos)
-
-    # xml wav filename/path
-    xml_base["job_config"]["input"]["audio"]["wav"]["file_name"] = f'"{wav_file_name}"'
-    xml_base["job_config"]["input"]["audio"]["wav"]["storage"]["local"][
-        "path"
-    ] = f'"{str(output_dir)}"'
-
-    # xml eac3 filename/path
-    xml_base["job_config"]["output"]["ec3"]["file_name"] = f'"{output_file_name}"'
-    xml_base["job_config"]["output"]["ec3"]["storage"]["local"][
-        "path"
-    ] = f'"{str(output_dir)}"'
-
-    # xml temp path config
-    xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
-
-    # # xml down mix config
-    # xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
-    #     "downmix_config"
-    # ] = down_mix_config
-
-    # if channels == 1:
-    #     downmix_mode = "not_indicated"
-    # elif channels == 2:
-    #     if stereo_down_mix == "standard":
-    #         downmix_mode = "ltrt"
-    #     elif stereo_down_mix == "dplii":
-    #         downmix_mode = "ltrt-pl2"
-    # elif channels >= 6:
-    #     downmix_mode = "loro"
-    # xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
-    #     "preferred_downmix_mode"
-    # ] = downmix_mode
-
-    # xml bitrate config
-    xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"]["data_rate"] = str(
-        bitrate
-    )
-
-    # if normalize is true, set template to normalize audio
-    if normalize:
-        # Remove measure_only, add measure_and_correct, with default preset of atsc_a85
-        del xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
-            "measure_only"
-        ]
-        xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
-            "measure_and_correct"
-        ] = {}
-        xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["loudness"][
-            "measure_and_correct"
-        ]["preset"] = "atsc_a85"
-
-    # create XML and return path to XML
-    updated_template_file = save_xml(
-        output_dir=output_dir, output_file_name=output_file_name, xml_base=xml_base
-    )
-
-    return updated_template_file
 
 
 def create_temp_dir(dir_path: Path, temp_folder: str):
@@ -222,3 +144,296 @@ def atmos_decode_job_single(jobs_list: list):
                     return True
 
     return False
+
+
+def generate_truehd_decode_command(
+    gst_launch_exe: Path,
+    input_file: Path,
+    output_wav_s: Path,
+    current_channel_id: int,
+    total_channel_s: int,
+):
+    """
+    Creates the decoding command needed to decode atmos.
+    It utilizes Dolby Reference Players plugins with gstreamer to decode.
+    Gstreamer is very picky when it comes to the file paths, so we need
+    to use Path().as_posix() for both "location" commands.
+
+    For "d.src_" we're subtracting 1 from the channel because we need to start at 0.
+
+    Args:
+        gst_launch_exe (Path): Full path to gst-launch-1.0.exe
+        input_file (Path): Input path to the THD/MLP Atmos file
+        output_wav_s (Path): Location where we will put the split WAV files
+        current_channel_id (int): Current channel out of the total channels
+        total_channel_s (int): Total channels to decode to
+
+    Returns:
+        list: Full command to be executed buy subprocess
+    """
+    return [
+        str(Path(gst_launch_exe).absolute()),
+        "--gst-plugin-path",
+        f'{str(Path(gst_launch_exe.parent.absolute() / "gst-plugins"))}',
+        "filesrc",
+        f"location={str(input_file.as_posix())}",
+        "!",
+        "dlbtruehdparse",
+        "align-major-sync=false",
+        "!",
+        "dlbaudiodecbin",
+        "truehddec-presentation=16",
+        f"out-ch-config={total_channel_s}",
+        "!",
+        "deinterleave",
+        "name=d",
+        f"d.src_{str(current_channel_id)}",
+        "!",
+        "wavenc",
+        "!",
+        "filesink",
+        f"location={str(output_wav_s.as_posix())}",
+    ]
+
+
+def generate_atmos_decode_jobs(
+    gst_launch_exe: Path,
+    temp_dir: Path,
+    demuxed_thd: Path,
+    channel_id: int,
+    channel_names: list,
+    atmos_decode_speed: str,
+):
+    """
+    Generates list of decode jobs based on channel layout count. If speed is set to single or multi it appends
+    the jobs differently and sends them to different functions to be handled.
+
+    Args:
+        gst_launch_exe (Path): Path to gst_launch_exe
+        temp_dir (Path): Path to temp_dir
+        demuxed_thd (Path): Path to demuxed_thd
+        channel_id (int): Channel ID
+        channel_names (list): List of channel names
+        atmos_decode_speed (str): Can be single or multi
+
+    Returns:
+        list: Returns list with full paths to the decoded wav files
+    """
+    jobs_list = []
+    output_wav_s_list = []
+    for channel_count, channel_name in enumerate(channel_names):
+        # generate wav name
+        output_wav_s = Path(
+            temp_dir / f"{str(channel_count)}_{channel_name}"
+        ).with_suffix(".wav")
+        # generate command
+        command = generate_truehd_decode_command(
+            Path(gst_launch_exe),
+            Path(demuxed_thd),
+            Path(output_wav_s),
+            channel_count,
+            channel_id,
+        )
+
+        # depending on atmos decode speed we'll either append only the command or subprocess objects
+        if atmos_decode_speed == "single":
+            jobs_list.append(command)
+        elif atmos_decode_speed == "multi":
+            jobs_list.append(
+                Popen(command, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
+            )
+
+        # add output wav's to a list to keep track of them
+        output_wav_s_list.append(output_wav_s)
+
+    # send the list to to the function for processing the list
+    if atmos_decode_speed == "single":
+        decode_error = atmos_decode_job_single(jobs_list=jobs_list)
+    elif atmos_decode_speed == "multi":
+        decode_error = AtmosDecodeMulti(subprocess_jobs_list=jobs_list).error
+
+    # check to ensure no error happened during decode and return wav list
+    if not decode_error:
+        return output_wav_s_list
+    else:
+        return None
+
+
+def create_atmos_audio_file(
+    ffmpeg: Path,
+    temp_dir: Path,
+    output_wav_s_list: list,
+    progress_mode: str,
+    duration: any,
+    volume: float = 2.5,
+):
+    """
+    This function combines all the mono wav files to a single file while retaining atmos.
+    Atmos audio files are actually just CAF (Core Audio Files) with a different extension.
+    Currently it's hard coded for 10 channel joins only.
+
+    Since the conversion to PCM can make audio quiet, we also boost the volume by 250%.
+    (Conversion is volume * 100 = result%).
+
+    Args:
+        ffmpeg (Path): Path to FFMPEG
+        temp_dir (Path): Path to temp_dir
+        output_wav_s_list (list): List of wav files to join
+        progress_mode (str): Set's the designed progress output mode
+        duration (any): Needed to convert progress to percent
+        volume (float): This boosts the volume of the PCM file (volume * 100 = x%)
+
+    Returns:
+        Path: Path to combined w64 file
+    """
+    # atmos audio file path
+    atmos_file_path = Path(temp_dir / Path("combined_wav.atmos.audio"))
+
+    # append -i to all of the inputs
+    inputs = [["-i", output_wav] for output_wav in output_wav_s_list]
+
+    # create the command
+    combine_cmd = [
+        str(ffmpeg),
+        "-y",
+        *[item for sublist in inputs for item in sublist],
+        "-c",
+        "pcm_s24le",
+        "-f",
+        "caf",
+        "-filter_complex",
+        f"join=inputs=10:channel_layout=5.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-TBL|7.0-TBR|8.0-TFL|9.0-TFR,volume={volume}",
+        "-hide_banner",
+        "-v",
+        "-stats",
+        str(atmos_file_path),
+    ]
+
+    print("Combining channels")
+    combine_job = process_ffmpeg(
+        cmd=combine_cmd, progress_mode=progress_mode, steps=False, duration=duration
+    )
+    if combine_job == 0 and atmos_file_path.is_file():
+        # clean up single channel files
+        # print("Deleting channel files")
+        # for channel_file in output_wav_s_list:
+        #     Path(channel_file).unlink()
+
+        # return path to atmos audio file
+        return atmos_file_path
+
+
+def create_mezz_files(
+    temp_dir: Path, atmos_audio_file: Path, template_dir: Path, fps: str
+):
+    """
+    Copies template files over to the temp directory, renaming them, and modifying the
+    main mezz file with needed information.
+
+    Args:
+        temp_dir (Path): Path to temp_directory
+        atmos_audio_file (Path): Path to atmos_audio_file
+        template_dir (Path): Path to template_dir
+        fps (str): Can be one of (not_indicated, 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60)
+
+    Returns:
+        Path: Main mezz file
+    """
+    # base name
+    base_name = Path(Path(atmos_audio_file).name).with_suffix("")
+
+    # copy and rename templates
+    for template in template_dir.glob("*.*"):
+        if "output.atmos" in template.name:
+            copied_template_name = template.name.replace("output.atmos", str(base_name))
+            shutil.copy(src=Path(template), dst=Path(temp_dir) / copied_template_name)
+
+    # define main mezz file
+    main_mezz = Path(Path(atmos_audio_file).parent) / Path(
+        str(base_name) + "audio"
+    ).with_suffix(".atmos")
+
+    # read template into memory, replacing values, and then write new file with the updated values
+    with open(main_mezz, "rt") as atmos_in, open(
+        main_mezz.with_suffix(".new"), "wt"
+    ) as atmos_out:
+        mezz_to_memory = atmos_in.read()
+        mezz_to_memory = (
+            mezz_to_memory.replace(
+                "metadata: output.atmos.metadata",
+                f'metadata: {str(base_name.with_suffix(""))}.atmos.metadata',
+            )
+            .replace(
+                "audio: output.atmos.audio",
+                f'audio: {str(base_name.with_suffix(""))}.atmos.audio',
+            )
+            .replace("fps: 29.97", f"fps: {str(fps)}")
+        )
+        atmos_out.write(mezz_to_memory)
+
+    # delete empty template and rename the new file to the original file name
+    main_mezz.unlink()
+    main_mezz.with_suffix(".new").replace(main_mezz)
+
+    # return mezz file location
+    if main_mezz.is_file():
+        return main_mezz
+
+
+def generate_xml_atmos(
+    bitrate: int,
+    atmos_mezz_file_name: str,
+    atmos_mezz_file_dir: Union[Path, str],
+    output_file_name: str,
+    output_dir: Union[Path, str],
+    fps: str,
+):
+    """Handles the parsing/creation of XML file for DEE encoding (atmos)
+    Args:
+        bitrate (int): Bitrate options are (Stream: [384, 448, 576, 640, 768] BluRay: [1024, 1152, 1280, 1408, 1512, 1536, 1664])
+        atmos_mezz_file_name (str): File name only
+        atmos_mezz_file_dir Union[Path, str]: Directory to atmos file
+        output_file_name (str): File name only
+        output_dir (Union[Path, str]): File path only
+        fps (str): Can be one of (not_indicated, 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60)
+
+    Returns:
+        Path: Returns the correct path to the created template file
+    """
+    # Update the xml template values
+    xml_base = xmltodict.parse(xml_audio_base_atmos)
+
+    # xml atmos filename/path
+    xml_base["job_config"]["input"]["audio"]["atmos_mezz"][
+        "file_name"
+    ] = f'"{atmos_mezz_file_name}"'
+    xml_base["job_config"]["input"]["audio"]["atmos_mezz"]["storage"]["local"][
+        "path"
+    ] = f'"{str(atmos_mezz_file_dir)}"'
+
+    # xml ec3 filename/path
+    xml_base["job_config"]["output"]["ec3"]["file_name"] = f'"{output_file_name}"'
+    xml_base["job_config"]["output"]["ec3"]["storage"]["local"][
+        "path"
+    ] = f'"{str(output_dir)}"'
+
+    # update fps sections
+    xml_base["job_config"]["input"]["audio"]["atmos_mezz"]["timecode_frame_rate"] = fps
+    xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+        "timecode_frame_rate"
+    ] = fps
+
+    # xml bitrate config
+    xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"]["data_rate"] = str(
+        bitrate
+    )
+
+    # xml temp path config
+    xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
+
+    # create XML and return path to XML
+    updated_template_file = save_xml(
+        output_dir=output_dir, output_file_name=output_file_name, xml_base=xml_base
+    )
+
+    return updated_template_file
