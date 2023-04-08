@@ -276,7 +276,6 @@ def main(base_wd: Path):
                 bitrate=str(args.bitrate),
                 atmos_mezz_file_name=Path(decode_atmos).name,
                 atmos_mezz_file_dir=Path(decode_atmos).parent,
-                wav_file_name=wav_file_name,
                 output_file_name=output_file_name,
                 output_dir=output_dir,
                 fps=fps,
@@ -319,7 +318,7 @@ def main(base_wd: Path):
         "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    process_ffmpeg(ffmpeg_cmd, args.progress_mode, duration)
+    process_ffmpeg(cmd=ffmpeg_cmd, progress_mode=args.progress_mode, steps=True, duration=duration)
 
     # Call dee to generate the encode file
     dee_cm = [
