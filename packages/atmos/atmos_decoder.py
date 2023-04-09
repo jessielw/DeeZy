@@ -44,7 +44,8 @@ def atmos_decode(
 
     # # create temp directory
     temp_dir = create_temp_dir(
-        dir_path=Path(input_file).parent, temp_folder="atmos_temp"
+        dir_path=Path(input_file).parent,
+        temp_folder=f"{str(Path(Path(input_file).name).with_suffix(''))}_atmos",
     )
 
     # demux true hd atmos track
