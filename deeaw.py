@@ -229,7 +229,7 @@ def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
                 progress_mode=args.progress_mode,
             )
 
-            # pass decoded atmos mezz file xml function
+            # pass decoded atmos mezz file to xml function
             if decode_atmos:
                 update_xml = generate_xml_atmos(
                     bitrate=str(args.bitrate),
