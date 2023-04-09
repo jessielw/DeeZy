@@ -250,6 +250,7 @@ def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
                         args=args,
                         track_info=track_info,
                     )
+                    return
                 else:
                     raise ArgumentTypeError("Source Atmos data is corrupt/invalid")
         else:
@@ -263,6 +264,7 @@ def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
                     args=args,
                     track_info=track_info,
                 )
+                return
             else:
                 raise ArgumentTypeError("Source Atmos data is corrupt/invalid")
 
