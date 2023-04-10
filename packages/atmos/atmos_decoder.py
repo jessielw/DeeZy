@@ -8,6 +8,7 @@ from packages.atmos.atmos_utils import (
     create_atmos_audio_file,
     create_mezz_files,
     generate_atmos_decode_jobs,
+    rename_thd_mlp,
 )
 from packages.shared.shared_utils import check_disk_space
 
@@ -48,15 +49,28 @@ def atmos_decode(
         temp_folder=f"{str(Path(Path(input_file).name).with_suffix(''))}_atmos",
     )
 
-    # demux true hd atmos track
-    demuxed_thd = demux_true_hd(
-        input_file=Path(input_file),
-        temp_dir=temp_dir,
-        mkvextract=Path(mkvextract),
-        mkv_track_num=track_number,
-    )
+    # demux truehd atmos track if it's in a supported matroska container
+    if input_file.suffix in (".mkv", ".mka"):
+        demuxed_thd = demux_true_hd(
+            input_file=Path(input_file),
+            temp_dir=temp_dir,
+            mkvextract=Path(mkvextract),
+            mkv_track_num=track_number,
+        )
+
+    # if truehd track is already in it's raw format
+    elif input_file.suffix in (".mlp", ".thd"):
+        demuxed_thd = rename_thd_mlp(thd_file=Path(input_file))
+
+    # check for any other potential containers
+    else:
+        raise ArgumentTypeError("Unknown input type for TrueHD")
+
+    # raise error if demuxed_thd does not exist
     if not demuxed_thd:
-        raise ArgumentTypeError("There was an error extracting the TrueHD/MLP track.")
+        raise ArgumentTypeError(
+            "There was an error extracting/parsing the TrueHD/MLP track."
+        )
 
     # check to ensure valid truehd
     confirm_thd_track(thd_file=demuxed_thd)
