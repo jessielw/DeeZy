@@ -68,9 +68,9 @@ def process_ffmpeg(
 
                     # update progress but break when 100% is met to prevent printing 100% multiple times
                     if percentage != "100.0%":
-                        print(percentage)
+                        print(percentage, end="\r")
                     else:
-                        print("100.0%\n")
+                        print("100.0%\n", end="\r")
                         break
             else:
                 print(line.strip())
@@ -135,9 +135,9 @@ def process_dee(cmd: list, progress_mode: str):
 
                     # update progress but break when 100% is met to prevent printing 100% multiple times
                     if progress < 100.0:
-                        print(str(progress) + "%")
+                        print(str(progress) + "%", end="\r")
                     elif progress == 100.0 and last_number < 100.0:
-                        print(str(progress) + "%")
+                        print(str(progress) + "%", end="\r")
 
                     # update last number
                     last_number = progress
