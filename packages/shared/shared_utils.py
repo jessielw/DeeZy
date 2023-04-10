@@ -156,7 +156,7 @@ def check_disk_space(drive_path: Path, free_space: int):
     # convert to GB's
     free_space_gb = round(free_space_cwd / (1024**3))
 
-    # check to ensure at least 50 GB's is free
+    # check to ensure the desired space in GB's is free
     if free_space_gb < int(free_space):
         raise ArgumentTypeError("There isn't enough free space to decode Dolby Atmos")
     else:
