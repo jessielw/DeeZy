@@ -1,5 +1,6 @@
 from subprocess import Popen, PIPE, STDOUT
 from packages.shared._version import program_name, __version__, developed_by
+from packages.shared.shared_utils import PrintSameLine
 from typing import Union
 from re import search
 from argparse import ArgumentTypeError
@@ -58,6 +59,9 @@ def process_ffmpeg(
         if progress_mode == "standard" and steps:
             print("---- Step 1 of 3 ---- [FFMPEG]")
 
+        # initiate print on same line
+        print_same_line = PrintSameLine()
+
         for line in proc.stdout:
             # Some audio formats actually do not have a "duration" in their raw containers,
             # if this is the case we will default ffmpeg to it's generic output string.
@@ -68,9 +72,9 @@ def process_ffmpeg(
 
                     # update progress but break when 100% is met to prevent printing 100% multiple times
                     if percentage != "100.0%":
-                        print(percentage, end="\r")
+                        print_same_line(percentage)
                     else:
-                        print("100.0%\n", end="\r")
+                        print_same_line("100.0%\n")
                         break
             else:
                 print(line.strip())
@@ -117,6 +121,9 @@ def process_dee(cmd: list, progress_mode: str):
         if progress_mode == "standard":
             print("---- Step 2 of 3 ---- [DEE measure]")
 
+        # initiate print on same line
+        print_same_line = PrintSameLine()
+
         for line in proc.stdout:
             # check for all dee errors
             if "ERROR " in line:
@@ -135,9 +142,9 @@ def process_dee(cmd: list, progress_mode: str):
 
                     # update progress but break when 100% is met to prevent printing 100% multiple times
                     if progress < 100.0:
-                        print(str(progress) + "%", end="\r")
+                        print_same_line(str(progress) + "%")
                     elif progress == 100.0 and last_number < 100.0:
-                        print(str(progress) + "%", end="\r")
+                        print_same_line(str(progress) + "%")
 
                     # update last number
                     last_number = progress
