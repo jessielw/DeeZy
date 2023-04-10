@@ -262,7 +262,7 @@ def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
         else:
             if args.atmos_fall_back:
                 auto_fallback(
-                    reason="Source Atmos data is corrupt/invalid",
+                    reason="Source does not contain Atmos data",
                     ffmpeg_path=ffmpeg_path,
                     mkvextract_path=mkvextract_path,
                     dee_path=dee_path,
@@ -272,7 +272,7 @@ def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
                 )
                 return
             else:
-                raise ArgumentTypeError("Source Atmos data is corrupt/invalid")
+                raise ArgumentTypeError("Source does not contain Atmos data")
 
     # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
     if args.channels == 2 and args.stereo_down_mix == "dplii" and args.format == "dd":
