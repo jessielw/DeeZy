@@ -60,6 +60,26 @@ def demux_true_hd(
         return output_name
 
 
+def rename_thd_mlp(thd_file: Path):
+    """
+    Checks if the input file is .mlp, if it is return it,
+    if it's not change extension and return it.
+
+    Args:
+        thd_file (Path): TrueHD format (.thd/.mlp)
+
+    Returns:
+        Path: Path to thd_file.mlp file
+    """
+    if Path(thd_file).suffix == ".thd":
+        mlp_file = Path(thd_file).with_suffix(".mlp")
+        Path(thd_file).replace(mlp_file)
+        if mlp_file.is_file():
+            return mlp_file
+    elif Path(thd_file).suffix == ".mlp":
+        return Path(thd_file)
+
+
 def confirm_thd_track(thd_file: Path):
     """Checks binary for proper TrueHD bytes, raise an error if it's not correct.
 
