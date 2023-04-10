@@ -4,6 +4,7 @@ import shutil
 from argparse import ArgumentParser, ArgumentTypeError
 from packages.dd_ddp import dd_ddp_bitrates
 import xmltodict
+from pymediainfo import MediaInfo
 
 
 def get_working_dir():
@@ -173,3 +174,88 @@ class PrintSameLine:
         print(" " * len(self.last_message), end="\r", flush=True)
         print(msg, end="\r", flush=True)
         self.last_message = msg
+
+
+def delay_detection(media_info: MediaInfo, file_input: Path, track_index: int):
+    """Detect delay relative to video to inject into filename
+
+    Args:
+        media_info (MediaInfo): pymediainfo object of input file
+        file_input (Path): Path to input file
+        track_index (int): Track index from args
+
+    Returns:
+        str: Returns a formatted delay string
+    """
+    audio_track = media_info.tracks[track_index + 1]
+    if Path(file_input).suffix == ".mp4":
+        if audio_track.source_delay:
+            delay_string = f"[delay {str(audio_track.source_delay)}ms]"
+        else:
+            delay_string = str("[delay 0ms]")
+    else:
+        if audio_track.delay_relative_to_video:
+            delay_string = f"[delay {str(audio_track.delay_relative_to_video)}ms]"
+        else:
+            delay_string = str("[delay 0ms]")
+    return delay_string
+
+
+def language_detection(media_info: MediaInfo, track_index: int):
+    """
+    Detect language of input track, returning language in the format of
+    "eng" instead of "en" or "english."
+
+    Args:
+        media_info (MediaInfo): pymediainfo object of input file
+        track_index (int): Track index from args
+
+    Returns:
+        str: Returns a formatted language string
+    """
+    audio_track = media_info.tracks[track_index + 1]
+    if audio_track.other_language:
+        l_lengths = [len(lang) for lang in audio_track.other_language]
+        l_index = next((i for i, length in enumerate(l_lengths) if length == 3), None)
+        language_string = (
+            f"[{audio_track.other_language[l_index]}]"
+            if l_index is not None
+            else "[und]"
+        )
+    else:
+        language_string = "[und]"
+    return language_string
+
+
+def generate_output_filename(
+    media_info: MediaInfo, file_input: Path, track_index: int, file_format: str
+):
+    """Automatically generate an output file name
+
+    Args:
+        media_info (MediaInfo): pymediainfo object of input file
+        file_input (Path): Path to input file
+        track_index (int): Track index from args
+        file_format (str): Encoder format
+
+    Returns:
+        Path: Path of a automatically generated filename
+    """
+    # generate extension based on selected encoder format
+    extension = ".ac3" if file_format == "dd" else ".ec3"
+
+    # base directory/name
+    base_dir = Path(file_input).parent
+    base_name = Path(Path(file_input).name).with_suffix("")
+
+    # if track index is 1 we can assume this audio is in a raw format
+    if track_index == 1:
+        return Path(base_dir / base_name).with_suffix(extension)
+
+    # if track index is greater than 1, we can assume it's likely in a container of some sort
+    # so we'll go ahead and attempt to detect delay/language to inject into the title.
+    elif track_index > 1:
+        delay = delay_detection(media_info, file_input, track_index)
+        language = language_detection(media_info, track_index)
+        file_name = f"{base_name}_{delay}_{language}"
+        return Path(base_dir / Path(file_name)).with_suffix(extension)

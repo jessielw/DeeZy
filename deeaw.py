@@ -8,6 +8,7 @@ from packages.shared.shared_utils import (
     validate_track_index,
     validate_channels_with_format,
     validate_bitrate_with_channels_and_format,
+    generate_output_filename,
 )
 from packages.shared._version import program_name, __version__
 from packages.dd_ddp.ddp_utils import generate_xml_dd
@@ -56,12 +57,22 @@ def auto_fallback(
     print(
         f"Falling back to {str(args.format).upper()} {channel_string} {args.bitrate}Kbps... Reason: {reason}"
     )
-    process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
+    process_input(
+        ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args, banner=False
+    )
 
 
-def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args):
-    # display banner to console
-    display_banner()
+def process_input(
+    ffmpeg_path: Path,
+    mkvextract_path: Path,
+    dee_path: Path,
+    gst_launch_path: Path,
+    args: argparse.ArgumentParser.parse_args,
+    banner: bool,
+):
+    # display banner to console if enabled
+    if banner:
+        display_banner()
 
     # validate correct bitrate, channel count and format
     validate_channels_with_format(arguments=args)
@@ -189,6 +200,16 @@ def process_input(ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args)
             down_mix_config = "7.1"
         else:
             raise ArgumentTypeError("Unsupported channel count")
+
+    # if no output is specified we'll create one automatically and set it
+    if not args.output:
+        auto_output = generate_output_filename(
+            media_info=media_info_source,
+            file_input=Path(args.input),
+            track_index=args.track_index,
+            file_format=args.format,
+        )
+        setattr(args, "output", str(auto_output))
 
     # Create the directory for the output file if it doesn't exist
     output_dir = Path(args.output).parent
@@ -348,7 +369,13 @@ def main(base_wd: Path):
         "-i", "--input", type=str, required=True, help="The input file path."
     )
     parser.add_argument(
-        "-o", "--output", type=str, required=True, help="The output file path."
+        "-o",
+        "--output",
+        type=str,
+        help=(
+            "The output file path. If not specified we will attempt to automatically "
+            "add Delay/Language string to output file name."
+        ),
     )
     parser.add_argument(
         "-c",
@@ -430,6 +457,7 @@ def main(base_wd: Path):
         dee_path=dee_path,
         gst_launch_path=gst_launch_path,
         args=args,
+        banner=True,
     )
 
 
