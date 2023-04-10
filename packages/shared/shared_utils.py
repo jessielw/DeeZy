@@ -161,3 +161,16 @@ def check_disk_space(drive_path: Path, free_space: int):
         raise ArgumentTypeError("There isn't enough free space to decode Dolby Atmos")
     else:
         return True
+
+
+class PrintSameLine:
+    """Class to correctly print on same line"""
+
+    def __init__(self):
+        self.last_message = ""
+
+    def print_msg(self, msg: str):
+        print(" " * len(self.last_message), end="\r")
+        sys.stdout.flush()
+        print(msg, end="\r")
+        self.last_message = str(msg)
