@@ -170,7 +170,6 @@ class PrintSameLine:
         self.last_message = ""
 
     def print_msg(self, msg: str):
-        print(" " * len(self.last_message), end="\r")
-        sys.stdout.flush()
-        print(msg, end="\r")
-        self.last_message = str(msg)
+        print(" " * len(self.last_message), end="\r", flush=True)
+        print(msg, end="\r", flush=True)
+        self.last_message = msg
