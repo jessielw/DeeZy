@@ -9,12 +9,13 @@ from packages.shared.shared_utils import (
     validate_channels_with_format,
     validate_bitrate_with_channels_and_format,
     generate_output_filename,
+    FindDependencies,
 )
+from packages.shared.progress import process_ffmpeg, process_dee, display_banner
 from packages.shared._version import program_name, __version__
 from packages.dd_ddp.ddp_utils import generate_xml_dd
 from packages.atmos.atmos_utils import generate_xml_atmos
 from packages.atmos.atmos_decoder import atmos_decode
-from packages.shared.progress import process_ffmpeg, process_dee, display_banner
 
 
 def auto_fallback(
@@ -353,17 +354,12 @@ def process_input(
 
 
 def main(base_wd: Path):
-    # Define paths to ffmpeg, dee, and mkvextract
-    # TODO: Consider adding switch to accept FFMPEG/mkvextract path instead of bundling?
-    ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
-    mkvextract_path = Path(base_wd / "apps/mkvextract/mkvextract.exe")
-    dee_path = Path(base_wd / "apps/dee/dee.exe")
-    gst_launch_path = Path(base_wd / "apps/drp/gst-launch-1.0.exe")
-
-    # Check that the required paths exist
-    for exe_path in [ffmpeg_path, dee_path, mkvextract_path, gst_launch_path]:
-        if not Path(exe_path).is_file():
-            raise ValueError(f"{str(Path(exe_path).name)} path not found")
+    # define tools
+    tools = FindDependencies(base_wd=base_wd)
+    ffmpeg_path = Path(tools.ffmpeg)
+    mkvextract_path = Path(tools.mkvextract)
+    dee_path = Path(tools.dee)
+    gst_launch_path = Path(tools.gst_launch)
 
     # Parse the command line arguments
     parser = argparse.ArgumentParser(description="A command line tool.")
