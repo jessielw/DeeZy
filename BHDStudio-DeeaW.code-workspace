@@ -39,6 +39,7 @@
 			"pymediainfo",
 			"resampler",
 			"soxr",
+			"taskkill",
 			"timecode",
 			"truehd",
 			"truehddec",
