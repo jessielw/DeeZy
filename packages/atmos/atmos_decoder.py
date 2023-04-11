@@ -19,7 +19,7 @@ def atmos_decode(
     ffmpeg: Path,
     input_file: Path,
     track_number: int,
-    atmos_decode_speed: str,
+    atmos_decode_workers: int,
     source_fps: str,
     duration: any,
     progress_mode: str,
@@ -32,7 +32,7 @@ def atmos_decode(
         ffmpeg (Path): Path to ffmpeg executable
         input_file (Path): Path to thd/mlp input file
         track_number (int): Base "tracks" number (ffmpeg 0:x)
-        atmos_decode_speed (str): Single threaded or multithreaded decoding process
+        atmos_decode_workers (int): Desired amount of decode jobs to do at one time
         source_fps (str): FPS of input file
         duration (any): Duration of input file
         progress_mode (str): CLI progress mode
@@ -86,7 +86,7 @@ def atmos_decode(
         demuxed_thd=demuxed_thd,
         channel_id=channel_id,
         channel_names=channel_names,
-        atmos_decode_speed=atmos_decode_speed,
+        atmos_decode_workers=atmos_decode_workers,
     )
 
     if decode_job:

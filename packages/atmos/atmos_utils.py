@@ -94,76 +94,58 @@ def confirm_thd_track(thd_file: Path):
             raise ArgumentTypeError("Source file must be in untouched TrueHD format")
 
 
-class AtmosDecodeMulti:
+class AtmosDecodeWorker:
     """
-    A class for decoding multiple atmos channels using subprocess.
+    A class for decoding atmos channels using subprocess.
     After this is complete, you can check to ensure .error is None.
 
     Args:
-        subprocess_jobs_list (list): A list of subprocess jobs to be run.
+        command_list (list): A list of command strings to be run.
+        max_workers (int): The maximum number of workers to use at any given time.
 
     Attributes:
         error (bool): Indicates if an error has occurred in any of the subprocess jobs.
         completed_jobs (int): The number of completed subprocess jobs.
         total_jobs (int): The total number of subprocess jobs.
+        processes (list): A list of subprocess.Popen objects representing the running subprocesses.
     """
 
-    def __init__(self, subprocess_jobs_list: list):
+    def __init__(self, command_list: list, max_workers: int):
         self.error = False
         self.completed_jobs = 0
-        self.total_jobs = len(subprocess_jobs_list)
+        self.total_jobs = len(command_list)
+        self.processes = []
 
-        print(f"Decoding {self.total_jobs} atmos channels.")
+        # ensure we're only starting as many workers as we need
+        num_workers = min(self.total_jobs, max_workers)
 
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.total_jobs
-        ) as executor:
-            future_to_job = {
-                executor.submit(self.run_job, job): job for job in subprocess_jobs_list
-            }
-            for future in concurrent.futures.as_completed(future_to_job):
-                job = future_to_job[future]
-                if future.exception() is not None:
+        print(f"Decoding {self.total_jobs} atmos channels with {num_workers} workers.")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            results = executor.map(self.run_job, command_list)
+            for result in results:
+                if result is not None and result != 0:
                     self.error = True
-                    print(f"Job {job} failed with exception: {future.exception()}")
+                    print(f"Job failed with exit code: {result}")
+                    for process in self.processes:
+                        process.terminate()
+                        print(f"Terminated process with command: {process.args}")
 
-    def run_job(self, job):
-        while True:
-            line = job.stdout.readline()
-            if not line:
-                break
-
-            if "ERROR" in line:
-                self.error = True
-                break
-
-            # can print output of "line" here if we want
-
-        if not self.error:
+    def run_job(self, command):
+        process = Popen(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        self.processes.append(process)
+        stdout, stderr = process.communicate()
+        if process.returncode != 0 or "error" in stderr.lower():
+            self.error = True
+            print(f"Job failed with exit code: {process.returncode}")
+            for process in self.processes:
+                process.terminate()
+                print(f"Terminated process with command: {process.args}")
+        else:
             self.completed_jobs += 1
             print(f"Decoding job {self.completed_jobs} of {self.total_jobs} completed.")
 
-        return job.poll()
-
-
-def atmos_decode_job_single(jobs_list: list):
-    """Decode Atmos audio channels from a list of subprocess jobs.
-
-    Args:
-        jobs_list (list): A list of subprocess jobs representing Atmos audio channels to be decoded.
-
-    Returns:
-        bool: True if an error occurred during decoding, False otherwise.
-    """
-    for job_num, job in enumerate(jobs_list, start=1):
-        print(f"Decoding channel {job_num} of {len(jobs_list)}")
-        with Popen(job, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-            for line in proc.stdout:
-                if "ERROR" in line:
-                    print(f"Error occurred while decoding channel {job_num}")
-                    return True
-
-    return False
+        return process.returncode
 
 
 def generate_truehd_decode_command(
@@ -222,7 +204,7 @@ def generate_atmos_decode_jobs(
     demuxed_thd: Path,
     channel_id: int,
     channel_names: list,
-    atmos_decode_speed: str,
+    atmos_decode_workers: int,
 ):
     """
     Generates list of decode jobs based on channel layout count. If speed is set to single or multi it appends
@@ -234,12 +216,12 @@ def generate_atmos_decode_jobs(
         demuxed_thd (Path): Path to demuxed_thd
         channel_id (int): Channel ID
         channel_names (list): List of channel names
-        atmos_decode_speed (str): Can be single or multi
+        atmos_decode_workers (int): Desired amount of decode jobs to do at one time
 
     Returns:
         list: Returns list with full paths to the decoded wav files
     """
-    jobs_list = []
+    command_list = []
     output_wav_s_list = []
     for channel_count, channel_name in enumerate(channel_names):
         # generate wav name
@@ -255,22 +237,17 @@ def generate_atmos_decode_jobs(
             channel_id,
         )
 
-        # depending on atmos decode speed we'll either append only the command or subprocess objects
-        if atmos_decode_speed == "single":
-            jobs_list.append(command)
-        elif atmos_decode_speed == "multi":
-            jobs_list.append(
-                Popen(command, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
-            )
+        # append all commands to a list to be sent to the worker
+        command_list.append(command)
 
         # add output wav's to a list to keep track of them
         output_wav_s_list.append(output_wav_s)
 
-    # send the list to to the function for processing the list
-    if atmos_decode_speed == "single":
-        decode_error = atmos_decode_job_single(jobs_list=jobs_list)
-    elif atmos_decode_speed == "multi":
-        decode_error = AtmosDecodeMulti(subprocess_jobs_list=jobs_list).error
+    # send the list of commands to the worker
+    atmos_worker = AtmosDecodeWorker(
+        command_list=command_list, max_workers=atmos_decode_workers
+    )
+    decode_error = atmos_worker.error
 
     # check to ensure no error happened during decode and return wav list
     if not decode_error:

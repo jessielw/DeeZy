@@ -248,7 +248,7 @@ def process_input(
                 ffmpeg=ffmpeg_path,
                 input_file=Path(args.input),
                 track_number=args.track_index,
-                atmos_decode_speed=args.atmos_decode_speed,
+                atmos_decode_workers=args.atmos_decode_workers,
                 source_fps=fps,
                 duration=duration,
                 progress_mode=args.progress_mode,
@@ -406,12 +406,12 @@ def main(base_wd: Path):
         help="The file format.",
     )
     parser.add_argument(
-        "-a",
-        "--atmos-decode-speed",
-        choices=["single", "multi"],
-        type=str,
-        default="multi",
-        help="Decode 1 atmos at a time or all at once.",
+        "-w",
+        "--atmos-decode-workers",
+        choices=list(range(1, 21)),
+        type=int,
+        default=4,
+        help="Desired amount of atmos decode workers at a time.",
     )
     parser.add_argument(
         "-r",
