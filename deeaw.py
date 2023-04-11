@@ -94,6 +94,8 @@ def process_input(
     # parse track for information
     # +1 because the first track is always "general"
     track_info = media_info_source.tracks[args.track_index + 1]
+    if track_info.track_type != "Audio":
+        raise ArgumentTypeError("Track index is not an audio track.")
 
     # get track duration and convert to a float if not None
     # we need duration to calculate percentage for FFMPEG
