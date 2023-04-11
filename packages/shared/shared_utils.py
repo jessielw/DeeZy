@@ -248,14 +248,15 @@ def generate_output_filename(
     base_dir = Path(file_input).parent
     base_name = Path(Path(file_input).name).with_suffix("")
 
-    # if track index is 1 we can assume this audio is in a raw format
-    if track_index == 1:
-        return Path(base_dir / base_name).with_suffix(extension)
+    # if track index is 0 we can assume this audio is in a raw format
+    if track_index == 0:
+        file_name = f"{base_name}{extension}"
+        return Path(base_dir / Path(file_name))
 
-    # if track index is greater than 1, we can assume it's likely in a container of some sort
-    # so we'll go ahead and attempt to detect delay/language to inject into the title.
-    elif track_index > 1:
+    # if track index is equal to or greater than 1, we can assume it's likely in a container of some
+    # sort, so we'll go ahead and attempt to detect delay/language to inject into the title.
+    elif track_index >= 1:
         delay = delay_detection(media_info, file_input, track_index)
         language = language_detection(media_info, track_index)
-        file_name = f"{base_name}_{delay}_{language}"
-        return Path(base_dir / Path(file_name)).with_suffix(extension)
+        file_name = f"{base_name}_{language}_{delay}{extension}"
+        return Path(base_dir / Path(file_name))
