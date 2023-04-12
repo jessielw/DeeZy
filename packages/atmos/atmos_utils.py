@@ -280,6 +280,7 @@ def create_atmos_audio_file(
     temp_dir: Path,
     output_wav_s_list: list,
     progress_mode: str,
+    atmos_channel_config: str,
     duration: any,
     volume: float = 2.5,
 ):
@@ -296,6 +297,7 @@ def create_atmos_audio_file(
         temp_dir (Path): Path to temp_dir
         output_wav_s_list (list): List of wav files to join
         progress_mode (str): Set's the designed progress output mode
+        atmos_channel_config (str): The desired Atmos channel config
         duration (any): Needed to convert progress to percent
         volume (float): This boosts the volume of the PCM file (volume * 100 = x%)
 
@@ -308,6 +310,12 @@ def create_atmos_audio_file(
     # append -i to all of the inputs
     inputs = [["-i", output_wav] for output_wav in output_wav_s_list]
 
+    # create ffmpeg's join command
+    if atmos_channel_config == "5.1.4":
+        join_command = f"join=inputs=10:channel_layout=5.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-TBL|7.0-TBR|8.0-TFL|9.0-TFR,volume={volume}"
+    elif atmos_channel_config == "7.1.4":
+        join_command = f"join=inputs=10:channel_layout=7.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-SL|7.0-SR|8.0-TBL|9.0-TBR|10.0-TFL|11.0-TFR,volume={volume}"
+
     # create the command
     combine_cmd = [
         str(ffmpeg),
@@ -318,7 +326,7 @@ def create_atmos_audio_file(
         "-f",
         "caf",
         "-filter_complex",
-        f"join=inputs=10:channel_layout=5.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-TBL|7.0-TBR|8.0-TFL|9.0-TFR,volume={volume}",
+        join_command,
         "-hide_banner",
         "-v",
         "-stats",

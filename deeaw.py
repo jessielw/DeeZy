@@ -253,6 +253,7 @@ def process_input(
                 source_fps=fps,
                 duration=duration,
                 progress_mode=args.progress_mode,
+                atmos_channel_config=args.atmos_channel_config,
             )
 
             # pass decoded atmos mezz file path to xml function
@@ -410,7 +411,15 @@ def main(base_wd: Path):
         help="Desired amount of atmos decode workers at a time.",
     )
     parser.add_argument(
-        "-r",
+        "-ac",
+        "--atmos-channel-config",
+        choices=["5.1.4", "7.1.4"],
+        type=str,
+        default="5.1.4",
+        help="Desired Atmos channel configuration.",
+    )
+    parser.add_argument(
+        "-afb",
         "--atmos-fall-back",
         action="store_true",
         help="In the event Atmos data is invalid, automatically fall back to the next best potential settings",

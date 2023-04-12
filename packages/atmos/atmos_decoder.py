@@ -23,6 +23,7 @@ def atmos_decode(
     source_fps: str,
     duration: any,
     progress_mode: str,
+    atmos_channel_config: str,
 ):
     """_summary_
 
@@ -36,6 +37,7 @@ def atmos_decode(
         source_fps (str): FPS of input file
         duration (any): Duration of input file
         progress_mode (str): CLI progress mode
+        atmos_channel_config (str): Desired Atmos channel configuration
 
     Returns:
         Path: Path to main mezz file
@@ -75,9 +77,9 @@ def atmos_decode(
     # check to ensure valid truehd
     confirm_thd_track(thd_file=demuxed_thd)
 
-    # get needed channel layout (since we're only looking to support 5.1.4 for now it'll be hard coded)
-    channel_id = atmos_channels["5.1.4"]["id"]
-    channel_names = atmos_channels["5.1.4"]["names"]
+    # get needed channel layout
+    channel_id = atmos_channels[atmos_channel_config]["id"]
+    channel_names = atmos_channels[atmos_channel_config]["names"]
 
     # decode
     decode_job = generate_atmos_decode_jobs(
