@@ -1,4 +1,4 @@
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, STDOUT, CREATE_NO_WINDOW
 from packages.shared._version import program_name, __version__, developed_by
 from packages.shared.shared_utils import PrintSameLine
 from typing import Union
@@ -55,7 +55,13 @@ def process_ffmpeg(
     elif progress_mode == "debug":
         cmd.insert(inject, "debug")
 
-    with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
+    with Popen(
+        cmd,
+        stdout=PIPE,
+        stderr=STDOUT,
+        universal_newlines=True,
+        creationflags=CREATE_NO_WINDOW,
+    ) as proc:
         if progress_mode == "standard" and steps:
             print("---- Step 1 of 3 ---- [FFMPEG]")
 
@@ -117,7 +123,13 @@ def process_dee(cmd: list, progress_mode: str):
     # variable to update to print step 3
     last_number = 0
 
-    with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
+    with Popen(
+        cmd,
+        stdout=PIPE,
+        stderr=STDOUT,
+        universal_newlines=True,
+        creationflags=CREATE_NO_WINDOW,
+    ) as proc:
         if progress_mode == "standard":
             print("---- Step 2 of 3 ---- [DEE measure]")
 

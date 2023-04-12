@@ -1,5 +1,5 @@
 from pathlib import Path
-from subprocess import run
+from subprocess import run, CREATE_NO_WINDOW
 import os
 
 
@@ -17,7 +17,8 @@ def build_app():
 
     # run pyinstaller command
     build_job = run(
-        ["pyinstaller.exe", "--onefile", f"--icon={str(icon_path)}", str(deeaw_script)]
+        ["pyinstaller.exe", "--onefile", f"--icon={str(icon_path)}", str(deeaw_script)],
+        creationflags=CREATE_NO_WINDOW,
     )
 
     # ensure output of exe

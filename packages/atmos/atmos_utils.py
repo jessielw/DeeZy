@@ -6,7 +6,7 @@ from packages.shared.shared_utils import save_xml
 from packages.shared.progress import process_ffmpeg
 from pathlib import Path
 import shutil
-from subprocess import run, Popen, STDOUT, PIPE
+from subprocess import run, Popen, STDOUT, PIPE, CREATE_NO_WINDOW
 import concurrent.futures
 import atexit
 import platform
@@ -54,7 +54,8 @@ def demux_true_hd(
             str(input_file),
             "tracks",
             f"{str(mkv_track_num)}:{str(output_name)}",
-        ]
+        ],
+        creationflags=CREATE_NO_WINDOW,
     )
 
     # check for valid output
@@ -140,7 +141,13 @@ class AtmosDecodeWorker:
             atexit.register(self.terminate_processes)
 
     def run_job(self, command):
-        process = Popen(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        process = Popen(
+            command,
+            stdout=PIPE,
+            stderr=PIPE,
+            universal_newlines=True,
+            creationflags=CREATE_NO_WINDOW,
+        )
         self.processes.append(process)
         stdout, stderr = process.communicate()
         if process.returncode != 0 or "error" in stderr.lower():
@@ -164,7 +171,10 @@ class AtmosDecodeWorker:
         # on Windows, subprocesses are not automatically terminated when the parent process exits,
         # so we need to use the taskkill command to forcibly terminate them
         for process in self.processes:
-            run(["taskkill", "/F", "/T", "/PID", str(process.pid)])
+            run(
+                ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                creationflags=CREATE_NO_WINDOW,
+            )
 
 
 def generate_truehd_decode_command(
