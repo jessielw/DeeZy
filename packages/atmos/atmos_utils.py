@@ -8,6 +8,8 @@ from pathlib import Path
 import shutil
 from subprocess import run, Popen, STDOUT, PIPE
 import concurrent.futures
+import atexit
+import platform
 
 
 def create_temp_dir(dir_path: Path, temp_folder: str):
@@ -131,6 +133,12 @@ class AtmosDecodeWorker:
                         process.terminate()
                         print(f"Terminated process with command: {process.args}")
 
+        # register a function to terminate any remaining subprocesses on exit
+        if platform.system() == "Windows":
+            atexit.register(self.terminate_processes_windows)
+        else:
+            atexit.register(self.terminate_processes)
+
     def run_job(self, command):
         process = Popen(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         self.processes.append(process)
@@ -146,6 +154,17 @@ class AtmosDecodeWorker:
             print(f"Decoding job {self.completed_jobs} of {self.total_jobs} completed.")
 
         return process.returncode
+
+    def terminate_processes(self):
+        for process in self.processes:
+            process.terminate()
+            print(f"Terminated process with command: {process.args}")
+
+    def terminate_processes_windows(self):
+        # on Windows, subprocesses are not automatically terminated when the parent process exits,
+        # so we need to use the taskkill command to forcibly terminate them
+        for process in self.processes:
+            run(["taskkill", "/F", "/T", "/PID", str(process.pid)])
 
 
 def generate_truehd_decode_command(
