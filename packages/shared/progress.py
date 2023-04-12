@@ -99,12 +99,13 @@ def _filter_dee_progress(line: str):
         return float(get_progress.group(1))
 
 
-def process_dee(cmd: list, progress_mode: str):
+def process_dee(cmd: list, progress_mode: str, encoder_format: str):
     """Processes file with DEE while generating progress depending on progress_mode.
 
     Args:
         cmd (list): Base DEE cmd list
         progress_mode (str): Options are "standard" or "debug"
+        encoder_format (str): Encoding format setting
     """
 
     # inject verbosity level into cmd list depending on progress_mode
@@ -118,8 +119,10 @@ def process_dee(cmd: list, progress_mode: str):
     last_number = 0
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-        if progress_mode == "standard":
+        if progress_mode == "standard" and encoder_format != "atmos":
             print("---- Step 2 of 3 ---- [DEE measure]")
+        else:
+            print("\n---- Step 2 of 2 ---- [DEE encode]")
 
         # initiate print on same line
         print_same_line = PrintSameLine()
@@ -148,6 +151,7 @@ def process_dee(cmd: list, progress_mode: str):
 
                     # update last number
                     last_number = progress
+                pass
             else:
                 print(line.strip())
 

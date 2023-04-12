@@ -99,6 +99,7 @@ def atmos_decode(
             output_wav_s_list=decode_job,
             progress_mode=progress_mode,
             duration=duration,
+            atmos_channel_config=atmos_channel_config,
         )
 
         # create atmos mezz files (currently just hard coded channel layout)

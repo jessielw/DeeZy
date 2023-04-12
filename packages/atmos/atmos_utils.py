@@ -100,11 +100,9 @@ class AtmosDecodeWorker:
     """
     A class for decoding atmos channels using subprocess.
     After this is complete, you can check to ensure .error is None.
-
     Args:
         command_list (list): A list of command strings to be run.
         max_workers (int): The maximum number of workers to use at any given time.
-
     Attributes:
         error (bool): Indicates if an error has occurred in any of the subprocess jobs.
         completed_jobs (int): The number of completed subprocess jobs.
@@ -133,12 +131,6 @@ class AtmosDecodeWorker:
                         process.terminate()
                         print(f"Terminated process with command: {process.args}")
 
-        # register a function to terminate any remaining subprocesses on exit
-        if platform.system() == "Windows":
-            atexit.register(self.terminate_processes_windows)
-        else:
-            atexit.register(self.terminate_processes)
-
     def run_job(self, command):
         process = Popen(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         self.processes.append(process)
@@ -154,17 +146,6 @@ class AtmosDecodeWorker:
             print(f"Decoding job {self.completed_jobs} of {self.total_jobs} completed.")
 
         return process.returncode
-
-    def terminate_processes(self):
-        for process in self.processes:
-            process.terminate()
-            print(f"Terminated process with command: {process.args}")
-
-    def terminate_processes_windows(self):
-        # on Windows, subprocesses are not automatically terminated when the parent process exits,
-        # so we need to use the taskkill command to forcibly terminate them
-        for process in self.processes:
-            run(["taskkill", "/F", "/T", "/PID", str(process.pid)])
 
 
 def generate_truehd_decode_command(
@@ -314,7 +295,7 @@ def create_atmos_audio_file(
     if atmos_channel_config == "5.1.4":
         join_command = f"join=inputs=10:channel_layout=5.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-TBL|7.0-TBR|8.0-TFL|9.0-TFR,volume={volume}"
     elif atmos_channel_config == "7.1.4":
-        join_command = f"join=inputs=10:channel_layout=7.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-SL|7.0-SR|8.0-TBL|9.0-TBR|10.0-TFL|11.0-TFR,volume={volume}"
+        join_command = f"join=inputs=12:channel_layout=7.1+TFL+TFR+TBL+TBR:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-SL|7.0-SR|8.0-TBL|9.0-TBR|10.0-TFL|11.0-TFR,volume={volume}"
 
     # create the command
     combine_cmd = [

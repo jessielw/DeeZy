@@ -346,7 +346,7 @@ def process_input(
         str(update_xml),
         "--disable-xml-validation",
     ]
-    process_dee(dee_cm, args.progress_mode)
+    process_dee(cmd=dee_cm, progress_mode=args.progress_mode, encoder_format=args.format)
 
     # Clean up temp files
     if not args.keep_temp:
