@@ -105,7 +105,9 @@ def atmos_decode(
         mezz_file = create_mezz_files(
             temp_dir=temp_dir,
             atmos_audio_file=Path(generate_atmos_audio_file),
-            template_dir=Path(Path(gst_launch).parent / "channel_layouts" / "5.1.4"),
+            template_dir=Path(
+                Path(gst_launch).parent / "channel_layouts" / atmos_channel_config
+            ),
             fps=source_fps,
         )
 
