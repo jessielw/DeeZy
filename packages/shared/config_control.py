@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 from pathlib import Path
-from argparse import ArgumentTypeError
+from packages import custom_exit, exit_fail
 
 config_file = "deeaw_config.ini"
 
@@ -26,7 +26,7 @@ def create_config():
 
             config.write(config_file_handle)
     except Exception as e:
-        raise ArgumentTypeError(f"Error while creating the config file: {e}")
+        custom_exit(f"Error while creating the config file: {e}", exit_fail)
 
 
 def update_config(section: str, option: str, value: str):
@@ -44,7 +44,7 @@ def update_config(section: str, option: str, value: str):
     except FileNotFoundError:
         config_parser.add_section(section)
     except Exception as e:
-        raise ArgumentTypeError(f"Error while reading the config file: {e}")
+        custom_exit(f"Error while reading the config file: {e}", exit_fail)
 
     if not config_parser.has_section(section):
         config_parser.add_section(section)
@@ -59,7 +59,7 @@ def update_config(section: str, option: str, value: str):
         with open(config_file, "w") as cfg_file:
             config_parser.write(cfg_file)
     except Exception as e:
-        raise ArgumentTypeError(f"Error while writing to the config file: {e}")
+        custom_exit(f"Error while writing to the config file: {e}", exit_fail)
 
 
 def read_config(section: str, option: str):
@@ -77,8 +77,8 @@ def read_config(section: str, option: str):
         with open(config_file, "r") as cfg_file:
             config_parser.read_file(cfg_file)
     except FileNotFoundError:
-        raise ArgumentTypeError("Config file not found.")
+        custom_exit("Config file not found.", exit_fail)
     except Exception as e:
-        raise ArgumentTypeError(f"Error while reading the config file: {e}")
+        custom_exit(f"Error while reading the config file: {e}", exit_fail)
 
     return config_parser.get(section, option)

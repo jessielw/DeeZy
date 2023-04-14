@@ -1,9 +1,9 @@
 from subprocess import Popen, PIPE, STDOUT
+from packages import custom_exit, exit_fail
 from packages.shared._version import program_name, __version__, developed_by
 from packages.shared.shared_utils import PrintSameLine
 from typing import Union
 from re import search
-from argparse import ArgumentTypeError
 
 
 def display_banner():
@@ -80,7 +80,9 @@ def process_ffmpeg(
                 print(line.strip())
 
         if proc.returncode != 0:
-            ArgumentTypeError("There was an FFMPEG error. Please re-run in debug mode.")
+            custom_exit(
+                "There was an FFMPEG error. Please re-run in debug mode.", exit_fail
+            )
 
     return True
 
@@ -130,7 +132,7 @@ def process_dee(cmd: list, progress_mode: str, encoder_format: str):
         for line in proc.stdout:
             # check for all dee errors
             if "ERROR " in line:
-                raise ArgumentTypeError(f"There was a DEE error: {line}")
+                custom_exit(f"There was a DEE error: {line}", exit_fail)
 
             # If progress mode is quiet let's clean up progress output
             if progress_mode == "standard":
@@ -156,4 +158,6 @@ def process_dee(cmd: list, progress_mode: str, encoder_format: str):
                 print(line.strip())
 
         if proc.returncode != 0:
-            ArgumentTypeError("There was an DEE error. Please re-run in debug mode.")
+            custom_exit(
+                "There was an DEE error. Please re-run in debug mode.", exit_fail
+            )

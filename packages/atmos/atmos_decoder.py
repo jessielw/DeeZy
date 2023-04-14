@@ -1,5 +1,5 @@
 from pathlib import Path
-from argparse import ArgumentTypeError
+from packages import custom_exit, exit_fail
 from packages.atmos import atmos_channels
 from packages.atmos.atmos_utils import (
     create_temp_dir,
@@ -66,12 +66,12 @@ def atmos_decode(
 
     # check for any other potential containers
     else:
-        raise ArgumentTypeError("Unknown input type for TrueHD")
+        custom_exit("Unknown input type for TrueHD", exit_fail)
 
     # raise error if demuxed_thd does not exist
     if not demuxed_thd:
-        raise ArgumentTypeError(
-            "There was an error extracting/parsing the TrueHD/MLP track."
+        custom_exit(
+            "There was an error extracting/parsing the TrueHD/MLP track.", exit_fail
         )
 
     # check to ensure valid truehd

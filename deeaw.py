@@ -1,8 +1,8 @@
 import sys
 import argparse
-from argparse import ArgumentTypeError
 from pathlib import Path
 from pymediainfo import MediaInfo
+from packages import custom_exit, exit_fail
 from packages.shared.shared_utils import (
     get_working_dir,
     validate_track_index,
@@ -81,7 +81,7 @@ def process_input(
 
     # Check that the input file exists
     if not Path(args.input).exists():
-        raise ArgumentTypeError(f"Input file not found: {args.input}")
+        custom_exit(f"Input file not found: {args.input}", exit_fail)
 
     # Parse file with MediaInfo
     media_info_source = MediaInfo.parse(args.input)
@@ -96,7 +96,7 @@ def process_input(
     # +1 because the first track is always "general"
     track_info = media_info_source.tracks[args.track_index + 1]
     if track_info.track_type != "Audio":
-        raise ArgumentTypeError("Track index is not an audio track.")
+        custom_exit("Track index is not an audio track.", exit_fail)
 
     # get track duration and convert to a float if not None
     # we need duration to calculate percentage for FFMPEG
@@ -187,7 +187,7 @@ def process_input(
     # Work out if we need to do down-mix
     if args.format != "atmos":
         if args.channels > channels:
-            raise ArgumentTypeError("Up-mixing is not supported.")
+            custom_exit("Up-mixing is not supported.", exit_fail)
         elif args.channels == channels:
             down_mix_config = "off"
         elif args.channels == 1:
@@ -202,7 +202,7 @@ def process_input(
         elif args.channels == 8:
             down_mix_config = "7.1"
         else:
-            raise ArgumentTypeError("Unsupported channel count")
+            custom_exit("Unsupported channel count.", exit_fail)
 
     # if no output is specified we'll create one automatically and set it
     if not args.output:
@@ -271,7 +271,7 @@ def process_input(
             else:
                 if args.atmos_fall_back:
                     auto_fallback(
-                        reason="Source Atmos data is corrupt/invalid",
+                        reason="Source Atmos data is corrupt/invalid.",
                         ffmpeg_path=ffmpeg_path,
                         mkvextract_path=mkvextract_path,
                         dee_path=dee_path,
@@ -281,13 +281,13 @@ def process_input(
                     )
                     return
                 else:
-                    raise ArgumentTypeError("Source Atmos data is corrupt/invalid")
+                    custom_exit("Source Atmos data is corrupt/invalid.", exit_fail)
 
         # if no atmos was detected in input file
         else:
             if args.atmos_fall_back:
                 auto_fallback(
-                    reason="Source does not contain Atmos data",
+                    reason="Source does not contain Atmos data.",
                     ffmpeg_path=ffmpeg_path,
                     mkvextract_path=mkvextract_path,
                     dee_path=dee_path,
@@ -297,7 +297,7 @@ def process_input(
                 )
                 return
             else:
-                raise ArgumentTypeError("Source does not contain Atmos data")
+                custom_exit("Source does not contain Atmos data.", exit_fail)
 
     # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
     if args.channels == 2 and args.stereo_down_mix == "dplii" and args.format == "dd":
@@ -346,12 +346,17 @@ def process_input(
         str(update_xml),
         "--disable-xml-validation",
     ]
-    process_dee(cmd=dee_cm, progress_mode=args.progress_mode, encoder_format=args.format)
+    process_dee(
+        cmd=dee_cm, progress_mode=args.progress_mode, encoder_format=args.format
+    )
 
     # Clean up temp files
     if not args.keep_temp:
         Path(update_xml).unlink()
         Path(output_dir / wav_file_name).unlink()
+
+    # print success message
+    custom_exit(f"Success: {Path(args.output).name}")
 
 
 def main(base_wd: Path):

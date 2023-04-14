@@ -1,7 +1,8 @@
 from pathlib import Path
 import sys
 import shutil
-from argparse import ArgumentParser, ArgumentTypeError
+from argparse import ArgumentParser
+from packages import custom_exit, exit_fail
 from packages.dd_ddp import dd_ddp_bitrates
 from packages.shared.config_control import create_config, read_config
 import xmltodict
@@ -53,7 +54,7 @@ def save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
     if updated_template_file.exists():
         return updated_template_file
     else:
-        raise ArgumentTypeError("XML file could not be created")
+        custom_exit("XML file could not be created", exit_fail)
 
 
 def validate_track_index(value: any):
@@ -94,11 +95,12 @@ def validate_channels_with_format(arguments: ArgumentParser.parse_args):
         elif arguments.format == "ddp":
             valid_channels = [1, 2, 6, 8]
         else:
-            raise ArgumentTypeError("Unknown file format.")
+            custom_exit("Unknown file format.", exit_fail)
 
         if arguments.channels not in valid_channels:
-            ArgumentTypeError.error(
-                message=f"Invalid channel count for designated file type: {arguments.format}.\nValid options: {valid_channels}"
+            custom_exit(
+                f"Invalid channel count for designated file type: {arguments.format}.\nValid options: {valid_channels}",
+                exit_fail,
             )
 
 
@@ -121,7 +123,7 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
             elif arguments.channels == 6:
                 valid_bitrates = dd_ddp_bitrates.get("dd_51")
             else:
-                raise ArgumentTypeError("Invalid channel count.")
+                custom_exit("Invalid channel count.", exit_fail)
         elif arguments.format == "ddp":
             if arguments.channels == 1:
                 valid_bitrates = dd_ddp_bitrates.get("ddp_10")
@@ -132,13 +134,14 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
             elif arguments.channels == 8:
                 valid_bitrates = dd_ddp_bitrates.get("ddp_71_standard")
             else:
-                raise ArgumentTypeError("Invalid channel count.")
+                custom_exit("invalid channel count.", exit_fail)
         else:
-            raise ArgumentTypeError("Unknown file format.")
+            custom_exit("Unknown file format.", exit_fail)
 
         if arguments.bitrate not in valid_bitrates:
-            ArgumentTypeError(
-                f"Invalid bitrate for input channel count and file type: {arguments.format} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}"
+            custom_exit(
+                f"Invalid bitrate for input channel count and file type: {arguments.format} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}",
+                exit_fail,
             )
 
 
@@ -160,7 +163,7 @@ def check_disk_space(drive_path: Path, free_space: int):
 
     # check to ensure the desired space in GB's is free
     if free_space_gb < int(free_space):
-        raise ArgumentTypeError("There isn't enough free space to decode Dolby Atmos")
+        custom_exit("There isn't enough free space to decode Dolby Atmos.", exit_fail)
     else:
         return True
 

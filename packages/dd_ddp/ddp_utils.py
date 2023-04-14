@@ -1,9 +1,9 @@
 import xmltodict
 from pathlib import Path
+from packages import custom_exit, exit_fail
 from packages.dd_ddp.xml_base import xml_audio_base_ddp
 from packages.shared.shared_utils import save_xml
 from typing import Union
-from argparse import ArgumentTypeError
 
 
 def generate_xml_dd(
@@ -124,7 +124,7 @@ def generate_xml_dd(
         # delete ac3 from dict
         del xml_base["job_config"]["output"]["ac3"]
     else:
-        raise ArgumentTypeError("Unknown file format.")
+        custom_exit("Unknown file format.", exit_fail)
 
     # create XML and return path to XML
     updated_template_file = save_xml(

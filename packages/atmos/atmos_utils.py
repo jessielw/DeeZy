@@ -1,15 +1,13 @@
-from argparse import ArgumentTypeError
 from typing import Union
 import xmltodict
+from packages import custom_exit, exit_fail
 from packages.atmos.xml_base import xml_audio_base_atmos
 from packages.shared.shared_utils import save_xml
 from packages.shared.progress import process_ffmpeg
 from pathlib import Path
 import shutil
-from subprocess import run, Popen, STDOUT, PIPE
+from subprocess import run, Popen, PIPE
 import concurrent.futures
-import atexit
-import platform
 
 
 def create_temp_dir(dir_path: Path, temp_folder: str):
@@ -93,7 +91,7 @@ def confirm_thd_track(thd_file: Path):
         truehd_sync_word = 0xF8726FBA.to_bytes(4, "big")
 
         if truehd_sync_word not in first_bytes:
-            raise ArgumentTypeError("Source file must be in untouched TrueHD format")
+            custom_exit("Source file must be in untouched TrueHD format", exit_fail)
 
 
 class AtmosDecodeWorker:
