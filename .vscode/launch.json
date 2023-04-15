@@ -40,25 +40,23 @@
             "justMyCode": true
         },
         {
-            "name": "Python: Test 7.1",
+            "name": "Python: Test 5.1",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [ 
-                "-i",
                 "C:\\Users\\jlw_4\\OneDrive\\Desktop\\testing dre\\Ant-Man.2015.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv",
-                "-c",
-                "8",
                 "-b",
-                "768",
+                "640",
                 "-t",
                 "1",
                 "-k",
                 "-p",
                 "standard",
-                "-f",
-                "ddp"],
+                "ddp",
+                "-c",
+                "6",],
             "justMyCode": true
         },
         {
@@ -83,6 +81,32 @@
                 "atmos",
                 "-w",
                 "4"],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Test 7.1 Atmos",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [ 
+                "-i",
+                "C:\\Users\\jlw_4\\OneDrive\\Desktop\\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.mkv",
+                "-o",
+                "C:\\Users\\jlw_4\\OneDrive\\Desktop\\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR\\Luca.2021.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX-FraMeSToR.ec3",
+                "-b",
+                "768",
+                "-t",
+                "1",
+                "-k",
+                "-p",
+                "standard",
+                "-f",
+                "atmos",
+                "-w",
+                "10",
+                "-ac",
+                "7.1.4"],
             "justMyCode": true
         }
     ]
