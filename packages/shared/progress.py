@@ -53,7 +53,7 @@ def process_ffmpeg(
     if progress_mode == "standard":
         cmd.insert(inject, "quiet")
     elif progress_mode == "debug":
-        cmd.insert(inject, "debug")
+        cmd.insert(inject, "info")
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
         if progress_mode == "standard" and steps:
@@ -79,12 +79,12 @@ def process_ffmpeg(
             else:
                 print(line.strip())
 
-        if proc.returncode != 0:
-            custom_exit(
-                "There was an FFMPEG error. Please re-run in debug mode.", exit_fail
-            )
-
-    return True
+    if proc.returncode != 0:
+        custom_exit(
+            "There was an FFMPEG error. Please re-run in debug mode.", exit_fail
+        )
+    else:
+        return True
 
 
 def _filter_dee_progress(line: str):
@@ -157,7 +157,7 @@ def process_dee(cmd: list, progress_mode: str, encoder_format: str):
             else:
                 print(line.strip())
 
-        if proc.returncode != 0:
-            custom_exit(
-                "There was an DEE error. Please re-run in debug mode.", exit_fail
-            )
+    if proc.returncode != 0:
+        custom_exit("There was an DEE error. Please re-run in debug mode.", exit_fail)
+    else:
+        return True
