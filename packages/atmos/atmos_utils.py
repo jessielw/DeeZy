@@ -205,8 +205,7 @@ def generate_atmos_decode_jobs(
     atmos_decode_workers: int,
 ):
     """
-    Generates list of decode jobs based on channel layout count. If speed is set to single or multi it appends
-    the jobs differently and sends them to different functions to be handled.
+    Generates list of decode jobs based on channel layout count
 
     Args:
         gst_launch_exe (Path): Path to gst_launch_exe
