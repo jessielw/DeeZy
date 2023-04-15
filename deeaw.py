@@ -6,7 +6,6 @@ from packages import custom_exit, exit_fail
 from packages.shared.shared_utils import (
     get_working_dir,
     validate_track_index,
-    validate_channels_with_format,
     validate_bitrate_with_channels_and_format,
     generate_output_filename,
     FindDependencies,
@@ -16,51 +15,6 @@ from packages.shared._version import program_name, __version__
 from packages.dd_ddp.ddp_utils import generate_xml_dd
 from packages.atmos.atmos_utils import generate_xml_atmos
 from packages.atmos.atmos_decoder import atmos_decode
-
-
-def auto_fallback(
-    reason: str,
-    ffmpeg_path: Path,
-    mkvextract_path: Path,
-    dee_path: Path,
-    gst_launch_path: Path,
-    args: argparse.ArgumentParser.parse_args,
-    track_info: object,
-):
-    """Falls back to hardcoded settings, currently only for Atmos
-
-    Args:
-        reason (str): String of the reason why we're falling back to print to console
-        ffmpeg_path (Path): Path to ffmpeg
-        mkvextract_path (Path): Path to mkvextract
-        dee_path (Path): Path to DEE
-        gst_launch_path (Path): Path to gst_launch
-        args (argparse.ArgumentParser.parse_args): Parsed args object
-        track_info (object): Track input mediainfo object
-    """
-    if track_info.channel_s >= 8:
-        setattr(args, "channels", 8)
-        setattr(args, "bitrate", "768")
-        setattr(args, "format", "ddp")
-        channel_string = "7.1"
-    elif track_info.channel_s == 6:
-        setattr(args, "channels", 6)
-        setattr(args, "bitrate", "640")
-        setattr(args, "format", "dd")
-        channel_string = "5.1"
-    elif track_info.channel_s < 6:
-        setattr(args, "channels", 2)
-        setattr(args, "bitrate", "448")
-        setattr(args, "format", "dd")
-        setattr(args, "stereo-down-mix", "dplii")
-        channel_string = "2.0 DDPLII"
-
-    print(
-        f"Falling back to {str(args.format).upper()} {channel_string} {args.bitrate}Kbps... Reason: {reason}"
-    )
-    process_input(
-        ffmpeg_path, mkvextract_path, dee_path, gst_launch_path, args, banner=False
-    )
 
 
 def process_input(
@@ -75,8 +29,7 @@ def process_input(
     if banner:
         display_banner()
 
-    # validate correct bitrate, channel count and format
-    validate_channels_with_format(arguments=args)
+    # validate correct bitrate
     validate_bitrate_with_channels_and_format(arguments=args)
 
     # Check that the input file exists
@@ -142,11 +95,11 @@ def process_input(
 
     if resample:
         channel_swap = ""
-        if args.format != "atmos":
+        if args.encoder != "atmos":
             if (
                 channels == 2
                 and args.stereo_down_mix == "dplii"
-                and args.format == "dd"
+                and args.encoder == "dd"
             ):
                 channel_swap = "aresample=matrix_encoding=dplii,"
             elif channels == 8:
@@ -173,10 +126,10 @@ def process_input(
         channels == 2
         and not resample_args
         and args.stereo_down_mix == "dplii"
-        and args.format == "dd"
+        and args.encoder == "dd"
     ):
         channel_swap_args = ["-af", "aresample=matrix_encoding=dplii"]
-    elif channels == 8 and not resample_args and args.format != "atmos":
+    elif channels == 8 and not resample_args and args.encoder != "atmos":
         channel_swap_args = [
             "-af",
             "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
@@ -185,7 +138,7 @@ def process_input(
         channel_swap_args = []
 
     # Work out if we need to do down-mix
-    if args.format != "atmos":
+    if args.encoder != "atmos":
         if args.channels > channels:
             custom_exit("Up-mixing is not supported.", exit_fail)
         elif args.channels == channels:
@@ -193,7 +146,7 @@ def process_input(
         elif args.channels == 1:
             down_mix_config = "mono"
         elif args.channels == 2:
-            if args.stereo_down_mix == "dplii" and args.format == "dd":
+            if args.stereo_down_mix == "dplii" and args.encoder == "dd":
                 down_mix_config = "off"
             else:
                 down_mix_config = "stereo"
@@ -210,7 +163,7 @@ def process_input(
             media_info=media_info_source,
             file_input=Path(args.input),
             track_index=args.track_index,
-            file_format=args.format,
+            encoder=args.encoder,
         )
         setattr(args, "output", str(auto_output))
 
@@ -224,12 +177,26 @@ def process_input(
     output_file_name = str(Path(args.output).name)
 
     # generate xml file and return path
-    if args.format == "dd" or args.format == "ddp":
+    if args.encoder == "dd":
         update_xml = generate_xml_dd(
             down_mix_config=down_mix_config,
             stereo_down_mix=args.stereo_down_mix,
             bitrate=str(args.bitrate),
-            dd_format=args.format,
+            dd_format=args.encoder,
+            channels=args.channels,
+            normalize=False,
+            wav_file_name=wav_file_name,
+            output_file_name=output_file_name,
+            output_dir=output_dir,
+            fps=fps,
+        )
+
+    elif args.encoder == "ddp":
+        update_xml = generate_xml_dd(
+            down_mix_config=down_mix_config,
+            stereo_down_mix=args.stereo_down_mix,
+            bitrate=str(args.bitrate),
+            dd_format=args.encoder,
             channels=args.channels,
             normalize=args.normalize,
             wav_file_name=wav_file_name,
@@ -239,7 +206,7 @@ def process_input(
         )
 
     # if format is set to "atmos"
-    elif args.format == "atmos":
+    elif args.encoder == "atmos":
         # ensure input file has atmos
         if "Atmos" in track_info.commercial_name:
             # decode atmos
@@ -253,7 +220,7 @@ def process_input(
                 source_fps=fps,
                 duration=duration,
                 progress_mode=args.progress_mode,
-                atmos_channel_config=args.atmos_channel_config,
+                atmos_channel_config=args.channels,
             )
 
             # pass decoded atmos mezz file path to xml function
@@ -269,40 +236,16 @@ def process_input(
 
             # if decoded atmos returned None
             else:
-                if args.atmos_fall_back:
-                    auto_fallback(
-                        reason="Source Atmos data is corrupt/invalid.",
-                        ffmpeg_path=ffmpeg_path,
-                        mkvextract_path=mkvextract_path,
-                        dee_path=dee_path,
-                        gst_launch_path=gst_launch_path,
-                        args=args,
-                        track_info=track_info,
-                    )
-                    return
-                else:
-                    custom_exit("Source Atmos data is corrupt/invalid.", exit_fail)
+                custom_exit("Source Atmos data is corrupt/invalid.", exit_fail)
 
         # if no atmos was detected in input file
         else:
-            if args.atmos_fall_back:
-                auto_fallback(
-                    reason="Source does not contain Atmos data.",
-                    ffmpeg_path=ffmpeg_path,
-                    mkvextract_path=mkvextract_path,
-                    dee_path=dee_path,
-                    gst_launch_path=gst_launch_path,
-                    args=args,
-                    track_info=track_info,
-                )
-                return
-            else:
-                custom_exit("Source does not contain Atmos data.", exit_fail)
+            custom_exit("Source does not contain Atmos data.", exit_fail)
 
     # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
-    if args.channels == 2 and args.stereo_down_mix == "dplii" and args.format == "dd":
+    if args.channels == 2 and args.stereo_down_mix == "dplii" and args.encoder == "dd":
         ffmpeg_ac = ["-ac", "2"]
-    elif args.format == "atmos":
+    elif args.encoder == "atmos":
         atmos_channels = str(track_info.format_additionalfeatures).split("-")[0]
         ffmpeg_ac = ["-ac", atmos_channels]
     else:
@@ -347,7 +290,7 @@ def process_input(
         "--disable-xml-validation",
     ]
     process_dee(
-        cmd=dee_cm, progress_mode=args.progress_mode, encoder_format=args.format
+        cmd=dee_cm, progress_mode=args.progress_mode, encoder_format=args.encoder
     )
 
     # Clean up temp files
@@ -367,68 +310,15 @@ def main(base_wd: Path):
     dee_path = Path(tools.dee)
     gst_launch_path = Path(tools.gst_launch)
 
-    # Parse the command line arguments
-    parser = argparse.ArgumentParser(description="A command line tool.")
-    parser.add_argument(
-        "-i", "--input", type=str, required=True, help="The input file path."
+    # Top-level parser
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s [INPUT] encoder [encoder commands] [optional commands]"
     )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=str,
-        help=(
-            "The output file path. If not specified we will attempt to automatically "
-            "add Delay/Language string to output file name."
-        ),
-    )
-    parser.add_argument(
-        "-c",
-        "--channels",
-        choices=[1, 2, 6, 8],
-        type=int,
-        help="The number of channels.",
-    )
-    parser.add_argument(
-        "-s",
-        "--stereo-down-mix",
-        choices=["standard", "dplii"],
-        type=str,
-        default="standard",
-        help="Down mix method for stereo.",
-    )
-    parser.add_argument(
-        "-b", "--bitrate", type=int, required=True, help="The bitrate in Kbps."
-    )
-    parser.add_argument(
-        "-f",
-        "--format",
-        choices=["dd", "ddp", "atmos"],
-        type=str,
-        default="dd",
-        help="The file format.",
-    )
-    parser.add_argument(
-        "-w",
-        "--atmos-decode-workers",
-        choices=list(range(1, 21)),
-        type=int,
-        default=4,
-        help="Desired amount of atmos decode workers at a time.",
-    )
-    parser.add_argument(
-        "-ac",
-        "--atmos-channel-config",
-        choices=["5.1.4", "7.1.4"],
-        type=str,
-        default="5.1.4",
-        help="Desired Atmos channel configuration.",
-    )
-    parser.add_argument(
-        "-afb",
-        "--atmos-fall-back",
-        action="store_true",
-        help="In the event Atmos data is invalid, automatically fall back to the next best potential settings",
-    )
+
+    # global positional commands
+    parser.add_argument("input", type=str, help="The input file path.")
+
+    # global optional commands
     parser.add_argument(
         "-t",
         "--track-index",
@@ -437,13 +327,10 @@ def main(base_wd: Path):
         help="The index of the audio track to use.",
     )
     parser.add_argument(
-        "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
+        "-b", "--bitrate", type=int, required=False, help="The bitrate in Kbps."
     )
     parser.add_argument(
-        "-n",
-        "--normalize",
-        action="store_true",
-        help="Normalize audio for DDP.",
+        "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
     )
     parser.add_argument(
         "-k",
@@ -459,8 +346,90 @@ def main(base_wd: Path):
         help="Sets progress output mode verbosity.",
     )
     parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help=(
+            "The output file path. If not specified we will attempt to automatically "
+            "add Delay/Language string to output file name."
+        ),
+    )
+
+    # version command
+    parser.add_argument(
         "-v", "--version", action="version", version=f"{program_name} {__version__}"
     )
+
+    # initiate subparsers (must be defined after top level parser args)
+    subparsers = parser.add_subparsers(dest="encoder", help="Choose encoder")
+
+    # dd subparser
+    dd_parser = subparsers.add_parser("dd", help="Subset of exclusive DD commands")
+    # dd subparser commands
+    dd_parser.add_argument(
+        "-c",
+        "--channels",
+        choices=[1, 2, 6],
+        type=int,
+        help="The number of channels.",
+    )
+    dd_parser.add_argument(
+        "-s",
+        "--stereo-down-mix",
+        choices=["standard", "dplii"],
+        type=str,
+        default="standard",
+        help="Down mix method for stereo.",
+    )
+
+    # ddp subparser
+    ddp_parser = subparsers.add_parser("ddp", help="Subset of exclusive DD commands")
+    # ddp subparser commands
+    ddp_parser.add_argument(
+        "-c",
+        "--channels",
+        choices=[1, 2, 6, 8],
+        type=int,
+        help="The number of channels.",
+    )
+    ddp_parser.add_argument(
+        "-s",
+        "--stereo-down-mix",
+        choices=["standard", "dplii"],
+        type=str,
+        default="standard",
+        help="Down mix method for stereo.",
+    )
+    ddp_parser.add_argument(
+        "-n",
+        "--normalize",
+        action="store_true",
+        help="Normalize audio for DDP.",
+    )
+
+    # atmos subparser
+    atmos_parser = subparsers.add_parser(
+        "atmos", help="Subset of exclusive Atmos commands"
+    )
+    # atmos subparser commands
+    atmos_parser.add_argument(
+        "-w",
+        "--atmos-decode-workers",
+        choices=list(range(1, 21)),
+        type=int,
+        default=4,
+        help="Desired amount of atmos decode workers at a time.",
+    )
+    atmos_parser.add_argument(
+        "-c",
+        "--channels",
+        choices=["5.1.4", "7.1.4"],
+        type=str,
+        default="5.1.4",
+        help="Desired Atmos channel configuration.",
+    )
+
+    # parse the arguments
     args = parser.parse_args()
 
     process_input(
