@@ -76,34 +76,6 @@ def validate_track_index(value: any):
     return 0
 
 
-def validate_channels_with_format(arguments: ArgumentParser.parse_args):
-    """
-    Validate channel count based on encoder format.
-
-    We'll only check channels if we're using dd/ddp, ignoring this function for atmos.
-
-    If an invalid input is detected, raise a parser error that will update
-    the user with valid options and exit the program automatically.
-
-    Args:
-        arguments (ArgumentParser.parse_args): Parsed arguments from parser instance
-    """
-
-    if arguments.format != "atmos":
-        if arguments.format == "dd":
-            valid_channels = [1, 2, 6]
-        elif arguments.format == "ddp":
-            valid_channels = [1, 2, 6, 8]
-        else:
-            custom_exit("Unknown file format.", exit_fail)
-
-        if arguments.channels not in valid_channels:
-            custom_exit(
-                f"Invalid channel count for designated file type: {arguments.format}.\nValid options: {valid_channels}",
-                exit_fail,
-            )
-
-
 def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_args):
     """
     Validate bitrate input based on channel input and file format.
@@ -113,9 +85,10 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
     Args:
         arguments (ArgumentParser.parse_args): Parsed arguments from parser instance
     """
+    # TODO we might need to change this for atmos once we do full support for all channels
 
-    if arguments.format != "atmos":
-        if arguments.format == "dd":
+    if arguments.encoder != "atmos":
+        if arguments.encoder == "dd":
             if arguments.channels == 1:
                 valid_bitrates = dd_ddp_bitrates.get("dd_10")
             elif arguments.channels == 2:
@@ -124,7 +97,7 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
                 valid_bitrates = dd_ddp_bitrates.get("dd_51")
             else:
                 custom_exit("Invalid channel count.", exit_fail)
-        elif arguments.format == "ddp":
+        elif arguments.encoder == "ddp":
             if arguments.channels == 1:
                 valid_bitrates = dd_ddp_bitrates.get("ddp_10")
             elif arguments.channels == 2:
@@ -140,7 +113,7 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
 
         if arguments.bitrate not in valid_bitrates:
             custom_exit(
-                f"Invalid bitrate for input channel count and file type: {arguments.format} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}",
+                f"Invalid bitrate for input channel count and file type: {arguments.encoder} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}",
                 exit_fail,
             )
 
@@ -232,7 +205,7 @@ def language_detection(media_info: MediaInfo, track_index: int):
 
 
 def generate_output_filename(
-    media_info: MediaInfo, file_input: Path, track_index: int, file_format: str
+    media_info: MediaInfo, file_input: Path, track_index: int, encoder: str
 ):
     """Automatically generate an output file name
 
@@ -240,13 +213,13 @@ def generate_output_filename(
         media_info (MediaInfo): pymediainfo object of input file
         file_input (Path): Path to input file
         track_index (int): Track index from args
-        file_format (str): Encoder format
+        encoder (str): Encoder format
 
     Returns:
         Path: Path of a automatically generated filename
     """
     # generate extension based on selected encoder format
-    extension = ".ac3" if file_format == "dd" else ".ec3"
+    extension = ".ac3" if encoder == "dd" else ".ec3"
 
     # base directory/name
     base_dir = Path(file_input).parent
