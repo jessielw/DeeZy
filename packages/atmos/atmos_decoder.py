@@ -1,19 +1,18 @@
 from pathlib import Path
-from packages import custom_exit, exit_fail
 from packages.atmos import atmos_channels
 from packages.atmos.atmos_utils import (
-    create_temp_dir,
-    demux_true_hd,
-    confirm_thd_track,
-    create_atmos_audio_file,
-    create_mezz_files,
-    generate_atmos_decode_jobs,
-    rename_thd_mlp,
+    _create_temp_dir,
+    _demux_true_hd,
+    _confirm_thd_track,
+    _create_atmos_audio_file,
+    _create_mezz_files,
+    _generate_atmos_decode_jobs,
+    _copy_thd_mlp,
 )
-from packages.shared.shared_utils import check_disk_space
+from packages.shared.shared_utils import _check_disk_space
 
 
-def atmos_decode(
+def _atmos_decode(
     gst_launch: Path,
     mkvextract: Path,
     ffmpeg: Path,
@@ -43,17 +42,17 @@ def atmos_decode(
         Path: Path to main mezz file
     """
     # check for free space
-    check_disk_space(drive_path=Path(input_file), free_space=50)
+    _check_disk_space(drive_path=Path(input_file), required_space=50)
 
     # # create temp directory
-    temp_dir = create_temp_dir(
+    temp_dir = _create_temp_dir(
         dir_path=Path(input_file).parent,
         temp_folder=f"{str(Path(Path(input_file).name).with_suffix(''))}_atmos",
     )
 
     # demux truehd atmos track if it's in a supported matroska container
     if input_file.suffix in (".mkv", ".mka"):
-        demuxed_thd = demux_true_hd(
+        demuxed_thd = _demux_true_hd(
             input_file=Path(input_file),
             temp_dir=temp_dir,
             mkvextract=Path(mkvextract),
@@ -62,27 +61,25 @@ def atmos_decode(
 
     # if truehd track is already in it's raw format
     elif input_file.suffix in (".mlp", ".thd"):
-        demuxed_thd = rename_thd_mlp(thd_file=Path(input_file))
+        demuxed_thd = _copy_thd_mlp(thd_file=Path(input_file), temp_dir=temp_dir)
 
     # check for any other potential containers
     else:
-        custom_exit("Unknown input type for TrueHD", exit_fail)
+        raise ValueError("Unknown input type for TrueHD")
 
     # raise error if demuxed_thd does not exist
     if not demuxed_thd:
-        custom_exit(
-            "There was an error extracting/parsing the TrueHD/MLP track.", exit_fail
-        )
+        raise ValueError("There was an error extracting/parsing the TrueHD/MLP track.")
 
     # check to ensure valid truehd
-    confirm_thd_track(thd_file=demuxed_thd)
+    _confirm_thd_track(thd_file=demuxed_thd)
 
     # get needed channel layout
     channel_id = atmos_channels[atmos_channel_config]["id"]
     channel_names = atmos_channels[atmos_channel_config]["names"]
 
     # decode
-    decode_job = generate_atmos_decode_jobs(
+    decode_job = _generate_atmos_decode_jobs(
         gst_launch_exe=Path(gst_launch),
         temp_dir=temp_dir,
         demuxed_thd=demuxed_thd,
@@ -93,7 +90,7 @@ def atmos_decode(
 
     if decode_job:
         # generate atmos audio file
-        generate_atmos_audio_file = create_atmos_audio_file(
+        generate_atmos_audio_file = _create_atmos_audio_file(
             ffmpeg=ffmpeg,
             temp_dir=temp_dir,
             output_wav_s_list=decode_job,
@@ -103,7 +100,7 @@ def atmos_decode(
         )
 
         # create atmos mezz files (currently just hard coded channel layout)
-        mezz_file = create_mezz_files(
+        mezz_file = _create_mezz_files(
             temp_dir=temp_dir,
             atmos_audio_file=Path(generate_atmos_audio_file),
             template_dir=Path(

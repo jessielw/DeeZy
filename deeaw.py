@@ -2,22 +2,22 @@ import sys
 import argparse
 from pathlib import Path
 from pymediainfo import MediaInfo
-from packages import custom_exit, exit_fail
+from packages import _exit_application, exit_fail
 from packages.shared.shared_utils import (
-    get_working_dir,
-    validate_track_index,
-    validate_bitrate_with_channels_and_format,
-    generate_output_filename,
+    _get_working_dir,
+    _validate_track_index,
+    _validate_bitrate_with_channels_and_format,
+    _generate_output_filename,
     FindDependencies,
 )
-from packages.shared.progress import process_ffmpeg, process_dee, display_banner
+from packages.shared.progress import _process_ffmpeg, _process_dee, _display_banner
 from packages.shared._version import program_name, __version__
-from packages.dd_ddp.ddp_utils import generate_xml_dd
-from packages.atmos.atmos_utils import generate_xml_atmos
-from packages.atmos.atmos_decoder import atmos_decode
+from packages.dd_ddp.ddp_utils import _generate_xml_dd
+from packages.atmos.atmos_utils import _generate_xml_atmos
+from packages.atmos.atmos_decoder import _atmos_decode
 
 
-def process_input(
+def _process_input(
     ffmpeg_path: Path,
     mkvextract_path: Path,
     dee_path: Path,
@@ -27,14 +27,17 @@ def process_input(
 ):
     # display banner to console if enabled
     if banner:
-        display_banner()
+        _display_banner()
 
     # validate correct bitrate
-    validate_bitrate_with_channels_and_format(arguments=args)
+    try:
+        _validate_bitrate_with_channels_and_format(arguments=args)
+    except ValueError as e:
+        _exit_application(e, exit_fail)
 
     # Check that the input file exists
     if not Path(args.input).exists():
-        custom_exit(f"Input file not found: {args.input}", exit_fail)
+        _exit_application(f"Input file not found: {args.input}", exit_fail)
 
     # Parse file with MediaInfo
     media_info_source = MediaInfo.parse(args.input)
@@ -47,9 +50,19 @@ def process_input(
 
     # parse track for information
     # +1 because the first track is always "general"
-    track_info = media_info_source.tracks[args.track_index + 1]
+    try:
+        track_info = media_info_source.tracks[args.track_index + 1]
+    except IndexError:
+        _exit_application(
+            f"Selected track #{args.track_index} does not exist.",
+            exit_fail,
+        )
+
     if track_info.track_type != "Audio":
-        custom_exit("Track index is not an audio track.", exit_fail)
+        _exit_application(
+            f"Selected track #{args.track_index} ({track_info.track_type}) is not an audio track.",
+            exit_fail,
+        )
 
     # get track duration and convert to a float if not None
     # we need duration to calculate percentage for FFMPEG
@@ -63,7 +76,7 @@ def process_input(
     except AttributeError:
         sample_rate = sys.maxsize
 
-    if sample_rate == None:
+    if not sample_rate:
         sample_rate = sys.maxsize
 
     # get channel(s)
@@ -140,7 +153,7 @@ def process_input(
     # Work out if we need to do down-mix
     if args.encoder != "atmos":
         if args.channels > channels:
-            custom_exit("Up-mixing is not supported.", exit_fail)
+            _exit_application("Up-mixing is not supported.", exit_fail)
         elif args.channels == channels:
             down_mix_config = "off"
         elif args.channels == 1:
@@ -155,11 +168,11 @@ def process_input(
         elif args.channels == 8:
             down_mix_config = "7.1"
         else:
-            custom_exit("Unsupported channel count.", exit_fail)
+            _exit_application("Unsupported channel count.", exit_fail)
 
     # if no output is specified we'll create one automatically and set it
     if not args.output:
-        auto_output = generate_output_filename(
+        auto_output = _generate_output_filename(
             media_info=media_info_source,
             file_input=Path(args.input),
             track_index=args.track_index,
@@ -178,54 +191,63 @@ def process_input(
 
     # generate xml file and return path
     if args.encoder == "dd":
-        update_xml = generate_xml_dd(
-            down_mix_config=down_mix_config,
-            stereo_down_mix=args.stereo_down_mix,
-            bitrate=str(args.bitrate),
-            dd_format=args.encoder,
-            channels=args.channels,
-            normalize=False,
-            wav_file_name=wav_file_name,
-            output_file_name=output_file_name,
-            output_dir=output_dir,
-            fps=fps,
-        )
+        try:
+            update_xml = _generate_xml_dd(
+                down_mix_config=down_mix_config,
+                stereo_down_mix=args.stereo_down_mix,
+                bitrate=str(args.bitrate),
+                dd_format=args.encoder,
+                channels=args.channels,
+                normalize=False,
+                wav_file_name=wav_file_name,
+                output_file_name=output_file_name,
+                output_dir=output_dir,
+                fps=fps,
+            )
+        except ValueError as e:
+            _exit_application(e, exit_fail)
 
     elif args.encoder == "ddp":
-        update_xml = generate_xml_dd(
-            down_mix_config=down_mix_config,
-            stereo_down_mix=args.stereo_down_mix,
-            bitrate=str(args.bitrate),
-            dd_format=args.encoder,
-            channels=args.channels,
-            normalize=args.normalize,
-            wav_file_name=wav_file_name,
-            output_file_name=output_file_name,
-            output_dir=output_dir,
-            fps=fps,
-        )
+        try:
+            update_xml = _generate_xml_dd(
+                down_mix_config=down_mix_config,
+                stereo_down_mix=args.stereo_down_mix,
+                bitrate=str(args.bitrate),
+                dd_format=args.encoder,
+                channels=args.channels,
+                normalize=args.normalize,
+                wav_file_name=wav_file_name,
+                output_file_name=output_file_name,
+                output_dir=output_dir,
+                fps=fps,
+            )
+        except ValueError as e:
+            _exit_application(e, exit_fail)
 
     # if format is set to "atmos"
     elif args.encoder == "atmos":
         # ensure input file has atmos
         if "Atmos" in track_info.commercial_name:
             # decode atmos
-            decode_atmos = atmos_decode(
-                gst_launch=gst_launch_path,
-                mkvextract=mkvextract_path,
-                ffmpeg=ffmpeg_path,
-                input_file=Path(args.input),
-                track_number=args.track_index,
-                atmos_decode_workers=args.atmos_decode_workers,
-                source_fps=fps,
-                duration=duration,
-                progress_mode=args.progress_mode,
-                atmos_channel_config=args.channels,
-            )
+            try:
+                decode_atmos = _atmos_decode(
+                    gst_launch=gst_launch_path,
+                    mkvextract=mkvextract_path,
+                    ffmpeg=ffmpeg_path,
+                    input_file=Path(args.input),
+                    track_number=args.track_index,
+                    atmos_decode_workers=args.atmos_decode_workers,
+                    source_fps=fps,
+                    duration=duration,
+                    progress_mode=args.progress_mode,
+                    atmos_channel_config=args.channels,
+                )
+            except ValueError as e:
+                _exit_application(e, exit_fail)
 
             # pass decoded atmos mezz file path to xml function
             if decode_atmos:
-                update_xml = generate_xml_atmos(
+                update_xml = _generate_xml_atmos(
                     bitrate=str(args.bitrate),
                     atmos_mezz_file_name=Path(decode_atmos).name,
                     atmos_mezz_file_dir=Path(decode_atmos).parent,
@@ -236,11 +258,11 @@ def process_input(
 
             # if decoded atmos returned None
             else:
-                custom_exit("Source Atmos data is corrupt/invalid.", exit_fail)
+                _exit_application("Source Atmos data is corrupt/invalid.", exit_fail)
 
         # if no atmos was detected in input file
         else:
-            custom_exit("Source does not contain Atmos data.", exit_fail)
+            _exit_application("Source does not contain Atmos data.", exit_fail)
 
     # if we're using 2.0, send "-ac 2" to ffmpeg for dplii resample
     if args.channels == 2 and args.stereo_down_mix == "dplii" and args.encoder == "dd":
@@ -273,9 +295,13 @@ def process_input(
         "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    process_ffmpeg(
-        cmd=ffmpeg_cmd, progress_mode=args.progress_mode, steps=True, duration=duration
-    )
+    
+    try:
+        _process_ffmpeg(
+            cmd=ffmpeg_cmd, progress_mode=args.progress_mode, steps=True, duration=duration
+        )
+    except ValueError as e:
+        _exit_application(e, exit_fail)
 
     # Call dee to generate the encode file
     dee_cm = [
@@ -289,9 +315,13 @@ def process_input(
         str(update_xml),
         "--disable-xml-validation",
     ]
-    process_dee(
-        cmd=dee_cm, progress_mode=args.progress_mode, encoder_format=args.encoder
-    )
+    
+    try:
+        _process_dee(
+            cmd=dee_cm, progress_mode=args.progress_mode, encoder_format=args.encoder
+        )
+    except ValueError as e:
+        _exit_application(e, exit_fail)
 
     # Clean up temp files
     if not args.keep_temp:
@@ -299,12 +329,15 @@ def process_input(
         Path(output_dir / wav_file_name).unlink()
 
     # print success message
-    custom_exit(f"Success: {Path(args.output).name}")
+    _exit_application(f"Success: {Path(args.output).name}")
 
 
-def main(base_wd: Path):
+def _main(base_wd: Path):
     # define tools
-    tools = FindDependencies(base_wd=base_wd)
+    try:
+        tools = FindDependencies(base_wd=base_wd)
+    except FileNotFoundError as e:
+        _exit_application(e, exit_fail)
     ffmpeg_path = Path(tools.ffmpeg)
     mkvextract_path = Path(tools.mkvextract)
     dee_path = Path(tools.dee)
@@ -322,7 +355,7 @@ def main(base_wd: Path):
     parser.add_argument(
         "-t",
         "--track-index",
-        type=validate_track_index,
+        type=_validate_track_index,
         default=0,
         help="The index of the audio track to use.",
     )
@@ -418,7 +451,7 @@ def main(base_wd: Path):
         choices=list(range(1, 21)),
         type=int,
         default=4,
-        help="Desired amount of atmos decode workers at a time.",
+        help="Number of concurrent Atmos decode threads to process each channel",
     )
     atmos_parser.add_argument(
         "-c",
@@ -432,7 +465,7 @@ def main(base_wd: Path):
     # parse the arguments
     args = parser.parse_args()
 
-    process_input(
+    _process_input(
         ffmpeg_path=ffmpeg_path,
         mkvextract_path=mkvextract_path,
         dee_path=dee_path,
@@ -443,4 +476,4 @@ def main(base_wd: Path):
 
 
 if __name__ == "__main__":
-    main(base_wd=get_working_dir())
+    _main(base_wd=_get_working_dir())

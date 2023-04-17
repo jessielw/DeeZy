@@ -1,16 +1,15 @@
 from typing import Union
 import xmltodict
-from packages import custom_exit, exit_fail
 from packages.atmos.xml_base import xml_audio_base_atmos
-from packages.shared.shared_utils import save_xml
-from packages.shared.progress import process_ffmpeg
+from packages.shared.shared_utils import _save_xml
+from packages.shared.progress import _process_ffmpeg
 from pathlib import Path
 import shutil
 from subprocess import run, Popen, PIPE
 import concurrent.futures
 
 
-def create_temp_dir(dir_path: Path, temp_folder: str):
+def _create_temp_dir(dir_path: Path, temp_folder: str):
     """Creates a temporary directory deleting the old one if it already exists.
 
     Args:
@@ -28,7 +27,7 @@ def create_temp_dir(dir_path: Path, temp_folder: str):
     return temp_dir
 
 
-def demux_true_hd(
+def _demux_true_hd(
     input_file: Path, temp_dir: Path, mkvextract: Path, mkv_track_num: int
 ):
     """We utilize mkvextract.exe to extract the THD/MLP file to the temporary directory.
@@ -60,38 +59,47 @@ def demux_true_hd(
         return output_name
 
 
-def rename_thd_mlp(thd_file: Path):
+def _copy_thd_mlp(thd_file: Path, temp_dir: Path):
     """
-    Checks if the input file is .mlp, if it is return it,
-    if it's not change extension and return it.
+    Copies a TrueHD format (.thd or .mlp) file to a temporary directory for processing,
+    and returns the path to the copied .mlp file. If the copy fails, returns None.
 
     Args:
-        thd_file (Path): TrueHD format (.thd/.mlp)
+        thd_file (Path): Path to the TrueHD file.
+        temp_dir (Path): Path to the temporary directory where the file will be copied.
 
     Returns:
-        Path: Path to thd_file.mlp file
+        Path: Path to the copied .mlp file, or None if the copy fails.
     """
-    if Path(thd_file).suffix == ".thd":
-        mlp_file = Path(thd_file).with_suffix(".mlp")
-        Path(thd_file).replace(mlp_file)
-        if mlp_file.is_file():
-            return mlp_file
-    elif Path(thd_file).suffix == ".mlp":
-        return Path(thd_file)
+    try:
+        print(f"Copying {thd_file.name} to temp directory for processing.")
+        out_file = Path(temp_dir / thd_file.name).with_suffix(".mlp")
+
+        copied_file = shutil.copy(src=thd_file, dst=out_file)
+        if Path(copied_file).is_file():
+            print("Done.")
+            return Path(copied_file)
+    except Exception as e:
+        print(f"Error copying {thd_file.name} to temp directory: {e}")
+    return None
 
 
-def confirm_thd_track(thd_file: Path):
-    """Checks binary for proper TrueHD bytes, raise an error if it's not correct.
+def _confirm_thd_track(thd_file: Path):
+    """
+    Checks if a TrueHD/MLP file has the correct byte signature at the beginning of the file.
+    Raises an error if the byte signature is not present or incorrect.
 
     Args:
-        thd_file (Path): Path to TrueHD/MLP file
+        thd_file (Path): Path to the TrueHD/MLP file
     """
     with Path(thd_file).open("rb") as f:
         first_bytes = f.read(10)
         truehd_sync_word = 0xF8726FBA.to_bytes(4, "big")
 
         if truehd_sync_word not in first_bytes:
-            custom_exit("Source file must be in untouched TrueHD format", exit_fail)
+            raise ValueError(
+                "The source file must be in the original, unaltered TrueHD format."
+            )
 
 
 class AtmosDecodeWorker:
@@ -124,10 +132,8 @@ class AtmosDecodeWorker:
             for result in results:
                 if result is not None and result != 0:
                     self.error = True
-                    print(f"Job failed with exit code: {result}")
                     for process in self.processes:
                         process.terminate()
-                        print(f"Terminated process with command: {process.args}")
 
     def run_job(self, command):
         process = Popen(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
@@ -135,10 +141,8 @@ class AtmosDecodeWorker:
         stdout, stderr = process.communicate()
         if process.returncode != 0 or "error" in stderr.lower():
             self.error = True
-            print(f"Job failed with exit code: {process.returncode}")
             for process in self.processes:
                 process.terminate()
-                print(f"Terminated process with command: {process.args}")
         else:
             self.completed_jobs += 1
             print(f"Decoding job {self.completed_jobs} of {self.total_jobs} completed.")
@@ -146,7 +150,7 @@ class AtmosDecodeWorker:
         return process.returncode
 
 
-def generate_truehd_decode_command(
+def _generate_truehd_decode_command(
     gst_launch_exe: Path,
     input_file: Path,
     output_wav_s: Path,
@@ -196,7 +200,7 @@ def generate_truehd_decode_command(
     ]
 
 
-def generate_atmos_decode_jobs(
+def _generate_atmos_decode_jobs(
     gst_launch_exe: Path,
     temp_dir: Path,
     demuxed_thd: Path,
@@ -226,7 +230,7 @@ def generate_atmos_decode_jobs(
             temp_dir / f"{str(channel_count)}_{channel_name}"
         ).with_suffix(".wav")
         # generate command
-        command = generate_truehd_decode_command(
+        command = _generate_truehd_decode_command(
             Path(gst_launch_exe),
             Path(demuxed_thd),
             Path(output_wav_s),
@@ -253,7 +257,7 @@ def generate_atmos_decode_jobs(
         return None
 
 
-def create_atmos_audio_file(
+def _create_atmos_audio_file(
     ffmpeg: Path,
     temp_dir: Path,
     output_wav_s_list: list,
@@ -312,7 +316,7 @@ def create_atmos_audio_file(
     ]
 
     print("Combining channels")
-    combine_job = process_ffmpeg(
+    combine_job = _process_ffmpeg(
         cmd=combine_cmd, progress_mode=progress_mode, steps=False, duration=duration
     )
     if combine_job and atmos_file_path.is_file():
@@ -325,7 +329,7 @@ def create_atmos_audio_file(
         return atmos_file_path
 
 
-def create_mezz_files(
+def _create_mezz_files(
     temp_dir: Path, atmos_audio_file: Path, template_dir: Path, fps: str
 ):
     """
@@ -382,7 +386,7 @@ def create_mezz_files(
         return main_mezz
 
 
-def generate_xml_atmos(
+def _generate_xml_atmos(
     bitrate: int,
     atmos_mezz_file_name: str,
     atmos_mezz_file_dir: Union[Path, str],
@@ -434,7 +438,7 @@ def generate_xml_atmos(
     xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
 
     # create XML and return path to XML
-    updated_template_file = save_xml(
+    updated_template_file = _save_xml(
         output_dir=output_dir, output_file_name=output_file_name, xml_base=xml_base
     )
 

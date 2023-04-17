@@ -1,11 +1,10 @@
 from configparser import ConfigParser
 from pathlib import Path
-from packages import custom_exit, exit_fail
 
 config_file = "deeaw_config.ini"
 
 
-def create_config():
+def _create_config():
     """Create parameters at launch"""
     if not Path(config_file).is_file():
         print(
@@ -26,10 +25,10 @@ def create_config():
 
             config.write(config_file_handle)
     except Exception as e:
-        custom_exit(f"Error while creating the config file: {e}", exit_fail)
+        raise ValueError(f"Error while creating the config file: {e}")
 
 
-def update_config(section: str, option: str, value: str):
+def _update_config(section: str, option: str, value: str):
     """Update the config file with the given section, option, and value.
 
     Args:
@@ -44,7 +43,7 @@ def update_config(section: str, option: str, value: str):
     except FileNotFoundError:
         config_parser.add_section(section)
     except Exception as e:
-        custom_exit(f"Error while reading the config file: {e}", exit_fail)
+        raise ValueError(f"Error while reading the config file: {e}")
 
     if not config_parser.has_section(section):
         config_parser.add_section(section)
@@ -59,10 +58,10 @@ def update_config(section: str, option: str, value: str):
         with open(config_file, "w") as cfg_file:
             config_parser.write(cfg_file)
     except Exception as e:
-        custom_exit(f"Error while writing to the config file: {e}", exit_fail)
+        raise ValueError(f"Error while writing to the config file: {e}")
 
 
-def read_config(section: str, option: str):
+def _read_config(section: str, option: str):
     """Read the specified option from the config file.
 
     Args:
@@ -77,8 +76,8 @@ def read_config(section: str, option: str):
         with open(config_file, "r") as cfg_file:
             config_parser.read_file(cfg_file)
     except FileNotFoundError:
-        custom_exit("Config file not found.", exit_fail)
+        raise ValueError("Config file not found.")
     except Exception as e:
-        custom_exit(f"Error while reading the config file: {e}", exit_fail)
+        raise ValueError(f"Error while reading the config file: {e}")
 
     return config_parser.get(section, option)

@@ -2,14 +2,13 @@ from pathlib import Path
 import sys
 import shutil
 from argparse import ArgumentParser
-from packages import custom_exit, exit_fail
 from packages.dd_ddp import dd_ddp_bitrates
-from packages.shared.config_control import create_config, read_config
+from packages.shared.config_control import _create_config, _read_config
 import xmltodict
 from pymediainfo import MediaInfo
 
 
-def get_working_dir():
+def _get_working_dir():
     """
     Used to determine the correct working directory automatically.
     This way we can utilize files/relative paths easily.
@@ -26,7 +25,7 @@ def get_working_dir():
         return Path.cwd()
 
 
-def save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
+def _save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
     """Creates/Deletes old XML files for use with DEE
 
     Args:
@@ -54,10 +53,10 @@ def save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
     if updated_template_file.exists():
         return updated_template_file
     else:
-        custom_exit("XML file could not be created", exit_fail)
+        raise ValueError("XML file could not be created")
 
 
-def validate_track_index(value: any):
+def _validate_track_index(value: any):
     """
     Determines if the input is a valid number.
     If it's not returns the default of 0.
@@ -76,7 +75,7 @@ def validate_track_index(value: any):
     return 0
 
 
-def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_args):
+def _validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_args):
     """
     Validate bitrate input based on channel input and file format.
     If an invalid input is detected, raise a parser error that will update
@@ -96,7 +95,7 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
             elif arguments.channels == 6:
                 valid_bitrates = dd_ddp_bitrates.get("dd_51")
             else:
-                custom_exit("Invalid channel count.", exit_fail)
+                raise ValueError("Invalid channel count.")
         elif arguments.encoder == "ddp":
             if arguments.channels == 1:
                 valid_bitrates = dd_ddp_bitrates.get("ddp_10")
@@ -107,36 +106,35 @@ def validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_ar
             elif arguments.channels == 8:
                 valid_bitrates = dd_ddp_bitrates.get("ddp_71_standard")
             else:
-                custom_exit("invalid channel count.", exit_fail)
+                raise ValueError("Invalid channel count.")
         else:
-            custom_exit("Unknown file format.", exit_fail)
+            raise ValueError("Unknown file format.")
 
         if arguments.bitrate not in valid_bitrates:
-            custom_exit(
-                f"Invalid bitrate for input channel count and file type: {arguments.encoder} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}",
-                exit_fail,
+            raise ValueError(
+                f"Invalid bitrate for input channel count and file type: {arguments.encoder} {str(arguments.channels)}.\nValid options: {', '.join(str(v) for v in valid_bitrates)}"
             )
 
 
-def check_disk_space(drive_path: Path, free_space: int):
+def _check_disk_space(drive_path: Path, required_space: int):
     """
     Check for free space at the drive path, rounding to nearest whole number.
-    If there isn't at least "free_space" GB of space free, raise an ArgumentTypeError.
+    If there isn't at least "required_space" GB of space free, raise an ArgumentTypeError.
 
     Args:
         drive_path (Path): Path to check
-        free_space (int): Minimum space (GB)
+        required_space (int): Minimum space (GB)
     """
 
     # get free space in bytes
-    free_space_cwd = shutil.disk_usage(Path(drive_path)).free
+    required_space_cwd = shutil.disk_usage(Path(drive_path)).free
 
     # convert to GB's
-    free_space_gb = round(free_space_cwd / (1024**3))
+    free_space_gb = round(required_space_cwd / (1024**3))
 
     # check to ensure the desired space in GB's is free
-    if free_space_gb < int(free_space):
-        custom_exit("There isn't enough free space to decode Dolby Atmos.", exit_fail)
+    if free_space_gb < int(required_space):
+        raise ValueError("There isn't enough free space to decode Dolby Atmos.")
     else:
         return True
 
@@ -153,7 +151,7 @@ class PrintSameLine:
         self.last_message = msg
 
 
-def delay_detection(media_info: MediaInfo, file_input: Path, track_index: int):
+def _delay_detection(media_info: MediaInfo, file_input: Path, track_index: int):
     """Detect delay relative to video to inject into filename
 
     Args:
@@ -178,7 +176,7 @@ def delay_detection(media_info: MediaInfo, file_input: Path, track_index: int):
     return delay_string
 
 
-def language_detection(media_info: MediaInfo, track_index: int):
+def _language_detection(media_info: MediaInfo, track_index: int):
     """
     Detect language of input track, returning language in the format of
     "eng" instead of "en" or "english."
@@ -204,7 +202,7 @@ def language_detection(media_info: MediaInfo, track_index: int):
     return language_string
 
 
-def generate_output_filename(
+def _generate_output_filename(
     media_info: MediaInfo, file_input: Path, track_index: int, encoder: str
 ):
     """Automatically generate an output file name
@@ -233,8 +231,8 @@ def generate_output_filename(
     # if track index is equal to or greater than 1, we can assume it's likely in a container of some
     # sort, so we'll go ahead and attempt to detect delay/language to inject into the title.
     elif track_index >= 1:
-        delay = delay_detection(media_info, file_input, track_index)
-        language = language_detection(media_info, track_index)
+        delay = _delay_detection(media_info, file_input, track_index)
+        language = _language_detection(media_info, track_index)
         file_name = f"{base_name}_{language}_{delay}{extension}"
         return Path(base_dir / Path(file_name))
 
@@ -264,7 +262,7 @@ class FindDependencies:
         self._locate_beside_program(base_wd)
 
         if None in [self.ffmpeg, self.mkvextract, self.dee, self.gst_launch]:
-            create_config()
+            _create_config()
             self._locate_in_config()
 
         if None in [self.ffmpeg, self.mkvextract, self.dee, self.gst_launch]:
@@ -300,7 +298,7 @@ class FindDependencies:
         attribute_names = ["ffmpeg", "mkvextract", "dee", "gst_launch"]
         config_section = "tool_paths"
         for attr_name in attribute_names:
-            value = read_config(config_section, attr_name)
+            value = _read_config(config_section, attr_name)
             if value and Path(value).is_file():
                 setattr(self, attr_name, str(value))
 

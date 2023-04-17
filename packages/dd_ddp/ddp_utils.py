@@ -1,12 +1,11 @@
 import xmltodict
 from pathlib import Path
-from packages import custom_exit, exit_fail
 from packages.dd_ddp.xml_base import xml_audio_base_ddp
-from packages.shared.shared_utils import save_xml
+from packages.shared.shared_utils import _save_xml
 from typing import Union
 
 
-def generate_xml_dd(
+def _generate_xml_dd(
     down_mix_config: str,
     stereo_down_mix: str,
     bitrate: str,
@@ -124,10 +123,10 @@ def generate_xml_dd(
         # delete ac3 from dict
         del xml_base["job_config"]["output"]["ac3"]
     else:
-        custom_exit("Unknown file format.", exit_fail)
+        raise ValueError("Unknown file format.")
 
     # create XML and return path to XML
-    updated_template_file = save_xml(
+    updated_template_file = _save_xml(
         output_dir=output_dir, output_file_name=output_file_name, xml_base=xml_base
     )
 

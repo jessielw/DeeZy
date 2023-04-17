@@ -4,7 +4,7 @@ exit_success = 0
 exit_fail = 1
 
 
-def custom_exit(msg: str, exit_code: int = 0):
+def _exit_application(msg: str, exit_code: int = 0):
     """A clean way to exit the program without raising traceback errors
 
     Args:

@@ -1,12 +1,11 @@
 from subprocess import Popen, PIPE, STDOUT
-from packages import custom_exit, exit_fail
 from packages.shared._version import program_name, __version__, developed_by
 from packages.shared.shared_utils import PrintSameLine
 from typing import Union
 from re import search
 
 
-def display_banner():
+def _display_banner():
     """Generate and display the banner"""
     print(f"{program_name} {__version__}\nDeveloped by: {developed_by}\n")
 
@@ -35,7 +34,7 @@ def _convert_ffmpeg_to_percent(line: str, duration: float):
         return percent
 
 
-def process_ffmpeg(
+def _process_ffmpeg(
     cmd: list, progress_mode: str, steps: bool, duration: Union[float, None]
 ):
     """Processes file with FFMPEG while generating progress depending on progress_mode.
@@ -80,9 +79,7 @@ def process_ffmpeg(
                 print(line.strip())
 
     if proc.returncode != 0:
-        custom_exit(
-            "There was an FFMPEG error. Please re-run in debug mode.", exit_fail
-        )
+        raise ValueError("There was an FFMPEG error. Please re-run in debug mode.")
     else:
         return True
 
@@ -101,7 +98,7 @@ def _filter_dee_progress(line: str):
         return float(get_progress.group(1))
 
 
-def process_dee(cmd: list, progress_mode: str, encoder_format: str):
+def _process_dee(cmd: list, progress_mode: str, encoder_format: str):
     """Processes file with DEE while generating progress depending on progress_mode.
 
     Args:
@@ -132,7 +129,7 @@ def process_dee(cmd: list, progress_mode: str, encoder_format: str):
         for line in proc.stdout:
             # check for all dee errors
             if "ERROR " in line:
-                custom_exit(f"There was a DEE error: {line}", exit_fail)
+                raise ValueError(f"There was a DEE error: {line}")
 
             # If progress mode is quiet let's clean up progress output
             if progress_mode == "standard":
@@ -158,6 +155,6 @@ def process_dee(cmd: list, progress_mode: str, encoder_format: str):
                 print(line.strip())
 
     if proc.returncode != 0:
-        custom_exit("There was an DEE error. Please re-run in debug mode.", exit_fail)
+        raise ValueError("There was an DEE error. Please re-run in debug mode.")
     else:
         return True
