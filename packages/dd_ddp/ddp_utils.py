@@ -1,42 +1,11 @@
 import xmltodict
 from pathlib import Path
-from packages.xml_base import xml_audio_base_ddp, xml_audio_base_atmos
+from packages.dd_ddp.xml_base import xml_audio_base_ddp
+from packages.shared.shared_utils import _save_xml
 from typing import Union
-from argparse import ArgumentTypeError
 
 
-def _save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
-    """Creates/Deletes old XML files for use with DEE
-
-    Args:
-        output_dir (Path): Full output directory
-        output_file_name (Path): File name
-        xml_base (dict): XML generated dictionary
-
-    Returns:
-        Path: Path to XML file for DEE
-    """
-    # Save out the updated template (use filename output with xml suffix)
-    updated_template_file = Path(output_dir / Path(output_file_name)).with_suffix(
-        ".xml"
-    )
-
-    # delete xml output template if one already exists
-    if updated_template_file.exists():
-        updated_template_file.unlink()
-
-    # write new xml template for dee
-    with open(updated_template_file, "w", encoding="utf-8") as xml_out:
-        xml_out.write(xmltodict.unparse(xml_base, pretty=True, indent="  "))
-
-    # check to ensure template file was created
-    if updated_template_file.exists():
-        return updated_template_file
-    else:
-        raise ArgumentTypeError("XML file could not be created")
-
-
-def generate_xml_dd(
+def _generate_xml_dd(
     down_mix_config: str,
     stereo_down_mix: str,
     bitrate: str,
@@ -46,6 +15,7 @@ def generate_xml_dd(
     wav_file_name: str,
     output_file_name: str,
     output_dir: Union[Path, str],
+    fps: str,
 ):
     """Handles the parsing/creation of XML file for DEE encoding (DD/DDP)
 
@@ -59,6 +29,7 @@ def generate_xml_dd(
         wav_file_name (str): File name only
         output_file_name (str): File name only
         output_dir (Union[Path, str]): File path only
+        fps (str): FPS of video input if it exists
 
     Returns:
         Path: Returns the correct path to the created template file
@@ -77,6 +48,10 @@ def generate_xml_dd(
     xml_base["job_config"]["output"]["ac3"]["storage"]["local"][
         "path"
     ] = f'"{str(output_dir)}"'
+
+    # update fps sections
+    xml_base["job_config"]["input"]["audio"]["wav"]["timecode_frame_rate"] = fps
+    xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["timecode_frame_rate"] = fps
 
     # xml temp path config
     xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
@@ -115,7 +90,6 @@ def generate_xml_dd(
     if dd_format == "dd":
         xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = "dd"
     elif dd_format == "ddp":
-
         # if ddp and normalize is true, set template to normalize audio
         if normalize:
             # Remove measure_only, add measure_and_correct, with default preset of atsc_a85
@@ -149,7 +123,7 @@ def generate_xml_dd(
         # delete ac3 from dict
         del xml_base["job_config"]["output"]["ac3"]
     else:
-        raise ArgumentTypeError("Unknown file format.")
+        raise ValueError("Unknown file format.")
 
     # create XML and return path to XML
     updated_template_file = _save_xml(
