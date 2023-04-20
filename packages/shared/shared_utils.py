@@ -6,6 +6,7 @@ from packages.dd_ddp import dd_ddp_bitrates
 from packages.shared.config_control import _create_config, _read_config
 import xmltodict
 from pymediainfo import MediaInfo
+import glob
 
 
 def _get_working_dir():
@@ -318,3 +319,35 @@ class FindDependencies:
         for exe_path, exe_name in zip(dependencies, executable_names):
             if exe_path is None or exe_path == "" or not Path(exe_path).is_file():
                 raise FileNotFoundError(f"{exe_name} path not found")
+
+
+def _parse_input_s(args_list: list):
+    """
+    Parse the input arguments and return a list of Path objects representing the input files.
+
+    Args:
+        args_list (list): List of input arguments.
+
+    Returns:
+        list: List of Path objects representing the input files.
+
+    Raises:
+        FileNotFoundError: If an input path is not a valid file path.
+    """
+    input_paths = []
+    for arg_input in args_list:
+        # non recursive
+        if "*" in arg_input:
+            input_paths.extend(Path(p) for p in glob.glob(arg_input))
+
+        # recursive search
+        elif "**" in arg_input:
+            input_paths.extend(Path(p) for p in glob.glob(arg_input, recursive=True))
+
+        # single file path
+        elif Path(arg_input).is_file():
+            input_paths.append(Path(arg_input))
+        else:
+            raise FileNotFoundError(f"{arg_input} is not a valid input path.")
+
+    return input_paths

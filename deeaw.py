@@ -9,6 +9,8 @@ from packages.shared.shared_utils import (
     _validate_bitrate_with_channels_and_format,
     _generate_output_filename,
     FindDependencies,
+    _parse_input_s,
+    _validate_media_file_s,
 )
 from packages.shared.progress import _process_ffmpeg, _process_dee, _display_banner
 from packages.shared._version import program_name, __version__
@@ -345,11 +347,8 @@ def _main(base_wd: Path):
 
     # Top-level parser
     parser = argparse.ArgumentParser(
-        usage="%(prog)s [INPUT] encoder [encoder commands] [optional commands]"
+        usage="%(prog)s encoder [encoder commands] optional commands"
     )
-
-    # global positional commands
-    parser.add_argument("input", type=str, help="The input file path.")
 
     # global optional commands
     parser.add_argument(
@@ -378,6 +377,7 @@ def _main(base_wd: Path):
         default="standard",
         help="Sets progress output mode verbosity.",
     )
+    parser.add_argument("-i", "--input", required=True, type=str, nargs="*", default=[], help="Input file(s) path(s).")
     parser.add_argument(
         "-o",
         "--output",
@@ -393,7 +393,7 @@ def _main(base_wd: Path):
         "-v", "--version", action="version", version=f"{program_name} {__version__}"
     )
 
-    # initiate subparsers (must be defined after top level parser args)
+    # initiate subparsers
     subparsers = parser.add_subparsers(dest="encoder", help="Choose encoder")
 
     # dd subparser
@@ -464,15 +464,22 @@ def _main(base_wd: Path):
 
     # parse the arguments
     args = parser.parse_args()
+    
+    # parse input(s)
+    try:
+        parsed_inputs = _parse_input_s(args.input)
+    except FileNotFoundError as e:
+        _exit_application(e, exit_fail)
+        
 
-    _process_input(
-        ffmpeg_path=ffmpeg_path,
-        mkvextract_path=mkvextract_path,
-        dee_path=dee_path,
-        gst_launch_path=gst_launch_path,
-        args=args,
-        banner=True,
-    )
+    # _process_input(
+    #     ffmpeg_path=ffmpeg_path,
+    #     mkvextract_path=mkvextract_path,
+    #     dee_path=dee_path,
+    #     gst_launch_path=gst_launch_path,
+    #     args=args,
+    #     banner=True,
+    # )
 
 
 if __name__ == "__main__":
