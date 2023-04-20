@@ -30,6 +30,9 @@ def _process_input(
     # display banner to console if enabled
     if banner:
         _display_banner()
+        
+    # print message
+    print(f"Processing input: {file_input.name}")
 
     # validate correct bitrate
     try:
@@ -485,16 +488,15 @@ def _main(base_wd: Path):
     # process files displaying the banner only on the first iteration
     banner = True
     for file_input in parsed_inputs:
-        print(f"Processing input: {file_input.name}")
-        _process_input(
-            ffmpeg_path=ffmpeg_path,
-            mkvextract_path=mkvextract_path,
-            dee_path=dee_path,
-            gst_launch_path=gst_launch_path,
-            file_input=file_input,
-            args=args,
-            banner=banner,
-        )
+        # _process_input(
+        #     ffmpeg_path=ffmpeg_path,
+        #     mkvextract_path=mkvextract_path,
+        #     dee_path=dee_path,
+        #     gst_launch_path=gst_launch_path,
+        #     file_input=file_input,
+        #     args=args,
+        #     banner=banner,
+        # )
         banner = False
 
 
