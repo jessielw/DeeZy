@@ -109,7 +109,7 @@ def _validate_bitrate_with_channels_and_format(arguments: ArgumentParser.parse_a
             else:
                 raise ValueError("Invalid channel count.")
         else:
-            raise ValueError("Unknown file format.")
+            raise ValueError("Unknown encoder format.")
 
         if arguments.bitrate not in valid_bitrates:
             raise ValueError(
