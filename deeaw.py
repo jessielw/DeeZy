@@ -10,7 +10,6 @@ from packages.shared.shared_utils import (
     _generate_output_filename,
     FindDependencies,
     _parse_input_s,
-    _validate_media_file_s,
 )
 from packages.shared.progress import _process_ffmpeg, _process_dee, _display_banner
 from packages.shared._version import program_name, __version__
@@ -24,6 +23,7 @@ def _process_input(
     mkvextract_path: Path,
     dee_path: Path,
     gst_launch_path: Path,
+    file_input: Path,
     args: argparse.ArgumentParser.parse_args,
     banner: bool,
 ):
@@ -38,11 +38,11 @@ def _process_input(
         _exit_application(e, exit_fail)
 
     # Check that the input file exists
-    if not Path(args.input).exists():
-        _exit_application(f"Input file not found: {args.input}", exit_fail)
+    if not Path(file_input).exists():
+        _exit_application(f"Input file not found: {file_input}", exit_fail)
 
     # Parse file with MediaInfo
-    media_info_source = MediaInfo.parse(args.input)
+    media_info_source = MediaInfo.parse(file_input)
 
     # attempt to get FPS from video track if it's present
     fps = "not_indicated"
@@ -176,7 +176,7 @@ def _process_input(
     if not args.output:
         auto_output = _generate_output_filename(
             media_info=media_info_source,
-            file_input=Path(args.input),
+            file_input=Path(file_input),
             track_index=args.track_index,
             encoder=args.encoder,
         )
@@ -236,7 +236,7 @@ def _process_input(
                     gst_launch=gst_launch_path,
                     mkvextract=mkvextract_path,
                     ffmpeg=ffmpeg_path,
-                    input_file=Path(args.input),
+                    input_file=Path(file_input),
                     track_number=args.track_index,
                     atmos_decode_workers=args.atmos_decode_workers,
                     source_fps=fps,
@@ -282,7 +282,7 @@ def _process_input(
         "-drc_scale",
         "0",
         "-i",
-        str(Path(args.input)),
+        str(Path(file_input)),
         "-map",
         f"0:{str(args.track_index)}",
         *(ffmpeg_ac),
@@ -297,10 +297,13 @@ def _process_input(
         "-stats",
         str(Path(output_dir / wav_file_name)),
     ]
-    
+
     try:
         _process_ffmpeg(
-            cmd=ffmpeg_cmd, progress_mode=args.progress_mode, steps=True, duration=duration
+            cmd=ffmpeg_cmd,
+            progress_mode=args.progress_mode,
+            steps=True,
+            duration=duration,
         )
     except ValueError as e:
         _exit_application(e, exit_fail)
@@ -317,7 +320,7 @@ def _process_input(
         str(update_xml),
         "--disable-xml-validation",
     ]
-    
+
     try:
         _process_dee(
             cmd=dee_cm, progress_mode=args.progress_mode, encoder_format=args.encoder
@@ -377,7 +380,15 @@ def _main(base_wd: Path):
         default="standard",
         help="Sets progress output mode verbosity.",
     )
-    parser.add_argument("-i", "--input", required=True, type=str, nargs="*", default=[], help="Input file(s) path(s).")
+    parser.add_argument(
+        "-i",
+        "--input",
+        required=True,
+        type=str,
+        nargs="*",
+        default=[],
+        help="Input file(s) path(s).",
+    )
     parser.add_argument(
         "-o",
         "--output",
@@ -464,22 +475,27 @@ def _main(base_wd: Path):
 
     # parse the arguments
     args = parser.parse_args()
-    
+
     # parse input(s)
     try:
         parsed_inputs = _parse_input_s(args.input)
     except FileNotFoundError as e:
         _exit_application(e, exit_fail)
-        
 
-    # _process_input(
-    #     ffmpeg_path=ffmpeg_path,
-    #     mkvextract_path=mkvextract_path,
-    #     dee_path=dee_path,
-    #     gst_launch_path=gst_launch_path,
-    #     args=args,
-    #     banner=True,
-    # )
+    # process files displaying the banner only on the first iteration
+    banner = True
+    for file_input in parsed_inputs:
+        print(f"Processing input: {file_input.name}")
+        _process_input(
+            ffmpeg_path=ffmpeg_path,
+            mkvextract_path=mkvextract_path,
+            dee_path=dee_path,
+            gst_launch_path=gst_launch_path,
+            file_input=file_input,
+            args=args,
+            banner=banner,
+        )
+        banner = False
 
 
 if __name__ == "__main__":
