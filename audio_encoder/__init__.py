@@ -6,7 +6,7 @@ from packages.shared._version import program_name, __version__
 
 # replace with encoders
 from audio_encoder.utils.exit import _exit_application, exit_fail
-from audio_encoder.audio_encoders.dd import DDEncoder
+from audio_encoder.audio_encoders.dd import DDEncoderDEE
 from audio_encoder.payloads.dd import DDPayload
 from audio_encoder.enums import case_insensitive_enum, enum_choices
 from audio_encoder.enums.shared import ProgressMode, StereoDownmix
@@ -218,7 +218,7 @@ def _main(base_wd: Path):
             payload.channels = args.channels
 
             # encoder
-            dd = DDEncoder(payload)
+            dd = DDEncoderDEE(payload)
 
         elif args.format_command == "ddp":
             # Encode DDP
