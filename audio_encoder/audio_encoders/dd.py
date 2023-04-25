@@ -32,7 +32,7 @@ class DDEncoderDEE(BaseAudioEncoder):
             "60",
         }
         fps = "not_indicated"
-        str_fps = str(self.payload.fps)
+        str_fps = str(self.audio_track_info.fps)
         if str_fps in accepted_choices:
             fps = str_fps
         return fps
