@@ -12,6 +12,7 @@ from audio_encoder.enums import case_insensitive_enum, enum_choices
 from audio_encoder.enums.shared import ProgressMode, StereoDownmix
 from audio_encoder.enums.dd import DolbyDigitalChannels
 from audio_encoder.enums.ddp import DolbyDigitalPlusChannels
+from audio_encoder.info import AudioStreamViewer
 
 
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
@@ -261,4 +262,5 @@ def _main(base_wd: Path):
 
     elif args.sub_command == "info":
         # Info
+        # TODO display audio information from AudioStreamViewer
         pass
