@@ -28,7 +28,11 @@ class FileParser:
                 input_s.extend(Path(p) for p in glob.glob(arg_input, recursive=True))
 
             # single file path
-            elif Path(arg_input).is_file():
+            elif (
+                Path(arg_input).exists()
+                and Path(arg_input).is_file()
+                and arg_input.strip() != ""
+            ):
                 input_s.append(Path(arg_input))
             else:
                 raise FileNotFoundError(f"{arg_input} is not a valid input path.")
