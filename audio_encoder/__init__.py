@@ -5,7 +5,7 @@ from pathlib import Path
 from packages.shared._version import program_name, __version__
 
 # replace with encoders
-from audio_encoder.utils.exit import _exit_application, exit_fail
+from audio_encoder.utils.exit import _exit_application, exit_fail, exit_success
 from audio_encoder.utils.file_parser import FileParser
 from audio_encoder.audio_encoders.dee.dd import DDEncoderDEE
 from audio_encoder.payloads.dd import DDPayload
@@ -216,13 +216,12 @@ def _main(base_wd: Path):
         exit()
 
     # parse all possible file inputs
-    # TODO We will need to decide what to do when multiple file inputs 
-    # don't have the track provided by the user? 
-    # Additionally is this the best place to do this? 
+    # TODO We will need to decide what to do when multiple file inputs
+    # don't have the track provided by the user?
+    # Additionally is this the best place to do this?
     file_inputs = FileParser().parse_input_s(args.input)
     if not file_inputs:
         _exit_application("No input files we're found.", exit_fail)
-        
 
     if args.sub_command == "encode":
         # TODO Display banner here?
@@ -269,5 +268,11 @@ def _main(base_wd: Path):
 
     elif args.sub_command == "info":
         # Info
-        # TODO display audio information from AudioStreamViewer
-        pass
+        # TODO this probably needs handled in a cleaner way
+        track_s_info = ""
+        for input_file in file_inputs:
+            info = AudioStreamViewer().parse_audio_streams(input_file)
+            track_s_info = (
+                track_s_info + f"File: {input_file.name}\n" + info.media_info + "\n\n"
+            )
+        _exit_application(track_s_info, exit_success)
