@@ -224,12 +224,13 @@ def _main(base_wd: Path):
             # TODO We will need to catch all expected expectations possible and wrap this in a try except
             # with the exit application output. That way we're not catching all generic issues.
             # _exit_application(e, exit_fail)
+            # TODO we need to catch all errors that we know will happen here in the scope
 
             # update payload
             # TODO prevent duplicate payload code somehow
 
             # TODO We actually need to do a for loop for file input to batch all inputs
-            # TODO we need to catch all errors that we know will happen here in the scope
+
             payload = DDPayload()
             payload.file_input = args.input
             payload.track_index = args.track_index
