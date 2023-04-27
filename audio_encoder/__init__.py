@@ -229,8 +229,6 @@ def _main(base_wd: Path):
             # update payload
             # TODO prevent duplicate payload code somehow
 
-            # TODO We actually need to do a for loop for file input to batch all inputs
-
             payload = DDPayload()
             payload.file_input = args.input
             payload.track_index = args.track_index
@@ -249,6 +247,8 @@ def _main(base_wd: Path):
 
             # encoder
             # TODO will need to pass input (multiple)
+            # TODO We actually need to do a for loop for file input to batch all inputs 
+            # or something like it.
             dd = DDEncoderDEE().encode(payload)
 
         elif args.format_command == "ddp":
