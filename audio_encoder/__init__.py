@@ -44,7 +44,7 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
         return f"{option_strings}, {args_string}"
 
 
-# TODO Fix FindDependencies
+# TODO Fix FindDependencies, this is a temporary class, the real class resides in audio_encoder.utils.utils
 class TempToolPath:
     ffmpeg = "ffmpeg"
     dee = r"E:\programming\BHDStudio-DEEWrapper\apps\dee\dee.exe"
@@ -210,9 +210,11 @@ def _main(base_wd: Path):
     if not args.sub_command:
         if not hasattr(args, "version"):
             parser.print_usage()
+        # TODO maybe exit this with _exit_application printing a message? 
         exit()
 
     if not hasattr(args, "input") or not args.input:
+        # TODO maybe exit this with _exit_application printing a message? 
         exit()
 
     # parse all possible file inputs
