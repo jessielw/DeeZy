@@ -273,6 +273,9 @@ def _main(base_wd: Path):
         for input_file in file_inputs:
             info = AudioStreamViewer().parse_audio_streams(input_file)
             track_s_info = (
-                track_s_info + f"File: {input_file.name}\n" + info.media_info + "\n\n"
+                track_s_info
+                + f"File: {input_file.name}\nAudio tracks: {info.track_list}\n"
+                + info.media_info
+                + "\n\n"
             )
         _exit_application(track_s_info, exit_success)
