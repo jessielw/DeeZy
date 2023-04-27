@@ -269,7 +269,7 @@ def _main(base_wd: Path):
 
     # Find
     elif args.sub_command == "find":
-        # TODO ensure this is done the best way possible
+        # TODO ensure this is done the best way possible.
         file_names = []
         for input_file in file_inputs:
             # if name only is used, print only the name of the file.
@@ -286,7 +286,9 @@ def _main(base_wd: Path):
 
     # Info
     elif args.sub_command == "info":
-        # TODO this probably needs handled in a cleaner way
+        # TODO this probably needs handled in a cleaner way.
+        # could use list comprehension here but will be harder to 
+        # add args if we add them later?
         track_s_info = ""
         for input_file in file_inputs:
             info = AudioStreamViewer().parse_audio_streams(input_file)
