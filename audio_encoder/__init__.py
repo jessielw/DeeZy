@@ -6,7 +6,7 @@ from packages.shared._version import program_name, __version__
 
 # replace with encoders
 from audio_encoder.utils.exit import _exit_application, exit_fail
-from audio_encoder.audio_encoders.dd import DDEncoderDEE
+from audio_encoder.audio_encoders.dee.dd import DDEncoderDEE
 from audio_encoder.payloads.dd import DDPayload
 from audio_encoder.enums import case_insensitive_enum, enum_choices
 from audio_encoder.enums.shared import ProgressMode, StereoDownmix
@@ -42,7 +42,22 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
         return f"{option_strings}, {args_string}"
 
 
+# TODO Fix FindDependencies
+class TempToolPath:
+    ffmpeg = "ffmpeg"
+    dee = r"E:\programming\BHDStudio-DEEWrapper\apps\dee\dee.exe"
+
+
 def _main(base_wd: Path):
+    # define tools
+    # try:
+    #     tools = FindDependencies(base_wd=base_wd)
+    # except FileNotFoundError as e:
+    #     _exit_application(e, exit_fail)
+    tools = TempToolPath()
+    ffmpeg_path = Path(tools.ffmpeg)
+    dee_path = Path(tools.dee)
+
     # Top-level parser
     parser = argparse.ArgumentParser(prog=program_name)
 
@@ -94,12 +109,6 @@ def _main(base_wd: Path):
         help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
     )
     encode_group.add_argument(
-        "-o",
-        "--output",
-        type=str,
-        help="The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.",
-    )
-    encode_group.add_argument(
         "-p",
         "--progress-mode",
         type=case_insensitive_enum(ProgressMode),
@@ -107,6 +116,18 @@ def _main(base_wd: Path):
         choices=list(ProgressMode),
         metavar=enum_choices(ProgressMode),
         help="Sets progress output mode verbosity.",
+    )
+    encode_group.add_argument(
+        "-tmp",
+        "--temp-dir",
+        type=str,
+        help="Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.",
+    )
+    encode_group.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.",
     )
 
     # downmix group
@@ -206,19 +227,28 @@ def _main(base_wd: Path):
 
             # update payload
             # TODO prevent duplicate payload code somehow
+
+            # TODO We actually need to do a for loop for file input to batch all inputs
+            # TODO we need to catch all errors that we know will happen here in the scope
             payload = DDPayload()
             payload.file_input = args.input
             payload.track_index = args.track_index
             payload.bitrate = args.bitrate
             payload.delay = args.delay
+            payload.temp_dir = args.temp_dir
             payload.keep_temp = args.keep_temp
             payload.file_output = args.output
             payload.progress_mode = args.progress_mode
             payload.stereo_mix = args.stereo_down_mix
             payload.channels = args.channels
 
+            # TODO Not sure if this is how we wanna inject, but for now...
+            payload.ffmpeg_path = ffmpeg_path
+            payload.dee_path = dee_path
+
             # encoder
-            dd = DDEncoderDEE(payload)
+            # TODO will need to pass input (multiple)
+            dd = DDEncoderDEE().encode(payload)
 
         elif args.format_command == "ddp":
             # Encode DDP
