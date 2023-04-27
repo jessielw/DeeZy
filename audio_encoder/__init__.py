@@ -1,10 +1,6 @@
 import argparse
 from pathlib import Path
-
-# slowly remove packages
-from packages.shared._version import program_name, __version__
-
-# replace with encoders
+from audio_encoder.utils._version import program_name, __version__
 from audio_encoder.utils.exit import _exit_application, exit_fail, exit_success
 from audio_encoder.utils.file_parser import FileParser
 from audio_encoder.audio_encoders.dee.dd import DDEncoderDEE
@@ -210,11 +206,11 @@ def _main(base_wd: Path):
     if not args.sub_command:
         if not hasattr(args, "version"):
             parser.print_usage()
-        # TODO maybe exit this with _exit_application printing a message? 
+        # TODO maybe exit this with _exit_application printing a message?
         exit()
 
     if not hasattr(args, "input") or not args.input:
-        # TODO maybe exit this with _exit_application printing a message? 
+        # TODO maybe exit this with _exit_application printing a message?
         exit()
 
     # parse all possible file inputs
