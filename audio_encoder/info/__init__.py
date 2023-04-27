@@ -3,10 +3,17 @@ from pymediainfo import MediaInfo
 import shutil
 
 
+class AudioStreams:
+    """Dumb object for displaying audio stream information"""
+
+    media_info = None
+    track_list = None
+
+
 class AudioStreamViewer:
     def parse_audio_streams(self, file_input: Path):
-        """Parse audio streams information from a media file and return a dictionary containing
-        the formatted string and a list of audio track IDs.
+        """Parse audio streams information from a media file and return an instance
+        of AudioStreams class containing the formatted string and a list of audio track IDs.
 
         Args:
             file_input (Path): File input path.
@@ -172,6 +179,12 @@ class AudioStreamViewer:
                     + columns * "-"
                     + "\n"
                 )
+
+        # return {"track_output": media_info_track_string, "track_list": track_list}
+        streams = AudioStreams()
+        streams.media_info = media_info_track_string
+        streams.track_list = track_list
+        return streams
 
     @staticmethod
     def _calculate_space(title: str, character_space: int = 20):
