@@ -157,6 +157,11 @@ class DDEncoderDEE(BaseAudioEncoder):
         move_file = shutil.move(Path(temp_dir / output_file_name), output)
         # TODO maybe cheek if move_file exists and print success?
 
+        # delete temp folder and all files if enabled
+        # TODO if set to no, maybe let the user know where they are stored maybe, idk?
+        if not payload.keep_temp:
+            shutil.rmtree(temp_dir)
+
     @staticmethod
     def _get_fps(fps: object):
         accepted_choices = {
