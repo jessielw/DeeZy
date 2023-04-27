@@ -6,6 +6,7 @@ from packages.shared._version import program_name, __version__
 
 # replace with encoders
 from audio_encoder.utils.exit import _exit_application, exit_fail
+from audio_encoder.utils.file_parser import FileParser
 from audio_encoder.audio_encoders.dee.dd import DDEncoderDEE
 from audio_encoder.payloads.dd import DDPayload
 from audio_encoder.enums import case_insensitive_enum, enum_choices
@@ -214,6 +215,15 @@ def _main(base_wd: Path):
     if not hasattr(args, "input") or not args.input:
         exit()
 
+    # parse all possible file inputs
+    # TODO We will need to decide what to do when multiple file inputs 
+    # don't have the track provided by the user? 
+    # Additionally is this the best place to do this? 
+    file_inputs = FileParser().parse_input_s(args.input)
+    if not file_inputs:
+        _exit_application("No input files we're found.", exit_fail)
+        
+
     if args.sub_command == "encode":
         # TODO Display banner here?
 
@@ -229,28 +239,25 @@ def _main(base_wd: Path):
 
             # update payload
             # TODO prevent duplicate payload code somehow
+            for input_file in file_inputs:
+                payload = DDPayload()
+                payload.file_input = input_file
+                payload.track_index = args.track_index
+                payload.bitrate = args.bitrate
+                payload.delay = args.delay
+                payload.temp_dir = args.temp_dir
+                payload.keep_temp = args.keep_temp
+                payload.file_output = args.output
+                payload.progress_mode = args.progress_mode
+                payload.stereo_mix = args.stereo_down_mix
+                payload.channels = args.channels
 
-            payload = DDPayload()
-            payload.file_input = args.input
-            payload.track_index = args.track_index
-            payload.bitrate = args.bitrate
-            payload.delay = args.delay
-            payload.temp_dir = args.temp_dir
-            payload.keep_temp = args.keep_temp
-            payload.file_output = args.output
-            payload.progress_mode = args.progress_mode
-            payload.stereo_mix = args.stereo_down_mix
-            payload.channels = args.channels
+                # TODO Not sure if this is how we wanna inject, but for now...
+                payload.ffmpeg_path = ffmpeg_path
+                payload.dee_path = dee_path
 
-            # TODO Not sure if this is how we wanna inject, but for now...
-            payload.ffmpeg_path = ffmpeg_path
-            payload.dee_path = dee_path
-
-            # encoder
-            # TODO will need to pass input (multiple)
-            # TODO We actually need to do a for loop for file input to batch all inputs 
-            # or something like it.
-            dd = DDEncoderDEE().encode(payload)
+                # encoder
+                dd = DDEncoderDEE().encode(payload)
 
         elif args.format_command == "ddp":
             # Encode DDP

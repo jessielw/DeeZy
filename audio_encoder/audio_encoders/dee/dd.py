@@ -27,8 +27,7 @@ class DDEncoderDEE(BaseAudioEncoder):
 
         # convert for dee XML
         # file input
-        # TODO actually allow multiple inputs, for now hard coded to first one
-        file_input = Path(payload.file_input[0])
+        file_input = Path(payload.file_input)
         self._check_input_file(file_input)
 
         # # track index
