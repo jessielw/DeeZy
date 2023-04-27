@@ -2,11 +2,21 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
 
+# from typing import Union
+# from audio_encoder.enums.dd import DolbyDigitalChannels
+# from audio_encoder.enums.ddp import DolbyDigitalPlusChannels
 
-class NotEnoughSpace(Exception):
+
+class NotEnoughSpaceError(Exception):
     """Custom error class to for insufficient storage"""
 
-    pass
+
+class PathTooLongError(Exception):
+    """Custom error class to for path names that are too long"""
+
+
+class InvalidExtensionError(Exception):
+    """Custom error class for invalid file extensions"""
 
 
 class BaseAudioEncoder(ABC):
@@ -43,6 +53,19 @@ class BaseAudioEncoder(ABC):
 
         # check to ensure the desired space in GB's is free
         if free_space_gb < int(required_space):
-            raise NotEnoughSpace(f"Insufficient storage to complete the process.")
+            raise NotEnoughSpaceError(f"Insufficient storage to complete the process.")
         else:
             return True
+
+    @staticmethod
+    def _get_closest_allowed_bitrate(bitrate: int, accepted_bitrates: list):
+        """Returns the closest allowed bitrate from a given input bitrate in a list of accepted bitrates.
+
+        Args:
+            bitrate (int): The input bitrate to find the closest allowed bitrate for.
+            accepted_bitrates (list): A list of accepted bitrates.
+
+        Returns:
+            int: The closest allowed bitrate in the list of accepted bitrates.
+        """
+        return min(accepted_bitrates, key=lambda x: abs(x - bitrate))
