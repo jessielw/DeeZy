@@ -48,6 +48,7 @@ class TempToolPath:
 
 def _main(base_wd: Path):
     # define tools
+    # TODO re-add once we fix the actual FindDependencies class
     # try:
     #     tools = FindDependencies(base_wd=base_wd)
     # except FileNotFoundError as e:
@@ -188,6 +189,12 @@ def _main(base_wd: Path):
     #############################################################
     # Find command parser
     find_parser = subparsers.add_parser("find", parents=[input_group])
+    find_parser.add_argument(
+        "-n",
+        "--name",
+        action="store_true",
+        help="Only display names instead of full paths.",
+    )
     # TODO: Add arg options if required
 
     #############################################################
@@ -260,12 +267,25 @@ def _main(base_wd: Path):
             # Encode DDP
             pass
 
+    # Find
     elif args.sub_command == "find":
-        # Find
-        pass
+        # TODO ensure this is done the best way possible
+        file_names = []
+        for input_file in file_inputs:
+            # if name only is used, print only the name of the file.
+            if args.name:
+                input_file = input_file.name
 
+            # append file to file_names (ensuring they are strings for the .join method)
+            file_names.append(str(input_file))
+
+            # Join the file names with newlines
+            found_files = "\n".join(file_names)
+
+        _exit_application(found_files, exit_success)
+
+    # Info
     elif args.sub_command == "info":
-        # Info
         # TODO this probably needs handled in a cleaner way
         track_s_info = ""
         for input_file in file_inputs:
