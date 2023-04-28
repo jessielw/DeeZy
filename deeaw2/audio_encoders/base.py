@@ -2,10 +2,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
 
-# from typing import Union
-# from audio_encoder.enums.dd import DolbyDigitalChannels
-# from audio_encoder.enums.ddp import DolbyDigitalPlusChannels
-
 
 class NotEnoughSpaceError(Exception):
     """Custom error class to for insufficient storage"""
@@ -19,7 +15,17 @@ class InvalidExtensionError(Exception):
     """Custom error class for invalid file extensions"""
 
 
+class ChannelMixError(Exception):
+    """Custom error class for invalid channel mix configurations"""
+
+
 class BaseAudioEncoder(ABC):
+    @staticmethod
+    def _check_for_up_mixing(source_channels: int, desired_channels: int):
+        """Provide source_channels and ensure that desired channels enum object is less than source"""
+        if source_channels < desired_channels:
+            raise ChannelMixError("Up-mixing is not supported.")
+
     @staticmethod
     def _check_input_file(input_file: Path):
         """Checks to ensure input file exists retuning a boolean value

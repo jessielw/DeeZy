@@ -48,6 +48,9 @@ class DDEncoderDEE(BaseAudioEncoder):
             file_input, payload.track_index
         )
 
+        # check for up-mixing
+        self._check_for_up_mixing(audio_track_info.channels, payload.channels.value)
+
         # delay
         if payload.delay:
             delay = str(payload.delay)
