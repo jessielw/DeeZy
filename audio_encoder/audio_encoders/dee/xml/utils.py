@@ -2,6 +2,7 @@ import xmltodict
 from pathlib import Path
 from audio_encoder.audio_encoders.dee.xml.dd_ddp_base_xml import xml_audio_base_ddp
 from audio_encoder.enums.dd import DolbyDigitalChannels
+from audio_encoder.enums.ddp import DolbyDigitalPlusChannels
 from typing import Union
 
 
@@ -92,31 +93,34 @@ def _generate_xml_dd(
     xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
 
     # xml down mix config
-    xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
-        "downmix_config"
-    ] = down_mix_config
+    if down_mix_config:
+        xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
+            "downmix_config"
+        ] = down_mix_config
+    else:
+        del xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
+            "downmix_config"
+        ]
 
-    if channels == DolbyDigitalChannels.MONO:
+    # TODO This is a temporary shared work around, this needs split up.
+    if channels in [DolbyDigitalChannels.MONO, DolbyDigitalPlusChannels.MONO]:
         downmix_mode = "not_indicated"
-    elif channels == DolbyDigitalChannels.STEREO:
+    elif channels in [DolbyDigitalChannels.STEREO, DolbyDigitalPlusChannels.STEREO]:
         if stereo_down_mix == "standard":
             downmix_mode = "ltrt"
         elif stereo_down_mix == "dplii" and dd_format == "ddp":
             downmix_mode = "ltrt-pl2"
         elif stereo_down_mix == "dplii" and dd_format == "dd":
             downmix_mode = None
-    elif channels == DolbyDigitalChannels.SURROUND:
+    elif channels in [DolbyDigitalChannels.SURROUND, DolbyDigitalPlusChannels.SURROUND]:
         downmix_mode = "loro"
+    elif channels == DolbyDigitalPlusChannels.SURROUNDEX:
+        downmix_mode = "not_indicated"
 
     # if downmix_mode is not None update the XML entry
-    if downmix_mode:
-        xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
-            "preferred_downmix_mode"
-        ] = downmix_mode
-
-    # if downmix_mode is None delete XML entry completely
-    elif not downmix_mode:
-        del xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"]
+    xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
+        "preferred_downmix_mode"
+    ] = downmix_mode
 
     # xml bit rate config
     xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["data_rate"] = str(bitrate)
@@ -139,7 +143,7 @@ def _generate_xml_dd(
             ]["preset"] = "atsc_a85"
 
         # if channels are 8 set encoder mode to ddp71
-        if channels == 8:
+        if channels == DolbyDigitalPlusChannels.SURROUNDEX:
             xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
                 "encoder_mode"
             ] = "ddp71"

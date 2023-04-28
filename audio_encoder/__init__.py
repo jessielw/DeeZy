@@ -5,7 +5,9 @@ from audio_encoder.utils.exit import _exit_application, exit_fail, exit_success
 from audio_encoder.utils.file_parser import FileParser
 from audio_encoder.utils.dependencies import DependencyNotFoundError, FindDependencies
 from audio_encoder.audio_encoders.dee.dd import DDEncoderDEE
+from audio_encoder.audio_encoders.dee.ddp import DDPEncoderDEE
 from audio_encoder.payloads.dd import DDPayload
+from audio_encoder.payloads.ddp import DDPPayload
 from audio_encoder.enums import case_insensitive_enum, enum_choices
 from audio_encoder.enums.shared import ProgressMode, StereoDownmix
 from audio_encoder.enums.dd import DolbyDigitalChannels
@@ -228,7 +230,8 @@ def _main(base_wd: Path):
         # TODO DO we print this here as well?
         # print message
         # print(f"Processing input: {Path(args.input).name}")
-
+        
+        # encode Dolby Digital
         if args.format_command == "dd":
             # TODO We will need to catch all expected expectations possible and wrap this in a try except
             # with the exit application output. That way we're not catching all generic issues.
@@ -257,9 +260,34 @@ def _main(base_wd: Path):
                 # encoder
                 dd = DDEncoderDEE().encode(payload)
 
+        # Encode Dolby Digital Plus
         elif args.format_command == "ddp":
-            # Encode DDP
-            pass
+                        # TODO We will need to catch all expected expectations possible and wrap this in a try except
+            # with the exit application output. That way we're not catching all generic issues.
+            # _exit_application(e, exit_fail)
+            # TODO we need to catch all errors that we know will happen here in the scope
+
+            # update payload
+            # TODO prevent duplicate payload code somehow
+            for input_file in file_inputs:
+                payload = DDPPayload()
+                payload.file_input = input_file
+                payload.track_index = args.track_index
+                payload.bitrate = args.bitrate
+                payload.delay = args.delay
+                payload.temp_dir = args.temp_dir
+                payload.keep_temp = args.keep_temp
+                payload.file_output = args.output
+                payload.progress_mode = args.progress_mode
+                payload.stereo_mix = args.stereo_down_mix
+                payload.channels = args.channels
+
+                # TODO Not sure if this is how we wanna inject, but for now...
+                payload.ffmpeg_path = ffmpeg_path
+                payload.dee_path = dee_path
+
+                # encoder
+                ddp = DDPEncoderDEE().encode(payload)
 
     # Find
     elif args.sub_command == "find":
