@@ -209,12 +209,10 @@ def _main(base_wd: Path):
     if not args.sub_command:
         if not hasattr(args, "version"):
             parser.print_usage()
-        # TODO maybe exit this with _exit_application printing a message?
-        exit()
+        _exit_application("", exit_fail)
 
     if not hasattr(args, "input") or not args.input:
-        # TODO maybe exit this with _exit_application printing a message?
-        exit()
+        _exit_application("", exit_fail)
 
     # parse all possible file inputs
     # TODO We will need to decide what to do when multiple file inputs
@@ -230,7 +228,7 @@ def _main(base_wd: Path):
         # TODO DO we print this here as well?
         # print message
         # print(f"Processing input: {Path(args.input).name}")
-        
+
         # encode Dolby Digital
         if args.format_command == "dd":
             # TODO We will need to catch all expected expectations possible and wrap this in a try except
@@ -262,7 +260,7 @@ def _main(base_wd: Path):
 
         # Encode Dolby Digital Plus
         elif args.format_command == "ddp":
-                        # TODO We will need to catch all expected expectations possible and wrap this in a try except
+            # TODO We will need to catch all expected expectations possible and wrap this in a try except
             # with the exit application output. That way we're not catching all generic issues.
             # _exit_application(e, exit_fail)
             # TODO we need to catch all errors that we know will happen here in the scope
