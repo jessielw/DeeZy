@@ -1,4 +1,4 @@
-from audio_encoder.track_info.audio_track_info import AudioTrackInfo
+from deeaw2.track_info.audio_track_info import AudioTrackInfo
 from pymediainfo import MediaInfo
 from pathlib import Path
 from re import search

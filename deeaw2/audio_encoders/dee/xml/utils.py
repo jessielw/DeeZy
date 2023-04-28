@@ -1,8 +1,8 @@
 import xmltodict
 from pathlib import Path
-from audio_encoder.audio_encoders.dee.xml.dd_ddp_base_xml import xml_audio_base_ddp
-from audio_encoder.enums.dd import DolbyDigitalChannels
-from audio_encoder.enums.ddp import DolbyDigitalPlusChannels
+from deeaw2.audio_encoders.dee.xml.dd_ddp_base_xml import xml_audio_base_ddp
+from deeaw2.enums.dd import DolbyDigitalChannels
+from deeaw2.enums.ddp import DolbyDigitalPlusChannels
 from typing import Union
 
 

@@ -1,21 +1,21 @@
-from audio_encoder.audio_encoders.base import (
+from deeaw2.audio_encoders.base import (
     BaseAudioEncoder,
     PathTooLongError,
     InvalidExtensionError,
 )
-from audio_encoder.audio_encoders.dee.xml.utils import _generate_xml_dd
-from audio_encoder.track_info.mediainfo import MediainfoParser
-from audio_encoder.audio_encoders.dee.bitrates import dee_ddp_bitrates
-from audio_encoder.enums.shared import ProgressMode, StereoDownmix
-from audio_encoder.enums.ddp import DolbyDigitalPlusChannels
-from audio_encoder.audio_processors.ffmpeg import ProcessFFMPEG
-from audio_encoder.audio_processors.dee import ProcessDEE
+from deeaw2.audio_encoders.dee.xml.utils import _generate_xml_dd
+from deeaw2.track_info.mediainfo import MediainfoParser
+from deeaw2.audio_encoders.dee.bitrates import dee_dd_bitrates
+from deeaw2.enums.shared import ProgressMode, StereoDownmix
+from deeaw2.enums.dd import DolbyDigitalChannels
+from deeaw2.audio_processors.ffmpeg import ProcessFFMPEG
+from deeaw2.audio_processors.dee import ProcessDEE
 from pathlib import Path
 import tempfile
 import shutil
 
 
-class DDPEncoderDEE(BaseAudioEncoder):
+class DDEncoderDEE(BaseAudioEncoder):
     def __init__(self):
         super().__init__()
 
@@ -76,17 +76,17 @@ class DDPEncoderDEE(BaseAudioEncoder):
         # file output (if an output is a defined check users extension and use their output)
         if payload.file_output:
             output = Path(payload.file_output)
-            if output.suffix not in [".ec3", ".eac3"]:
+            if "ac3" not in output.suffix:
                 raise InvalidExtensionError(
-                    "DDP output must must end with the suffix '.eac3' or '.ec3'."
+                    "DD output must must end with the suffix '.ac3'."
                 )
         elif not payload.file_output:
-            output = Path(audio_track_info.auto_name).with_suffix(".ec3")
+            output = Path(audio_track_info.auto_name).with_suffix(".ac3")
 
         # Define .wav and .ac3/.ec3 file names (not full path)
         # TODO can likely handle this better.
         wav_file_name = temp_filename + ".wav"
-        output_file_name = temp_filename + output.suffix
+        output_file_name = temp_filename + ".ac3"
 
         # generate ffmpeg cmd
         ffmpeg_cmd = self._generate_ffmpeg_cmd(
@@ -120,9 +120,9 @@ class DDPEncoderDEE(BaseAudioEncoder):
             stereo_down_mix=stereo_mix,
             bitrate=bitrate,
             # TODO handle dd format
-            dd_format="ddp",
+            dd_format="dd",
             channels=payload.channels,
-            # TODO deal with normalize correctly, only enable for DDP (optional of course)
+            # TODO deal with normalize correctly, only enable for DDP
             normalize=False,
             wav_file_name=wav_file_name,
             output_file_name=output_file_name,
@@ -148,7 +148,7 @@ class DDPEncoderDEE(BaseAudioEncoder):
         # Process dee command
         # TODO handle hard coded progress_mode
         # TODO can check for True return from dee_job if we need?
-        dee_job = ProcessDEE().process_job(cmd=dee_cm, progress_mode="debug")
+        dee_job = ProcessDEE().process_job(cmd=dee_cm, progress_mode="standard")
 
         # move file to output path
         # TODO handle this in a function/cleaner
@@ -182,14 +182,12 @@ class DDPEncoderDEE(BaseAudioEncoder):
 
     @staticmethod
     def _get_accepted_bitrates(channels: int):
-        if channels == DolbyDigitalPlusChannels.MONO:
-            return dee_ddp_bitrates.get("ddp_10")
-        elif channels == DolbyDigitalPlusChannels.STEREO:
-            return dee_ddp_bitrates.get("ddp_20")
-        elif channels == DolbyDigitalPlusChannels.SURROUND:
-            return dee_ddp_bitrates.get("ddp_51")
-        elif channels == DolbyDigitalPlusChannels.SURROUNDEX:
-            return dee_ddp_bitrates.get("ddp_71_combined")
+        if channels == DolbyDigitalChannels.MONO:
+            return dee_dd_bitrates.get("dd_10")
+        elif channels == DolbyDigitalChannels.STEREO:
+            return dee_dd_bitrates.get("dd_20")
+        elif channels == DolbyDigitalChannels.SURROUND:
+            return dee_dd_bitrates.get("dd_51")
 
     @staticmethod
     def _get_temp_dir(file_input: Path, temp_dir: Path):
@@ -219,16 +217,15 @@ class DDPEncoderDEE(BaseAudioEncoder):
     #         mode = ""
 
     @staticmethod
-    def _get_down_mix_config(channels: DolbyDigitalPlusChannels):
-        # TODO this might need to be re-worked some
-        if channels == DolbyDigitalPlusChannels.MONO:
+    def _get_down_mix_config(channels: DolbyDigitalChannels):
+        # TODO this also can be "off", NOT SURE IF NEEDED
+        # return "off"?
+        if channels == DolbyDigitalChannels.MONO:
             return "mono"
-        elif channels == DolbyDigitalPlusChannels.STEREO:
+        elif channels == DolbyDigitalChannels.STEREO:
             return "stereo"
-        elif channels == DolbyDigitalPlusChannels.SURROUND:
+        elif channels == DolbyDigitalChannels.SURROUND:
             return "5.1"
-        elif channels == DolbyDigitalPlusChannels.SURROUNDEX:
-            return "off"
 
     @staticmethod
     def _generate_ffmpeg_cmd(
@@ -236,7 +233,7 @@ class DDPEncoderDEE(BaseAudioEncoder):
         file_input: Path,
         track_index: int,
         sample_rate: int,
-        channels: DolbyDigitalPlusChannels,
+        channels: DolbyDigitalChannels,
         stereo_down_mix: StereoDownmix,
         output_dir: Path,
         wav_file_name: str,
@@ -254,33 +251,33 @@ class DDPEncoderDEE(BaseAudioEncoder):
             bits_per_sample = 32
             resample = False
 
-        # resample and add swap channels
+        # resample and add dplii
         audio_filter_args = []
-        if resample:
-            if channels == DolbyDigitalPlusChannels.SURROUNDEX:
+        if (
+            channels == DolbyDigitalChannels.STEREO
+            and stereo_down_mix == StereoDownmix.DPLII
+        ):
+            if resample:
                 audio_filter_args = [
                     "-af",
-                    (
-                        "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
-                        "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0"
-                    ),
+                    "aresample=matrix_encoding=dplii,aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
                     "-ar",
                     str(sample_rate),
                 ]
-            elif channels != DolbyDigitalPlusChannels.SURROUNDEX:
+            elif not resample:
                 audio_filter_args = [
+                    "-ac",
+                    "2",
                     "-af",
-                    "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
-                    "-ar",
-                    str(sample_rate),
+                    "aresample=matrix_encoding=dplii",
                 ]
-
-        elif not resample:
-            if channels == DolbyDigitalPlusChannels.SURROUNDEX:
-                audio_filter_args = [
-                    "-af",
-                    "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
-                ]
+        elif resample:
+            audio_filter_args = [
+                "-af",
+                "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+                "-ar",
+                str(sample_rate),
+            ]
 
         # base ffmpeg command
         ffmpeg_cmd = [

@@ -1,4 +1,4 @@
-from audio_encoder.payloads.shared import BaseArgsPayload
+from deeaw2.payloads.shared import BaseArgsPayload
 
 
 class DDPPayload(BaseArgsPayload):

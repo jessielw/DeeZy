@@ -1,5 +1,5 @@
 from subprocess import Popen, PIPE, STDOUT
-from audio_encoder.utils.utils import PrintSameLine
+from deeaw2.utils.utils import PrintSameLine
 import re
 
 

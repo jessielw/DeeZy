@@ -1,5 +1,5 @@
 from cli import cli_parser
-from audio_encoder.utils.utils import _get_working_dir
+from deeaw2.utils.utils import _get_working_dir
 
 
 if __name__ == "__main__":
