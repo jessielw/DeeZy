@@ -49,17 +49,17 @@ class FindDependencies:
         return dependencies
 
     @staticmethod
-    def _locate_beside_program(base_wd, ffmpeg, dee):
+    def _locate_beside_program(base_wd):
         ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg.exe")
         dee_path = Path(base_wd / "apps/dee/dee.exe")
 
         found_paths = [str(path) for path in [ffmpeg_path, dee_path] if path.exists()]
 
         for path in found_paths:
-            if str(path) == str(ffmpeg_path) and not ffmpeg:
-                ffmpeg = str(path)
-            elif str(path) == str(dee_path) and not dee:
-                dee = str(path)
+            if str(path) == str(ffmpeg_path):
+                ffmpeg_path = str(path)
+            elif str(path) == str(dee_path):
+                dee_path = str(path)
 
         return ffmpeg_path, dee_path
 
