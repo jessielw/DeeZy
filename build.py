@@ -9,7 +9,7 @@ def build_app():
     pyinstaller_folder.mkdir(exist_ok=True)
 
     # define paths before changing directory
-    deeaw_script = Path(Path.cwd() / "deeaw.py")
+    deeaw_script = Path(Path.cwd() / "deeaw2.py")
     icon_path = Path(Path.cwd() / "icon" / "icon.ico")
 
     # change directory so we output all of pyinstallers files in it's own folder
@@ -17,7 +17,14 @@ def build_app():
 
     # run pyinstaller command
     build_job = run(
-        ["pyinstaller.exe", "--onefile", f"--icon={str(icon_path)}", str(deeaw_script)]
+        [
+            "pyinstaller.exe",
+            "-n",
+            "deeaw",
+            "--onefile",
+            f"--icon={str(icon_path)}",
+            str(deeaw_script),
+        ]
     )
 
     # ensure output of exe
