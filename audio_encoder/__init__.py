@@ -3,6 +3,7 @@ from pathlib import Path
 from audio_encoder.utils._version import program_name, __version__
 from audio_encoder.utils.exit import _exit_application, exit_fail, exit_success
 from audio_encoder.utils.file_parser import FileParser
+from audio_encoder.utils.dependencies import DependencyNotFoundError, FindDependencies
 from audio_encoder.audio_encoders.dee.dd import DDEncoderDEE
 from audio_encoder.payloads.dd import DDPayload
 from audio_encoder.enums import case_insensitive_enum, enum_choices
@@ -40,20 +41,13 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
         return f"{option_strings}, {args_string}"
 
 
-# TODO Fix FindDependencies, this is a temporary class, the real class resides in audio_encoder.utils.utils
-class TempToolPath:
-    ffmpeg = "ffmpeg"
-    dee = r"E:\programming\BHDStudio-DEEWrapper\apps\dee\dee.exe"
-
-
 def _main(base_wd: Path):
     # define tools
-    # TODO re-add once we fix the actual FindDependencies class
-    # try:
-    #     tools = FindDependencies(base_wd=base_wd)
-    # except FileNotFoundError as e:
-    #     _exit_application(e, exit_fail)
-    tools = TempToolPath()
+    # TODO might be able to still handle the tools better?
+    try:
+        tools = FindDependencies().get_dependencies(base_wd)
+    except DependencyNotFoundError as e:
+        _exit_application(e, exit_fail)
     ffmpeg_path = Path(tools.ffmpeg)
     dee_path = Path(tools.dee)
 
@@ -287,7 +281,7 @@ def _main(base_wd: Path):
     # Info
     elif args.sub_command == "info":
         # TODO this probably needs handled in a cleaner way.
-        # could use list comprehension here but will be harder to 
+        # could use list comprehension here but will be harder to
         # add args if we add them later?
         track_s_info = ""
         for input_file in file_inputs:
