@@ -54,9 +54,7 @@ class DelayGenerator:
                 delay_xml = format(s_delay / 1000, ".6f")
 
             # create an internal data class
-            data_class = DeeDelay()
-            data_class.MODE = dee_delay_mode
-            data_class.DELAY = delay_xml
+            data_class = DeeDelay(dee_delay_mode, delay_xml)
 
             return data_class
 
