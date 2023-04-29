@@ -1,9 +1,11 @@
 import xmltodict
 from pathlib import Path
 from deeaw2.audio_encoders.dee.xml.dd_ddp_base_xml import xml_audio_base_ddp
+from deeaw2.enums.shared import DeeFPS
 from deeaw2.enums.dd import DolbyDigitalChannels
 from deeaw2.enums.ddp import DolbyDigitalPlusChannels
 from deeaw2.exceptions import XMLFileNotFoundError
+from deeaw2.enums.shared import DeeDelay
 from typing import Union
 
 
@@ -16,7 +18,8 @@ class DeeXMLGenerator:
         wav_file_name: str,
         output_file_name: str,
         output_dir: Union[Path, str],
-        fps: str,
+        fps: DeeFPS,
+        delay: Union[DeeDelay, None],
     ):
         """Set shared values for both DD/DDP
 
@@ -25,7 +28,8 @@ class DeeXMLGenerator:
             wav_file_name (str): File name only
             output_file_name (str): File name only
             output_dir (Union[Path, str]): File path only
-            fps (str): FPS of video input if it exists
+            fps (DeeFPS): FPS of video input if it exists
+            delay (Union[DeeDelay, None]): Dataclass holding DeeDelay values or None
         """
         # outputs
         self.output_file_name = output_file_name
@@ -65,6 +69,12 @@ class DeeXMLGenerator:
         self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["data_rate"] = str(
             bitrate
         )
+
+        # xml delay config
+        if delay:
+            self.xml["job_config"]["filter"]["audio"]["pcm_to_ddp"][
+                DeeDelay.MODE
+            ] = DeeDelay.DELAY
 
     def generate_xml_dd(
         self, down_mix_config: str, stereo_down_mix: str, channels: DolbyDigitalChannels

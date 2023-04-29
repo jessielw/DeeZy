@@ -6,10 +6,11 @@ from deeaw2.audio_encoders.base import (
 from deeaw2.audio_encoders.dee.xml.xml import DeeXMLGenerator
 from deeaw2.track_info.mediainfo import MediainfoParser
 from deeaw2.audio_encoders.dee.bitrates import dee_dd_bitrates
-from deeaw2.enums.shared import StereoDownmix
+from deeaw2.enums.shared import StereoDownmix, DeeFPS
 from deeaw2.enums.dd import DolbyDigitalChannels
 from deeaw2.audio_processors.ffmpeg import ProcessFFMPEG
 from deeaw2.audio_processors.dee import ProcessDEE
+from deeaw2.audio_encoders.delay import DelayGenerator
 from pathlib import Path
 import tempfile
 import shutil
@@ -52,10 +53,9 @@ class DDEncoderDEE(BaseAudioEncoder):
         self._check_for_up_mixing(audio_track_info.channels, payload.channels.value)
 
         # delay
+        delay = None
         if payload.delay:
-            delay = str(payload.delay)
-        else:
-            delay = None
+            delay = DelayGenerator().get_dee_delay(payload.delay)
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
@@ -65,7 +65,7 @@ class DDEncoderDEE(BaseAudioEncoder):
         # not even sure we need this atm though...
         # channels = payload.channels.value
 
-        # temp dir
+        # output dir
         output_dir = self._get_temp_dir(file_input, payload.temp_dir)
         # temp filename
         temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
@@ -121,6 +121,8 @@ class DDEncoderDEE(BaseAudioEncoder):
             wav_file_name=wav_file_name,
             output_file_name=output_file_name,
             output_dir=output_dir,
+            fps=fps,
+            delay=delay,
         )
         update_xml = xml_generator.generate_xml_dd(
             down_mix_config=down_mix_config,
@@ -161,23 +163,22 @@ class DDEncoderDEE(BaseAudioEncoder):
             shutil.rmtree(output_dir)
 
     @staticmethod
-    def _get_fps(fps: object):
-        accepted_choices = {
-            "23.976",
-            "24",
-            "25",
-            "29.97",
-            "30",
-            "48",
-            "50",
-            "59.94",
-            "60",
-        }
-        fps_out = "not_indicated"
-        str_fps = str(fps)
-        if str_fps in accepted_choices:
-            fps_out = str_fps
-        return fps_out
+    def _get_fps(fps: str):
+        """
+        Tries to get a valid FPS value from an input string, otherwise returns 'not_indicated'.
+
+        Args:
+            fps (str): The input FPS string to check.
+
+        Returns:
+            DeeFPS: A valid DeeFPS value from the input string, or FPS_NOT_INDICATED if not found.
+
+        """
+        try:
+            dee_fps = DeeFPS(fps)
+        except ValueError:
+            dee_fps = DeeFPS.FPS_NOT_INDICATED
+        return dee_fps
 
     @staticmethod
     def _get_accepted_bitrates(channels: int):

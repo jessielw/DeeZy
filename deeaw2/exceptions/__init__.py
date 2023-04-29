@@ -28,3 +28,7 @@ class DependencyNotFoundError(Exception):
 
 class XMLFileNotFoundError(Exception):
     """Custom class to return if XML file output was not found"""
+
+
+class InvalidDelayError(Exception):
+    """Class to raise in the event of an invalid delay input"""

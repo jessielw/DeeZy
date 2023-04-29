@@ -67,11 +67,13 @@ def cli_parser(base_wd: Path):
     encode_group.add_argument(
         "-b", "--bitrate", type=int, required=False, help="The bitrate in Kbps."
     )
-    # TODO Add actual support for delay
-    # See documentation for <start> and <prepend_silence_duration> for positive/negative delays
-    # encode_group.add_argument(
-    #     "-d", "--delay", type=int, default=0, help="The delay in milliseconds."
-    # )
+    encode_group.add_argument(
+        "-d",
+        "--delay",
+        type=int,
+        default=0,
+        help="The delay in milliseconds or seconds (-10ms/10s).",
+    )
     encode_group.add_argument(
         "-k",
         "--keep-temp",
@@ -218,7 +220,7 @@ def cli_parser(base_wd: Path):
                 payload.file_input = input_file
                 payload.track_index = args.track_index
                 payload.bitrate = args.bitrate
-                # payload.delay = args.delay
+                payload.delay = args.delay
                 payload.temp_dir = args.temp_dir
                 payload.keep_temp = args.keep_temp
                 payload.file_output = args.output
@@ -247,7 +249,7 @@ def cli_parser(base_wd: Path):
                 payload.file_input = input_file
                 payload.track_index = args.track_index
                 payload.bitrate = args.bitrate
-                # payload.delay = args.delay
+                payload.delay = args.delay
                 payload.temp_dir = args.temp_dir
                 payload.keep_temp = args.keep_temp
                 payload.file_output = args.output
