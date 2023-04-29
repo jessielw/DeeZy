@@ -1,22 +1,23 @@
 from subprocess import Popen, PIPE, STDOUT
 from deeaw2.utils.utils import PrintSameLine
+from deeaw2.enums.shared import ProgressMode
 import re
 
 
 class ProcessDEE:
-    def process_job(self, cmd: list, progress_mode: str):
+    def process_job(self, cmd: list, progress_mode: ProgressMode):
         """Processes file with DEE while generating progress depending on progress_mode.
 
         Args:
             cmd (list): Base DEE cmd list
-            progress_mode (str): Options are "standard" or "debug"
+            progress_mode (ProgressMode): Options are ProgressMode.STANDARD or ProgressMode.DEBUG
         """
 
         # inject verbosity level into cmd list depending on progress_mode
         inject = cmd.index("--verbose") + 1
-        if progress_mode == "standard":
+        if progress_mode == ProgressMode.STANDARD:
             cmd.insert(inject, "info")
-        elif progress_mode == "debug":
+        elif progress_mode == ProgressMode.DEBUG:
             cmd.insert(inject, "debug")
 
         # variable to update to print step 3

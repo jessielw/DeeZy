@@ -2,18 +2,23 @@ from typing import Union
 from subprocess import Popen, PIPE, STDOUT
 import re
 from deeaw2.utils.utils import PrintSameLine
+from deeaw2.enums.shared import ProgressMode
 
 
 # TODO Modify this to work with more than just DEE, for now hard coded to DEE's uses
 class ProcessFFMPEG:
     def process_job(
-        self, cmd: list, progress_mode: str, steps: bool, duration: Union[float, None]
+        self,
+        cmd: list,
+        progress_mode: ProgressMode,
+        steps: bool,
+        duration: Union[float, None],
     ):
         """Processes file with FFMPEG while generating progress depending on progress_mode.
 
         Args:
             cmd (list): Base FFMPEG command list
-            progress_mode (str): Options are "standard" or "debug"
+            progress_mode (ProgressMode): Options are ProgressMode.STANDARD or ProgressMode.DEBUG
             steps (bool): True or False, to disable updating encode steps
             duration (Union[float, None]): Can be None or duration in milliseconds
             If set to None the generic FFMPEG output will be displayed
@@ -21,9 +26,9 @@ class ProcessFFMPEG:
         """
         # inject verbosity level into cmd list depending on progress_mode
         inject = cmd.index("-v") + 1
-        if progress_mode == "standard":
+        if progress_mode == ProgressMode.STANDARD:
             cmd.insert(inject, "quiet")
-        elif progress_mode == "debug":
+        elif progress_mode == ProgressMode.DEBUG:
             cmd.insert(inject, "info")
 
         with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:

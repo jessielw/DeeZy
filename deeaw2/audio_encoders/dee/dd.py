@@ -6,7 +6,7 @@ from deeaw2.audio_encoders.base import (
 from deeaw2.audio_encoders.dee.xml.xml import DeeXMLGenerator
 from deeaw2.track_info.mediainfo import MediainfoParser
 from deeaw2.audio_encoders.dee.bitrates import dee_dd_bitrates
-from deeaw2.enums.shared import ProgressMode, StereoDownmix
+from deeaw2.enums.shared import StereoDownmix
 from deeaw2.enums.dd import DolbyDigitalChannels
 from deeaw2.audio_processors.ffmpeg import ProcessFFMPEG
 from deeaw2.audio_processors.dee import ProcessDEE
@@ -105,11 +105,10 @@ class DDEncoderDEE(BaseAudioEncoder):
         )
 
         # process ffmpeg command
-        # TODO fix progress mode to enums
         # TODO can check for True return from ffmpeg_job if we need?
         ffmpeg_job = ProcessFFMPEG().process_job(
             cmd=ffmpeg_cmd,
-            progress_mode="standard",
+            progress_mode=payload.progress_mode,
             steps=True,
             duration=audio_track_info.duration,
         )
@@ -145,9 +144,10 @@ class DDEncoderDEE(BaseAudioEncoder):
         ]
 
         # Process dee command
-        # TODO handle hard coded progress_mode
         # TODO can check for True return from dee_job if we need?
-        dee_job = ProcessDEE().process_job(cmd=dee_cm, progress_mode="standard")
+        dee_job = ProcessDEE().process_job(
+            cmd=dee_cm, progress_mode=payload.progress_mode
+        )
 
         # move file to output path
         # TODO handle this in a function/cleaner
