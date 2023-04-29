@@ -1,5 +1,5 @@
-from deeaw2.audio_encoders.base import (
-    BaseAudioEncoder,
+from deeaw2.audio_encoders.base import BaseAudioEncoder
+from deeaw2.exceptions import (
     PathTooLongError,
     InvalidExtensionError,
 )
@@ -30,9 +30,6 @@ class DDEncoderDEE(BaseAudioEncoder):
         # file input
         file_input = Path(payload.file_input)
         self._check_input_file(file_input)
-
-        # # track index
-        # track_index = str(payload.track_index)
 
         # bitrate
         bitrate = str(
@@ -65,16 +62,18 @@ class DDEncoderDEE(BaseAudioEncoder):
         # not even sure we need this atm though...
         # channels = payload.channels.value
 
-        # output dir
-        output_dir = self._get_temp_dir(file_input, payload.temp_dir)
+        # temp dir
+        temp_dir = self._get_temp_dir(file_input, payload.temp_dir)
+
+        # check disk space
+        self._check_disk_space(drive_path=temp_dir, required_space=15)
+
         # temp filename
         temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
-        # keep temp
-        keep_temp = payload.keep_temp
-        # progress mode
-        progress_mode = payload.progress_mode
+
         # downmix config
         down_mix_config = self._get_down_mix_config(payload.channels)
+
         # stereo mix
         stereo_mix = str(payload.stereo_mix.name).lower()
         # file output (if an output is a defined check users extension and use their output)
@@ -100,7 +99,7 @@ class DDEncoderDEE(BaseAudioEncoder):
             sample_rate=audio_track_info.sample_rate,
             channels=payload.channels,
             stereo_down_mix=payload.stereo_mix,
-            output_dir=output_dir,
+            output_dir=temp_dir,
             wav_file_name=wav_file_name,
         )
 
@@ -120,7 +119,7 @@ class DDEncoderDEE(BaseAudioEncoder):
             bitrate=bitrate,
             wav_file_name=wav_file_name,
             output_file_name=output_file_name,
-            output_dir=output_dir,
+            output_dir=temp_dir,
             fps=fps,
             delay=delay,
         )
@@ -154,13 +153,13 @@ class DDEncoderDEE(BaseAudioEncoder):
         # move file to output path
         # TODO handle this in a function/cleaner
         # TODO maybe print that we're moving the file, in the event it takes a min?
-        move_file = shutil.move(Path(output_dir / output_file_name), output)
+        move_file = shutil.move(Path(temp_dir / output_file_name), output)
         # TODO maybe cheek if move_file exists and print success?
 
         # delete temp folder and all files if enabled
         # TODO if set to no, maybe let the user know where they are stored maybe, idk?
         if not payload.keep_temp:
-            shutil.rmtree(output_dir)
+            shutil.rmtree(temp_dir)
 
     @staticmethod
     def _get_fps(fps: str):
