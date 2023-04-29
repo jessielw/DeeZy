@@ -3,7 +3,7 @@ from deeaw2.audio_encoders.base import (
     PathTooLongError,
     InvalidExtensionError,
 )
-from deeaw2.audio_encoders.dee.xml.utils import _generate_xml_dd
+from deeaw2.audio_encoders.dee.xml.xml import DeeXMLGenerator
 from deeaw2.track_info.mediainfo import MediainfoParser
 from deeaw2.audio_encoders.dee.bitrates import dee_ddp_bitrates
 from deeaw2.enums.shared import ProgressMode, StereoDownmix
@@ -56,6 +56,7 @@ class DDPEncoderDEE(BaseAudioEncoder):
             delay = str(payload.delay)
         else:
             delay = None
+
         # fps
         fps = self._get_fps(audio_track_info.fps)
 
@@ -64,8 +65,8 @@ class DDPEncoderDEE(BaseAudioEncoder):
         # not even sure we need this atm though...
         # channels = payload.channels.value
 
-        # temp dir
-        temp_dir = self._get_temp_dir(file_input, payload.temp_dir)
+        # output dir
+        output_dir = self._get_temp_dir(file_input, payload.temp_dir)
         # temp filename
         temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
         # keep temp
@@ -99,7 +100,7 @@ class DDPEncoderDEE(BaseAudioEncoder):
             sample_rate=audio_track_info.sample_rate,
             channels=payload.channels,
             stereo_down_mix=payload.stereo_mix,
-            output_dir=temp_dir,
+            output_dir=output_dir,
             wav_file_name=wav_file_name,
         )
 
@@ -116,21 +117,17 @@ class DDPEncoderDEE(BaseAudioEncoder):
         print("wait")
 
         # generate XML
-        # TODO deal with sending the encoder to this correctly later
-        # Optimize all of this correctly
-        update_xml = _generate_xml_dd(
-            down_mix_config=down_mix_config,
-            stereo_down_mix=stereo_mix,
+        xml_generator = DeeXMLGenerator(
             bitrate=bitrate,
-            # TODO handle dd format
-            dd_format="ddp",
-            channels=payload.channels,
-            # TODO deal with normalize correctly, only enable for DDP (optional of course)
-            normalize=False,
             wav_file_name=wav_file_name,
             output_file_name=output_file_name,
-            output_dir=temp_dir,
-            fps=fps,
+            output_dir=output_dir,
+        )
+        update_xml = xml_generator.generate_xml_ddp(
+            down_mix_config=down_mix_config,
+            stereo_down_mix=stereo_mix,
+            channels=payload.channels,
+            normalize=payload.normalize,
         )
 
         print("pause")
@@ -156,13 +153,13 @@ class DDPEncoderDEE(BaseAudioEncoder):
         # move file to output path
         # TODO handle this in a function/cleaner
         # TODO maybe print that we're moving the file, in the event it takes a min?
-        move_file = shutil.move(Path(temp_dir / output_file_name), output)
+        move_file = shutil.move(Path(output_dir / output_file_name), output)
         # TODO maybe cheek if move_file exists and print success?
 
         # delete temp folder and all files if enabled
         # TODO if set to no, maybe let the user know where they are stored maybe, idk?
         if not payload.keep_temp:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(output_dir)
 
     @staticmethod
     def _get_fps(fps: object):
