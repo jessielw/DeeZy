@@ -70,9 +70,8 @@ def cli_parser(base_wd: Path):
     encode_group.add_argument(
         "-d",
         "--delay",
-        type=int,
-        default=0,
-        help="The delay in milliseconds or seconds (-10ms/10s).",
+        type=str,
+        help="The delay in milliseconds or seconds. Note '-d=' is required! (-d=-10ms / -d=10s).",
     )
     encode_group.add_argument(
         "-k",
