@@ -252,6 +252,7 @@ def cli_parser(base_wd: Path):
                 payload.progress_mode = args.progress_mode
                 payload.stereo_mix = args.stereo_down_mix
                 payload.channels = args.channels
+                payload.normalize = args.normalize
 
                 # TODO Not sure if this is how we wanna inject, but for now...
                 payload.ffmpeg_path = ffmpeg_path
