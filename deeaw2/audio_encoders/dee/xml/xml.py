@@ -3,11 +3,8 @@ from pathlib import Path
 from deeaw2.audio_encoders.dee.xml.dd_ddp_base_xml import xml_audio_base_ddp
 from deeaw2.enums.dd import DolbyDigitalChannels
 from deeaw2.enums.ddp import DolbyDigitalPlusChannels
+from deeaw2.exceptions import XMLFileNotFoundError
 from typing import Union
-
-
-class XMLFileNotFoundError(Exception):
-    """Custom class to return if XML file output was not found"""
 
 
 class DeeXMLGenerator:

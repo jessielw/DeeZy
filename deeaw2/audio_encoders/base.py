@@ -1,22 +1,11 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
-
-
-class NotEnoughSpaceError(Exception):
-    """Custom error class to for insufficient storage"""
-
-
-class PathTooLongError(Exception):
-    """Custom error class to for path names that are too long"""
-
-
-class InvalidExtensionError(Exception):
-    """Custom error class for invalid file extensions"""
-
-
-class ChannelMixError(Exception):
-    """Custom error class for invalid channel mix configurations"""
+from deeaw2.exceptions import (
+    ChannelMixError,
+    InputFileNotFoundError,
+    NotEnoughSpaceError,
+)
 
 
 class BaseAudioEncoder(ABC):
@@ -37,7 +26,7 @@ class BaseAudioEncoder(ABC):
             bool: True or False
         """
         if not input_file.exists():
-            raise FileNotFoundError(f"Could not find {input_file.name}.")
+            raise InputFileNotFoundError(f"Could not find {input_file.name}.")
         return input_file.exists()
 
     @staticmethod

@@ -1,13 +1,8 @@
 from deeaw2.track_info.audio_track_info import AudioTrackInfo
+from deeaw2.exceptions import MediaInfoError
 from pymediainfo import MediaInfo
 from pathlib import Path
 from re import search
-
-
-class MediaInfoError(Exception):
-    """Custom class for MediaInfo errors"""
-
-    pass
 
 
 class AutoFileName:

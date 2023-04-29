@@ -1,9 +1,6 @@
 from pathlib import Path
 import shutil
-
-
-class DependencyNotFoundError(Exception):
-    """Custom exception class to call when a dependency is not found"""
+from deeaw2.exceptions import DependencyNotFoundError
 
 
 class Dependencies:
