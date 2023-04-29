@@ -22,7 +22,7 @@ class ChannelMixError(Exception):
 class BaseAudioEncoder(ABC):
     @staticmethod
     def _check_for_up_mixing(source_channels: int, desired_channels: int):
-        """Provide source_channels and ensure that desired channels enum object is less than source"""
+        """Provide source_channels and ensure that desired channels is less than source"""
         if source_channels < desired_channels:
             raise ChannelMixError("Up-mixing is not supported.")
 
