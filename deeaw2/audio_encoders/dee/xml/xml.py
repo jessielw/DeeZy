@@ -57,10 +57,10 @@ class DeeXMLGenerator:
         # update fps sections
         self.xml_base["job_config"]["input"]["audio"]["wav"][
             "timecode_frame_rate"
-        ] = fps
+        ] = fps.value
         self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
             "timecode_frame_rate"
-        ] = fps
+        ] = fps.value
 
         # xml temp path config
         self.xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
@@ -72,9 +72,9 @@ class DeeXMLGenerator:
 
         # xml delay config
         if delay:
-            self.xml["job_config"]["filter"]["audio"]["pcm_to_ddp"][
-                DeeDelay.MODE
-            ] = DeeDelay.DELAY
+            self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
+                delay.MODE.value
+            ] = delay.DELAY
 
     def generate_xml_dd(
         self, down_mix_config: str, stereo_down_mix: str, channels: DolbyDigitalChannels
