@@ -41,7 +41,7 @@ class ProcessFFMPEG:
             for line in proc.stdout:
                 # Some audio formats actually do not have a "duration" in their raw containers,
                 # if this is the case we will default ffmpeg to it's generic output string.
-                if duration and progress_mode == "standard":
+                if duration and progress_mode == ProgressMode.STANDARD:
                     # we need to wait for size= to prevent any errors
                     if "size=" in line:
                         percentage = self._convert_ffmpeg_to_percent(line, duration)

@@ -36,7 +36,7 @@ class ProcessDEE:
                     raise ValueError(f"There was a DEE error: {line}")
 
                 # If progress mode is quiet let's clean up progress output
-                if progress_mode == "standard":
+                if progress_mode == ProgressMode.STANDARD:
                     # We need to wait for size= to prevent any errors
                     if "Stage progress" in line:
                         progress = self._filter_dee_progress(line)
