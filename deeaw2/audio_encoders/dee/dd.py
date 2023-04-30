@@ -9,7 +9,7 @@ from deeaw2.audio_processors.dee import ProcessDEE
 from deeaw2.audio_processors.ffmpeg import ProcessFFMPEG
 from deeaw2.enums.dd import DolbyDigitalChannels
 from deeaw2.enums.shared import StereoDownmix
-from deeaw2.exceptions import InvalidExtensionError
+from deeaw2.exceptions import InvalidExtensionError, OutputFileNotFoundError
 from deeaw2.track_info.mediainfo import MediainfoParser
 from deeaw2.audio_encoders.delay import DelayGenerator
 
@@ -143,13 +143,19 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
         # move file to output path
         # TODO handle this in a function/cleaner
         # TODO maybe print that we're moving the file, in the event it takes a min?
-        move_file = shutil.move(Path(temp_dir / output_file_name), output)
+        move_file = Path(shutil.move(Path(temp_dir / output_file_name), output))
         # TODO maybe cheek if move_file exists and print success?
 
         # delete temp folder and all files if enabled
         # TODO if set to no, maybe let the user know where they are stored maybe, idk?
         if not payload.keep_temp:
             shutil.rmtree(temp_dir)
+
+        # return path
+        if move_file.is_file():
+            return move_file
+        else:
+            raise OutputFileNotFoundError(f"{move_file.name} output not found")
 
     @staticmethod
     def _get_accepted_bitrates(channels: int):
