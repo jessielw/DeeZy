@@ -1,22 +1,20 @@
-from deeaw2.audio_encoders.base import BaseAudioEncoder
-from deeaw2.exceptions import (
-    PathTooLongError,
-    InvalidExtensionError,
-)
-from deeaw2.audio_encoders.dee.xml.xml import DeeXMLGenerator
-from deeaw2.track_info.mediainfo import MediainfoParser
-from deeaw2.audio_encoders.dee.bitrates import dee_dd_bitrates
-from deeaw2.enums.shared import StereoDownmix, DeeFPS
-from deeaw2.enums.dd import DolbyDigitalChannels
-from deeaw2.audio_processors.ffmpeg import ProcessFFMPEG
-from deeaw2.audio_processors.dee import ProcessDEE
-from deeaw2.audio_encoders.delay import DelayGenerator
 from pathlib import Path
 import tempfile
 import shutil
 
+from deeaw2.audio_encoders.dee.base import BaseDeeAudioEncoder
+from deeaw2.audio_encoders.dee.bitrates import dee_dd_bitrates
+from deeaw2.audio_encoders.dee.xml.xml import DeeXMLGenerator
+from deeaw2.audio_processors.dee import ProcessDEE
+from deeaw2.audio_processors.ffmpeg import ProcessFFMPEG
+from deeaw2.enums.dd import DolbyDigitalChannels
+from deeaw2.enums.shared import StereoDownmix
+from deeaw2.exceptions import InvalidExtensionError
+from deeaw2.track_info.mediainfo import MediainfoParser
+from deeaw2.audio_encoders.delay import DelayGenerator
 
-class DDEncoderDEE(BaseAudioEncoder):
+
+class DDEncoderDEE(BaseDeeAudioEncoder):
     def __init__(self):
         super().__init__()
 
@@ -131,23 +129,15 @@ class DDEncoderDEE(BaseAudioEncoder):
 
         print("pause")
 
-        # Call dee to generate the encode file
-        dee_cm = [
-            str(payload.dee_path),
-            "--progress-interval",
-            "500",
-            "--diagnostics-interval",
-            "90000",
-            "--verbose",
-            "-x",
-            str(update_xml),
-            "--disable-xml-validation",
-        ]
+        # generate DEE command
+        dee_cmd = self._get_dee_cmd(
+            dee_path=Path(payload.dee_path), xml_path=update_xml
+        )
 
         # Process dee command
         # TODO can check for True return from dee_job if we need?
         dee_job = ProcessDEE().process_job(
-            cmd=dee_cm, progress_mode=payload.progress_mode
+            cmd=dee_cmd, progress_mode=payload.progress_mode
         )
 
         # move file to output path
@@ -162,24 +152,6 @@ class DDEncoderDEE(BaseAudioEncoder):
             shutil.rmtree(temp_dir)
 
     @staticmethod
-    def _get_fps(fps: str):
-        """
-        Tries to get a valid FPS value from an input string, otherwise returns 'not_indicated'.
-
-        Args:
-            fps (str): The input FPS string to check.
-
-        Returns:
-            DeeFPS: A valid DeeFPS value from the input string, or FPS_NOT_INDICATED if not found.
-
-        """
-        try:
-            dee_fps = DeeFPS(fps)
-        except ValueError:
-            dee_fps = DeeFPS.FPS_NOT_INDICATED
-        return dee_fps
-
-    @staticmethod
     def _get_accepted_bitrates(channels: int):
         if channels == DolbyDigitalChannels.MONO:
             return dee_dd_bitrates.get("dd_10")
@@ -187,33 +159,6 @@ class DDEncoderDEE(BaseAudioEncoder):
             return dee_dd_bitrates.get("dd_20")
         elif channels == DolbyDigitalChannels.SURROUND:
             return dee_dd_bitrates.get("dd_51")
-
-    @staticmethod
-    def _get_temp_dir(file_input: Path, temp_dir: Path):
-        if temp_dir:
-            if len(file_input.name) + len(temp_dir) < 259:
-                raise PathTooLongError(
-                    "Path provided with input file exceeds path length for DEE."
-                )
-            temp_directory = Path(temp_dir)
-            temp_directory.mkdir(exist_ok=True)
-
-        else:
-            temp_directory = Path(tempfile.mkdtemp(prefix="dee_temp_"))
-
-        return temp_directory
-
-    # @staticmethod
-    # def _get_stereo_mix(stereo_mix: object):
-    #     if stereo_mix == StereoDownmix.STANDARD:
-    #         mix = "standard"
-    #     elif stereo_mix == StereoDownmix.DPLII:
-    #         mix = ""
-
-    # @staticmethod
-    # def _get_progress_mode(progress_mode: object):
-    #     if progress_mode == ProgressMode.DEBUG:
-    #         mode = ""
 
     @staticmethod
     def _get_down_mix_config(channels: DolbyDigitalChannels):
@@ -226,8 +171,8 @@ class DDEncoderDEE(BaseAudioEncoder):
         elif channels == DolbyDigitalChannels.SURROUND:
             return "5.1"
 
-    @staticmethod
     def _generate_ffmpeg_cmd(
+        self,
         ffmpeg_path: Path,
         file_input: Path,
         track_index: int,
@@ -279,23 +224,14 @@ class DDEncoderDEE(BaseAudioEncoder):
             ]
 
         # base ffmpeg command
-        ffmpeg_cmd = [
-            str(ffmpeg_path),
-            "-y",
-            "-drc_scale",
-            "0",
-            "-i",
-            str(Path(file_input)),
-            "-map",
-            f"0:{track_index}",
-            "-c",
-            f"pcm_s{str(bits_per_sample)}le",
-            *(audio_filter_args),
-            "-rf64",
-            "always",
-            "-hide_banner",
-            "-v",
-            "-stats",
-            str(Path(output_dir / wav_file_name)),
-        ]
+        ffmpeg_cmd = self._get_ffmpeg_cmd(
+            ffmpeg_path,
+            file_input,
+            track_index,
+            bits_per_sample,
+            audio_filter_args,
+            output_dir,
+            wav_file_name,
+        )
+
         return ffmpeg_cmd
