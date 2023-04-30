@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
 from deeaw2.exceptions import (
@@ -8,7 +7,7 @@ from deeaw2.exceptions import (
 )
 
 
-class BaseAudioEncoder(ABC):
+class BaseAudioEncoder:
     @staticmethod
     def _check_for_up_mixing(source_channels: int, desired_channels: int):
         """Provide source_channels and ensure that desired channels is less than source"""
