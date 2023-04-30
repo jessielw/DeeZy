@@ -18,6 +18,10 @@ class InputFileNotFoundError(Exception):
     """Custom error class for missing input files"""
 
 
+class OutputFileNotFoundError(Exception):
+    """Custom error class for missing input files"""
+
+
 class MediaInfoError(Exception):
     """Custom class for MediaInfo errors"""
 
