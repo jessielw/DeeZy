@@ -215,25 +215,30 @@ def cli_parser(base_wd: Path):
 
             # update payload
             # TODO prevent duplicate payload code somehow
-            for input_file in file_inputs:
-                payload = DDPayload()
-                payload.file_input = input_file
-                payload.track_index = args.track_index
-                payload.bitrate = args.bitrate
-                payload.delay = args.delay
-                payload.temp_dir = args.temp_dir
-                payload.keep_temp = args.keep_temp
-                payload.file_output = args.output
-                payload.progress_mode = args.progress_mode
-                payload.stereo_mix = args.stereo_down_mix
-                payload.channels = args.channels
+            try:
+                for input_file in file_inputs:
+                    payload = DDPayload()
+                    payload.file_input = input_file
+                    payload.track_index = args.track_index
+                    payload.bitrate = args.bitrate
+                    payload.delay = args.delay
+                    payload.temp_dir = args.temp_dir
+                    payload.keep_temp = args.keep_temp
+                    payload.file_output = args.output
+                    payload.progress_mode = args.progress_mode
+                    payload.stereo_mix = args.stereo_down_mix
+                    payload.channels = args.channels
 
-                # TODO Not sure if this is how we wanna inject, but for now...
-                payload.ffmpeg_path = ffmpeg_path
-                payload.dee_path = dee_path
+                    # TODO Not sure if this is how we wanna inject, but for now...
+                    payload.ffmpeg_path = ffmpeg_path
+                    payload.dee_path = dee_path
 
-                # encoder
-                dd = DDEncoderDEE().encode(payload)
+                    # encoder
+                    dd = DDEncoderDEE().encode(payload)
+                    print(f"Job successful! Output file path:\n{dd}")
+            except Exception as e:
+                # TODO not sure if we wanna exit or continue for batch?
+                _exit_application(e, exit_fail)
 
         # Encode Dolby Digital Plus
         elif args.format_command == "ddp":
@@ -244,26 +249,31 @@ def cli_parser(base_wd: Path):
 
             # update payload
             # TODO prevent duplicate payload code somehow
-            for input_file in file_inputs:
-                payload = DDPPayload()
-                payload.file_input = input_file
-                payload.track_index = args.track_index
-                payload.bitrate = args.bitrate
-                payload.delay = args.delay
-                payload.temp_dir = args.temp_dir
-                payload.keep_temp = args.keep_temp
-                payload.file_output = args.output
-                payload.progress_mode = args.progress_mode
-                payload.stereo_mix = args.stereo_down_mix
-                payload.channels = args.channels
-                payload.normalize = args.normalize
+            try:
+                for input_file in file_inputs:
+                    payload = DDPPayload()
+                    payload.file_input = input_file
+                    payload.track_index = args.track_index
+                    payload.bitrate = args.bitrate
+                    payload.delay = args.delay
+                    payload.temp_dir = args.temp_dir
+                    payload.keep_temp = args.keep_temp
+                    payload.file_output = args.output
+                    payload.progress_mode = args.progress_mode
+                    payload.stereo_mix = args.stereo_down_mix
+                    payload.channels = args.channels
+                    payload.normalize = args.normalize
 
-                # TODO Not sure if this is how we wanna inject, but for now...
-                payload.ffmpeg_path = ffmpeg_path
-                payload.dee_path = dee_path
+                    # TODO Not sure if this is how we wanna inject, but for now...
+                    payload.ffmpeg_path = ffmpeg_path
+                    payload.dee_path = dee_path
 
-                # encoder
-                ddp = DDPEncoderDEE().encode(payload)
+                    # encoder
+                    ddp = DDPEncoderDEE().encode(payload)
+                    print(f"Output file path:\n{ddp}")
+            except Exception as e:
+                # TODO not sure if we wanna exit or continue for batch?
+                _exit_application(e, exit_fail)
 
     # Find
     elif args.sub_command == "find":
