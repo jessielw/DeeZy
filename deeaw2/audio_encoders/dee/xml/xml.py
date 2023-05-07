@@ -37,6 +37,9 @@ class DeeXMLGenerator:
         self.output_file_name = output_file_name
         self.output_dir = output_dir
 
+        # bitrate
+        self.bitrate = bitrate
+
         # Parse base template
         self.xml_base = xmltodict.parse(xml_audio_base_ddp)
 
@@ -217,9 +220,18 @@ class DeeXMLGenerator:
         # xml encoder format
         # if channels are 8 set encoder mode to ddp71
         if channels == DolbyDigitalPlusChannels.SURROUNDEX:
-            self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
-                "encoder_mode"
-            ] = "ddp71"
+            # set encoder mode based on bitrate, under 1024 and under would be
+            # standard (web)
+            if int(self.bitrate) <= 1024:
+                self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
+                    "encoder_mode"
+                ] = "ddp71"
+
+            # over 1024 would be considered 'bluray'
+            elif int(self.bitrate) > 1024:
+                self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
+                    "encoder_mode"
+                ] = "bluray"
 
         # if channels are less than 8 set encoder to ddp
         else:
