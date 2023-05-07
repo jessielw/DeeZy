@@ -40,8 +40,8 @@ xml_audio_base_ddp = """<?xml version="1.0"?>
         <dolby_surround_ex_mode>no</dolby_surround_ex_mode>
         <user_data>-1</user_data>
         <drc>
-          <line_mode_drc_profile>music_light</line_mode_drc_profile>
-          <rf_mode_drc_profile>music_light</rf_mode_drc_profile>
+          <line_mode_drc_profile>-</line_mode_drc_profile>
+          <rf_mode_drc_profile>-</rf_mode_drc_profile>
         </drc>
         <lfe_lowpass_filter>true</lfe_lowpass_filter>
         <surround_90_degree_phase_shift>true</surround_90_degree_phase_shift>

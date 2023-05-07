@@ -34,3 +34,12 @@ class DeeFPS(Enum):
     FPS_50 = "50"
     FPS_59_94 = "59.94"
     FPS_60 = "60"
+
+
+class DeeDRC(Enum):
+    FILM_STANDARD = "film_standard"
+    FILM_LIGHT = "film_light"
+    MUSIC_STANDARD = "music_standard"
+    MUSIC_LIGHT = "music_light"
+    SPEECH = "speech"
+    OFF = "none"

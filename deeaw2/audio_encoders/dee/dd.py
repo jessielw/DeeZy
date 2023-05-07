@@ -120,6 +120,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
             output_dir=temp_dir,
             fps=fps,
             delay=delay,
+            drc=payload.drc,
         )
         update_xml = xml_generator.generate_xml_dd(
             down_mix_config=down_mix_config,

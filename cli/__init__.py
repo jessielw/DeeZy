@@ -7,7 +7,7 @@ from deeaw2.audio_encoders.dee.ddp import DDPEncoderDEE
 from deeaw2.enums import case_insensitive_enum, enum_choices
 from deeaw2.enums.dd import DolbyDigitalChannels
 from deeaw2.enums.ddp import DolbyDigitalPlusChannels
-from deeaw2.enums.shared import ProgressMode, StereoDownmix
+from deeaw2.enums.shared import ProgressMode, StereoDownmix, DeeDRC
 from deeaw2.info import AudioStreamViewer
 from deeaw2.payloads.dd import DDPayload
 from deeaw2.payloads.ddp import DDPPayload
@@ -124,7 +124,6 @@ def cli_parser(base_wd: Path):
             max_help_position=3,
         ),
     )
-
     encode_dd_parser.add_argument(
         "-c",
         "--channels",
@@ -132,6 +131,17 @@ def cli_parser(base_wd: Path):
         choices=list(DolbyDigitalChannels),
         metavar=enum_choices(DolbyDigitalChannels),
         help="The number of channels.",
+    )
+    # TODO this will likely only be valid for DEE, so we'll need to
+    # decide what we want to do here
+    encode_dd_parser.add_argument(
+        "-drc",
+        "--dynamic-range-compression",
+        type=case_insensitive_enum(DeeDRC),
+        choices=list(DeeDRC),
+        metavar=enum_choices(DeeDRC),
+        default=DeeDRC.MUSIC_LIGHT,
+        help="Dynamic range compression settings.",
     )
 
     ### Dolby Digital Plus Command ###
@@ -154,6 +164,17 @@ def cli_parser(base_wd: Path):
     )
     encode_ddp_parser.add_argument(
         "-n", "--normalize", action="store_true", help="Normalize audio for DDP."
+    )
+    # TODO this will likely only be valid for DEE, so we'll need to
+    # decide what we want to do here
+    encode_ddp_parser.add_argument(
+        "-drc",
+        "--dynamic-range-compression",
+        type=case_insensitive_enum(DeeDRC),
+        choices=list(DeeDRC),
+        metavar=enum_choices(DeeDRC),
+        default=DeeDRC.MUSIC_LIGHT,
+        help="Dynamic range compression settings.",
     )
 
     #############################################################
@@ -228,6 +249,7 @@ def cli_parser(base_wd: Path):
                     payload.progress_mode = args.progress_mode
                     payload.stereo_mix = args.stereo_down_mix
                     payload.channels = args.channels
+                    payload.drc = args.dynamic_range_compression
 
                     # TODO Not sure if this is how we wanna inject, but for now...
                     payload.ffmpeg_path = ffmpeg_path
@@ -263,6 +285,7 @@ def cli_parser(base_wd: Path):
                     payload.stereo_mix = args.stereo_down_mix
                     payload.channels = args.channels
                     payload.normalize = args.normalize
+                    payload.drc = args.dynamic_range_compression
 
                     # TODO Not sure if this is how we wanna inject, but for now...
                     payload.ffmpeg_path = ffmpeg_path

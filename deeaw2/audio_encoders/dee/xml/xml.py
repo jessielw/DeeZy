@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Union
 
 from deeaw2.audio_encoders.dee.xml.dd_ddp_base_xml import xml_audio_base_ddp
-from deeaw2.enums.shared import DeeFPS, DeeDelay
+from deeaw2.enums.shared import DeeFPS, DeeDelay, DeeDRC
 from deeaw2.enums.dd import DolbyDigitalChannels
 from deeaw2.enums.ddp import DolbyDigitalPlusChannels
 from deeaw2.exceptions import XMLFileNotFoundError
@@ -20,6 +20,7 @@ class DeeXMLGenerator:
         output_dir: Union[Path, str],
         fps: DeeFPS,
         delay: Union[DeeDelay, None],
+        drc: DeeDRC,
     ):
         """Set shared values for both DD/DDP
 
@@ -30,6 +31,7 @@ class DeeXMLGenerator:
             output_dir (Union[Path, str]): File path only
             fps (DeeFPS): FPS of video input if it exists
             delay (Union[DeeDelay, None]): Dataclass holding DeeDelay values or None
+            drc (DeeDRC): Dynamic range compression setting
         """
         # outputs
         self.output_file_name = output_file_name
@@ -75,6 +77,11 @@ class DeeXMLGenerator:
             self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
                 delay.MODE.value
             ] = delay.DELAY
+
+        # xml dynamic range compression config
+        drc_path = self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["drc"]
+        drc_path["line_mode_drc_profile"] = drc.value
+        drc_path["rf_mode_drc_profile"] = drc.value
 
     def generate_xml_dd(
         self, down_mix_config: str, stereo_down_mix: str, channels: DolbyDigitalChannels
