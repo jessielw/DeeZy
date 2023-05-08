@@ -80,6 +80,7 @@ def cli_parser(base_wd: Path):
         action="store_true",
         help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
     )
+    # TODO add a SILENT mode (already in enums)
     encode_group.add_argument(
         "-p",
         "--progress-mode",
