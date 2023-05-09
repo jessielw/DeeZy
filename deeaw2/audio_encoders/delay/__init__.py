@@ -5,7 +5,7 @@ from deeaw2.enums.shared import DeeDelay, DeeDelayModes
 
 
 class DelayGenerator:
-    def get_dee_delay(self, delay: str):
+    def get_dee_delay(self, delay: str, compensate: bool = True):
         """
         Converts the delay string to the proper format, checks for invalid characters,
         and returns a tuple containing the Dee Delay mode and the delay in the
@@ -13,6 +13,8 @@ class DelayGenerator:
 
         Parameters:
             delay (str): The delay string to be converted.
+            compensate (bool): Rather or not we want to compensate for DEE's added audio delay,
+            this compensates for dee's 256 added samples
 
         Returns:
             DeeDelay dataclass with needed values for XML.
@@ -41,15 +43,19 @@ class DelayGenerator:
             # convert numbers to a float
             s_delay = float(s_delay.group())
 
-            # if delay is set to "-"
-            if "-" in get_delay:
+            # subtract the Dolby silence offset
+            if compensate:
+                s_delay -= 16 / 3
+
+            # if delay is negative
+            if s_delay < 0:
                 dee_delay_mode = DeeDelayModes.NEGATIVE
                 delay_xml = str(timedelta(seconds=(abs(s_delay) / 1000)))
                 if "." not in delay_xml:
                     delay_xml = f"{delay_xml}.0"
 
             # if delay is positive
-            elif "-" not in get_delay:
+            elif s_delay > 0:
                 dee_delay_mode = DeeDelayModes.POSITIVE
                 delay_xml = format(s_delay / 1000, ".6f")
 
