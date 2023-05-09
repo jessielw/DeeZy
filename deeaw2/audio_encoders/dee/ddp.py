@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 import tempfile
 
-from deeaw2.audio_encoders.base import BaseAudioEncoder
+from deeaw2.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deeaw2.audio_encoders.dee.bitrates import dee_ddp_bitrates
 from deeaw2.audio_encoders.dee.xml.xml import DeeXMLGenerator
 from deeaw2.audio_encoders.delay import DelayGenerator
@@ -15,7 +15,7 @@ from deeaw2.exceptions import InvalidExtensionError, OutputFileNotFoundError
 from deeaw2.track_info.mediainfo import MediainfoParser
 
 
-class DDPEncoderDEE(BaseAudioEncoder):
+class DDPEncoderDEE(BaseDeeAudioEncoder):
     def __init__(self):
         super().__init__()
 
