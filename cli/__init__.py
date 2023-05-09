@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from cli.utils import CustomHelpFormatter
+from cli.utils import CustomHelpFormatter, _validate_track_index
 from deeaw2.audio_encoders.dee.dd import DDEncoderDEE
 from deeaw2.audio_encoders.dee.ddp import DDPEncoderDEE
 from deeaw2.enums import case_insensitive_enum, enum_choices
@@ -61,7 +61,7 @@ def cli_parser(base_wd: Path):
     encode_group.add_argument(
         "-t",
         "--track-index",
-        type=int,
+        type=_validate_track_index,
         default=0,
         help="The index of the audio track to use.",
     )

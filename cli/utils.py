@@ -27,3 +27,22 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
 
         option_strings = ", ".join(action.option_strings)
         return f"{option_strings}, {args_string}"
+
+
+def _validate_track_index(value: any):
+    """
+    Determines if the input is a valid number.
+    If it's not returns the default of 0.
+
+    Args:
+        value (any): Can be any input
+
+    Returns:
+        int: Corrected track index
+    """
+
+    # Check if the input is valid
+    if value.isdigit():
+        return int(value)
+    # If the input is invalid, return the default value
+    return 0
