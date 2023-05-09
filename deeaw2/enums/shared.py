@@ -43,4 +43,3 @@ class DeeDRC(Enum):
     MUSIC_STANDARD = "music_standard"
     MUSIC_LIGHT = "music_light"
     SPEECH = "speech"
-    OFF = "none"
