@@ -86,7 +86,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
         # file output (if an output is a defined check users extension and use their output)
         if payload.file_output:
             output = Path(payload.file_output)
-            if "ac3" not in output.suffix:
+            if ".ac3" not in output.suffix:
                 raise InvalidExtensionError(
                     "DD output must must end with the suffix '.ac3'."
                 )
