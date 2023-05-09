@@ -1,3 +1,4 @@
+from typing import Union
 from pathlib import Path
 import shutil
 import tempfile
@@ -48,9 +49,10 @@ class DDPEncoderDEE(BaseAudioEncoder):
         self._check_for_up_mixing(audio_track_info.channels, payload.channels.value)
 
         # delay
-        delay = None
+        delay_str = "0ms"
         if payload.delay:
-            delay = DelayGenerator().get_dee_delay(payload.delay)
+            delay_str = payload.delay
+        delay = DelayGenerator().get_dee_delay(delay_str)
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
@@ -70,7 +72,14 @@ class DDPEncoderDEE(BaseAudioEncoder):
         temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
 
         # downmix config
-        down_mix_config = self._get_down_mix_config(payload.channels)
+        down_mix_config = self._get_down_mix_config(
+            payload.channels, audio_track_info.channels
+        )
+
+        # determine if FFMPEG downmix is needed
+        ffmpeg_down_mix = False
+        if down_mix_config == "off" and audio_track_info.channels != 2:
+            ffmpeg_down_mix = payload.channels.value
 
         # stereo mix
         stereo_mix = str(payload.stereo_mix.name).lower()
@@ -95,6 +104,7 @@ class DDPEncoderDEE(BaseAudioEncoder):
             file_input=file_input,
             track_index=payload.track_index,
             sample_rate=audio_track_info.sample_rate,
+            ffmpeg_down_mix=ffmpeg_down_mix,
             channels=payload.channels,
             stereo_down_mix=payload.stereo_mix,
             output_dir=temp_dir,
@@ -110,8 +120,6 @@ class DDPEncoderDEE(BaseAudioEncoder):
             steps=True,
             duration=audio_track_info.duration,
         )
-
-        print("wait")
 
         # generate XML
         xml_generator = DeeXMLGenerator(
@@ -129,8 +137,6 @@ class DDPEncoderDEE(BaseAudioEncoder):
             channels=payload.channels,
             normalize=payload.normalize,
         )
-
-        print("pause")
 
         # generate DEE command
         dee_cmd = self._get_dee_cmd(
@@ -172,9 +178,12 @@ class DDPEncoderDEE(BaseAudioEncoder):
             return dee_ddp_bitrates.get("ddp_71_combined")
 
     @staticmethod
-    def _get_down_mix_config(channels: DolbyDigitalPlusChannels):
-        # TODO this might need to be re-worked some
-        if channels == DolbyDigitalPlusChannels.MONO:
+    def _get_down_mix_config(channels: DolbyDigitalPlusChannels, input_channels: int):
+        if channels.value == input_channels or not any(
+            member.value == input_channels for member in DolbyDigitalPlusChannels
+        ):
+            return "off"
+        elif channels == DolbyDigitalPlusChannels.MONO:
             return "mono"
         elif channels == DolbyDigitalPlusChannels.STEREO:
             return "stereo"
@@ -189,6 +198,7 @@ class DDPEncoderDEE(BaseAudioEncoder):
         file_input: Path,
         track_index: int,
         sample_rate: int,
+        ffmpeg_down_mix: Union[bool, DolbyDigitalPlusChannels],
         channels: DolbyDigitalPlusChannels,
         stereo_down_mix: StereoDownmix,
         output_dir: Path,
@@ -233,6 +243,10 @@ class DDPEncoderDEE(BaseAudioEncoder):
                     "-af",
                     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
                 ]
+
+        # utilize ffmpeg to downmix for channels that aren't supported by DEE
+        if ffmpeg_down_mix and stereo_down_mix != StereoDownmix.DPLII:
+            audio_filter_args.extend(["-ac", f"{ffmpeg_down_mix}"])
 
         # base ffmpeg command
         ffmpeg_cmd = self._get_ffmpeg_cmd(
