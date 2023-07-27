@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-from deeaw2.exceptions import (
+from deezy.exceptions import (
     ChannelMixError,
     InputFileNotFoundError,
     NotEnoughSpaceError,

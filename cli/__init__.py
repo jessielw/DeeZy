@@ -2,19 +2,19 @@ import argparse
 from pathlib import Path
 
 from cli.utils import CustomHelpFormatter, _validate_track_index
-from deeaw2.audio_encoders.dee.dd import DDEncoderDEE
-from deeaw2.audio_encoders.dee.ddp import DDPEncoderDEE
-from deeaw2.enums import case_insensitive_enum, enum_choices
-from deeaw2.enums.dd import DolbyDigitalChannels
-from deeaw2.enums.ddp import DolbyDigitalPlusChannels
-from deeaw2.enums.shared import ProgressMode, StereoDownmix, DeeDRC
-from deeaw2.info import AudioStreamViewer
-from deeaw2.payloads.dd import DDPayload
-from deeaw2.payloads.ddp import DDPPayload
-from deeaw2.utils.dependencies import DependencyNotFoundError, FindDependencies
-from deeaw2.utils.exit import _exit_application, exit_fail, exit_success
-from deeaw2.utils.file_parser import FileParser
-from deeaw2.utils._version import program_name, __version__
+from deezy.audio_encoders.dee.dd import DDEncoderDEE
+from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
+from deezy.enums import case_insensitive_enum, enum_choices
+from deezy.enums.dd import DolbyDigitalChannels
+from deezy.enums.ddp import DolbyDigitalPlusChannels
+from deezy.enums.shared import ProgressMode, StereoDownmix, DeeDRC
+from deezy.info import AudioStreamViewer
+from deezy.payloads.dd import DDPayload
+from deezy.payloads.ddp import DDPPayload
+from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
+from deezy.utils.exit import _exit_application, exit_fail, exit_success
+from deezy.utils.file_parser import FileParser
+from deezy.utils._version import program_name, __version__
 
 
 def cli_parser(base_wd: Path):

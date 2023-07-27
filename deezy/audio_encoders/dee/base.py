@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 import tempfile
 from pathlib import Path
 
-from deeaw2.audio_encoders.base import BaseAudioEncoder
-from deeaw2.enums.dd import DolbyDigitalChannels
-from deeaw2.enums.shared import DeeFPS, StereoDownmix
-from deeaw2.exceptions import PathTooLongError
+from deezy.audio_encoders.base import BaseAudioEncoder
+from deezy.enums.dd import DolbyDigitalChannels
+from deezy.enums.shared import DeeFPS, StereoDownmix
+from deezy.exceptions import PathTooLongError
 
 
 class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):

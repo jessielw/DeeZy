@@ -3,19 +3,19 @@ from pathlib import Path
 import shutil
 import tempfile
 
-from deeaw2.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deeaw2.audio_encoders.dee.bitrates import dee_ddp_bitrates
-from deeaw2.audio_encoders.dee.xml.xml import DeeXMLGenerator
-from deeaw2.audio_encoders.delay import DelayGenerator
-from deeaw2.audio_processors.dee import ProcessDEE
-from deeaw2.audio_processors.ffmpeg import ProcessFFMPEG
-from deeaw2.enums.ddp import DolbyDigitalPlusChannels
-from deeaw2.enums.shared import StereoDownmix
-from deeaw2.exceptions import InvalidExtensionError, OutputFileNotFoundError
-from deeaw2.track_info.mediainfo import MediainfoParser
+from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
+from deezy.audio_encoders.dee.bitrates import dee_dd_bitrates
+from deezy.audio_encoders.dee.xml.xml import DeeXMLGenerator
+from deezy.audio_processors.dee import ProcessDEE
+from deezy.audio_processors.ffmpeg import ProcessFFMPEG
+from deezy.audio_encoders.delay import DelayGenerator
+from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
+from deezy.enums.dd import DolbyDigitalChannels
+from deezy.enums.shared import StereoDownmix
+from deezy.track_info.mediainfo import MediainfoParser
 
 
-class DDPEncoderDEE(BaseDeeAudioEncoder):
+class DDEncoderDEE(BaseDeeAudioEncoder):
     def __init__(self):
         super().__init__()
 
@@ -62,7 +62,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
         # not even sure we need this atm though...
         # channels = payload.channels.value
 
-        # output dir
+        # temp dir
         temp_dir = self._get_temp_dir(file_input, payload.temp_dir)
 
         # check disk space
@@ -86,17 +86,17 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
         # file output (if an output is a defined check users extension and use their output)
         if payload.file_output:
             output = Path(payload.file_output)
-            if output.suffix not in [".ec3", ".eac3"]:
+            if ".ac3" not in output.suffix:
                 raise InvalidExtensionError(
-                    "DDP output must must end with the suffix '.eac3' or '.ec3'."
+                    "DD output must must end with the suffix '.ac3'."
                 )
         elif not payload.file_output:
-            output = Path(audio_track_info.auto_name).with_suffix(".ec3")
+            output = Path(audio_track_info.auto_name).with_suffix(".ac3")
 
         # Define .wav and .ac3/.ec3 file names (not full path)
         # TODO can likely handle this better.
         wav_file_name = temp_filename + ".wav"
-        output_file_name = temp_filename + output.suffix
+        output_file_name = temp_filename + ".ac3"
 
         # generate ffmpeg cmd
         ffmpeg_cmd = self._generate_ffmpeg_cmd(
@@ -112,7 +112,6 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
         )
 
         # process ffmpeg command
-        # TODO fix progress mode to enums
         # TODO can check for True return from ffmpeg_job if we need?
         ffmpeg_job = ProcessFFMPEG().process_job(
             cmd=ffmpeg_cmd,
@@ -131,11 +130,10 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
             delay=delay,
             drc=payload.drc,
         )
-        update_xml = xml_generator.generate_xml_ddp(
+        update_xml = xml_generator.generate_xml_dd(
             down_mix_config=down_mix_config,
             stereo_down_mix=stereo_mix,
             channels=payload.channels,
-            normalize=payload.normalize,
         )
 
         # generate DEE command
@@ -168,29 +166,25 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
 
     @staticmethod
     def _get_accepted_bitrates(channels: int):
-        if channels == DolbyDigitalPlusChannels.MONO:
-            return dee_ddp_bitrates.get("ddp_10")
-        elif channels == DolbyDigitalPlusChannels.STEREO:
-            return dee_ddp_bitrates.get("ddp_20")
-        elif channels == DolbyDigitalPlusChannels.SURROUND:
-            return dee_ddp_bitrates.get("ddp_51")
-        elif channels == DolbyDigitalPlusChannels.SURROUNDEX:
-            return dee_ddp_bitrates.get("ddp_71_combined")
+        if channels == DolbyDigitalChannels.MONO:
+            return dee_dd_bitrates.get("dd_10")
+        elif channels == DolbyDigitalChannels.STEREO:
+            return dee_dd_bitrates.get("dd_20")
+        elif channels == DolbyDigitalChannels.SURROUND:
+            return dee_dd_bitrates.get("dd_51")
 
     @staticmethod
-    def _get_down_mix_config(channels: DolbyDigitalPlusChannels, input_channels: int):
+    def _get_down_mix_config(channels: DolbyDigitalChannels, input_channels: int):
         if channels.value == input_channels or not any(
-            member.value == input_channels for member in DolbyDigitalPlusChannels
+            member.value == input_channels for member in DolbyDigitalChannels
         ):
             return "off"
-        elif channels == DolbyDigitalPlusChannels.MONO:
+        elif channels == DolbyDigitalChannels.MONO:
             return "mono"
-        elif channels == DolbyDigitalPlusChannels.STEREO:
+        elif channels == DolbyDigitalChannels.STEREO:
             return "stereo"
-        elif channels == DolbyDigitalPlusChannels.SURROUND:
+        elif channels == DolbyDigitalChannels.SURROUND:
             return "5.1"
-        elif channels == DolbyDigitalPlusChannels.SURROUNDEX:
-            return "off"
 
     def _generate_ffmpeg_cmd(
         self,
@@ -198,13 +192,14 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
         file_input: Path,
         track_index: int,
         sample_rate: int,
-        ffmpeg_down_mix: Union[bool, DolbyDigitalPlusChannels],
-        channels: DolbyDigitalPlusChannels,
+        ffmpeg_down_mix: Union[bool, DolbyDigitalChannels],
+        channels: DolbyDigitalChannels,
         stereo_down_mix: StereoDownmix,
         output_dir: Path,
         wav_file_name: str,
     ):
         # Work out if we need to do a complex or simple resample
+        # check for dplii
         # TODO we need to allow custom sample rates
         if sample_rate != 48000:
             bits_per_sample = 32
@@ -216,33 +211,33 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
             bits_per_sample = 32
             resample = False
 
-        # resample and add swap channels
+        # resample and add dplii
         audio_filter_args = []
-        if resample:
-            if channels == DolbyDigitalPlusChannels.SURROUNDEX:
+        if (
+            channels == DolbyDigitalChannels.STEREO
+            and stereo_down_mix == StereoDownmix.DPLII
+        ):
+            if resample:
                 audio_filter_args = [
                     "-af",
-                    (
-                        "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
-                        "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0"
-                    ),
+                    "aresample=matrix_encoding=dplii,aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
                     "-ar",
                     str(sample_rate),
                 ]
-            elif channels != DolbyDigitalPlusChannels.SURROUNDEX:
+            elif not resample:
                 audio_filter_args = [
+                    "-ac",
+                    "2",
                     "-af",
-                    "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
-                    "-ar",
-                    str(sample_rate),
+                    "aresample=matrix_encoding=dplii",
                 ]
-
-        elif not resample:
-            if channels == DolbyDigitalPlusChannels.SURROUNDEX:
-                audio_filter_args = [
-                    "-af",
-                    "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
-                ]
+        elif resample:
+            audio_filter_args = [
+                "-af",
+                "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+                "-ar",
+                str(sample_rate),
+            ]
 
         # utilize ffmpeg to downmix for channels that aren't supported by DEE
         if ffmpeg_down_mix and stereo_down_mix != StereoDownmix.DPLII:

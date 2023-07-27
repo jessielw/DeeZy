@@ -1,4 +1,4 @@
-from deeaw2.payloads.shared import BaseArgsPayload
+from deezy.payloads.shared import BaseArgsPayload
 
 
 class DDPayload(BaseArgsPayload):
