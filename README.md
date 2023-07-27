@@ -131,6 +131,13 @@ options:
   -n, --name  Only display names instead of full paths.
 ```
 
+Example:
+
+```
+deezy find "\\JLW-UNRAID\dl_share_nvme\bhdstudio\downloads\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX\*.*"
+\\JLW-UNRAID\dl_share_nvme\bhdstudio\downloads\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX.mkv
+```
+
 ## Info Usage
 
 ```
@@ -146,7 +153,7 @@ options:
 Example:
 
 ```
-E:\programming\DeeZy\deezy.exe info "C:\Users\jlw_4\OneDrive\Desktop\testing\Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv"
+deezy info "C:\Users\jlw_4\OneDrive\Desktop\testing\Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv"
 File: Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv
 Audio tracks: [1]
 ------------------------------------------------------------------------------------------
