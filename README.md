@@ -173,3 +173,5 @@ Default             : Yes
 Forced              : No
 ------------------------------------------------------------------------------------------
 ```
+
+`Track ... : 1` corresponds to the `-t / --track-index` arg when selecting your track to encode with dd/ddp
