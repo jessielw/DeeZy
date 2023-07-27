@@ -62,24 +62,17 @@ class FindDependencies:
         ffmpeg_path = Path(base_wd / f"apps/ffmpeg/ffmpeg{self.os_exe}")
         dee_path = Path(base_wd / f"apps/dee/dee{self.os_exe}")
 
-        found_paths = [path for path in [ffmpeg_path, dee_path] if path.is_file()]
+        # check if ffmpeg exists beside the program
+        if ffmpeg_path.is_file():
+            ffmpeg_path = str(ffmpeg_path)
+        else:
+            ffmpeg_path = None
 
-        for path in found_paths:
-            if "ffmpeg" in str(path.name):
-                if str(path) == str(ffmpeg_path):
-                    ffmpeg_path = str(path)
-                else:
-                    ffmpeg_path = None
-            else:
-                ffmpeg_path = None
-
-            if "dee" in str(path.name):
-                if str(path) == str(dee_path):
-                    dee_path = str(path)
-                else:
-                    dee_path = None
-            else:
-                dee_path = None
+        # check if dee exists beside the program
+        if dee_path.is_file():
+            dee_path = str(dee_path)
+        else:
+            dee_path = None
 
         return ffmpeg_path, dee_path
 
