@@ -14,3 +14,4 @@ packages/github_token.py
 /pyinstaller_build
 deeaw_config.ini
 .vscode/
+deezy.code-workspace
