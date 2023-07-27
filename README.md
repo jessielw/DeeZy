@@ -15,7 +15,7 @@ At the moment you'll need to download your binary (Windows 8+ x64 or Linux) and 
 2. Create an `apps` folder beside DeeZy with two nested directories `ffmpeg` and `dee`
 
 ```
-- deezy
+deezy (executable)
 - apps
     - ffmpeg
     - dee
@@ -137,8 +137,8 @@ options:
 Example:
 
 ```
-deezy find "\\JLW-UNRAID\dl_share_nvme\bhdstudio\downloads\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX\*.*"
-\\JLW-UNRAID\dl_share_nvme\bhdstudio\downloads\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX.mkv
+deezy find "Path\*.*"
+Path\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX.mkv
 ```
 
 ## Info Usage
@@ -156,7 +156,7 @@ options:
 Example:
 
 ```
-deezy info "C:\Users\jlw_4\OneDrive\Desktop\testing\Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv"
+deezy info "Path\Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv"
 File: Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv
 Audio tracks: [1]
 ------------------------------------------------------------------------------------------
