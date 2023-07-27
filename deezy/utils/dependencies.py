@@ -70,12 +70,16 @@ class FindDependencies:
                     ffmpeg_path = str(path)
                 else:
                     ffmpeg_path = None
+            else:
+                ffmpeg_path = None
 
             if "dee" in str(path.name):
                 if str(path) == str(dee_path):
                     dee_path = str(path)
                 else:
                     dee_path = None
+            else:
+                dee_path = None
 
         return ffmpeg_path, dee_path
 
