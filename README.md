@@ -175,3 +175,20 @@ Forced              : No
 ```
 
 `Track ... : 1` corresponds to the `-t / --track-index` arg when selecting your track to encode with dd/ddp
+
+## Input Types
+
+```
+You can line up multiple inputs to be encoded with the same settings:
+input.mkv input.mp4 etc...
+If there is space in the name you'll likely want to wrap them in quotes
+
+It also supports everything the python glob module supports. This allows you to filter or search recursively etc:
+
+Will find all mkv's in that currently directory:
+"directory/nested_path/*.mkv"
+
+Will find all mkv's recursively:
+"directory/nested_path/**/*.mkv"
+
+```
