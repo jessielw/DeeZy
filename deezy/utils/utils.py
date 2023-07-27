@@ -22,7 +22,7 @@ def _get_working_dir():
     Returns:
         (Path): Current working directory
     """
-    # we're in a pyinstaller.exe bundle
+    # we're in a pyinstaller bundle
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return Path(sys.executable).parent
 
