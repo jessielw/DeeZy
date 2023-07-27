@@ -18,7 +18,7 @@ def build_app():
     # run pyinstaller command
     build_job = run(
         [
-            "pyinstaller.exe",
+            "pyinstaller",
             "-n",
             "deezy",
             "--onefile",
@@ -29,8 +29,8 @@ def build_app():
 
     # ensure output of exe
     success = "Did not complete successfully"
-    if Path(Path("dist") / "deezy.exe").is_file() and str(build_job.returncode) == "0":
-        success = f'\nSuccess!\nPath to exe: {str(Path.cwd() / (Path(Path("dist") / "deezy.exe")))}'
+    if Path(Path("dist") / "deezy").is_file() and str(build_job.returncode) == "0":
+        success = f'\nSuccess!\nPath to exe: {str(Path.cwd() / (Path(Path("dist") / "deezy")))}'
 
     # change directory back to original directory
     os.chdir(deezy_script.parent)
