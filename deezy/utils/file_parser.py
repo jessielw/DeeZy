@@ -21,11 +21,17 @@ class FileParser:
         for arg_input in args_list:
             # non recursive
             if "*" in arg_input:
-                input_s.extend(Path(p) for p in glob.glob(arg_input))
+                input_s.extend(
+                    Path(p) for p in glob.glob(arg_input) if Path(p).is_file()
+                )
 
             # recursive search
             elif "**" in arg_input:
-                input_s.extend(Path(p) for p in glob.glob(arg_input, recursive=True))
+                input_s.extend(
+                    Path(p)
+                    for p in glob.glob(arg_input, recursive=True)
+                    if Path(p).is_file()
+                )
 
             # single file path
             elif (
