@@ -12,5 +12,6 @@ packages/user_pw_key.py
 packages/github_token.py
 *.db
 /pyinstaller_build
-deeaw_config.ini
+deezy_config.ini
 .vscode/
+deezy.code-workspace
