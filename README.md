@@ -131,19 +131,6 @@ options:
   -n, --name  Only display names instead of full paths.
 ```
 
-## Find Usage
-
-```
-usage: DeeZy find [-h] [-n] INPUT [INPUT ...]
-
-positional arguments:
-  INPUT       Input file paths or directories
-
-options:
-  -h, --help  show this help message and exit
-  -n, --name  Only display names instead of full paths.
-```
-
 ## Info Usage
 
 ```
@@ -154,4 +141,28 @@ positional arguments:
 
 options:
   -h, --help  show this help message and exit
+```
+
+Example:
+
+```
+E:\programming\DeeZy\deezy.exe info "C:\Users\jlw_4\OneDrive\Desktop\testing\Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv"
+File: Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv
+Audio tracks: [1]
+------------------------------------------------------------------------------------------
+Track               : 1
+Codec               : FLAC - (flac)
+Channels            : 2.0 - L R
+Bit rate mode       : VBR / Variable
+Bit rate            : 760 kb/s
+Sampling Rate       : 48.0 kHz
+Duration            : 23 min 40 s
+Language            : English
+Title               : FLAC 2.0
+Stream size         : 128.7 MiB
+Bit Depth           : 24 bits
+Compression         : Lossless
+Default             : Yes
+Forced              : No
+------------------------------------------------------------------------------------------
 ```
