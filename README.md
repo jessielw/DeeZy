@@ -1,7 +1,10 @@
 # DeeZy
 
 In it's current form it's designed around encoding audio with Dolby Engine Encoder.
+
 However, it was designed with expandability as needed for other encoders.
+
+Everything is functional, DeeZy is still in beta until everything has been thoroughly tested, as far as handling errors etc.
 
 ## Install (no install needed it's portable)
 
