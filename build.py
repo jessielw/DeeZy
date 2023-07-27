@@ -2,6 +2,8 @@ from pathlib import Path
 from subprocess import run
 import os
 
+from deezy.utils.dependencies import get_executable_string_by_os
+
 
 def build_app():
     # define and create pyinstaller output path
@@ -27,10 +29,16 @@ def build_app():
         ]
     )
 
+    # get exe string based on os
+    exe_str = get_executable_string_by_os()
+
     # ensure output of exe
     success = "Did not complete successfully"
-    if Path(Path("dist") / "deezy").is_file() and str(build_job.returncode) == "0":
-        success = f'\nSuccess!\nPath to exe: {str(Path.cwd() / (Path(Path("dist") / "deezy")))}'
+    if (
+        Path(Path("dist") / f"deezy{exe_str}").is_file()
+        and str(build_job.returncode) == "0"
+    ):
+        success = f'\nSuccess!\nPath to exe: {str(Path.cwd() / (Path(Path("dist") / f"deezy{exe_str}")))}'
 
     # change directory back to original directory
     os.chdir(deezy_script.parent)

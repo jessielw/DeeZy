@@ -1,6 +1,16 @@
 from pathlib import Path
 import shutil
+import platform
 from deezy.exceptions import DependencyNotFoundError
+
+
+def get_executable_string_by_os():
+    """Check executable type based on operating system"""
+    operating_system = platform.system()
+    if operating_system == "Windows":
+        return ".exe"
+    elif operating_system == "Linux":
+        return ""
 
 
 class Dependencies:
@@ -26,6 +36,9 @@ class FindDependencies:
         base_wd (Path): The base working directory of the program.
     """
 
+    # determine os exe
+    os_exe = get_executable_string_by_os()
+
     def get_dependencies(self, base_wd: Path):
         ffmpeg, dee = self._locate_beside_program(base_wd)
 
@@ -45,23 +58,24 @@ class FindDependencies:
 
         return dependencies
 
-    @staticmethod
-    def _locate_beside_program(base_wd):
-        ffmpeg_path = Path(base_wd / "apps/ffmpeg/ffmpeg")
-        dee_path = Path(base_wd / "apps/dee/dee")
+    def _locate_beside_program(self, base_wd):
+        ffmpeg_path = Path(base_wd / f"apps/ffmpeg/ffmpeg{self.os_exe}")
+        dee_path = Path(base_wd / f"apps/dee/dee{self.os_exe}")
 
-        found_paths = [str(path) for path in [ffmpeg_path, dee_path] if path.is_file()]
+        found_paths = [path for path in [ffmpeg_path, dee_path] if path.is_file()]
 
         for path in found_paths:
-            if str(path) == str(ffmpeg_path):
-                ffmpeg_path = str(path)
-            else:
-                ffmpeg_path = None
+            if "ffmpeg" in str(path.name):
+                if str(path) == str(ffmpeg_path):
+                    ffmpeg_path = str(path)
+                else:
+                    ffmpeg_path = None
 
-            if str(path) == str(dee_path):
-                dee_path = str(path)
-            else:
-                dee_path = None
+            if "dee" in str(path.name):
+                if str(path) == str(dee_path):
+                    dee_path = str(path)
+                else:
+                    dee_path = None
 
         return ffmpeg_path, dee_path
 
@@ -73,18 +87,16 @@ class FindDependencies:
     #         if value and Path(value).is_file():
     #             setattr(self, attr_name, str(value))
 
-    @staticmethod
-    def _locate_on_path(ffmpeg, dee):
+    def _locate_on_path(self, ffmpeg, dee):
         if ffmpeg is None:
-            ffmpeg = shutil.which("ffmpeg")
+            ffmpeg = shutil.which(f"ffmpeg{self.os_exe}")
         if dee is None:
-            dee = shutil.which("dee")
+            dee = shutil.which(f"dee{self.os_exe}")
 
         return ffmpeg, dee
 
-    @staticmethod
-    def _verify_dependencies(dependencies: list):
-        executable_names = ["ffmpeg", "dee"]
+    def _verify_dependencies(self, dependencies: list):
+        executable_names = [f"ffmpeg{self.os_exe}", f"dee{self.os_exe}"]
         for exe_path, exe_name in zip(dependencies, executable_names):
             if exe_path is None or exe_path == "" or not Path(exe_path).is_file():
                 raise DependencyNotFoundError(f"{exe_name} path not found")
