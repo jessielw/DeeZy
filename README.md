@@ -26,7 +26,7 @@ Delete files.
 
 ## Basic Usage
 
-```bash
+```
 usage: DeeZy [-h] [-v] {encode,find,info} ...
 
 positional arguments:
@@ -39,7 +39,7 @@ options:
 
 ## Encode Usage DD
 
-```bash
+```
 usage: DeeZy encode dd [-h] [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
                        [-p {STANDARD[0],DEBUG[1],SILENT[3]}] [-tmp TEMP_DIR]
                        [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
@@ -78,7 +78,7 @@ options:
 
 ## Encode Usage DDP
 
-```bash
+```
 usage: DeeZy encode ddp [-h] [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
                         [-p {STANDARD[0],DEBUG[1],SILENT[3]}] [-tmp TEMP_DIR]
                         [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
@@ -120,7 +120,7 @@ options:
 
 ## Find Usage
 
-```bash
+```
 usage: DeeZy find [-h] [-n] INPUT [INPUT ...]
 
 positional arguments:
@@ -133,7 +133,7 @@ options:
 
 ## Find Usage
 
-```bash
+```
 usage: DeeZy find [-h] [-n] INPUT [INPUT ...]
 
 positional arguments:
@@ -146,7 +146,7 @@ options:
 
 ## Info Usage
 
-```bash
+```
 usage: DeeZy info [-h] INPUT [INPUT ...]
 
 positional arguments:
