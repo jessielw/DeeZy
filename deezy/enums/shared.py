@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class ProgressMode(Enum):
     STANDARD = 0
     DEBUG = 1
-    SILENT = 3
+    SILENT = 2
 
 
 class StereoDownmix(Enum):
