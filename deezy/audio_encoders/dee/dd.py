@@ -55,7 +55,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
         delay = DelayGenerator().get_dee_delay(delay_str)
 
         # fps
-        fps = self._get_fps(audio_track_info.fps)
+        fps = str(self._get_fps(audio_track_info.fps))
 
         # channels
         # TODO need to figure out what to do if no channels are supplied

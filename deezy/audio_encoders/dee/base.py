@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
 import tempfile
+from abc import ABC, abstractmethod
+from typing import Union
 from pathlib import Path
 
 from deezy.audio_encoders.base import BaseAudioEncoder
@@ -104,22 +105,28 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
         return dee_cmd
 
     @staticmethod
-    def _get_fps(fps: str):
+    def _get_fps(fps: Union[str, None]):
         """
-        Tries to get a valid FPS value from an input string, otherwise returns 'not_indicated'.
+        Tries to get a valid FPS value from the input, handling conversion from string to float/int,
+        otherwise returns 'not_indicated'.
 
         Args:
-            fps (str): The input FPS string to check.
+            fps (str, float): The input FPS input to check.
 
         Returns:
-            DeeFPS: A valid DeeFPS value from the input string, or FPS_NOT_INDICATED if not found.
+            DeeFPS: A valid DeeFPS value from the input, or FPS_NOT_INDICATED if not found.
 
         """
         try:
-            dee_fps = DeeFPS(fps)
+            if fps:
+                if "." in fps:
+                    return DeeFPS(float(fps))
+                else:
+                    return DeeFPS(int(fps))
+            else:
+                return None
         except ValueError:
-            dee_fps = DeeFPS.FPS_NOT_INDICATED
-        return dee_fps
+            return None
 
     @staticmethod
     def _get_temp_dir(file_input: Path, temp_dir: Path):

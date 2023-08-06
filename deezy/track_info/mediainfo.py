@@ -178,11 +178,8 @@ class MediainfoParser:
         """
         for mi_track in mi_object.tracks:
             if mi_track.track_type == "Video":
-                fps = mi_track.frame_rate
-                break
-            else:
-                fps = None
-        return fps
+                return mi_track.frame_rate
+        return None
 
     @staticmethod
     def _get_duration(mi_object, track_index):

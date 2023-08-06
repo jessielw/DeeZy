@@ -83,8 +83,8 @@ class DeeXMLGenerator:
 
         # xml dynamic range compression config
         drc_path = self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["drc"]
-        drc_path["line_mode_drc_profile"] = drc.value
-        drc_path["rf_mode_drc_profile"] = drc.value
+        drc_path["line_mode_drc_profile"] = str(drc)
+        drc_path["rf_mode_drc_profile"] = str(drc)
 
     def generate_xml_dd(
         self, down_mix_config: str, stereo_down_mix: str, channels: DolbyDigitalChannels
