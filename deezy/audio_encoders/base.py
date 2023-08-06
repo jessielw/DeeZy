@@ -1,5 +1,6 @@
-from pathlib import Path
 import shutil
+import os
+from pathlib import Path
 from deezy.exceptions import (
     ChannelMixError,
     InputFileNotFoundError,
@@ -29,27 +30,31 @@ class BaseAudioEncoder:
         return input_file.exists()
 
     @staticmethod
-    def _check_disk_space(drive_path: Path, required_space: int):
+    def _check_disk_space(input_file_path: Path, temp_path: Path):
         """
-        Check for free space at the drive path, rounding to nearest whole number.
-        If there isn't at least "required_space" GB of space free, raise an ArgumentTypeError.
+        Check for free space at the temporary directory, rounding to the nearest whole number.
+        If there isn't at least 110% of the size of the input file as free space in the temporary directory,
+        raise an exception.
 
         Args:
-            drive_path (Path): Path to check
-            required_space (int): Minimum space (GB)
+            input_file_path (Path): Path to the input file.
+            temp_path (Path): Path to the temporary directory where intermediate files will be stored.
         """
 
-        # get free space in bytes
-        required_space_cwd = shutil.disk_usage(Path(drive_path)).free
+        # Get the size of the input file in bytes
+        input_file_size = os.path.getsize(input_file_path)
 
-        # convert to GB's
-        free_space_gb = round(required_space_cwd / (1024**3))
+        # Get free space in bytes in the temporary directory
+        free_space_bytes = shutil.disk_usage(temp_path).free
 
-        # check to ensure the desired space in GB's is free
-        if free_space_gb < int(required_space):
-            raise NotEnoughSpaceError(f"Insufficient storage to complete the process.")
-        else:
-            return True
+        # Calculate the required space (110% of the input file size) in bytes
+        required_space_bytes = int(input_file_size * 1.1)
+
+        # Check if the required space is available
+        if free_space_bytes < required_space_bytes:
+            raise NotEnoughSpaceError(
+                "Insufficient storage in the temporary directory to complete the process."
+            )
 
     @staticmethod
     def _get_closest_allowed_bitrate(bitrate: int, accepted_bitrates: list):

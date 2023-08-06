@@ -66,7 +66,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
         temp_dir = self._get_temp_dir(file_input, payload.temp_dir)
 
         # check disk space
-        self._check_disk_space(drive_path=temp_dir, required_space=15)
+        self._check_disk_space(input_file_path=file_input, drive_path=temp_dir)
 
         # temp filename
         temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
