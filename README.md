@@ -43,11 +43,11 @@ options:
 ## Encode Usage DD
 
 ```
-usage: DeeZy encode dd [-h] [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
-                       [-p {STANDARD[0],DEBUG[1],SILENT[3]}] [-tmp TEMP_DIR]
+sage: DeeZy encode dd [-h] [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
+                       [-p {STANDARD[0],DEBUG[1],SILENT[2]}] [-tmp TEMP_DIR]
                        [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
                        [-c {MONO[1],STEREO[2],SURROUND[6]}]
-                       [-drc {FILM_STANDARD[film_standard],FILM_LIGHT[film_light],MUSIC_STANDARD[music_standard],MUSIC_LIGHT[music_light],SPEECH[speech]}]
+                       [-drc {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}]
                        INPUT [INPUT ...]
 
 positional arguments:
@@ -65,7 +65,7 @@ options:
    The delay in milliseconds or seconds. Note '-d=' is required! (-d=-10ms / -d=10s).
   -k, --keep-temp
    Keeps the temp files after finishing (usually a wav and an xml for DEE).
-  -p, --progress-mode, {STANDARD[0],DEBUG[1],SILENT[3]}
+  -p, --progress-mode, {STANDARD[0],DEBUG[1],SILENT[2]}
    Sets progress output mode verbosity.
   -tmp, --temp-dir, TEMP_DIR
    Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.
@@ -75,7 +75,7 @@ options:
    Down mix method for stereo.
   -c, --channels, {MONO[1],STEREO[2],SURROUND[6]}
    The number of channels.
-  -drc, --dynamic-range-compression, {FILM_STANDARD[film_standard],FILM_LIGHT[film_light],MUSIC_STANDARD[music_standard],MUSIC_LIGHT[music_light],SPEECH[speech]}
+  -drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
    Dynamic range compression settings.
 ```
 
@@ -83,11 +83,11 @@ options:
 
 ```
 usage: DeeZy encode ddp [-h] [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
-                        [-p {STANDARD[0],DEBUG[1],SILENT[3]}] [-tmp TEMP_DIR]
+                        [-p {STANDARD[0],DEBUG[1],SILENT[2]}] [-tmp TEMP_DIR]
                         [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
                         [-c {MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8]}]
                         [-n]
-                        [-drc {FILM_STANDARD[film_standard],FILM_LIGHT[film_light],MUSIC_STANDARD[music_standard],MUSIC_LIGHT[music_light],SPEECH[speech]}]
+                        [-drc {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}]
                         INPUT [INPUT ...]
 
 positional arguments:
@@ -105,7 +105,7 @@ options:
    The delay in milliseconds or seconds. Note '-d=' is required! (-d=-10ms / -d=10s).
   -k, --keep-temp
    Keeps the temp files after finishing (usually a wav and an xml for DEE).
-  -p, --progress-mode, {STANDARD[0],DEBUG[1],SILENT[3]}
+  -p, --progress-mode, {STANDARD[0],DEBUG[1],SILENT[2]}
    Sets progress output mode verbosity.
   -tmp, --temp-dir, TEMP_DIR
    Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.
@@ -117,7 +117,7 @@ options:
    The number of channels.
   -n, --normalize
    Normalize audio for DDP.
-  -drc, --dynamic-range-compression, {FILM_STANDARD[film_standard],FILM_LIGHT[film_light],MUSIC_STANDARD[music_standard],MUSIC_LIGHT[music_light],SPEECH[speech]}
+  -drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
    Dynamic range compression settings.
 ```
 
