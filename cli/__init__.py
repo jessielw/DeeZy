@@ -213,6 +213,15 @@ def cli_parser(base_wd: Path):
     if not hasattr(args, "input") or not args.input:
         _exit_application("", exit_fail)
 
+    if not hasattr(args, "channels") or not args.channels:
+        _exit_application(
+            "You must specify your desired channels. Example: '-c 2'", exit_fail
+        )
+
+    if not hasattr(args, "bitrate") or not args.bitrate:
+        print("No bitrate specified, defaulting to 448k")
+        setattr(args, "bitrate", 448)
+
     # parse all possible file inputs
     # TODO We will need to decide what to do when multiple file inputs
     # don't have the track provided by the user?
