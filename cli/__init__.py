@@ -18,15 +18,6 @@ from deezy.utils._version import program_name, __version__
 
 
 def cli_parser(base_wd: Path):
-    # define tools
-    # TODO might be able to still handle the tools better?
-    try:
-        tools = FindDependencies().get_dependencies(base_wd)
-    except DependencyNotFoundError as e:
-        _exit_application(e, exit_fail)
-    ffmpeg_path = Path(tools.ffmpeg)
-    dee_path = Path(tools.dee)
-
     # Top-level parser
     parser = argparse.ArgumentParser(prog=program_name)
 
@@ -58,6 +49,16 @@ def cli_parser(base_wd: Path):
 
     # Common Encode Args
     encode_group = argparse.ArgumentParser(add_help=False)
+    encode_group.add_argument(
+        "--ffmpeg",
+        type=str,
+        help="Path to FFMPEG executable.",
+    )
+    encode_group.add_argument(
+        "--dee",
+        type=str,
+        help="Path to DEE (Dolby Encoding Engine) executable.",
+    )
     encode_group.add_argument(
         "-t",
         "--track-index",
@@ -211,6 +212,14 @@ def cli_parser(base_wd: Path):
         if not hasattr(args, "version"):
             parser.print_usage()
         _exit_application("", exit_fail)
+
+    # detect tool dependencies
+    try:
+        tools = FindDependencies().get_dependencies(base_wd, args.ffmpeg, args.dee)
+    except DependencyNotFoundError as e:
+        _exit_application(e, exit_fail)
+    ffmpeg_path = Path(tools.ffmpeg)
+    dee_path = Path(tools.dee)
 
     if not hasattr(args, "input") or not args.input:
         _exit_application("", exit_fail)

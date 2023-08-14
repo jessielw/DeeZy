@@ -1,6 +1,7 @@
 from pathlib import Path
 import shutil
 import platform
+from typing import Union
 from deezy.exceptions import DependencyNotFoundError
 
 
@@ -39,7 +40,13 @@ class FindDependencies:
     # determine os exe
     os_exe = get_executable_string_by_os()
 
-    def get_dependencies(self, base_wd: Path):
+    def get_dependencies(
+        self,
+        base_wd: Path,
+        user_ffmpeg: Union[str, None],
+        user_dee: Union[str, None],
+    ):
+        # check beside program
         ffmpeg, dee = self._locate_beside_program(base_wd)
 
         # TODO re-implement this
@@ -50,6 +57,14 @@ class FindDependencies:
         if None in [ffmpeg, dee]:
             ffmpeg, dee = self._locate_on_path(ffmpeg, dee)
 
+        # if user defines FFMPEG or DEE then let's override automatic detection
+        if user_ffmpeg and user_ffmpeg.strip() != "":
+            ffmpeg = Path(user_ffmpeg)
+
+        if user_dee and user_dee.strip() != "":
+            dee = Path(user_dee)
+
+        # verify dependencies
         self._verify_dependencies([ffmpeg, dee])
 
         dependencies = Dependencies()
