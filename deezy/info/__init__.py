@@ -47,8 +47,8 @@ class AudioStreamViewer:
                 # audio track id
                 audio_track_id = ""
                 if track.stream_identifier or track.stream_identifier == 0:
-                    audio_track_id = f"{self._calculate_space('Track')}: {str(int(track.stream_identifier) + 1)}\n"
-                    track_list.append(int(track.stream_identifier) + 1)
+                    audio_track_id = f"{self._calculate_space('Track')}: {str(int(track.stream_identifier))}\n"
+                    track_list.append(int(track.stream_identifier))
 
                 # audio format
                 audio_format = ""

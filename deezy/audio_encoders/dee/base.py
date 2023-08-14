@@ -66,7 +66,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
             "-i",
             str(Path(file_input)),
             "-map",
-            f"0:{track_index}",
+            f"0:a:{track_index}",
             "-c",
             f"pcm_s{str(bits_per_sample)}le",
             *(audio_filter_args),

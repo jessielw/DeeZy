@@ -51,7 +51,7 @@ class AutoFileName:
         Returns:
             str: Returns a formatted delay string
         """
-        audio_track = media_info.tracks[track_index + 1]
+        audio_track = media_info.audio_tracks[track_index]
         if Path(file_input).suffix == ".mp4":
             if audio_track.source_delay:
                 delay_string = f"[delay {str(audio_track.source_delay)}ms]"
@@ -77,7 +77,7 @@ class AutoFileName:
         Returns:
             str: Returns a formatted language string
         """
-        audio_track = media_info.tracks[track_index + 1]
+        audio_track = media_info.audio_tracks[track_index]
         if audio_track.other_language:
             l_lengths = [len(lang) for lang in audio_track.other_language]
             l_index = next(
@@ -120,8 +120,8 @@ class MediainfoParser:
         # update AudioTrackInfo with needed values
         audio_info.fps = self._get_fps(mi_object)
         audio_info.duration = self._get_duration(mi_object, track_index)
-        audio_info.sample_rate = mi_object.tracks[track_index + 1].sampling_rate
-        audio_info.bit_depth = mi_object.tracks[track_index + 1].bit_depth
+        audio_info.sample_rate = mi_object.audio_tracks[track_index].sampling_rate
+        audio_info.bit_depth = mi_object.audio_tracks[track_index].bit_depth
         audio_info.channels = self._get_channels(mi_object, track_index)
         audio_info.auto_name = AutoFileName().generate_output_filename(
             mi_object, file_input, track_index
@@ -143,7 +143,7 @@ class MediainfoParser:
             MediaInfoError: If the requested track does not exist in the MediaInfo object.
         """
         try:
-            mi_object.tracks[track_index + 1]
+            mi_object.audio_tracks[track_index]
         except IndexError:
             raise MediaInfoError(f"Selected track #{track_index} does not exist.")
 
@@ -159,7 +159,7 @@ class MediainfoParser:
         Raises:
             MediaInfoError: If the specified track index does not correspond to an audio track.
         """
-        track_info = mi_object.tracks[track_index + 1].track_type
+        track_info = mi_object.audio_tracks[track_index].track_type
         if track_info != "Audio":
             raise MediaInfoError(
                 f"Selected track #{track_index} ({track_info}) is not an audio track."
@@ -193,7 +193,7 @@ class MediainfoParser:
         Returns:
             duration (float or None): The duration of the specified track in milliseconds, or None if the duration cannot be retrieved.
         """
-        duration = mi_object.tracks[track_index + 1].duration
+        duration = mi_object.audio_tracks[track_index].duration
         if duration:
             duration = float(duration)
         return duration
@@ -210,7 +210,7 @@ class MediainfoParser:
         Returns:
             The number of audio channels as an integer.
         """
-        track = mi_object.tracks[track_index + 1]
+        track = mi_object.audio_tracks[track_index]
         base_channels = track.channel_s
         check_other = search(r"\d+", str(track.other_channel_s[0]))
         if check_other:
