@@ -32,7 +32,7 @@ class ProcessFFMPEG:
             cmd.insert(inject, "info")
 
         with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-            if progress_mode == "standard" and steps:
+            if progress_mode == ProgressMode.STANDARD and steps:
                 print("---- Step 1 of 3 ---- [FFMPEG]")
 
             # initiate print on same line

@@ -56,6 +56,9 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
                 audio_track_info.channels, DolbyDigitalPlusChannels.get_values_list()
             )
 
+            # update payload channels enum to automatic channel selection
+            payload.channels = DolbyDigitalPlusChannels(audio_track_info.channels)
+
         # delay
         delay_str = "0ms"
         if payload.delay:
@@ -176,7 +179,16 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
 
     @staticmethod
     def _get_accepted_bitrates(channels: int):
-        if channels == DolbyDigitalPlusChannels.MONO:
+        if channels == DolbyDigitalPlusChannels.AUTO:
+            return sorted(
+                list(
+                    set(dee_ddp_bitrates.get("ddp_10"))
+                    & set(dee_ddp_bitrates.get("ddp_20"))
+                    & set(dee_ddp_bitrates.get("ddp_51"))
+                    & set(dee_ddp_bitrates.get("ddp_71_combined"))
+                )
+            )
+        elif channels == DolbyDigitalPlusChannels.MONO:
             return dee_ddp_bitrates.get("ddp_10")
         elif channels == DolbyDigitalPlusChannels.STEREO:
             return dee_ddp_bitrates.get("ddp_20")

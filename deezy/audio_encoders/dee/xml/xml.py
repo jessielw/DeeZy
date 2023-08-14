@@ -62,10 +62,10 @@ class DeeXMLGenerator:
         # update fps sections
         self.xml_base["job_config"]["input"]["audio"]["wav"][
             "timecode_frame_rate"
-        ] = fps.value
+        ] = fps
         self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
             "timecode_frame_rate"
-        ] = fps.value
+        ] = fps
 
         # xml temp path config
         self.xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'

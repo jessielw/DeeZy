@@ -215,13 +215,17 @@ def cli_parser(base_wd: Path):
     if not hasattr(args, "input") or not args.input:
         _exit_application("", exit_fail)
 
-    if not hasattr(args, "channels") or not args.channels or args.channels == 0:
+    if (
+        not hasattr(args, "channels")
+        or not args.channels
+        or int(args.channels.value) == 0
+    ):
         print(
-            "No channel(s) specified, will automatically detect highest quality supported channel based on codec"
+            "No channel(s) specified, will automatically detect highest quality supported channel based on codec."
         )
 
     if not hasattr(args, "bitrate") or not args.bitrate:
-        print("No bitrate specified, defaulting to 448k")
+        print("No bitrate specified, defaulting to 448k.")
         setattr(args, "bitrate", 448)
 
     # parse all possible file inputs

@@ -24,7 +24,7 @@ class ProcessDEE:
         last_number = 0
 
         with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-            if progress_mode == "standard":
+            if progress_mode == ProgressMode.STANDARD:
                 print("---- Step 2 of 3 ---- [DEE measure]")
 
             # initiate print on same line
