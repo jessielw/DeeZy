@@ -124,9 +124,9 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
                 else:
                     return DeeFPS(int(fps))
             else:
-                return None
+                return str(DeeFPS.FPS_NOT_INDICATED)
         except ValueError:
-            return None
+            return str(DeeFPS.FPS_NOT_INDICATED)
 
     @staticmethod
     def _get_temp_dir(file_input: Path, temp_dir: Path):
