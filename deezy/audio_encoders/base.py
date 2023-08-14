@@ -2,6 +2,7 @@ import shutil
 import os
 from pathlib import Path
 from deezy.exceptions import (
+    AutoChannelDetectionError,
     ChannelMixError,
     InputFileNotFoundError,
     NotEnoughSpaceError,
@@ -30,7 +31,7 @@ class BaseAudioEncoder:
         return input_file.exists()
 
     @staticmethod
-    def _check_disk_space(input_file_path: Path, temp_path: Path):
+    def _check_disk_space(input_file_path: Path, drive_path: Path):
         """
         Check for free space at the temporary directory, rounding to the nearest whole number.
         If there isn't at least 110% of the size of the input file as free space in the temporary directory,
@@ -38,14 +39,14 @@ class BaseAudioEncoder:
 
         Args:
             input_file_path (Path): Path to the input file.
-            temp_path (Path): Path to the temporary directory where intermediate files will be stored.
+            drive_path (Path): Path to the temporary directory where intermediate files will be stored.
         """
 
         # Get the size of the input file in bytes
         input_file_size = os.path.getsize(input_file_path)
 
         # Get free space in bytes in the temporary directory
-        free_space_bytes = shutil.disk_usage(temp_path).free
+        free_space_bytes = shutil.disk_usage(drive_path).free
 
         # Calculate the required space (110% of the input file size) in bytes
         required_space_bytes = int(input_file_size * 1.1)
@@ -68,3 +69,33 @@ class BaseAudioEncoder:
             int: The closest allowed bitrate in the list of accepted bitrates.
         """
         return min(accepted_bitrates, key=lambda x: abs(x - bitrate))
+
+    @staticmethod
+    def _determine_auto_channel_s(
+        input_track_channel_s: int, accepted_channel_list: list
+    ):
+        """Determine the highest quality automatic channel selection based on the input track and codec accepted channels
+
+        Args:
+            input_track_channel_s (int): Audio tracks input channel(s).
+            accepted_channel_list (list): Dolby encoder used accepted channel list.
+
+        Raises:
+            AutoChannelDetectionError: If unable to detect the output channel raise an error.
+
+        Returns:
+            int: Highest accepted channel allowed by the codec.
+        """
+        if input_track_channel_s in accepted_channel_list:
+            return input_track_channel_s
+        else:
+            lower_values = [
+                x for x in accepted_channel_list if x < input_track_channel_s
+            ]
+            if lower_values:
+                try:
+                    return int(max(lower_values))
+                except ValueError:
+                    raise AutoChannelDetectionError(
+                        "Failed to determine output channel automatically"
+                    )

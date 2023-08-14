@@ -130,6 +130,7 @@ def cli_parser(base_wd: Path):
         "--channels",
         type=case_insensitive_enum(DolbyDigitalChannels),
         choices=list(DolbyDigitalChannels),
+        default=DolbyDigitalChannels.AUTO,
         metavar=enum_choices(DolbyDigitalChannels),
         help="The number of channels.",
     )
@@ -160,6 +161,7 @@ def cli_parser(base_wd: Path):
         "--channels",
         type=case_insensitive_enum(DolbyDigitalPlusChannels),
         choices=list(DolbyDigitalPlusChannels),
+        default=DolbyDigitalPlusChannels.AUTO,
         metavar=enum_choices(DolbyDigitalPlusChannels),
         help="The number of channels.",
     )
@@ -213,9 +215,9 @@ def cli_parser(base_wd: Path):
     if not hasattr(args, "input") or not args.input:
         _exit_application("", exit_fail)
 
-    if not hasattr(args, "channels") or not args.channels:
-        _exit_application(
-            "You must specify your desired channels. Example: '-c 2'", exit_fail
+    if not hasattr(args, "channels") or not args.channels or args.channels == 0:
+        print(
+            "No channel(s) specified, will automatically detect highest quality supported channel based on codec"
         )
 
     if not hasattr(args, "bitrate") or not args.bitrate:

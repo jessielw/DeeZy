@@ -14,6 +14,10 @@ class ChannelMixError(Exception):
     """Custom error class for invalid channel mix configurations"""
 
 
+class AutoChannelDetectionError(Exception):
+    """Custom error class for failure to automatically calculate output channels"""
+
+
 class InputFileNotFoundError(Exception):
     """Custom error class for missing input files"""
 

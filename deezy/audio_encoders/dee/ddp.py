@@ -45,8 +45,16 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
             file_input, payload.track_index
         )
 
-        # check for up-mixing
-        self._check_for_up_mixing(audio_track_info.channels, payload.channels.value)
+        # check for up-mixing if user has defined their own channel
+        if payload.channels != DolbyDigitalPlusChannels.AUTO:
+            self._check_for_up_mixing(audio_track_info.channels, payload.channels.value)
+
+        # else if user has not defined their own channel, let's find the highest channel count
+        # based on their input
+        elif payload.channels == DolbyDigitalPlusChannels.AUTO:
+            audio_track_info.channels = self._determine_auto_channel_s(
+                audio_track_info.channels, DolbyDigitalPlusChannels.get_values_list()
+            )
 
         # delay
         delay_str = "0ms"
