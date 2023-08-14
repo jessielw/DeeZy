@@ -43,12 +43,14 @@ options:
 ## Encode Usage DD
 
 ```
-sage: DeeZy encode dd [-h] [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
+DeeZy encode dd [-h] [--ffmpeg FFMPEG] [--dee DEE] [-t TRACK_INDEX]
+                       [-b BITRATE] [-d DELAY] [-k]
                        [-p {STANDARD[0],DEBUG[1],SILENT[2]}] [-tmp TEMP_DIR]
                        [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
-                       [-c {MONO[1],STEREO[2],SURROUND[6]}]
+                       [-c {AUTO[0],MONO[1],STEREO[2],SURROUND[6]}]
                        [-drc {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}]
                        INPUT [INPUT ...]
+
 
 positional arguments:
   INPUT
@@ -57,6 +59,10 @@ positional arguments:
 options:
   -h, --help
    show this help message and exit
+  --ffmpeg, FFMPEG
+   Path to FFMPEG executable.
+  --dee, DEE
+   Path to DEE (Dolby Encoding Engine) executable.
   -t, --track-index, TRACK_INDEX
    The index of the audio track to use.
   -b, --bitrate, BITRATE
@@ -73,7 +79,7 @@ options:
    The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
   -s, --stereo-down-mix, {STANDARD[0],DPLII[1]}
    Down mix method for stereo.
-  -c, --channels, {MONO[1],STEREO[2],SURROUND[6]}
+  -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6]}
    The number of channels.
   -drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
    Dynamic range compression settings.
@@ -82,10 +88,11 @@ options:
 ## Encode Usage DDP
 
 ```
-usage: DeeZy encode ddp [-h] [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
+DeeZy encode ddp [-h] [--ffmpeg FFMPEG] [--dee DEE] [-t TRACK_INDEX]
+                        [-b BITRATE] [-d DELAY] [-k]
                         [-p {STANDARD[0],DEBUG[1],SILENT[2]}] [-tmp TEMP_DIR]
                         [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
-                        [-c {MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8]}]
+                        [-c {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8]}]
                         [-n]
                         [-drc {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}]
                         INPUT [INPUT ...]
@@ -97,6 +104,10 @@ positional arguments:
 options:
   -h, --help
    show this help message and exit
+  --ffmpeg, FFMPEG
+   Path to FFMPEG executable.
+  --dee, DEE
+   Path to DEE (Dolby Encoding Engine) executable.
   -t, --track-index, TRACK_INDEX
    The index of the audio track to use.
   -b, --bitrate, BITRATE
@@ -113,7 +124,7 @@ options:
    The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
   -s, --stereo-down-mix, {STANDARD[0],DPLII[1]}
    Down mix method for stereo.
-  -c, --channels, {MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8]}
+  -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8]}
    The number of channels.
   -n, --normalize
    Normalize audio for DDP.
@@ -158,9 +169,9 @@ Example:
 ```
 deezy info "Path\Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv"
 File: Avatar.The.Last.Airbender.S01E01.The.Boy.in.the.Iceberg.mkv
-Audio tracks: [1]
+Audio tracks: [0]
 ------------------------------------------------------------------------------------------
-Track               : 1
+Track               : 0
 Codec               : FLAC - (flac)
 Channels            : 2.0 - L R
 Bit rate mode       : VBR / Variable
@@ -177,7 +188,7 @@ Forced              : No
 ------------------------------------------------------------------------------------------
 ```
 
-`Track ... : 1` corresponds to the `-t / --track-index` arg when selecting your track to encode with dd/ddp
+`Track ... : 0` corresponds to the `-t / --track-index` arg when selecting your track to encode with dd/ddp
 
 ## Input Types
 
