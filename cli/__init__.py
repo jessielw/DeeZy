@@ -214,8 +214,10 @@ def cli_parser(base_wd: Path):
         _exit_application("", exit_fail)
 
     # detect tool dependencies
+    ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
+    dee_arg = args.dee if hasattr(args, "dee") else None
     try:
-        tools = FindDependencies().get_dependencies(base_wd, args.ffmpeg, args.dee)
+        tools = FindDependencies().get_dependencies(base_wd, ffmpeg_arg, dee_arg)
     except DependencyNotFoundError as e:
         _exit_application(e, exit_fail)
     ffmpeg_path = Path(tools.ffmpeg)
