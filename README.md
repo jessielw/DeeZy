@@ -4,8 +4,6 @@ In it's current form it's designed around encoding audio with Dolby Engine Encod
 
 However, it was designed with expandability as needed for other encoders.
 
-Everything is functional, DeeZy is still in beta until everything has been thoroughly tested, as far as handling errors etc.
-
 ## Install (no install needed it's portable)
 
 At the moment you'll need to download your binary (Windows 8+ x64 or Linux) and handle this one of two ways.
