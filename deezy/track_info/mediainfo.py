@@ -119,6 +119,10 @@ class MediainfoParser:
 
         # update AudioTrackInfo with needed values
         audio_info.fps = self._get_fps(mi_object)
+        audio_info.audio_only = False
+        audio_info.recommended_free_space = self._recommended_free_space(
+            mi_object, track_index
+        )
         audio_info.duration = self._get_duration(mi_object, track_index)
         audio_info.sample_rate = mi_object.audio_tracks[track_index].sampling_rate
         audio_info.bit_depth = mi_object.audio_tracks[track_index].bit_depth
@@ -180,6 +184,33 @@ class MediainfoParser:
             if mi_track.track_type == "Video":
                 return mi_track.frame_rate
         return None
+
+    @staticmethod
+    def _recommended_free_space(mi_object, track_index: int):
+        """
+        Determine the recommended temporary file size needed for processing.
+
+        Args:
+            mi_object (MediaInfo): A MediaInfo object.
+
+        Returns:
+            size (int or None): Recommended size in bytes.
+        """
+        selected_audio_track_size = mi_object.audio_tracks[track_index].stream_size
+        if selected_audio_track_size:
+            try:
+                return int(selected_audio_track_size)
+            except ValueError:
+                general_track = mi_object.general_tracks[0]
+                video_streams = general_track.count_of_video_streams
+                audio_streams = general_track.count_of_audio_streams
+
+                if video_streams and audio_streams:
+                    return int(int(general_track.stream_size) * 0.12)
+                else:
+                    return int(int(general_track.stream_size) * 1.1)
+        else:
+            return None
 
     @staticmethod
     def _get_duration(mi_object, track_index):

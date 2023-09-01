@@ -1,6 +1,7 @@
 import shutil
 import os
 from pathlib import Path
+from typing import Union
 from deezy.exceptions import (
     AutoChannelDetectionError,
     ChannelMixError,
@@ -31,7 +32,11 @@ class BaseAudioEncoder:
         return input_file.exists()
 
     @staticmethod
-    def _check_disk_space(input_file_path: Path, drive_path: Path):
+    def _check_disk_space(
+        input_file_path: Path,
+        drive_path: Path,
+        recommended_free_space: Union[None, int],
+    ):
         """
         Check for free space at the temporary directory, rounding to the nearest whole number.
         If there isn't at least 110% of the size of the input file as free space in the temporary directory,
@@ -40,21 +45,26 @@ class BaseAudioEncoder:
         Args:
             input_file_path (Path): Path to the input file.
             drive_path (Path): Path to the temporary directory where intermediate files will be stored.
+            recommended_free_space (None or int): None or calculated free space in bytes.
         """
 
-        # Get the size of the input file in bytes
-        input_file_size = os.path.getsize(input_file_path)
+        # Calculate the required space (110% of the input file size if no recommendation) in bytes
+        if recommended_free_space:
+            required_space_bytes = recommended_free_space
+        else:
+            # Get the size of the input file in bytes
+            input_file_size = os.path.getsize(input_file_path)
+
+            required_space_bytes = int(input_file_size * 1.1)
 
         # Get free space in bytes in the temporary directory
         free_space_bytes = shutil.disk_usage(drive_path).free
 
-        # Calculate the required space (110% of the input file size) in bytes
-        required_space_bytes = int(input_file_size * 1.1)
-
         # Check if the required space is available
         if free_space_bytes < required_space_bytes:
             raise NotEnoughSpaceError(
-                "Insufficient storage in the temporary directory to complete the process."
+                "Insufficient storage in the temporary directory to complete the process. "
+                f"Calculated required storage (bytes): {required_space_bytes}"
             )
 
     @staticmethod
