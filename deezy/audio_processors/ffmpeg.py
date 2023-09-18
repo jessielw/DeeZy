@@ -73,13 +73,20 @@ class ProcessFFMPEG:
         Returns:
             str: Formatted %
         """
-        time = re.search(r"(\d\d):(\d\d):(\d\d)", line.strip())
-        if time:
-            total_ms = (
-                int(time.group(1)) * 3600000
-                + int(time.group(2)) * 60000
-                + int(time.group(3)) * 1000
-            )
-            progress = float(total_ms) / float(duration)
-            percent = "{:.1%}".format(min(1.0, progress))
-            return percent
+        # sometimes FFMPEG can start at a negative (-) value, this will prevent
+        # progress from breaking
+        if "time=-" in line:
+            return "0%"
+
+        # once the time is not a negative value actual calculate progress
+        else:
+            time = re.search(r"(\d\d):(\d\d):(\d\d)", line.strip())
+            if time:
+                total_ms = (
+                    int(time.group(1)) * 3600000
+                    + int(time.group(2)) * 60000
+                    + int(time.group(3)) * 1000
+                )
+                progress = float(total_ms) / float(duration)
+                percent = "{:.1%}".format(min(1.0, progress))
+                return percent
