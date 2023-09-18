@@ -98,6 +98,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
 
         # stereo mix
         stereo_mix = str(payload.stereo_mix.name).lower()
+
         # file output (if an output is a defined check users extension and use their output)
         if payload.file_output:
             output = Path(payload.file_output)
@@ -263,7 +264,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
             ]
 
         # utilize ffmpeg to downmix for channels that aren't supported by DEE
-        if ffmpeg_down_mix and stereo_down_mix != StereoDownmix.DPLII:
+        if ffmpeg_down_mix and stereo_down_mix == StereoDownmix.DPLII:
             audio_filter_args.extend(["-ac", f"{ffmpeg_down_mix}"])
 
         # base ffmpeg command
