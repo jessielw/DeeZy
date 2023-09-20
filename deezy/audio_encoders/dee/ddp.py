@@ -10,7 +10,6 @@ from deezy.audio_encoders.delay import DelayGenerator
 from deezy.audio_processors.dee import ProcessDEE
 from deezy.audio_processors.ffmpeg import ProcessFFMPEG
 from deezy.enums.ddp import DolbyDigitalPlusChannels
-from deezy.enums.shared import StereoDownmix
 from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
 from deezy.track_info.mediainfo import MediainfoParser
 
@@ -86,19 +85,22 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
         # temp filename
         temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
 
+        # check to see if input channels are accepted by dee
+        dee_allowed_input = self._dee_allowed_input(audio_track_info.channels)
+
         # downmix config
         down_mix_config = self._get_down_mix_config(
-            payload.channels, audio_track_info.channels
+            payload.channels, audio_track_info.channels, dee_allowed_input
         )
 
-        # determine if FFMPEG downmix is needed
+        # determine if FFMPEG downmix is needed for unsupported channels
         ffmpeg_down_mix = False
-        if down_mix_config == "off":
+        if down_mix_config == "off" and not dee_allowed_input:
             ffmpeg_down_mix = payload.channels.value
 
         # stereo mix
         stereo_mix = str(payload.stereo_mix.name).lower()
-        
+
         # file output (if an output is a defined check users extension and use their output)
         if payload.file_output:
             output = Path(payload.file_output)
@@ -122,7 +124,6 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
             sample_rate=audio_track_info.sample_rate,
             ffmpeg_down_mix=ffmpeg_down_mix,
             channels=payload.channels,
-            stereo_down_mix=payload.stereo_mix,
             output_dir=temp_dir,
             wav_file_name=wav_file_name,
         )
@@ -203,10 +204,10 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
             return dee_ddp_bitrates.get("ddp_71_combined")
 
     @staticmethod
-    def _get_down_mix_config(channels: DolbyDigitalPlusChannels, input_channels: int):
-        if channels.value == input_channels or not any(
-            member.value == input_channels for member in DolbyDigitalPlusChannels
-        ):
+    def _get_down_mix_config(
+        channels: DolbyDigitalPlusChannels, input_channels: int, dee_allowed_input: bool
+    ):
+        if channels.value == input_channels or not dee_allowed_input:
             return "off"
         elif channels == DolbyDigitalPlusChannels.MONO:
             return "mono"
@@ -225,7 +226,6 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
         sample_rate: int,
         ffmpeg_down_mix: Union[bool, DolbyDigitalPlusChannels],
         channels: DolbyDigitalPlusChannels,
-        stereo_down_mix: StereoDownmix,
         output_dir: Path,
         wav_file_name: str,
     ):

@@ -33,6 +33,13 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
         """Method to generate FFMPEG command to process"""
 
     @staticmethod
+    def _dee_allowed_input(input_channels: int):
+        """Check's if the input channels are in the DEE allowed input channel list"""
+        if input_channels in [1, 2, 6, 8]:
+            return True
+        return False
+
+    @staticmethod
     def _get_ffmpeg_cmd(
         ffmpeg_path: Path,
         file_input: Path,

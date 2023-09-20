@@ -86,14 +86,22 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
         # temp filename
         temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
 
+        # check to see if input channels are accepted by dee
+        dee_allowed_input = self._dee_allowed_input(audio_track_info.channels)
+
         # downmix config
         down_mix_config = self._get_down_mix_config(
-            payload.channels, audio_track_info.channels
+            payload.channels,
+            audio_track_info.channels,
+            payload.stereo_mix,
+            dee_allowed_input,
         )
 
         # determine if FFMPEG downmix is needed
         ffmpeg_down_mix = False
-        if down_mix_config == "off" and audio_track_info.channels != 2:
+        if (down_mix_config == "off" and not dee_allowed_input) or (
+            payload.channels.value == 2 and payload.stereo_mix == StereoDownmix.DPLII
+        ):
             ffmpeg_down_mix = payload.channels.value
 
         # stereo mix
@@ -198,9 +206,19 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
             return dee_dd_bitrates.get("dd_51")
 
     @staticmethod
-    def _get_down_mix_config(channels: DolbyDigitalChannels, input_channels: int):
-        if channels.value == input_channels or not any(
-            member.value == input_channels for member in DolbyDigitalChannels
+    def _get_down_mix_config(
+        channels: DolbyDigitalChannels,
+        input_channels: int,
+        stereo_downmix: StereoDownmix,
+        dee_allowed_input: bool,
+    ):
+        if (
+            (channels.value == input_channels)
+            or (
+                channels == DolbyDigitalChannels.STEREO
+                and stereo_downmix == StereoDownmix.DPLII
+            )
+            or not dee_allowed_input
         ):
             return "off"
         elif channels == DolbyDigitalChannels.MONO:
