@@ -234,6 +234,9 @@ class MediainfoParser:
         """
         Get the number of audio channels for the specified track.
 
+        The added complexity for 'check_other' is to ensure we get a report
+        of the highest potential channel count.
+
         Args:
             mi_object (MediaInfo): A MediaInfo object containing information about the media file.
             track_index (int): The index of the track to extract information from.
@@ -243,7 +246,7 @@ class MediainfoParser:
         """
         track = mi_object.audio_tracks[track_index]
         base_channels = track.channel_s
-        check_other = search(r"\d+", str(track.other_channel_s[0]))
+        check_other = search(r"\d+", str(track.channel_s__original))
         if check_other:
             return max(int(base_channels), int(check_other.group()))
         else:
