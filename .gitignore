@@ -16,3 +16,4 @@ deezy_config.ini
 .vscode/
 deezy.code-workspace
 test.py
+custom-pyinstaller/
