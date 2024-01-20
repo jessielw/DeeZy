@@ -246,8 +246,16 @@ class MediainfoParser:
         """
         track = mi_object.audio_tracks[track_index]
         base_channels = track.channel_s
-        check_other = search(r"\d+", str(track.channel_s__original))
+        check_other = search(r"\d+", str(track.other_channel_s[0]))
+        check_other_2 = str(track.channel_s__original)
+
+        # Create a list of values to find the maximum
+        values = [int(base_channels)]
+
         if check_other:
-            return max(int(base_channels), int(check_other.group()))
-        else:
-            return base_channels
+            values.append(int(check_other.group()))
+
+        if check_other_2.isdigit():
+            values.append(int(check_other_2))
+
+        return max(values)
