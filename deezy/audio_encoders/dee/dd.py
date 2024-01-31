@@ -1,7 +1,7 @@
-from typing import Union
-from pathlib import Path
 import shutil
 import tempfile
+from typing import Union, List
+from pathlib import Path
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.bitrates import dee_dd_bitrates
@@ -30,19 +30,20 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
         file_input = Path(payload.file_input)
         self._check_input_file(file_input)
 
+        # get audio track information (using payload.track_index here since it's already an int)
+        audio_track_info = MediainfoParser().get_track_by_id(
+            file_input, payload.track_index
+        )
+
         # bitrate
         bitrate = str(
             self._get_closest_allowed_bitrate(
                 bitrate=payload.bitrate,
                 accepted_bitrates=self._get_accepted_bitrates(
-                    channels=payload.channels
+                    desired_channels=payload.channels,
+                    source_channels=int(audio_track_info.channels),
                 ),
             )
-        )
-
-        # get audio track information (using payload.track_index here since it's already an int)
-        audio_track_info = MediainfoParser().get_track_by_id(
-            file_input, payload.track_index
         )
 
         # check for up-mixing if user has defined their own channel
@@ -189,20 +190,32 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
             raise OutputFileNotFoundError(f"{move_file.name} output not found")
 
     @staticmethod
-    def _get_accepted_bitrates(channels: int):
-        if channels == DolbyDigitalChannels.AUTO:
-            return sorted(
-                list(
-                    set(dee_dd_bitrates.get("dd_10"))
-                    & set(dee_dd_bitrates.get("dd_20"))
-                    & set(dee_dd_bitrates.get("dd_51"))
+    def _get_accepted_bitrates(
+        desired_channels: int, source_channels: int
+    ) -> List[int]:
+        if desired_channels == DolbyDigitalChannels.AUTO:
+            if source_channels == 1:
+                return dee_dd_bitrates.get("ddp_10")
+            elif source_channels == 2 or source_channels < 6:
+                return sorted(
+                    list(
+                        set(dee_dd_bitrates.get("ddp_10"))
+                        & set(dee_dd_bitrates.get("ddp_20"))
+                    )
                 )
-            )
-        elif channels == DolbyDigitalChannels.MONO:
+            elif source_channels >= 6:
+                return sorted(
+                    list(
+                        set(dee_dd_bitrates.get("ddp_10"))
+                        & set(dee_dd_bitrates.get("ddp_20"))
+                        & set(dee_dd_bitrates.get("ddp_51"))
+                    )
+                )
+        elif desired_channels == DolbyDigitalChannels.MONO:
             return dee_dd_bitrates.get("dd_10")
-        elif channels == DolbyDigitalChannels.STEREO:
+        elif desired_channels == DolbyDigitalChannels.STEREO:
             return dee_dd_bitrates.get("dd_20")
-        elif channels == DolbyDigitalChannels.SURROUND:
+        elif desired_channels == DolbyDigitalChannels.SURROUND:
             return dee_dd_bitrates.get("dd_51")
 
     @staticmethod
