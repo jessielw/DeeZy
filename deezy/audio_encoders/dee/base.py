@@ -151,7 +151,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
             Path: Path object representing the path to the temporary directory.
         """
         if temp_dir:
-            if len(file_input.name) + len(temp_dir) < 259:
+            if len(file_input.name) + len(temp_dir) > 259:
                 raise PathTooLongError(
                     "Path provided with input file exceeds path length for DEE."
                 )
