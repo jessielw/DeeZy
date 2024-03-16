@@ -176,7 +176,16 @@ class DDPEncoderDEE(BaseDeeAudioEncoder):
         # delete temp folder and all files if enabled
         # TODO if set to no, maybe let the user know where they are stored maybe, idk?
         if not payload.keep_temp:
-            shutil.rmtree(temp_dir)
+            # if the user didn't specify this directory let's delete all of it
+            if not payload.temp_dir:
+                shutil.rmtree(temp_dir)
+            # if the user specified the directory we'll only clear the contents
+            else:
+                for item in temp_dir.iterdir():
+                    if item.is_file():
+                        item.unlink()
+                    elif item.is_dir():
+                        shutil.rmtree(item)
 
         # return path
         if move_file.is_file():
