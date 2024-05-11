@@ -1,3 +1,4 @@
+import shutil
 import tempfile
 from abc import ABC, abstractmethod
 from typing import Union
@@ -150,8 +151,12 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
         Returns:
             Path: Path object representing the path to the temporary directory.
         """
+
+        TEMP_PREFIX = "deezy_"
+
         if temp_dir:
-            if len(file_input.name) + len(temp_dir) > 259:
+            temp_dir = Path(tempfile.mkdtemp(prefix=TEMP_PREFIX, dir=temp_dir))
+            if len(file_input.name) + len(str(temp_dir)) > 259:
                 raise PathTooLongError(
                     "Path provided with input file exceeds path length for DEE."
                 )
@@ -159,6 +164,18 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
             temp_directory.mkdir(exist_ok=True)
 
         else:
-            temp_directory = Path(tempfile.mkdtemp(prefix="dee_temp_"))
+            temp_directory = Path(tempfile.mkdtemp(prefix=TEMP_PREFIX))
 
         return temp_directory
+
+    @staticmethod
+    def _clean_temp(temp_dir: Path, keep_temp: bool):
+        """
+        Deletes temp folder and all child files.
+
+        Args:
+            temp_dir (Path): Path to the directory that we're deleting.
+            keep_temp (bool): Boolean on rather or not we'd like to keep the files.
+        """
+        if not keep_temp:
+            shutil.rmtree(temp_dir)
