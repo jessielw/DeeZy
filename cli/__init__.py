@@ -226,18 +226,19 @@ def cli_parser(base_wd: Path):
     if not hasattr(args, "input") or not args.input:
         _exit_application("", exit_fail)
 
-    if (
-        not hasattr(args, "channels")
-        or not args.channels
-        or int(args.channels.value) == 0
-    ):
-        print(
-            "No channel(s) specified, will automatically detect highest quality supported channel based on codec."
-        )
+    if args.sub_command not in {"find", "info"}:
+        if (
+            not hasattr(args, "channels")
+            or not args.channels
+            or int(args.channels.value) == 0
+        ):
+            print(
+                "No channel(s) specified, will automatically detect highest quality supported channel based on codec."
+            )
 
-    if not hasattr(args, "bitrate") or not args.bitrate:
-        print("No bitrate specified, defaulting to 448k.")
-        setattr(args, "bitrate", 448)
+        if not hasattr(args, "bitrate") or not args.bitrate:
+            print("No bitrate specified, defaulting to 448k.")
+            setattr(args, "bitrate", 448)
 
     # parse all possible file inputs
     # TODO We will need to decide what to do when multiple file inputs
@@ -325,7 +326,6 @@ def cli_parser(base_wd: Path):
                 # TODO not sure if we wanna exit or continue for batch?
                 _exit_application(e, exit_fail)
 
-    # Find
     elif args.sub_command == "find":
         # TODO ensure this is done the best way possible.
         file_names = []
@@ -342,7 +342,6 @@ def cli_parser(base_wd: Path):
 
         _exit_application(found_files, exit_success)
 
-    # Info
     elif args.sub_command == "info":
         # TODO this probably needs handled in a cleaner way.
         # could use list comprehension here but will be harder to
