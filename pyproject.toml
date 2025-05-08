@@ -17,3 +17,6 @@ line-length = 88
 include = ["cli", "deezy"]
 # ignore = [""]
 typeCheckingMode = "standard" # "off", "basic", "standard", "strict", "recommended" or "all"
+
+[tool.setuptools]
+py-modules = []
