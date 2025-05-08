@@ -167,7 +167,7 @@ def cli_parser(base_wd: Path):
         help="The number of channels.",
     )
     encode_ddp_parser.add_argument(
-        "-n", "--normalize", action="store_true", help="Normalize audio for DDP."
+        "-n", "--normalize", action="store_true", help="Normalize audio for DDP (ignored for DDP channels above 6)."
     )
     # TODO this will likely only be valid for DEE, so we'll need to
     # decide what we want to do here

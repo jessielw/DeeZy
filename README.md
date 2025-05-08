@@ -125,7 +125,7 @@ options:
   -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8]}
    The number of channels.
   -n, --normalize
-   Normalize audio for DDP.
+   Normalize audio for DDP (ignored for DDP channels above 6).
   -drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
    Dynamic range compression settings.
 ```
