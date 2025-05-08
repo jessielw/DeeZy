@@ -203,8 +203,8 @@ class DeeXMLGenerator:
             "preferred_downmix_mode"
         ] = downmix_mode
 
-        # if ddp and normalize is true, set template to normalize audio
-        if normalize:
+        # if ddp (NOT ddp71) and normalize is true, set template to normalize audio
+        if normalize and channels != DolbyDigitalPlusChannels.SURROUNDEX:
             # TODO allow all supported presets later
             # Remove measure_only, add measure_and_correct, with default preset of atsc_a85
             del self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
