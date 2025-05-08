@@ -44,25 +44,25 @@ class DeeXMLGenerator:
         self.xml_base = xmltodict.parse(xml_audio_base_ddp)
 
         # xml wav filename/path
-        self.xml_base["job_config"]["input"]["audio"]["wav"][
-            "file_name"
-        ] = f'"{wav_file_name}"'
+        self.xml_base["job_config"]["input"]["audio"]["wav"]["file_name"] = (
+            f'"{wav_file_name}"'
+        )
         self.xml_base["job_config"]["input"]["audio"]["wav"]["storage"]["local"][
             "path"
         ] = f'"{str(output_dir)}"'
 
         # xml output file/path
-        self.xml_base["job_config"]["output"]["ac3"][
-            "file_name"
-        ] = f'"{output_file_name}"'
-        self.xml_base["job_config"]["output"]["ac3"]["storage"]["local"][
-            "path"
-        ] = f'"{str(output_dir)}"'
+        self.xml_base["job_config"]["output"]["ac3"]["file_name"] = (
+            f'"{output_file_name}"'
+        )
+        self.xml_base["job_config"]["output"]["ac3"]["storage"]["local"]["path"] = (
+            f'"{str(output_dir)}"'
+        )
 
         # update fps sections
-        self.xml_base["job_config"]["input"]["audio"]["wav"][
-            "timecode_frame_rate"
-        ] = fps
+        self.xml_base["job_config"]["input"]["audio"]["wav"]["timecode_frame_rate"] = (
+            fps
+        )
         self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
             "timecode_frame_rate"
         ] = fps
@@ -140,9 +140,9 @@ class DeeXMLGenerator:
             ]
 
         # xml encoder format
-        self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
-            "encoder_mode"
-        ] = "dd"
+        self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["encoder_mode"] = (
+            "dd"
+        )
 
         # save xml
         xml_file = self._save_xml(self.output_dir, self.output_file_name, self.xml_base)
