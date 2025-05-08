@@ -17,3 +17,4 @@ deezy_config.ini
 deezy.code-workspace
 test.py
 custom-pyinstaller/
+deezy.egg-info
