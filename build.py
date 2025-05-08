@@ -20,6 +20,8 @@ def build_app():
     # run pyinstaller command
     build_job = run(
         [
+            "uv",
+            "run",
             "pyinstaller",
             "-n",
             "deezy",
