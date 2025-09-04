@@ -20,3 +20,4 @@ class DolbyDigitalChannels(Enum):
             return "2.0"
         elif self == DolbyDigitalChannels.SURROUND:
             return "5.1"
+        raise ValueError("Channel not found")
