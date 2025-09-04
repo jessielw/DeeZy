@@ -186,6 +186,11 @@ def cli_parser(base_wd: Path):
         ),
     )
     encode_ddp_parser.add_argument(
+        "--no-bed-conform",
+        action="store_true",
+        help="Disable bed conform for Atmos",
+    )
+    encode_ddp_parser.add_argument(
         "-drc",
         "--dynamic-range-compression",
         type=case_insensitive_enum(DeeDRC),
@@ -321,14 +326,15 @@ def cli_parser(base_wd: Path):
                         normalize=args.normalize,
                         drc=args.dynamic_range_compression,
                         atmos=args.atmos,
+                        no_bed_conform=args.no_bed_conform,
                         ffmpeg_path=ffmpeg_path,
                         truehdd_path=truehdd_path,
                         dee_path=dee_path,
                     )
 
                     # encoder
-                    ddp = DDPEncoderDEE().encode(payload)
-                    print(f"Output file path:\n{ddp}")
+                    ddp = DDPEncoderDEE(payload).encode()
+                    print(f"Job successful! Output file path:\n{ddp}")
             except Exception as e:
                 # TODO not sure if we wanna exit or continue for batch?
                 exit_application(str(e), EXIT_FAIL)
