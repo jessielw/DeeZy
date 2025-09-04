@@ -1,10 +1,11 @@
 import sys
+from typing import NoReturn
 
 EXIT_SUCCESS = 0
 EXIT_FAIL = 1
 
 
-def _exit_application(msg: str, exit_code: int = 0):
+def exit_application(msg: str, exit_code: int = 0) -> NoReturn:
     """A clean way to exit the program without raising traceback errors
 
     Args:
