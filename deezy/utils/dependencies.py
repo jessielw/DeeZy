@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 import platform
@@ -13,9 +12,9 @@ def get_executable_extension() -> str:
 
 @dataclass(slots=True)
 class Dependencies:
-    ffmpeg: Path | None = None
-    truehdd: Path | None = None
-    dee: Path | None = None
+    ffmpeg: Path
+    truehdd: Path
+    dee: Path
 
 
 class FindDependencies:
@@ -41,14 +40,22 @@ class FindDependencies:
             dee = Path(user_dee)
 
         # ensure all are Path or None
-        ffmpeg = Path(ffmpeg) if ffmpeg and not isinstance(ffmpeg, Path) else ffmpeg
-        truehdd = (
-            Path(truehdd) if truehdd and not isinstance(truehdd, Path) else truehdd
-        )
-        dee = Path(dee) if dee and not isinstance(dee, Path) else dee
+        ffmpeg = Path(ffmpeg) if ffmpeg else None
+        truehdd = Path(truehdd) if truehdd else None
+        dee = Path(dee) if dee else None
 
-        self._verify_dependencies((ffmpeg, truehdd, dee))
-        return Dependencies(ffmpeg=ffmpeg, truehdd=truehdd, dee=dee)
+        missing = []
+        if not ffmpeg:
+            missing.append("ffmpeg")
+        if not truehdd:
+            missing.append("truehdd")
+        if not dee:
+            missing.append("dee")
+        if missing:
+            raise DependencyNotFoundError(
+                f"Failed to detect required dependencies: {', '.join(missing)}."
+            )
+        return Dependencies(ffmpeg=ffmpeg, truehdd=truehdd, dee=dee)  # pyright: ignore[reportArgumentType]
 
     def _locate_beside_program(self, base_wd: Path) -> tuple[Path | None, ...]:
         def check(path: Path) -> Path | None:
@@ -70,9 +77,3 @@ class FindDependencies:
         truehdd = truehdd or which(f"truehdd{self.os_exe}")
         dee = dee or which(f"dee{self.os_exe}")
         return ffmpeg, truehdd, dee
-
-    def _verify_dependencies(self, dependencies: Sequence[Path | None]) -> None:
-        names = (f"ffmpeg{self.os_exe}", f"truehdd{self.os_exe}", f"dee{self.os_exe}")
-        for exe_path, exe_name in zip(dependencies, names):
-            if not exe_path or not exe_path.is_file():
-                raise DependencyNotFoundError(f"{exe_name} path not found")
