@@ -1,8 +1,14 @@
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(slots=True)
 class AudioTrackInfo:
-    auto_name = None
-    fps = None
-    recommended_free_space = None
-    duration = None
-    sample_rate = None
-    bit_depth = None
-    channels = None
+    auto_name: Path | None = None
+    fps: float | None = None
+    audio_only: bool = False
+    recommended_free_space: int | None = None
+    duration: float | None = None
+    sample_rate: int | None = None
+    bit_depth: int | None = None
+    channels: int | None = None

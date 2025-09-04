@@ -1,11 +1,15 @@
-from deezy.track_info.audio_track_info import AudioTrackInfo
-from deezy.exceptions import MediaInfoError
-from pymediainfo import MediaInfo
 from pathlib import Path
 from re import search
 
+from pymediainfo import MediaInfo
+
+from deezy.exceptions import MediaInfoError
+from deezy.track_info.audio_track_info import AudioTrackInfo
+
 
 class AutoFileName:
+    __slots__ = ()
+
     def generate_output_filename(
         self, media_info: MediaInfo, file_input: Path, track_index: int
     ):
@@ -94,6 +98,8 @@ class AutoFileName:
 
 
 class MediainfoParser:
+    __slots__ = ()
+
     def get_track_by_id(self, file_input: Path, track_index: int):
         """Returns an AudioTrackInfo object with metadata for the audio track at the specified index in the input file.
 
@@ -115,20 +121,17 @@ class MediainfoParser:
         self._verify_audio_track(mi_object, track_index)
 
         # initiate AudioTrackInfo class
-        audio_info = AudioTrackInfo()
-
-        # update AudioTrackInfo with needed values
-        audio_info.fps = self._get_fps(mi_object)
-        audio_info.audio_only = False
-        audio_info.recommended_free_space = self._recommended_free_space(
-            mi_object, track_index
-        )
-        audio_info.duration = self._get_duration(mi_object, track_index)
-        audio_info.sample_rate = mi_object.audio_tracks[track_index].sampling_rate
-        audio_info.bit_depth = mi_object.audio_tracks[track_index].bit_depth
-        audio_info.channels = self._get_channels(mi_object, track_index)
-        audio_info.auto_name = AutoFileName().generate_output_filename(
-            mi_object, file_input, track_index
+        audio_info = AudioTrackInfo(
+            fps=self._get_fps(mi_object),
+            audio_only=False,
+            recommended_free_space=self._recommended_free_space(mi_object, track_index),
+            duration=self._get_duration(mi_object, track_index),
+            sample_rate=mi_object.audio_tracks[track_index].sampling_rate,
+            bit_depth=mi_object.audio_tracks[track_index].bit_depth,
+            channels=self._get_channels(mi_object, track_index),
+            auto_name=AutoFileName().generate_output_filename(
+                mi_object, file_input, track_index
+            ),
         )
 
         # return object
