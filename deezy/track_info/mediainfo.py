@@ -1,210 +1,91 @@
 from pathlib import Path
 from re import search
 
-from pymediainfo import MediaInfo
+from pymediainfo import MediaInfo, Track
 
 from deezy.exceptions import MediaInfoError
 from deezy.track_info.audio_track_info import AudioTrackInfo
 
 
-class AutoFileName:
-    __slots__ = ()
-
-    def generate_output_filename(
-        self, media_info: MediaInfo, file_input: Path, track_index: int
-    ):
-        """Automatically generate an output file name
-
-        Args:
-            media_info (MediaInfo): pymediainfo object of input file
-            file_input (Path): Path to input file
-            track_index (int): Track index from args
-
-        Returns:
-            Path: Path of a automatically generated filename
-        """
-        # placeholder extension
-        extension = ".tmp"
-
-        # base directory/name
-        base_dir = Path(file_input).parent
-        base_name = Path(Path(file_input).name).with_suffix("")
-
-        # if track index is 0 we can assume this audio is in a raw format
-        if track_index == 0:
-            file_name = f"{base_name}{extension}"
-            return Path(base_dir / Path(file_name))
-
-        # if track index is equal to or greater than 1, we can assume it's likely in a container of some
-        # sort, so we'll go ahead and attempt to detect delay/language to inject into the title.
-        elif track_index >= 1:
-            delay = self._delay_detection(media_info, file_input, track_index)
-            language = self._language_detection(media_info, track_index)
-            file_name = f"{base_name}_{language}_{delay}{extension}"
-            return Path(base_dir / Path(file_name))
-
-    @staticmethod
-    def _delay_detection(media_info: MediaInfo, file_input: Path, track_index: int):
-        """Detect delay relative to video to inject into filename
-
-        Args:
-            media_info (MediaInfo): pymediainfo object of input file
-            file_input (Path): Path to input file
-            track_index (int): Track index from args
-
-        Returns:
-            str: Returns a formatted delay string
-        """
-        audio_track = media_info.audio_tracks[track_index]
-        if Path(file_input).suffix == ".mp4":
-            if audio_track.source_delay:
-                delay_string = f"[delay {str(audio_track.source_delay)}ms]"
-            else:
-                delay_string = str("[delay 0ms]")
-        else:
-            if audio_track.delay_relative_to_video:
-                delay_string = f"[delay {str(audio_track.delay_relative_to_video)}ms]"
-            else:
-                delay_string = str("[delay 0ms]")
-        return delay_string
-
-    @staticmethod
-    def _language_detection(media_info: MediaInfo, track_index: int):
-        """
-        Detect language of input track, returning language in the format of
-        "eng" instead of "en" or "english."
-
-        Args:
-            media_info (MediaInfo): pymediainfo object of input file
-            track_index (int): Track index from args
-
-        Returns:
-            str: Returns a formatted language string
-        """
-        audio_track = media_info.audio_tracks[track_index]
-        if audio_track.other_language:
-            l_lengths = [len(lang) for lang in audio_track.other_language]
-            l_index = next(
-                (i for i, length in enumerate(l_lengths) if length == 3), None
-            )
-            language_string = (
-                f"[{audio_track.other_language[l_index]}]"
-                if l_index is not None
-                else "[und]"
-            )
-        else:
-            language_string = "[und]"
-        return language_string
-
-
 class MediainfoParser:
-    __slots__ = ()
+    __slots__ = ("file_input", "track_index", "mi_obj", "mi_audio_obj")
 
-    def get_track_by_id(self, file_input: Path, track_index: int):
-        """Returns an AudioTrackInfo object with metadata for the audio track at the specified index in the input file.
+    def __init__(self, file_input: Path, track_index: int) -> None:
+        # parse file with mediainfo
+        self.file_input = file_input
+        self.track_index = track_index
+        self.mi_obj = MediaInfo.parse(file_input, legacy_stream_display=True)
+        self.mi_audio_obj = self._verify_audio_track(track_index)
 
-        Parameters:
-            file_input (Path): The input file to extract audio track metadata from.
-            track_index (int): The index of the audio track to extract metadata for.
-
-        Returns:
-            AudioTrackInfo: An object with the extracted audio track metadata, including fps, duration, sample rate, bit depth, and channels.
-
-        Raises:
-            MediaInfoError: If the specified track index is out of range or the specified track is not an audio track.
+    def get_audio_track_info(self) -> AudioTrackInfo:
         """
-        # parse the input file with MediaInfo lib
-        mi_object = MediaInfo.parse(file_input)
-
-        # verify
-        self._verify_track_index(mi_object, track_index)
-        self._verify_audio_track(mi_object, track_index)
-
+        Returns an AudioTrackInfo object with metadata for the audio track at the specified index in the input file.
+        """
         # initiate AudioTrackInfo class
         audio_info = AudioTrackInfo(
-            fps=self._get_fps(mi_object),
+            mi_track=self.mi_audio_obj,
+            auto_name=self._generate_output_filename(),
+            fps=self._get_fps(),
             audio_only=False,
-            recommended_free_space=self._recommended_free_space(mi_object, track_index),
-            duration=self._get_duration(mi_object, track_index),
-            sample_rate=mi_object.audio_tracks[track_index].sampling_rate,
-            bit_depth=mi_object.audio_tracks[track_index].bit_depth,
-            channels=self._get_channels(mi_object, track_index),
-            auto_name=AutoFileName().generate_output_filename(
-                mi_object, file_input, track_index
-            ),
+            recommended_free_space=self._recommended_free_space(),
+            duration=self._get_duration(),
+            sample_rate=self.mi_audio_obj.sampling_rate,
+            bit_depth=self.mi_audio_obj.bit_depth,
+            channels=self._get_channels(),
+            thd_atmos=self._is_thd_atmos(),
         )
 
         # return object
         return audio_info
 
-    @staticmethod
-    def _verify_track_index(mi_object, track_index):
-        """
-        Verify that the requested track exists in the MediaInfo object.
-
-        Args:
-            mi_object (MediaInfo): A MediaInfo object containing information about a media file.
-            track_index (int): The index of the requested track.
-
-        Raises:
-            MediaInfoError: If the requested track does not exist in the MediaInfo object.
-        """
-        try:
-            mi_object.audio_tracks[track_index]
-        except IndexError:
-            raise MediaInfoError(f"Selected track #{track_index} does not exist.")
-
-    @staticmethod
-    def _verify_audio_track(mi_object, track_index):
+    def _verify_audio_track(self, track_index: int) -> Track:
         """
         Checks that the specified track index in the given MediaInfo object corresponds to an audio track.
 
         Args:
-            mi_object: A MediaInfo object.
             track_index: An integer representing the index of the track to be verified.
+
+        Returns:
+            Track: MediaInfo Track object.
 
         Raises:
             MediaInfoError: If the specified track index does not correspond to an audio track.
         """
-        track_info = mi_object.audio_tracks[track_index].track_type
-        if track_info != "Audio":
-            raise MediaInfoError(
-                f"Selected track #{track_index} ({track_info}) is not an audio track."
-            )
+        try:
+            track_info = self.mi_obj.audio_tracks[track_index].track_type
+            if track_info != "Audio":
+                raise MediaInfoError(
+                    f"Selected track #{track_index} ({track_info}) is not an audio track."
+                )
+            else:
+                return self.mi_obj.audio_tracks[track_index]
+        except IndexError:
+            raise MediaInfoError(f"Selected track #{track_index} does not exist.")
 
-    @staticmethod
-    def _get_fps(mi_object):
+    def _get_fps(self) -> float | None:
         """
         Get the frames per second (fps) for the video track in the media info object.
-
-        Args:
-            mi_object (MediaInfo): A MediaInfo object.
 
         Returns:
             fps (float or None): The frames per second (fps) for the video track, or None if there is no video track.
         """
-        for mi_track in mi_object.tracks:
+        for mi_track in self.mi_obj.tracks:
             if mi_track.track_type == "Video":
-                return mi_track.frame_rate
-        return None
+                return float(mi_track.frame_rate) if mi_track.frame_rate else None
 
-    @staticmethod
-    def _recommended_free_space(mi_object, track_index: int):
+    def _recommended_free_space(self) -> int | None:
         """
         Determine the recommended temporary file size needed for processing.
-
-        Args:
-            mi_object (MediaInfo): A MediaInfo object.
 
         Returns:
             size (int or None): Recommended size in bytes.
         """
-        selected_audio_track_size = mi_object.audio_tracks[track_index].stream_size
+        selected_audio_track_size = self.mi_audio_obj.stream_size
         if selected_audio_track_size:
             try:
                 return int(selected_audio_track_size)
             except ValueError:
-                general_track = mi_object.general_tracks[0]
+                general_track = self.mi_obj.general_tracks[0]
                 video_streams = general_track.count_of_video_streams
                 audio_streams = general_track.count_of_audio_streams
 
@@ -212,47 +93,33 @@ class MediainfoParser:
                     return int(int(general_track.stream_size) * 0.12)
                 else:
                     return int(int(general_track.stream_size) * 1.1)
-        else:
-            return None
 
-    @staticmethod
-    def _get_duration(mi_object, track_index):
+    def _get_duration(self) -> float | None:
         """
         Retrieve the duration of a specified track in milliseconds.
 
-        Parameters:
-            mi_object (MediaInfoDLL.MediaInfo): A MediaInfo object containing information about a media file.
-            track_index (int): The index of the track for which to retrieve the duration.
-
         Returns:
-            duration (float or None): The duration of the specified track in milliseconds, or None if the duration cannot be retrieved.
+            duration (float or None): The duration of the specified track in milliseconds, or
+            None if the duration cannot be retrieved.
         """
-        duration = mi_object.audio_tracks[track_index].duration
-        if duration:
-            duration = float(duration)
-        return duration
+        duration = self.mi_audio_obj.duration
+        return float(duration) if duration else None
 
-    @staticmethod
-    def _get_channels(mi_object, track_index):
+    def _get_channels(self) -> int:
         """
         Get the number of audio channels for the specified track.
 
         The added complexity for 'check_other' is to ensure we get a report
         of the highest potential channel count.
 
-        Args:
-            mi_object (MediaInfo): A MediaInfo object containing information about the media file.
-            track_index (int): The index of the track to extract information from.
-
         Returns:
             The number of audio channels as an integer.
         """
-        track = mi_object.audio_tracks[track_index]
-        base_channels = track.channel_s
-        check_other = search(r"\d+", str(track.other_channel_s[0]))
-        check_other_2 = str(track.channel_s__original)
+        base_channels = self.mi_audio_obj.channel_s
+        check_other = search(r"\d+", str(self.mi_audio_obj.other_channel_s[0]))
+        check_other_2 = str(self.mi_audio_obj.channel_s__original)
 
-        # Create a list of values to find the maximum
+        # create a list of values to find the maximum
         values = [int(base_channels)]
 
         if check_other:
@@ -262,3 +129,77 @@ class MediainfoParser:
             values.append(int(check_other_2))
 
         return max(values)
+
+    def _is_thd_atmos(self) -> bool:
+        """Check if track is a THD Atmos file."""
+        if self.mi_audio_obj.commercial_name == "Dolby TrueHD with Dolby Atmos":
+            return True
+        return False
+
+    def _generate_output_filename(self):
+        """Automatically generate an output file name
+
+        Returns:
+            Path: Path of a automatically generated filename
+        """
+        # placeholder extension
+        extension = ".tmp"
+
+        # base directory/name
+        base_dir = Path(self.file_input).parent
+        base_name = Path(Path(self.file_input).name).with_suffix("")
+
+        # if track index is 0 we can assume this audio is in a raw format
+        if self.track_index == 0:
+            file_name = f"{base_name}{extension}"
+            return Path(base_dir / Path(file_name))
+
+        # if track index is equal to or greater than 1, we can assume it's likely in a container of some
+        # sort, so we'll go ahead and attempt to detect delay/language to inject into the title.
+        elif self.track_index >= 1:
+            delay = self._delay_detection()
+            language = self._language_detection()
+            file_name = f"{base_name}_{language}_{delay}{extension}"
+            return Path(base_dir / Path(file_name))
+
+    def _delay_detection(self):
+        """Detect delay relative to video to inject into filename
+
+        Returns:
+            str: Returns a formatted delay string
+        """
+        if self.file_input.suffix == ".mp4":
+            if self.mi_audio_obj.source_delay:
+                delay_string = f"[delay {str(self.mi_audio_obj.source_delay)}ms]"
+            else:
+                delay_string = str("[delay 0ms]")
+        else:
+            if self.mi_audio_obj.delay_relative_to_video:
+                delay_string = (
+                    f"[delay {str(self.mi_audio_obj.delay_relative_to_video)}ms]"
+                )
+            else:
+                delay_string = str("[delay 0ms]")
+        return delay_string
+
+    def _language_detection(self):
+        """
+        Detect language of input track, returning language in the format of
+        "eng" instead of "en" or "english."
+
+        Returns:
+            str: Returns a formatted language string
+        """
+        if self.mi_audio_obj.other_language:
+            l_lengths = [len(lang) for lang in self.mi_audio_obj.other_language]
+            l_index = next(
+                (i for i, length in enumerate(l_lengths) if length == 3), None
+            )
+            language_string = (
+                f"[{self.mi_audio_obj.other_language[l_index]}]"
+                if l_index is not None
+                else "[und]"
+            )
+        else:
+            language_string = "[und]"
+        return language_string
