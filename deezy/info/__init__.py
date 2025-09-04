@@ -1,13 +1,14 @@
+from dataclasses import dataclass
 from pathlib import Path
-from pymediainfo import MediaInfo
 import shutil
 
+from pymediainfo import MediaInfo
 
+
+@dataclass(slots=True)
 class AudioStreams:
-    """Dumb object for displaying audio stream information"""
-
-    media_info = None
-    track_list = None
+    media_info: str | None = None
+    track_list: list[int] | None = None
 
 
 class AudioStreamViewer:
@@ -181,9 +182,9 @@ class AudioStreamViewer:
                 )
 
         # return {"track_output": media_info_track_string, "track_list": track_list}
-        streams = AudioStreams()
-        streams.media_info = media_info_track_string
-        streams.track_list = track_list
+        streams = AudioStreams(
+            media_info=media_info_track_string, track_list=track_list
+        )
         return streams
 
     @staticmethod
