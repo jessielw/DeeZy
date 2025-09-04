@@ -1,5 +1,6 @@
 from argparse import ArgumentTypeError
 from enum import Enum
+from typing import Type
 
 
 def case_insensitive_enum(enum_class):
@@ -30,7 +31,7 @@ def case_insensitive_enum(enum_class):
     return converter
 
 
-def enum_choices(enum_class: Enum) -> str:
+def enum_choices(enum_class: Type[Enum]) -> str:
     """
     Returns a string representation of all possible choices in the given enumeration class.
 
@@ -52,4 +53,4 @@ def enum_choices(enum_class: Enum) -> str:
 
         "{MONO[1]},{STEREO[2]},{SURROUND[6]}"
     """
-    return f"{{{','.join(e.name+'['+str(e.value)+']' for e in enum_class)}}}"
+    return f"{{{','.join(e.name + '[' + str(e.value) + ']' for e in enum_class)}}}"
