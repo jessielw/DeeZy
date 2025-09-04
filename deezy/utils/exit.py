@@ -1,7 +1,7 @@
 import sys
 
-exit_success = 0
-exit_fail = 1
+EXIT_SUCCESS = 0
+EXIT_FAIL = 1
 
 
 def _exit_application(msg: str, exit_code: int = 0):
@@ -16,7 +16,7 @@ def _exit_application(msg: str, exit_code: int = 0):
 
     if exit_code == 0:
         output = sys.stdout
-    elif exit_code == 1:
+    else:
         output = sys.stderr
 
     print(msg, file=output)
