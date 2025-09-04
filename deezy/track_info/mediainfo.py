@@ -136,7 +136,7 @@ class MediainfoParser:
             return True
         return False
 
-    def _generate_output_filename(self):
+    def _generate_output_filename(self) -> Path:
         """Automatically generate an output file name
 
         Returns:
@@ -154,9 +154,9 @@ class MediainfoParser:
             file_name = f"{base_name}{extension}"
             return Path(base_dir / Path(file_name))
 
-        # if track index is equal to or greater than 1, we can assume it's likely in a container of some
+        # if track index is anything other than 0, we can assume it's likely in a container of some
         # sort, so we'll go ahead and attempt to detect delay/language to inject into the title.
-        elif self.track_index >= 1:
+        else:
             delay = self._delay_detection()
             language = self._language_detection()
             file_name = f"{base_name}_{language}_{delay}{extension}"
