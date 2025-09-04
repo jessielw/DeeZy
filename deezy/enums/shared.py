@@ -1,5 +1,5 @@
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 
 
 class ProgressMode(Enum):
@@ -57,6 +57,7 @@ class DeeFPS(Enum):
             return "59.94"
         elif self == DeeFPS.FPS_60:
             return "60"
+        raise ValueError("Failed to determine FPS")
 
 
 class DeeDRC(Enum):
@@ -77,3 +78,4 @@ class DeeDRC(Enum):
             return "music_light"
         elif self == DeeDRC.SPEECH:
             return "speech"
+        raise ValueError("Failed to determine DRC")
