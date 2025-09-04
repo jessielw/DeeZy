@@ -9,11 +9,11 @@ class BaseArgsPayload:
     ffmpeg_path: Path
     truehdd_path: Path
     dee_path: Path
-    file_input: Path | None = None
-    track_index: int | None = None
-    bitrate: int | None = None
-    delay: str | None = None
+    file_input: Path
+    track_index: int
+    bitrate: int
     temp_dir: Path | None = None
+    delay: str | None = None
     keep_temp: bool = False
     file_output: Path | None = None
     progress_mode: ProgressMode = ProgressMode.STANDARD

@@ -10,4 +10,5 @@ class DDPPayload(BaseArgsPayload):
     channels: DolbyDigitalPlusChannels = DolbyDigitalPlusChannels.AUTO
     normalize: bool = False
     drc: DeeDRC = DeeDRC.MUSIC_LIGHT
-    atmos_mode: bool = False
+    atmos: bool = False
+    no_bed_conform: bool = False
