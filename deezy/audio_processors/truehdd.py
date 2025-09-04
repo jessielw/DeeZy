@@ -57,16 +57,12 @@ def decode_truehd_to_atmos(
     elif progress_mode is ProgressMode.DEBUG:
         ffmpeg_cmd.insert(inject, "info")
 
-    # generate atmos output base path
-    output_atmos_base_path = output_dir / "atmos"
-    output_atmos_base_path.mkdir()
-
     truehdd_cmd = [
         str(truehdd_path),
         "--progress",
         "decode",
         "--output-path",
-        f"{output_atmos_base_path}{BASE_ATMOS_FILE_NAME}",
+        str(output_dir / BASE_ATMOS_FILE_NAME),
         "--bed-conform",
         "-",
     ]
@@ -174,7 +170,7 @@ def decode_truehd_to_atmos(
     )
     atmos_files: list[Path] = []
     for atmos_file in atmos_file_names:
-        a_file = Path(str(output_atmos_base_path) + str(atmos_file))
+        a_file = output_dir / atmos_file
         if not a_file.exists():
             raise FileNotFoundError(f"Failed to locate atmos file: {a_file}")
         atmos_files.append(a_file)
