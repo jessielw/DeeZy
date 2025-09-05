@@ -18,7 +18,7 @@ def decode_truehd_to_atmos(
     progress_mode: ProgressMode,
     no_bed_conform: bool = False,
     duration: float | None = None,
-) -> list[Path]:
+) -> Path:
     """
     Extract the TrueHD track and run truehdd decode to produce .atmos files.
 
@@ -162,19 +162,11 @@ def decode_truehd_to_atmos(
             f"truehdd decode (pipe) failed: {(truehdd_err or truehdd_out).strip()}"
         )
 
-    # find generated atmos files
-    atmos_file_names = (
-        f"{BASE_ATMOS_FILE_NAME}.atmos",
-        f"{BASE_ATMOS_FILE_NAME}.atmos.audio",
-        f"{BASE_ATMOS_FILE_NAME}.atmos.metadata",
-    )
-    atmos_files: list[Path] = []
-    for atmos_file in atmos_file_names:
-        a_file = output_dir / atmos_file
-        if not a_file.exists():
-            raise FileNotFoundError(f"Failed to locate atmos file: {a_file}")
-        atmos_files.append(a_file)
+    # find generated atmos file (dee will get all 3 we only need to pass the main atmos file)
+    main_atmos_file = output_dir / f"{BASE_ATMOS_FILE_NAME}.atmos"
+    if not main_atmos_file.exists():
+        raise FileNotFoundError(
+            f"Failed to locate atmos file after generation: {main_atmos_file}"
+        )
 
-    if not atmos_files:
-        raise RuntimeError("truehdd generation completed but no .atmos output found")
-    return atmos_files
+    return main_atmos_file
