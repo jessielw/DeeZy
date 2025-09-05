@@ -148,7 +148,7 @@ def cli_parser(base_wd: Path):
         type=case_insensitive_enum(DeeDRC),
         choices=list(DeeDRC),
         metavar=enum_choices(DeeDRC),
-        default=DeeDRC.MUSIC_LIGHT,
+        default=DeeDRC.FILM_LIGHT,
         help="Dynamic range compression settings.",
     )
 
@@ -296,7 +296,7 @@ def cli_parser(base_wd: Path):
                         truehdd_path=truehdd_path,
                         dee_path=dee_path,
                     )
-                    dd = DDEncoderDEE().encode(payload)
+                    dd = DDEncoderDEE(payload).encode()
                     print(f"Job successful! Output file path:\n{dd}")
             except Exception as e:
                 exit_application(str(e), EXIT_FAIL)
