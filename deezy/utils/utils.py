@@ -7,10 +7,10 @@ class PrintSameLine:
 
     __slots__ = ("last_message",)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.last_message = ""
 
-    def print_msg(self, msg: str):
+    def print_msg(self, msg: str) -> None:
         print(" " * len(self.last_message), end="\r", flush=True)
         print(msg, end="\r", flush=True)
         self.last_message = msg
