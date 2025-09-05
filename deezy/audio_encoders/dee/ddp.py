@@ -6,7 +6,7 @@ import tempfile
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.bitrates import dee_ddp_bitrates
 from deezy.audio_encoders.dee.xml.xml import DeeXMLGenerator
-from deezy.audio_encoders.delay import DelayGenerator
+from deezy.audio_encoders.delay import get_dee_delay
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
@@ -81,7 +81,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         delay_str = "0ms"
         if self.payload.delay:
             delay_str = self.payload.delay
-        delay = DelayGenerator().get_dee_delay(delay_str)
+        delay = get_dee_delay(delay_str)
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
