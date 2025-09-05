@@ -6,3 +6,5 @@ DDP encoder class has been cleaned up and properly typed, fixing numerous potent
 Add truehd atmos decoder
 add args for atmos, and no bed conform, as well as atmos channels
 Optimizations to ffmpeg calls
+Optimize calls to dee encoder.
+Fix potential edge case errors when encoding with dee.
