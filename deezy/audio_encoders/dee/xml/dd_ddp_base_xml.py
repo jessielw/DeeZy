@@ -22,7 +22,7 @@ xml_audio_base_ddp = """<?xml version="1.0"?>
           <measure_only>
             <metering_mode>1770-3</metering_mode>
             <dialogue_intelligence>true</dialogue_intelligence>
-            <speech_threshold>15</speech_threshold>
+            <speech_threshold>20</speech_threshold>
           </measure_only>
         </loudness>
         <encoder_mode>-</encoder_mode>
