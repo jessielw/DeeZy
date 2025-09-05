@@ -11,7 +11,11 @@ from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
 from deezy.enums.ddp import DolbyDigitalPlusChannels
-from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
+from deezy.exceptions import (
+    DependencyNotFoundError,
+    InvalidExtensionError,
+    OutputFileNotFoundError,
+)
 from deezy.payloads.ddp import DDPPayload
 from deezy.track_info.mediainfo import MediainfoParser
 
@@ -157,6 +161,12 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 duration=audio_track_info.duration,
             )
         else:
+            # Check if TrueHD path is available for Atmos processing
+            if not self.payload.truehdd_path:
+                raise DependencyNotFoundError(
+                    "TrueHD decoder (truehdd) is required for Atmos encoding but was not found."
+                )
+
             atmos_job = decode_truehd_to_atmos(
                 output_dir=temp_dir,
                 file_input=file_input,

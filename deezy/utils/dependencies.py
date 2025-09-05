@@ -13,11 +13,13 @@ def get_executable_extension() -> str:
 @dataclass(slots=True)
 class Dependencies:
     ffmpeg: Path
-    truehdd: Path
+    truehdd: Path | None
     dee: Path
 
 
 class FindDependencies:
+    __slots__ = ("os_exe",)
+
     def __init__(self):
         self.os_exe = get_executable_extension()
 
@@ -27,6 +29,7 @@ class FindDependencies:
         user_ffmpeg: str | None = None,
         user_truehdd: str | None = None,
         user_dee: str | None = None,
+        require_truehdd: bool = True,
     ) -> Dependencies:
         ffmpeg, truehdd, dee = self._locate_beside_program(base_wd)
         ffmpeg, truehdd, dee = self._locate_on_path(ffmpeg, truehdd, dee)
@@ -47,7 +50,7 @@ class FindDependencies:
         missing = []
         if not ffmpeg:
             missing.append("ffmpeg")
-        if not truehdd:
+        if require_truehdd and not truehdd:
             missing.append("truehdd")
         if not dee:
             missing.append("dee")

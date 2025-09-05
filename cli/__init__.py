@@ -234,14 +234,23 @@ def cli_parser(base_wd: Path):
     ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
     truehdd_arg = args.truehdd if hasattr(args, "truehdd") else None
     dee_arg = args.dee if hasattr(args, "dee") else None
+
+    # check if Atmos is being used (only available for DDP)
+    atmos_required = (
+        hasattr(args, "atmos")
+        and args.atmos
+        and args.sub_command == "encode"
+        and args.format_command == "ddp"
+    )
+
     try:
         tools = FindDependencies().get_dependencies(
-            base_wd, ffmpeg_arg, truehdd_arg, dee_arg
+            base_wd, ffmpeg_arg, truehdd_arg, dee_arg, require_truehdd=atmos_required
         )
     except DependencyNotFoundError as e:
         exit_application(str(e), EXIT_FAIL)
     ffmpeg_path = Path(tools.ffmpeg)
-    truehdd_path = Path(tools.truehdd)
+    truehdd_path = Path(tools.truehdd) if tools.truehdd else None
     dee_path = Path(tools.dee)
 
     if not hasattr(args, "input") or not args.input:
@@ -309,7 +318,6 @@ def cli_parser(base_wd: Path):
             # TODO we need to catch all errors that we know will happen here in the scope
 
             # update payload
-            # TODO prevent duplicate payload code somehow
             try:
                 for input_file in file_inputs:
                     payload = DDPPayload(

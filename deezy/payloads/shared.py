@@ -7,7 +7,7 @@ from deezy.enums.shared import ProgressMode, StereoDownmix
 @dataclass(slots=True)
 class BaseArgsPayload:
     ffmpeg_path: Path
-    truehdd_path: Path
+    truehdd_path: Path | None
     dee_path: Path
     file_input: Path
     track_index: int
