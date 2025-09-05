@@ -1,8 +1,8 @@
+import os
 from pathlib import Path
 from subprocess import run
-import os
 
-from deezy.utils.dependencies import get_executable_string_by_os
+from deezy.utils.dependencies import get_executable_extension
 
 
 def build_app():
@@ -32,7 +32,7 @@ def build_app():
     )
 
     # get exe string based on os
-    exe_str = get_executable_string_by_os()
+    exe_str = get_executable_extension()
 
     # ensure output of exe
     success = "Did not complete successfully"
@@ -40,7 +40,7 @@ def build_app():
         Path(Path("dist") / f"deezy{exe_str}").is_file()
         and str(build_job.returncode) == "0"
     ):
-        success = f'\nSuccess!\nPath to exe: {str(Path.cwd() / (Path(Path("dist") / f"deezy{exe_str}")))}'
+        success = f"\nSuccess!\nPath to exe: {str(Path.cwd() / (Path(Path('dist') / f'deezy{exe_str}')))}"
 
     # change directory back to original directory
     os.chdir(deezy_script.parent)
