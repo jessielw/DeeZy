@@ -41,14 +41,13 @@ options:
 ## Encode Usage DD
 
 ```
-DeeZy encode dd [-h] [--ffmpeg FFMPEG] [--dee DEE] [-t TRACK_INDEX]
-                       [-b BITRATE] [-d DELAY] [-k]
+usage: DeeZy encode dd [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
+                       [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
                        [-p {STANDARD[0],DEBUG[1],SILENT[2]}] [-tmp TEMP_DIR]
                        [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
                        [-c {AUTO[0],MONO[1],STEREO[2],SURROUND[6]}]
                        [-drc {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}]
                        INPUT [INPUT ...]
-
 
 positional arguments:
   INPUT
@@ -59,6 +58,8 @@ options:
    show this help message and exit
   --ffmpeg, FFMPEG
    Path to FFMPEG executable.
+  --truehdd, TRUEHDD
+   Path to Truehdd executable.
   --dee, DEE
    Path to DEE (Dolby Encoding Engine) executable.
   -t, --track-index, TRACK_INDEX
@@ -74,7 +75,7 @@ options:
   -tmp, --temp-dir, TEMP_DIR
    Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.
   -o, --output, OUTPUT
-   The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
+   The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.  
   -s, --stereo-down-mix, {STANDARD[0],DPLII[1]}
    Down mix method for stereo.
   -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6]}
@@ -86,12 +87,12 @@ options:
 ## Encode Usage DDP
 
 ```
-DeeZy encode ddp [-h] [--ffmpeg FFMPEG] [--dee DEE] [-t TRACK_INDEX]
-                        [-b BITRATE] [-d DELAY] [-k]
+usage: DeeZy encode ddp [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
+                        [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
                         [-p {STANDARD[0],DEBUG[1],SILENT[2]}] [-tmp TEMP_DIR]
                         [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
-                        [-c {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8]}]
-                        [-n]
+                        [-c {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8],ATMOS_5_1_2[512],ATMOS_5_1_4[514],ATMOS_7_1_2[712],ATMOS_7_1_4[714]}]
+                        [-n] [--atmos] [--no-bed-conform]
                         [-drc {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}]
                         INPUT [INPUT ...]
 
@@ -104,6 +105,8 @@ options:
    show this help message and exit
   --ffmpeg, FFMPEG
    Path to FFMPEG executable.
+  --truehdd, TRUEHDD
+   Path to Truehdd executable.
   --dee, DEE
    Path to DEE (Dolby Encoding Engine) executable.
   -t, --track-index, TRACK_INDEX
@@ -119,15 +122,19 @@ options:
   -tmp, --temp-dir, TEMP_DIR
    Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.
   -o, --output, OUTPUT
-   The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
+   The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.  
   -s, --stereo-down-mix, {STANDARD[0],DPLII[1]}
    Down mix method for stereo.
-  -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8]}
+  -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8],ATMOS_5_1_2[512],ATMOS_5_1_4[514],ATMOS_7_1_2[712],ATMOS_7_1_4[714]}
    The number of channels.
   -n, --normalize
    Normalize audio for DDP (ignored for DDP channels above 6).
+  --atmos
+   Enable Atmos encoding mode for TrueHD input files with Atmos content (automatically falls back to DDP if no Atmos is detected).
+  --no-bed-conform
+   Disable bed conform for Atmos
   -drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
-   Dynamic range compression settings.
+   Dynamic range compression settings
 ```
 
 ## Find Usage
