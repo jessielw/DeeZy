@@ -1,20 +1,20 @@
 import argparse
 from pathlib import Path
 
-from cli.utils import CustomHelpFormatter, _validate_track_index
+from cli.utils import CustomHelpFormatter, validate_track_index
 from deezy.audio_encoders.dee.dd import DDEncoderDEE
 from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
-from deezy.enums.shared import ProgressMode, StereoDownmix, DeeDRC
-from deezy.info import AudioStreamViewer
+from deezy.enums.shared import DeeDRC, ProgressMode, StereoDownmix
+from deezy.info import parse_audio_streams
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
+from deezy.utils._version import __version__, program_name
 from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
-from deezy.utils.exit import _exit_application, exit_fail, exit_success
-from deezy.utils.file_parser import FileParser
-from deezy.utils._version import program_name, __version__
+from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
+from deezy.utils.file_parser import parse_input_s
 
 
 def cli_parser(base_wd: Path):
@@ -55,6 +55,11 @@ def cli_parser(base_wd: Path):
         help="Path to FFMPEG executable.",
     )
     encode_group.add_argument(
+        "--truehdd",
+        type=str,
+        help="Path to Truehdd executable.",
+    )
+    encode_group.add_argument(
         "--dee",
         type=str,
         help="Path to DEE (Dolby Encoding Engine) executable.",
@@ -62,7 +67,7 @@ def cli_parser(base_wd: Path):
     encode_group.add_argument(
         "-t",
         "--track-index",
-        type=_validate_track_index,
+        type=validate_track_index,
         default=0,
         help="The index of the audio track to use.",
     )
@@ -143,7 +148,7 @@ def cli_parser(base_wd: Path):
         type=case_insensitive_enum(DeeDRC),
         choices=list(DeeDRC),
         metavar=enum_choices(DeeDRC),
-        default=DeeDRC.MUSIC_LIGHT,
+        default=DeeDRC.FILM_LIGHT,
         help="Dynamic range compression settings.",
     )
 
@@ -172,8 +177,19 @@ def cli_parser(base_wd: Path):
         action="store_true",
         help="Normalize audio for DDP (ignored for DDP channels above 6).",
     )
-    # TODO this will likely only be valid for DEE, so we'll need to
-    # decide what we want to do here
+    encode_ddp_parser.add_argument(
+        "--atmos",
+        action="store_true",
+        help=(
+            "Enable Atmos encoding mode for TrueHD input files with Atmos content "
+            "(automatically falls back to DDP if no Atmos is detected)."
+        ),
+    )
+    encode_ddp_parser.add_argument(
+        "--no-bed-conform",
+        action="store_true",
+        help="Disable bed conform for Atmos",
+    )
     encode_ddp_parser.add_argument(
         "-drc",
         "--dynamic-range-compression",
@@ -196,14 +212,12 @@ def cli_parser(base_wd: Path):
         action="store_true",
         help="Only display names instead of full paths.",
     )
-    # TODO: Add arg options if required
 
     #############################################################
     ## Info Command (placeholder, would print stream info for the input file(s)) ###
     #############################################################
     # Info command parser
-    info_parser = subparsers.add_parser("info", parents=[input_group])
-    # TODO: Add arg options if required
+    _info_parser = subparsers.add_parser("info", parents=[input_group])
 
     #############################################################
     ######################### Execute ###########################
@@ -214,20 +228,33 @@ def cli_parser(base_wd: Path):
     if not args.sub_command:
         if not hasattr(args, "version"):
             parser.print_usage()
-        _exit_application("", exit_fail)
+        exit_application("", EXIT_FAIL)
 
     # detect tool dependencies
     ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
+    truehdd_arg = args.truehdd if hasattr(args, "truehdd") else None
     dee_arg = args.dee if hasattr(args, "dee") else None
+
+    # check if Atmos is being used (only available for DDP)
+    atmos_required = (
+        hasattr(args, "atmos")
+        and args.atmos
+        and args.sub_command == "encode"
+        and args.format_command == "ddp"
+    )
+
     try:
-        tools = FindDependencies().get_dependencies(base_wd, ffmpeg_arg, dee_arg)
+        tools = FindDependencies().get_dependencies(
+            base_wd, ffmpeg_arg, truehdd_arg, dee_arg, require_truehdd=atmos_required
+        )
     except DependencyNotFoundError as e:
-        _exit_application(e, exit_fail)
+        exit_application(str(e), EXIT_FAIL)
     ffmpeg_path = Path(tools.ffmpeg)
+    truehdd_path = Path(tools.truehdd) if tools.truehdd else None
     dee_path = Path(tools.dee)
 
     if not hasattr(args, "input") or not args.input:
-        _exit_application("", exit_fail)
+        exit_application("", EXIT_FAIL)
 
     if args.sub_command not in {"find", "info"}:
         if (
@@ -247,115 +274,98 @@ def cli_parser(base_wd: Path):
     # TODO We will need to decide what to do when multiple file inputs
     # don't have the track provided by the user?
     # Additionally is this the best place to do this?
-    file_inputs = FileParser().parse_input_s(args.input)
+    file_inputs = parse_input_s(args.input)
     if not file_inputs:
-        _exit_application("No input files we're found.", exit_fail)
+        exit_application("No input files we're found.", EXIT_FAIL)
 
     if args.sub_command == "encode":
-        # TODO Display banner here?
-
-        # TODO DO we print this here as well?
-        # print message
-        # print(f"Processing input: {Path(args.input).name}")
-
         # encode Dolby Digital
         if args.format_command == "dd":
             # TODO We will need to catch all expected expectations possible and wrap this in a try except
             # with the exit application output. That way we're not catching all generic issues.
-            # _exit_application(e, exit_fail)
+            # exit_application(e, EXIT_FAIL)
             # TODO we need to catch all errors that we know will happen here in the scope
 
             # update payload
-            # TODO prevent duplicate payload code somehow
             try:
                 for input_file in file_inputs:
-                    payload = DDPayload()
-                    payload.file_input = input_file
-                    payload.track_index = args.track_index
-                    payload.bitrate = args.bitrate
-                    payload.delay = args.delay
-                    payload.temp_dir = args.temp_dir
-                    payload.keep_temp = args.keep_temp
-                    payload.file_output = args.output
-                    payload.progress_mode = args.progress_mode
-                    payload.stereo_mix = args.stereo_down_mix
-                    payload.channels = args.channels
-                    payload.drc = args.dynamic_range_compression
-
-                    # TODO Not sure if this is how we wanna inject, but for now...
-                    payload.ffmpeg_path = ffmpeg_path
-                    payload.dee_path = dee_path
-
-                    # encoder
-                    dd = DDEncoderDEE().encode(payload)
+                    payload = DDPayload(
+                        file_input=input_file,
+                        track_index=args.track_index,
+                        bitrate=args.bitrate,
+                        delay=args.delay,
+                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                        keep_temp=args.keep_temp,
+                        file_output=Path(args.output) if args.output else None,
+                        progress_mode=args.progress_mode,
+                        stereo_mix=args.stereo_down_mix,
+                        channels=args.channels,
+                        drc=args.dynamic_range_compression,
+                        ffmpeg_path=ffmpeg_path,
+                        truehdd_path=truehdd_path,
+                        dee_path=dee_path,
+                    )
+                    dd = DDEncoderDEE(payload).encode()
                     print(f"Job successful! Output file path:\n{dd}")
             except Exception as e:
-                # TODO not sure if we wanna exit or continue for batch?
-                _exit_application(e, exit_fail)
+                exit_application(str(e), EXIT_FAIL)
 
         # Encode Dolby Digital Plus
         elif args.format_command == "ddp":
             # TODO We will need to catch all expected expectations possible and wrap this in a try except
             # with the exit application output. That way we're not catching all generic issues.
-            # _exit_application(e, exit_fail)
+            # exit_application(e, EXIT_FAIL)
             # TODO we need to catch all errors that we know will happen here in the scope
 
             # update payload
-            # TODO prevent duplicate payload code somehow
             try:
                 for input_file in file_inputs:
-                    payload = DDPPayload()
-                    payload.file_input = input_file
-                    payload.track_index = args.track_index
-                    payload.bitrate = args.bitrate
-                    payload.delay = args.delay
-                    payload.temp_dir = args.temp_dir
-                    payload.keep_temp = args.keep_temp
-                    payload.file_output = args.output
-                    payload.progress_mode = args.progress_mode
-                    payload.stereo_mix = args.stereo_down_mix
-                    payload.channels = args.channels
-                    payload.normalize = args.normalize
-                    payload.drc = args.dynamic_range_compression
-
-                    # TODO Not sure if this is how we wanna inject, but for now...
-                    payload.ffmpeg_path = ffmpeg_path
-                    payload.dee_path = dee_path
+                    payload = DDPPayload(
+                        file_input=input_file,
+                        track_index=args.track_index,
+                        bitrate=args.bitrate,
+                        delay=args.delay,
+                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                        keep_temp=args.keep_temp,
+                        file_output=Path(args.output) if args.output else None,
+                        progress_mode=args.progress_mode,
+                        stereo_mix=args.stereo_down_mix,
+                        channels=args.channels,
+                        normalize=args.normalize,
+                        drc=args.dynamic_range_compression,
+                        atmos=args.atmos,
+                        no_bed_conform=args.no_bed_conform,
+                        ffmpeg_path=ffmpeg_path,
+                        truehdd_path=truehdd_path,
+                        dee_path=dee_path,
+                    )
 
                     # encoder
-                    ddp = DDPEncoderDEE().encode(payload)
-                    print(f"Output file path:\n{ddp}")
+                    ddp = DDPEncoderDEE(payload).encode()
+                    print(f"Job successful! Output file path:\n{ddp}")
             except Exception as e:
                 # TODO not sure if we wanna exit or continue for batch?
-                _exit_application(e, exit_fail)
+                exit_application(str(e), EXIT_FAIL)
 
     elif args.sub_command == "find":
-        # TODO ensure this is done the best way possible.
         file_names = []
         for input_file in file_inputs:
             # if name only is used, print only the name of the file.
             if args.name:
                 input_file = input_file.name
-
-            # append file to file_names (ensuring they are strings for the .join method)
             file_names.append(str(input_file))
 
-            # Join the file names with newlines
-            found_files = "\n".join(file_names)
-
-        _exit_application(found_files, exit_success)
+        exit_application("\n".join(file_names), EXIT_SUCCESS)
 
     elif args.sub_command == "info":
-        # TODO this probably needs handled in a cleaner way.
-        # could use list comprehension here but will be harder to
-        # add args if we add them later?
         track_s_info = ""
         for input_file in file_inputs:
-            info = AudioStreamViewer().parse_audio_streams(input_file)
-            track_s_info = (
-                track_s_info
-                + f"File: {input_file.name}\nAudio tracks: {info.track_list}\n"
-                + info.media_info
-                + "\n\n"
-            )
-        _exit_application(track_s_info, exit_success)
+            info = parse_audio_streams(input_file)
+            if info.media_info:
+                track_s_info = (
+                    track_s_info
+                    + f"File: {input_file.name}\nAudio tracks: {info.track_list}\n"
+                    + info.media_info
+                    + "\n\n"
+                )
+        exit_application(track_s_info, EXIT_SUCCESS)

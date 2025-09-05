@@ -1,7 +1,8 @@
-import shutil
+from collections.abc import Sequence
 import os
 from pathlib import Path
-from typing import Union
+import shutil
+
 from deezy.exceptions import (
     AutoChannelDetectionError,
     ChannelMixError,
@@ -35,7 +36,7 @@ class BaseAudioEncoder:
     def _check_disk_space(
         input_file_path: Path,
         drive_path: Path,
-        recommended_free_space: Union[None, int],
+        recommended_free_space: int | None,
     ):
         """
         Check for free space at the temporary directory, rounding to the nearest whole number.
@@ -68,7 +69,7 @@ class BaseAudioEncoder:
             )
 
     @staticmethod
-    def _get_closest_allowed_bitrate(bitrate: int, accepted_bitrates: list):
+    def _get_closest_allowed_bitrate(bitrate: int, accepted_bitrates: Sequence[int]):
         """Returns the closest allowed bitrate from a given input bitrate in a list of accepted bitrates.
 
         Args:
@@ -82,13 +83,15 @@ class BaseAudioEncoder:
 
     @staticmethod
     def _determine_auto_channel_s(
-        input_track_channel_s: int, accepted_channel_list: list
-    ):
-        """Determine the highest quality automatic channel selection based on the input track and codec accepted channels
+        input_track_channel_s: int, accepted_channel_list: Sequence[int]
+    ) -> int:
+        """
+        Determine the highest quality automatic channel selection based on the input track and
+        codec accepted channels
 
         Args:
             input_track_channel_s (int): Audio tracks input channel(s).
-            accepted_channel_list (list): Dolby encoder used accepted channel list.
+            accepted_channel_list (Sequence[int]): Dolby encoder used accepted channel sequence.
 
         Raises:
             AutoChannelDetectionError: If unable to detect the output channel raise an error.
@@ -96,16 +99,22 @@ class BaseAudioEncoder:
         Returns:
             int: Highest accepted channel allowed by the codec.
         """
+        # exact match -> return it
         if input_track_channel_s in accepted_channel_list:
             return input_track_channel_s
-        else:
-            lower_values = [
-                x for x in accepted_channel_list if x < input_track_channel_s
-            ]
-            if lower_values:
-                try:
-                    return int(max(lower_values))
-                except ValueError:
-                    raise AutoChannelDetectionError(
-                        "Failed to determine output channel automatically"
-                    )
+
+        # find the highest accepted channel that is lower than the input
+        lower_values = [x for x in accepted_channel_list if x < input_track_channel_s]
+        if lower_values:
+            try:
+                return int(max(lower_values))
+            except (ValueError, TypeError):
+                raise AutoChannelDetectionError(
+                    "Failed to determine output channel automatically"
+                )
+
+        # no suitable channel found -> raise instead of returning None
+        raise AutoChannelDetectionError(
+            "Unable to determine automatic channel selection for input "
+            f"{input_track_channel_s} with accepted channels {accepted_channel_list}"
+        )

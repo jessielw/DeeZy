@@ -1,4 +1,5 @@
 import argparse
+from typing import Any
 
 
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
@@ -29,13 +30,13 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
         return f"{option_strings}, {args_string}"
 
 
-def _validate_track_index(value: any):
+def validate_track_index(value: Any):
     """
     Determines if the input is a valid number.
     If it's not returns the default of 0.
 
     Args:
-        value (any): Can be any input
+        value (Any): Can be any input
 
     Returns:
         int: Corrected track index

@@ -1,6 +1,11 @@
+from dataclasses import dataclass
+
+from deezy.enums.dd import DolbyDigitalChannels
+from deezy.enums.shared import DeeDRC
 from deezy.payloads.shared import BaseArgsPayload
 
 
+@dataclass(slots=True)
 class DDPayload(BaseArgsPayload):
-    channels = None
-    drc = None
+    channels: DolbyDigitalChannels = DolbyDigitalChannels.AUTO
+    drc: DeeDRC = DeeDRC.FILM_STANDARD

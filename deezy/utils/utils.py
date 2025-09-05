@@ -1,20 +1,22 @@
-import sys
 from pathlib import Path
+import sys
 
 
 class PrintSameLine:
     """Class to correctly print on same line"""
 
-    def __init__(self):
+    __slots__ = ("last_message",)
+
+    def __init__(self) -> None:
         self.last_message = ""
 
-    def print_msg(self, msg: str):
+    def print_msg(self, msg: str) -> None:
         print(" " * len(self.last_message), end="\r", flush=True)
         print(msg, end="\r", flush=True)
         self.last_message = msg
 
 
-def _get_working_dir():
+def get_working_dir() -> Path:
     """
     Used to determine the correct working directory automatically.
     This way we can utilize files/relative paths easily.

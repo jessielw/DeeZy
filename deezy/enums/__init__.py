@@ -1,5 +1,6 @@
 from argparse import ArgumentTypeError
 from enum import Enum
+from typing import Type
 
 
 def case_insensitive_enum(enum_class):
@@ -19,18 +20,37 @@ def case_insensitive_enum(enum_class):
     """
 
     def converter(value):
+        v = value.strip()
         try:
-            if value.isdigit():
-                return enum_class(int(value))
-            else:
-                return enum_class[value.upper()]
-        except (KeyError, ValueError):
+            # numeric form e.g. "514"
+            if v.isdigit():
+                return enum_class(int(v))
+
+            # direct name lookup (case-insensitive) e.g. "ATMOS_5_1_4"
+            members = enum_class.__members__
+            key = v.upper()
+            if key in members:
+                return enum_class[key]
+
+            # allow enum classes to implement a from_string parser (e.g. "5.1.4")
+            from_str = getattr(enum_class, "from_string", None)
+            if callable(from_str):
+                parsed = from_str(v)
+                if isinstance(parsed, enum_class):
+                    return parsed
+                if isinstance(parsed, int):
+                    return enum_class(parsed)
+                if isinstance(parsed, str) and parsed.upper() in members:
+                    return enum_class[parsed.upper()]
+
+            raise ArgumentTypeError(f"Invalid choice: {value}")
+        except (KeyError, ValueError, TypeError):
             raise ArgumentTypeError(f"Invalid choice: {value}")
 
     return converter
 
 
-def enum_choices(enum_class: Enum) -> str:
+def enum_choices(enum_class: Type[Enum]) -> str:
     """
     Returns a string representation of all possible choices in the given enumeration class.
 
@@ -52,4 +72,4 @@ def enum_choices(enum_class: Enum) -> str:
 
         "{MONO[1]},{STEREO[2]},{SURROUND[6]}"
     """
-    return f"{{{','.join(e.name+'['+str(e.value)+']' for e in enum_class)}}}"
+    return f"{{{','.join(e.name + '[' + str(e.value) + ']' for e in enum_class)}}}"
