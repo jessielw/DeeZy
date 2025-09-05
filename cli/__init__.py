@@ -4,6 +4,7 @@ from pathlib import Path
 from cli.utils import CustomHelpFormatter, validate_track_index
 from deezy.audio_encoders.dee.dd import DDEncoderDEE
 from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
+from deezy.config import get_config_integration
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
@@ -72,7 +73,7 @@ def cli_parser(base_wd: Path):
         help="The index of the audio track to use.",
     )
     encode_group.add_argument(
-        "-b", "--bitrate", type=int, required=False, help="The bitrate in Kbps."
+        "-b", "--bitrate", type=int, default=None, help="The bitrate in Kbps."
     )
     encode_group.add_argument(
         "-d",
@@ -107,6 +108,11 @@ def cli_parser(base_wd: Path):
         "--output",
         type=str,
         help="The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.",
+    )
+    encode_group.add_argument(
+        "--preset",
+        type=str,
+        help="Use a predefined configuration preset from config file.",
     )
 
     # downmix group
@@ -220,6 +226,40 @@ def cli_parser(base_wd: Path):
     _info_parser = subparsers.add_parser("info", parents=[input_group])
 
     #############################################################
+    ## Config Command ###
+    #############################################################
+    # Config command parser
+    config_parser = subparsers.add_parser("config", help="Configuration management")
+    config_subparsers = config_parser.add_subparsers(
+        dest="config_command", required=True
+    )
+
+    # Generate config subcommand
+    generate_parser = config_subparsers.add_parser(
+        "generate", help="Generate configuration file"
+    )
+    generate_parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="Output path for config file (default: auto-detect)",
+    )
+    generate_parser.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing config file"
+    )
+    generate_parser.add_argument(
+        "--from-args",
+        action="store_true",
+        help="Generate config from current CLI arguments (use with encode command)",
+    )
+
+    # Info config subcommand
+    info_parser = config_subparsers.add_parser(
+        "info", help="Show configuration information"
+    )
+    info_parser.add_argument("--path", type=str, help="Show specific config file path")
+
+    #############################################################
     ######################### Execute ###########################
     #############################################################
     # parse the arguments
@@ -230,55 +270,145 @@ def cli_parser(base_wd: Path):
             parser.print_usage()
         exit_application("", EXIT_FAIL)
 
+    # load configuration and apply defaults if not a config command
+    config_integration = None
+    if args.sub_command != "config":
+        config_integration = get_config_integration()
+        config_integration.load_config()
+
+        # apply config defaults for encoding commands
+        if args.sub_command == "encode":
+            format_type = getattr(args, "format_command", None)
+            
+            # handle preset if specified
+            if hasattr(args, "preset") and args.preset:
+                preset_config = config_integration.loader.get_preset(args.preset)
+                if preset_config is None:
+                    available_presets = config_integration.loader.list_presets()
+                    preset_list = ", ".join(available_presets) if available_presets else "None"
+                    exit_application(
+                        f"Preset '{args.preset}' not found. Available presets: {preset_list}",
+                        EXIT_FAIL
+                    )
+                
+                # apply preset values to args (only if not already set by CLI)
+                for key, value in preset_config.items():
+                    if key == "format":
+                        continue  # skip format since it's handled by subcommand
+                    
+                    # convert key to arg attribute name
+                    arg_name = key.replace("-", "_")
+                    
+                    # only set if not already provided via CLI
+                    if not hasattr(args, arg_name) or getattr(args, arg_name) is None:
+                        # handle enum conversions
+                        if arg_name == "channels":
+                            if format_type == "ddp":
+                                value = DolbyDigitalPlusChannels(value) if isinstance(value, str) else value
+                            elif format_type == "dd":
+                                value = DolbyDigitalChannels(value) if isinstance(value, str) else value
+                        elif arg_name == "drc":
+                            value = DeeDRC(value) if isinstance(value, str) else value
+                        elif arg_name == "stereo_mix":
+                            value = StereoDownmix(value) if isinstance(value, str) else value
+                        elif arg_name == "progress_mode":
+                            value = ProgressMode(value) if isinstance(value, str) else value
+                        
+                        setattr(args, arg_name, value)
+            
+            args = config_integration.merge_args_with_config(args, format_type)
+
     # detect tool dependencies
-    ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
-    truehdd_arg = args.truehdd if hasattr(args, "truehdd") else None
-    dee_arg = args.dee if hasattr(args, "dee") else None
+    ffmpeg_arg = None
+    truehdd_arg = None
+    dee_arg = None
+    atmos_required = False
+    ffmpeg_path = None
+    truehdd_path = None
+    dee_path = None
 
-    # check if Atmos is being used (only available for DDP)
-    atmos_required = (
-        hasattr(args, "atmos")
-        and args.atmos
-        and args.sub_command == "encode"
-        and args.format_command == "ddp"
-    )
-
-    try:
-        tools = FindDependencies().get_dependencies(
-            base_wd, ffmpeg_arg, truehdd_arg, dee_arg, require_truehdd=atmos_required
-        )
-    except DependencyNotFoundError as e:
-        exit_application(str(e), EXIT_FAIL)
-    ffmpeg_path = Path(tools.ffmpeg)
-    truehdd_path = Path(tools.truehdd) if tools.truehdd else None
-    dee_path = Path(tools.dee)
-
-    if not hasattr(args, "input") or not args.input:
-        exit_application("", EXIT_FAIL)
-
-    if args.sub_command not in {"find", "info"}:
-        if (
-            not hasattr(args, "channels")
-            or not args.channels
-            or int(args.channels.value) == 0
-        ):
-            print(
-                "No channel(s) specified, will automatically detect highest quality supported channel based on codec."
+    if args.sub_command not in {"config"}:
+        # get dependency paths from CLI args or config
+        if config_integration:
+            ffmpeg_arg = (
+                args.ffmpeg
+                if hasattr(args, "ffmpeg") and args.ffmpeg
+                else config_integration.get_dependency_path("ffmpeg")
             )
+            truehdd_arg = (
+                args.truehdd
+                if hasattr(args, "truehdd") and args.truehdd
+                else config_integration.get_dependency_path("truehdd")
+            )
+            dee_arg = (
+                args.dee
+                if hasattr(args, "dee") and args.dee
+                else config_integration.get_dependency_path("dee")
+            )
+        else:
+            ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
+            truehdd_arg = args.truehdd if hasattr(args, "truehdd") else None
+            dee_arg = args.dee if hasattr(args, "dee") else None
 
-        if not hasattr(args, "bitrate") or not args.bitrate:
-            print("No bitrate specified, defaulting to 448k.")
-            setattr(args, "bitrate", 448)
+        # check if Atmos is being used (only available for DDP)
+        atmos_required = (
+            hasattr(args, "atmos")
+            and args.atmos
+            and args.sub_command == "encode"
+            and hasattr(args, "format_command")
+            and args.format_command == "ddp"
+        )
 
-    # parse all possible file inputs
-    # TODO We will need to decide what to do when multiple file inputs
-    # don't have the track provided by the user?
-    # Additionally is this the best place to do this?
-    file_inputs = parse_input_s(args.input)
-    if not file_inputs:
-        exit_application("No input files we're found.", EXIT_FAIL)
+    if args.sub_command not in {"config"}:
+        try:
+            tools = FindDependencies().get_dependencies(
+                base_wd,
+                ffmpeg_arg,
+                truehdd_arg,
+                dee_arg,
+                require_truehdd=atmos_required,
+            )
+        except DependencyNotFoundError as e:
+            exit_application(str(e), EXIT_FAIL)
+        ffmpeg_path = Path(tools.ffmpeg)
+        truehdd_path = Path(tools.truehdd) if tools.truehdd else None
+        dee_path = Path(tools.dee)
+
+        if not hasattr(args, "input") or not args.input:
+            exit_application("", EXIT_FAIL)
+
+        if args.sub_command not in ("find", "info"):
+            # config system now handles defaults, but provide fallbacks for edge cases
+            if (
+                not hasattr(args, "channels")
+                or not args.channels
+                or int(args.channels.value) == 0
+            ):
+                print(
+                    "No channel(s) specified, will automatically detect highest quality "
+                    "supported channel based on codec."
+                )
+
+            # final fallback for bitrate if config system didn't set it
+            if not hasattr(args, "bitrate") or args.bitrate is None:
+                print("No bitrate specified, defaulting to 448k.")
+                setattr(args, "bitrate", 448)
+
+        # parse all possible file inputs
+        file_inputs = parse_input_s(args.input)
+        if not file_inputs:
+            exit_application("No input files we're found.", EXIT_FAIL)
+    else:
+        # for config command, no file inputs needed
+        file_inputs = []
 
     if args.sub_command == "encode":
+        # ensure dependency paths are available for encoding
+        if ffmpeg_path is None or dee_path is None:
+            exit_application(
+                "Dependency paths not available for encoding commands", EXIT_FAIL
+            )
+
         # encode Dolby Digital
         if args.format_command == "dd":
             # TODO We will need to catch all expected expectations possible and wrap this in a try except
@@ -369,3 +499,65 @@ def cli_parser(base_wd: Path):
                     + "\n\n"
                 )
         exit_application(track_s_info, EXIT_SUCCESS)
+
+    elif args.sub_command == "config":
+        # config commands need their own integration instance
+        if config_integration is None:
+            config_integration = get_config_integration()
+
+        if args.config_command == "generate":
+            try:
+                output_path = Path(args.output) if args.output else None
+
+                if args.from_args:
+                    # for generating from args, we need to parse the full command
+                    # this is a bit tricky since we're in the middle of execution
+                    # for now, just use default generation
+                    config_path = config_integration.generate_config(
+                        output_path=output_path, overwrite=args.overwrite
+                    )
+                else:
+                    config_path = config_integration.generate_config(
+                        output_path=output_path, overwrite=args.overwrite
+                    )
+
+                exit_application(
+                    f"Configuration file generated: {config_path}", EXIT_SUCCESS
+                )
+
+            except FileExistsError:
+                exit_application(
+                    "Configuration file already exists. Use --overwrite to replace it.",
+                    EXIT_FAIL,
+                )
+            except Exception as e:
+                exit_application(f"Failed to generate config: {e}", EXIT_FAIL)
+
+        elif args.config_command == "info":
+            try:
+                if args.path:
+                    config_path = Path(args.path)
+                    if config_path.exists():
+                        exit_application(f"Config file: {config_path}", EXIT_SUCCESS)
+                    else:
+                        exit_application(
+                            f"Config file not found: {config_path}", EXIT_FAIL
+                        )
+                else:
+                    config_integration.load_config()
+                    if config_integration.loader.config_path:
+                        info_text = f"Active config file: {config_integration.loader.config_path}\n"
+                        info_text += f"Presets available: {', '.join(config_integration.loader.list_presets()) or 'None'}"
+                    else:
+                        info_text = (
+                            "No configuration file found. Using built-in defaults.\n"
+                        )
+                        from deezy.config.defaults import get_default_config_path
+
+                        info_text += (
+                            f"Default config location: {get_default_config_path()}"
+                        )
+
+                    exit_application(info_text, EXIT_SUCCESS)
+            except Exception as e:
+                exit_application(f"Failed to load config info: {e}", EXIT_FAIL)

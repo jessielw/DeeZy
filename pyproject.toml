@@ -4,7 +4,11 @@ version = "0.1.10"
 description = "Dolby Encoding Engine Wrapper"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["pymediainfo", "xmltodict"]
+dependencies = [
+    "pymediainfo",
+    "xmltodict",
+    "tomlkit",
+]
 
 [project.optional-dependencies]
 build = ["pyinstaller-hooks-contrib>=2025.1", "pyinstaller>=6.9.0"]
