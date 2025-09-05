@@ -1,44 +1,114 @@
 # DeeZy
 
-In it's current form it's designed around encoding audio with Dolby Engine Encoder.
+A powerful, portable audio encoding tool built around the Dolby Encoding Engine (DEE) with support for Dolby Digital (DD), Dolby Digital Plus (DDP), and **Dolby Atmos** encoding.
 
-However, it was designed with expandability as needed for other encoders.
+## ✨ Key Features
 
-## Install (no install needed it's portable)
+- **🎵 Multiple Audio Formats**: Support for Dolby Digital (DD), Dolby Digital Plus (DDP), and Dolby Atmos
+- **🔧 Portable**: No installation required - just download and run
+- **🎛️ Flexible Configuration**: Automatic channel detection, custom bitrates, and advanced audio processing
+- **🌟 Atmos Support**: Full support for JOC (5.1.2/5.1.4) and BluRay Atmos (7.1.2/7.1.4) encoding
+- **📁 Batch Processing**: Process multiple files or use glob patterns for bulk operations
+- **🎚️ Advanced Controls**: Dynamic range compression, stereo downmix options, and audio normalization
+- **⚡ Smart Dependencies**: Only requires TrueHD decoder when actually encoding Atmos content
+- **🔍 Audio Analysis**: Built-in audio stream inspection and metadata display
 
-At the moment you'll need to download your binary (Windows 8+ x64 or Linux) and handle this one of two ways.
+## 📦 Installation
 
-1. You can add both FFMPEG and dee.exe (Dolby Encoding Engine) to your system PATH and use DeeZy as a normal executable.
+DeeZy is completely portable - no installation needed! Just download the binary for your platform.
 
-2. Create an `apps` folder beside DeeZy with two nested directories `ffmpeg` and `dee`
+### Option 1: System PATH (Recommended)
 
-```
-deezy (executable)
-- apps
-    - ffmpeg
-    - dee
-```
+Add FFMPEG, DEE (Dolby Encoding Engine), and optionally TrueHDD to your system PATH, then use DeeZy anywhere.
 
-You can place the executables to those files and needed libraries in the folders and then use DeeZy as a normal executable.
+### Option 2: Portable Structure
 
-## Uninstall
-
-Delete files.
-
-## Basic Usage
+Create an `apps` folder beside the DeeZy executable:
 
 ```
-usage: DeeZy [-h] [-v] {encode,find,info} ...
-
-positional arguments:
-  {encode,find,info}
-
-options:
-  -h, --help          show this help message and exit
-  -v, --version       show program's version number and exit
+deezy.exe (or deezy on Linux)
+└── apps/
+    ├── ffmpeg/
+    │   └── ffmpeg.exe
+    ├── dee/
+    │   └── dee.exe
+    └── truehdd/         # Only needed for Atmos encoding
+        └── truehdd.exe
 ```
 
-## Encode Usage DD
+### Dependencies
+
+- **FFMPEG** - Required for all operations
+- **DEE (Dolby Encoding Engine)** - Required for DD/DDP encoding
+- **TrueHDD** - Only required when encoding Atmos content
+
+## 🚀 Quick Start
+
+```bash
+# Encode to Dolby Digital Plus with automatic settings
+deezy encode ddp input.mkv
+
+# Encode to Dolby Atmos (5.1.4 layout)
+deezy encode ddp --atmos -c 5.1.4 input.mkv
+
+# Batch encode multiple files
+deezy encode ddp *.mkv
+
+# Get audio track information
+deezy info input.mkv
+```
+
+## 📋 Usage
+
+### Basic Commands
+
+```bash
+# Show version
+deezy --version
+
+# Get help for any command
+deezy encode ddp --help
+
+# Find files using glob patterns
+deezy find "**/*.mkv"
+
+# Analyze audio streams
+deezy info input.mkv
+```
+
+### Global Options
+
+| Option          | Description          |
+| --------------- | -------------------- |
+| `-v, --version` | Show program version |
+| `-h, --help`    | Show help message    |
+
+## 🎵 Audio Encoding
+
+### Dolby Digital (DD) Encoding
+
+Perfect for legacy compatibility and smaller file sizes.
+
+```bash
+# Basic DD encoding with auto-detection
+deezy encode dd input.mkv
+
+# Specify channel layout and bitrate
+deezy encode dd -c 5.1 -b 448 input.mkv
+
+# Custom output path and keep temporary files
+deezy encode dd -o "output.ac3" -k input.mkv
+```
+
+**Common Options:**
+
+- `-c, --channels`: `AUTO`, `MONO`, `STEREO`, `SURROUND` (5.1)
+- `-b, --bitrate`: Bitrate in Kbps (default: 448)
+- `-s, --stereo-down-mix`: `STANDARD` or `DPLII` (Dolby Pro Logic II)
+- `-drc`: Dynamic range compression profiles
+
+<details>
+<summary>📖 Full DD Usage</summary>
 
 ```
 usage: DeeZy encode dd [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
@@ -75,7 +145,7 @@ options:
   -tmp, --temp-dir, TEMP_DIR
    Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.
   -o, --output, OUTPUT
-   The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.  
+   The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
   -s, --stereo-down-mix, {STANDARD[0],DPLII[1]}
    Down mix method for stereo.
   -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6]}
@@ -84,7 +154,44 @@ options:
    Dynamic range compression settings.
 ```
 
-## Encode Usage DDP
+-drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
+Dynamic range compression settings.
+
+````
+</details>
+
+### Dolby Digital Plus (DDP) Encoding
+
+Enhanced quality with support for higher bitrates and **Dolby Atmos**.
+
+```bash
+# Basic DDP encoding
+deezy encode ddp input.mkv
+
+# High-quality 5.1 encoding with normalization
+deezy encode ddp -c 5.1 -b 768 --normalize input.mkv
+
+# Dolby Atmos encoding (JOC - 5.1.4)
+deezy encode ddp --atmos -c 5.1.4 -b 768 input.mkv
+
+# Dolby Atmos encoding (BluRay - 7.1.4)
+deezy encode ddp --atmos -c 7.1.4 -b 1536 input.mkv
+````
+
+**Key Features:**
+
+- **🌟 Atmos Support**: Automatic detection and encoding of Atmos content
+- **📈 Higher Bitrates**: Support for up to 1664 Kbps (BluRay Atmos)
+- **🎚️ Audio Normalization**: Built-in loudness normalization
+- **🔄 Smart Fallbacks**: Automatically falls back to regular DDP if no Atmos detected
+
+**Channel Options:**
+
+- Standard: `AUTO`, `MONO`, `STEREO`, `SURROUND` (5.1), `SURROUNDEX` (7.1)
+- Atmos: `ATMOS_5_1_2`, `ATMOS_5_1_4`, `ATMOS_7_1_2`, `ATMOS_7_1_4`
+
+<details>
+<summary>📖 Full DDP Usage</summary>
 
 ```
 usage: DeeZy encode ddp [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
@@ -122,7 +229,7 @@ options:
   -tmp, --temp-dir, TEMP_DIR
    Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.
   -o, --output, OUTPUT
-   The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.  
+   The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
   -s, --stereo-down-mix, {STANDARD[0],DPLII[1]}
    Down mix method for stereo.
   -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8],ATMOS_5_1_2[512],ATMOS_5_1_4[514],ATMOS_7_1_2[712],ATMOS_7_1_4[714]}
@@ -137,7 +244,31 @@ options:
    Dynamic range compression settings
 ```
 
-## Find Usage
+-drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
+Dynamic range compression settings
+
+````
+</details>
+
+## 🔍 File Management & Analysis
+
+### Find Files
+
+Powerful file discovery with glob pattern support.
+
+```bash
+# Find all MKV files in current directory
+deezy find "*.mkv"
+
+# Find all video files recursively
+deezy find "**/*.{mkv,mp4,avi}"
+
+# Show only filenames (not full paths)
+deezy find -n "**/*.mkv"
+````
+
+<details>
+<summary>📖 Full Find Usage</summary>
 
 ```
 usage: DeeZy find [-h] [-n] INPUT [INPUT ...]
@@ -145,19 +276,33 @@ usage: DeeZy find [-h] [-n] INPUT [INPUT ...]
 positional arguments:
   INPUT       Input file paths or directories
 
-options:
   -h, --help  show this help message and exit
   -n, --name  Only display names instead of full paths.
 ```
 
-Example:
+**Example:**
 
-```
+```bash
 deezy find "Path\*.*"
-Path\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX.mkv
+# Output: Path\Men.in.Black.3.2012.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.HYBRID.REMUX.mkv
 ```
 
-## Info Usage
+</details>
+
+### Audio Stream Analysis
+
+Get detailed information about audio tracks before encoding.
+
+```bash
+# Analyze audio streams
+deezy info input.mkv
+
+# Analyze multiple files
+deezy info *.mkv
+```
+
+<details>
+<summary>📖 Full Info Usage</summary>
 
 ```
 usage: DeeZy info [-h] INPUT [INPUT ...]
@@ -195,19 +340,141 @@ Forced              : No
 
 `Track ... : 0` corresponds to the `-t / --track-index` arg when selecting your track to encode with dd/ddp
 
-## Input Types
+## 🎯 Input Types & Patterns
 
+DeeZy supports flexible input handling for batch processing:
+
+### Multiple Files
+
+```bash
+# Process multiple files with same settings
+deezy encode ddp input1.mkv input2.mp4 input3.avi
+
+# Files with spaces (use quotes)
+deezy encode ddp "Movie Name (2023).mkv" "Another Movie.mkv"
 ```
-You can line up multiple inputs to be encoded with the same settings:
-input.mkv input.mp4 etc...
-If there is space in the name you'll likely want to wrap them in quotes
 
-It also supports everything the python glob module supports. This allows you to filter or search recursively etc:
+### Glob Patterns
 
-Will find all mkv's in the specified directory:
-"directory/nested_path/*.mkv"
+```bash
+# All MKV files in directory
+deezy encode ddp "directory/*.mkv"
 
-Will find all mkv's recursively:
-"directory/nested_path/**/*.mkv"
+# Recursive search for all video files
+deezy encode ddp "movies/**/*.{mkv,mp4,avi}"
 
+# Pattern matching
+deezy encode ddp "*TrueHD*.mkv"
 ```
+
+## 🛠️ Advanced Configuration
+
+### Bitrate Guidelines
+
+| Format    | Layout      | Recommended Bitrate | Use Case              |
+| --------- | ----------- | ------------------- | --------------------- |
+| DD        | 5.1         | 448-640 kbps        | Legacy compatibility  |
+| DDP       | 5.1         | 640-768 kbps        | Streaming services    |
+| DDP       | 7.1         | 768-1024 kbps       | High-quality releases |
+| DDP Atmos | 5.1.2/5.1.4 | 768-1024 kbps       | JOC streaming         |
+| DDP Atmos | 7.1.2/7.1.4 | 1152-1664 kbps      | BluRay mastering      |
+
+### Dynamic Range Compression
+
+- **FILM_STANDARD**: Heavy compression for noisy environments
+- **FILM_LIGHT**: Light compression maintaining dynamics
+- **MUSIC_STANDARD**: Balanced for music content
+- **MUSIC_LIGHT**: Minimal compression for audiophile listening
+- **SPEECH**: Optimized for dialogue clarity
+
+### Temporary File Management
+
+Use `-k/--keep-temp` to retain intermediate files for debugging or manual processing. Temporary files include:
+
+- **WAV files**: Decoded audio streams
+- **XML files**: DEE job configurations
+- **LOG files**: Encoding process details
+
+## 📚 Examples & Workflows
+
+### Movie Encoding Workflow
+
+```bash
+# 1. Analyze the source
+deezy info "Movie.Name.2023.UHD.mkv"
+
+# 2. Encode with optimal settings
+deezy encode ddp --atmos -c 7.1.4 -b 1536 -drc FILM_LIGHT "Movie.Name.2023.UHD.mkv"
+
+# 3. Verify output
+deezy info "Movie.Name.2023.UHD.DDP.Atmos.ec3"
+```
+
+### Batch TV Series Processing
+
+```bash
+# Find all episodes
+deezy find "TV.Series.S01**/*.mkv"
+
+# Encode entire season
+deezy encode ddp -c 5.1 -b 640 -drc SPEECH "TV.Series.S01**/*.mkv"
+```
+
+### Quality Control
+
+```bash
+# Test encoding settings without processing
+deezy encode ddp -c 7.1.4 -b 1536 --print-only input.mkv
+
+# Keep temporary files for analysis
+deezy encode ddp -k input.mkv
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+**"TrueHD decoder not found"**
+
+- Ensure TrueHD decoder is installed and in PATH
+- Only required for Atmos encoding from TrueHD sources
+
+**"Invalid bitrate for channel layout"**
+
+- 7.1.4 Atmos requires minimum 1152 kbps
+- 5.1.2/5.1.4 Atmos requires minimum 768 kbps
+
+**"FFmpeg not found"**
+
+- Install FFmpeg and add to system PATH
+- Required for all audio processing operations
+
+**"DEE executable not found"**
+
+- Install Dolby Encoding Engine
+- Set DEE path with `--dee` parameter
+
+### Debug Mode
+
+```bash
+# Enable verbose output
+deezy encode ddp -p DEBUG input.mkv
+
+# Keep all temporary files
+deezy encode ddp -k -tmp "C:\debug\" input.mkv
+```
+
+## 🔗 Resources
+
+- **📖 Dolby Encoding Engine Documentation**: `docs/dolbyencodingengineusersguide.pdf`
+- **💡 Example Projects**: `example_project_using_thd/`
+- **🔧 Channel Layout Reference**: `deezy/enums/`
+- **🎵 Audio Filter Documentation**: DEE user guide for advanced filtering
+
+## 📄 License
+
+This project is licensed under the terms specified in the LICENSE file.
+
+---
+
+**Made with ❤️ for audio encoding enthusiasts**
