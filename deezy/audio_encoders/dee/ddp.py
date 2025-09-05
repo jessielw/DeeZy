@@ -7,8 +7,9 @@ from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.bitrates import dee_ddp_bitrates
 from deezy.audio_encoders.dee.xml.xml import DeeXMLGenerator
 from deezy.audio_encoders.delay import DelayGenerator
-from deezy.audio_processors.dee import ProcessDEE
+from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
+from deezy.audio_processors.truehdd import decode_truehd_to_atmos
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
 from deezy.payloads.ddp import DDPPayload
@@ -132,45 +133,64 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             output = Path(audio_track_info.auto_name).with_suffix(".ec3")
 
         # define .wav and .ac3/.ec3 file names (not full path)
-        wav_file_name = temp_filename + ".wav"
+        input_file_name = temp_filename + ".wav"
         output_file_name = temp_filename + output.suffix
 
-        # generate ffmpeg cmd
-        ffmpeg_cmd = self._generate_ffmpeg_cmd(
-            ffmpeg_path=self.payload.ffmpeg_path,
-            file_input=file_input,
-            track_index=self.payload.track_index,
-            sample_rate=audio_track_info.sample_rate,
-            ffmpeg_down_mix=ffmpeg_down_mix,
-            channels=self.payload.channels,
-            output_dir=temp_dir,
-            wav_file_name=wav_file_name,
-        )
+        if not self.payload.atmos:
+            # generate ffmpeg cmd
+            ffmpeg_cmd = self._generate_ffmpeg_cmd(
+                ffmpeg_path=self.payload.ffmpeg_path,
+                file_input=file_input,
+                track_index=self.payload.track_index,
+                sample_rate=audio_track_info.sample_rate,
+                ffmpeg_down_mix=ffmpeg_down_mix,
+                channels=self.payload.channels,
+                output_dir=temp_dir,
+                wav_file_name=input_file_name,
+            )
 
-        # process ffmpeg command
-        _ffmpeg_job = process_ffmpeg_job(
-            cmd=ffmpeg_cmd,
-            progress_mode=self.payload.progress_mode,
-            steps=True,
-            duration=audio_track_info.duration,
-        )
+            # process ffmpeg command
+            _ffmpeg_job = process_ffmpeg_job(
+                cmd=ffmpeg_cmd,
+                progress_mode=self.payload.progress_mode,
+                steps=True,
+                duration=audio_track_info.duration,
+            )
+        else:
+            atmos_job = decode_truehd_to_atmos(
+                output_dir=temp_dir,
+                file_input=file_input,
+                track_index=self.payload.track_index,
+                ffmpeg_path=self.payload.ffmpeg_path,
+                truehdd_path=self.payload.truehdd_path,
+                progress_mode=self.payload.progress_mode,
+                duration=audio_track_info.duration,
+            )
+            if atmos_job:
+                input_file_name = atmos_job.name
 
         # generate XML
         xml_generator = DeeXMLGenerator(
             bitrate=bitrate,
-            wav_file_name=wav_file_name,
+            input_file_name=input_file_name,
             output_file_name=output_file_name,
             output_dir=temp_dir,
             fps=fps,
             delay=delay,
             drc=self.payload.drc,
+            atmos=self.payload.atmos,
         )
-        update_xml = xml_generator.generate_xml_ddp(
-            down_mix_config=down_mix_config,
-            stereo_down_mix=stereo_mix,
-            channels=self.payload.channels,
-            normalize=self.payload.normalize,
-        )
+        if not self.payload.atmos:
+            update_xml = xml_generator.generate_xml_ddp(
+                down_mix_config=down_mix_config,
+                stereo_down_mix=stereo_mix,
+                channels=self.payload.channels,
+                normalize=self.payload.normalize,
+            )
+        else:
+            update_xml = xml_generator.generate_xml_atmos(
+                channels=self.payload.channels
+            )
 
         # generate DEE command
         dee_cmd = self._get_dee_cmd(
@@ -178,7 +198,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         )
 
         # process dee command
-        _dee_job = ProcessDEE().process_job(
+        _dee_job = process_dee_job(
             cmd=dee_cmd, progress_mode=self.payload.progress_mode
         )
 
