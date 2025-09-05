@@ -1,36 +1,34 @@
+from abc import ABC, abstractmethod
+from collections.abc import Sequence
+from enum import Enum
+from pathlib import Path
 import shutil
 import tempfile
-from abc import ABC, abstractmethod
-from typing import Union
-from pathlib import Path
+from typing import Generic, TypeVar
 
 from deezy.audio_encoders.base import BaseAudioEncoder
-from deezy.enums.dd import DolbyDigitalChannels
-from deezy.enums.shared import DeeFPS, StereoDownmix
+from deezy.enums.shared import DeeFPS
 from deezy.exceptions import PathTooLongError
 
+DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
 
-class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
+
+class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
+    @staticmethod
     @abstractmethod
-    def _get_accepted_bitrates(self, channels: int):
+    def _get_accepted_bitrates(
+        desired_channels: DolbyChannelType,
+        source_channels: int,
+    ) -> Sequence[int]:
         """Gets a list of accepted bitrates for the channel type"""
 
+    @staticmethod
     @abstractmethod
-    def _get_down_mix_config(self, channels: DolbyDigitalChannels):
+    def _get_down_mix_config(*args, **kwargs) -> str:
         """Gets the correct downmix string for DEE depending on channel count"""
 
     @abstractmethod
-    def _generate_ffmpeg_cmd(
-        self,
-        ffmpeg_path: Path,
-        file_input: Path,
-        track_index: int,
-        sample_rate: int,
-        channels: DolbyDigitalChannels,
-        stereo_down_mix: StereoDownmix,
-        output_dir: Path,
-        wav_file_name: str,
-    ):
+    def _generate_ffmpeg_cmd(self, *args, **kwargs) -> list[str]:
         """Method to generate FFMPEG command to process"""
 
     @staticmethod
@@ -113,31 +111,37 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC):
         return dee_cmd
 
     @staticmethod
-    def _get_fps(fps: Union[str, None]):
+    def _get_fps(fps: str | float | int | None):
         """
         Tries to get a valid FPS value from the input, handling conversion from string to float/int,
         otherwise returns 'not_indicated'.
 
         Args:
-            fps (str, float): The input FPS input to check.
+            fps (str, float | int | None): The input FPS input to check.
 
         Returns:
             DeeFPS: A valid DeeFPS value from the input, or FPS_NOT_INDICATED if not found.
 
         """
         try:
-            if fps:
-                if "." in fps:
-                    return DeeFPS(float(fps))
-                else:
-                    return DeeFPS(int(fps))
+            if fps is None:
+                return DeeFPS.FPS_NOT_INDICATED
+
+            if isinstance(fps, str):
+                value = float(fps) if "." in fps else int(fps)
+            elif isinstance(fps, float):
+                # allow integer-valued floats, otherwise keep float
+                value = int(fps) if fps.is_integer() else fps
+            # int
             else:
-                return str(DeeFPS.FPS_NOT_INDICATED)
-        except ValueError:
-            return str(DeeFPS.FPS_NOT_INDICATED)
+                value = fps
+
+            return DeeFPS(value)
+        except (ValueError, TypeError):
+            return DeeFPS.FPS_NOT_INDICATED
 
     @staticmethod
-    def _get_temp_dir(file_input: Path, temp_dir: Path):
+    def _get_temp_dir(file_input: Path, temp_dir: Path | None) -> Path:
         """
         Creates a temporary directory and returns its path. If `temp_dir` is provided,
         creates a directory with that name instead of a randomly generated one.
