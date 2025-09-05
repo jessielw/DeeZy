@@ -41,7 +41,7 @@ deezy.exe (or deezy on Linux)
 
 - **FFMPEG** - Required for all operations
 - **DEE (Dolby Encoding Engine)** - Required for DD/DDP encoding
-- **TrueHDD** - Only required when encoding Atmos content
+- **[TrueHDD](https://github.com/truehdd/truehdd)** - Only required when encoding Atmos content
 
 ## ⚙️ Configuration System
 
