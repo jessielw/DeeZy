@@ -1,11 +1,12 @@
-import xmltodict
 from pathlib import Path
-from typing import Union
 
+import xmltodict
+
+from deezy.audio_encoders.dee.xml.atmos_base_xml import xml_atmos_base_ddp
 from deezy.audio_encoders.dee.xml.dd_ddp_base_xml import xml_audio_base_ddp
-from deezy.enums.shared import DeeFPS, DeeDelay, DeeDRC
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
+from deezy.enums.shared import DeeDRC, DeeDelay, DeeFPS
 from deezy.exceptions import XMLFileNotFoundError
 
 
@@ -15,37 +16,60 @@ class DeeXMLGenerator:
     def __init__(
         self,
         bitrate: str,
-        wav_file_name: str,
+        input_file_name: str,
         output_file_name: str,
-        output_dir: Union[Path, str],
+        output_dir: Path,
         fps: DeeFPS,
-        delay: Union[DeeDelay, None],
+        delay: DeeDelay | None,
         drc: DeeDRC,
-    ):
+        atmos: bool,
+    ) -> None:
         """Set shared values for both DD/DDP
 
         Args:
-            bitrate (str): Bitrate in the format of '448'
-            wav_file_name (str): File name only
-            output_file_name (str): File name only
-            output_dir (Union[Path, str]): File path only
-            fps (DeeFPS): FPS of video input if it exists
-            delay (Union[DeeDelay, None]): Dataclass holding DeeDelay values or None
-            drc (DeeDRC): Dynamic range compression setting
+            bitrate (str): Bitrate in the format of '448'.
+            input_file_name (str): File name only.
+            output_file_name (str): File name only.
+            output_dir (Union[Path, str]): File path only.
+            fps (DeeFPS): FPS of video input if it exists.
+            delay (Union[DeeDelay, None]): Dataclass holding DeeDelay values or None.
+            drc (DeeDRC): Dynamic range compression setting.
+            atmos (bool): Rather or not this is an atmos workflow.
         """
         # outputs
         self.output_file_name = output_file_name
         self.output_dir = output_dir
+        self.atmos = atmos
 
         # bitrate
         self.bitrate = bitrate
 
-        # Parse base template
-        self.xml_base = xmltodict.parse(xml_audio_base_ddp)
+        # parse base template and set up basic structure
+        if not self.atmos:
+            self.xml_base = xmltodict.parse(xml_audio_base_ddp)
+            self._setup_regular_ddp_xml(
+                input_file_name, output_dir, output_file_name, fps, delay, bitrate, drc
+            )
+        else:
+            self.xml_base = xmltodict.parse(xml_atmos_base_ddp)
+            self._setup_atmos_xml(
+                input_file_name, output_dir, output_file_name, fps, delay, bitrate, drc
+            )
 
+    def _setup_regular_ddp_xml(
+        self,
+        input_file_name: str,
+        output_dir: Path,
+        output_file_name: str,
+        fps: DeeFPS,
+        delay: DeeDelay | None,
+        bitrate: str,
+        drc: DeeDRC,
+    ) -> None:
+        """Set up XML for regular DDP encoding (non-Atmos)"""
         # xml wav filename/path
         self.xml_base["job_config"]["input"]["audio"]["wav"]["file_name"] = (
-            f'"{wav_file_name}"'
+            f'"{input_file_name}"'
         )
         self.xml_base["job_config"]["input"]["audio"]["wav"]["storage"]["local"][
             "path"
@@ -86,9 +110,65 @@ class DeeXMLGenerator:
         drc_path["line_mode_drc_profile"] = str(drc)
         drc_path["rf_mode_drc_profile"] = str(drc)
 
+    def _setup_atmos_xml(
+        self,
+        input_file_name: str,
+        output_dir: Path,
+        output_file_name: str,
+        fps: DeeFPS,
+        delay: DeeDelay | None,
+        bitrate: str,
+        drc: DeeDRC,
+    ) -> None:
+        """Set up XML for Atmos encoding"""
+        # xml atmos mezz filename/path
+        self.xml_base["job_config"]["input"]["audio"]["atmos_mezz"]["file_name"] = (
+            f'"{input_file_name}"'
+        )
+        self.xml_base["job_config"]["input"]["audio"]["atmos_mezz"]["storage"]["local"][
+            "path"
+        ] = f'"{str(output_dir)}"'
+
+        # xml output file/path (Atmos template uses ec3 by default)
+        self.xml_base["job_config"]["output"]["ec3"]["file_name"] = (
+            f'"{output_file_name}"'
+        )
+        self.xml_base["job_config"]["output"]["ec3"]["storage"]["local"]["path"] = (
+            f'"{str(output_dir)}"'
+        )
+
+        # update fps sections
+        self.xml_base["job_config"]["input"]["audio"]["atmos_mezz"][
+            "timecode_frame_rate"
+        ] = fps
+        self.xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+            "timecode_frame_rate"
+        ] = fps
+
+        # xml temp path config
+        self.xml_base["job_config"]["misc"]["temp_dir"]["path"] = f'"{str(output_dir)}"'
+
+        # xml bit rate config
+        self.xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+            "data_rate"
+        ] = str(bitrate)
+
+        # xml delay config
+        if delay:
+            self.xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+                delay.MODE.value
+            ] = delay.DELAY
+
+        # xml dynamic range compression config
+        drc_path = self.xml_base["job_config"]["filter"]["audio"][
+            "encode_to_atmos_ddp"
+        ]["drc"]
+        drc_path["line_mode_drc_profile"] = str(drc)
+        drc_path["rf_mode_drc_profile"] = str(drc)
+
     def generate_xml_dd(
         self, down_mix_config: str, stereo_down_mix: str, channels: DolbyDigitalChannels
-    ):
+    ) -> Path:
         """Generates an XML file for a Dolby Digital (DD) audio encoding job with the
         specified parameters and saves it to disk.
 
@@ -117,6 +197,7 @@ class DeeXMLGenerator:
             ]
 
         # detect down_mix mode
+        downmix_mode = None
         if channels == DolbyDigitalChannels.MONO:
             downmix_mode = "not_indicated"
         elif channels == DolbyDigitalChannels.STEREO:
@@ -145,7 +226,9 @@ class DeeXMLGenerator:
         )
 
         # save xml
-        xml_file = self._save_xml(self.output_dir, self.output_file_name, self.xml_base)
+        xml_file = self._save_xml(
+            self.output_dir, Path(self.output_file_name), self.xml_base
+        )
 
         return xml_file
 
@@ -153,9 +236,9 @@ class DeeXMLGenerator:
         self,
         down_mix_config: str,
         stereo_down_mix: str,
-        channels: DolbyDigitalChannels,
+        channels: DolbyDigitalPlusChannels,
         normalize: bool,
-    ):
+    ) -> Path:
         """Generates an XML file for a Dolby Digital Plus (DDP) audio encoding job with the
         specified parameters and saves it to disk.
 
@@ -164,7 +247,7 @@ class DeeXMLGenerator:
                 downmix is needed.
             stereo_down_mix (str): The preferred stereo downmix mode: 'standard' for Dolby
                 Pro Logic II or 'dplii' for Lt/Rt.
-            channels (DolbyDigitalChannels): The number of audio channels to encode. Can be
+            channels (DolbyDigitalPlusChannels): The number of audio channels to encode. Can be
                 one of DolbyDigitalPlusChannels.MONO, DolbyDigitalPlusChannels.STEREO,
                 DolbyDigitalPlusChannels.SURROUND, or
                 DolbyDigitalPlusChannels.SURROUNDEX.
@@ -174,6 +257,12 @@ class DeeXMLGenerator:
         Returns:
             Path: The path to the generated XML file.
         """
+
+        # if this is an Atmos workflow, delegate to the Atmos method
+        if self.atmos:
+            return self.generate_xml_atmos(channels)
+
+        # continue with regular DDP processing
         # xml down mix config
         if down_mix_config:
             self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"][
@@ -185,6 +274,7 @@ class DeeXMLGenerator:
             ]
 
         # detect down_mix mode
+        downmix_mode = None
         if channels in [
             DolbyDigitalPlusChannels.MONO,
             DolbyDigitalPlusChannels.SURROUNDEX,
@@ -199,9 +289,10 @@ class DeeXMLGenerator:
             downmix_mode = "loro"
 
         # if downmix_mode is not None update the XML entry
-        self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
-            "preferred_downmix_mode"
-        ] = downmix_mode
+        if downmix_mode:
+            self.xml_base["job_config"]["filter"]["audio"]["pcm_to_ddp"]["downmix"][
+                "preferred_downmix_mode"
+            ] = downmix_mode
 
         # if ddp (NOT ddp71) and normalize is true, set template to normalize audio
         if normalize and channels != DolbyDigitalPlusChannels.SURROUNDEX:
@@ -248,12 +339,68 @@ class DeeXMLGenerator:
         del self.xml_base["job_config"]["output"]["ac3"]
 
         # save xml
-        xml_file = self._save_xml(self.output_dir, self.output_file_name, self.xml_base)
+        xml_file = self._save_xml(
+            self.output_dir, Path(self.output_file_name), self.xml_base
+        )
+
+        return xml_file
+
+    def generate_xml_atmos(self, channels: DolbyDigitalPlusChannels) -> Path:
+        """Generates an XML file for Atmos encoding.
+
+        Args:
+            channels: Atmos channel layout (must be an Atmos layout).
+
+        Returns:
+            Path: The path to the generated XML file.
+        """
+        # Set downmix mode for Atmos - use not_indicated since we don't do stereo downmix for Atmos
+        self.xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+            "downmix"
+        ]["preferred_downmix_mode"] = "not_indicated"
+
+        # Only set encoding_backend and encoder_mode for BluRay Atmos (7.1.x)
+        # For JOC Atmos (5.1.x), these fields should not exist
+        if channels.is_bluray_atmos():
+            # BluRay Atmos for 7.1.2 and 7.1.4
+            self.xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+                "encoding_backend"
+            ] = "atmosprocessor"
+            self.xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+                "encoder_mode"
+            ] = "bluray"
+        else:
+            # For JOC Atmos (5.1.x), remove these fields if they exist
+            encode_filter = self.xml_base["job_config"]["filter"]["audio"][
+                "encode_to_atmos_ddp"
+            ]
+            if "encoding_backend" in encode_filter:
+                del encode_filter["encoding_backend"]
+            if "encoder_mode" in encode_filter:
+                del encode_filter["encoder_mode"]
+
+        # Handle custom trims for Atmos based on channel layout
+        if channels in [
+            DolbyDigitalPlusChannels.ATMOS_5_1_2,
+            DolbyDigitalPlusChannels.ATMOS_5_1_4,
+        ]:
+            # For 5.1.x layouts, set surround and height trims
+            self.xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+                "custom_trims"
+            ]["surround_trim_5_1"] = "auto"
+            self.xml_base["job_config"]["filter"]["audio"]["encode_to_atmos_ddp"][
+                "custom_trims"
+            ]["height_trim_5_1"] = "auto"
+
+        # save xml
+        xml_file = self._save_xml(
+            self.output_dir, Path(self.output_file_name), self.xml_base
+        )
 
         return xml_file
 
     @staticmethod
-    def _save_xml(output_dir: Path, output_file_name: Path, xml_base: dict):
+    def _save_xml(output_dir: Path, output_file_name: Path, xml_base: dict) -> Path:
         """Creates/Deletes old XML files for use with DEE
 
         Args:
