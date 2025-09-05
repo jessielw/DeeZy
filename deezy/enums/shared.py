@@ -18,7 +18,7 @@ class DeeDelayModes(Enum):
     POSITIVE = "prepend_silence_duration"
 
 
-@dataclass
+@dataclass(slots=True)
 class DeeDelay:
     MODE: DeeDelayModes
     DELAY: str
