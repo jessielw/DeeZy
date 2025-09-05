@@ -8,7 +8,7 @@ from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.shared import DeeDRC, ProgressMode, StereoDownmix
-from deezy.info import AudioStreamViewer
+from deezy.info import parse_audio_streams
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.utils._version import __version__, program_name
@@ -352,7 +352,7 @@ def cli_parser(base_wd: Path):
     elif args.sub_command == "info":
         track_s_info = ""
         for input_file in file_inputs:
-            info = AudioStreamViewer().parse_audio_streams(input_file)
+            info = parse_audio_streams(input_file)
             if info.media_info:
                 track_s_info = (
                     track_s_info
