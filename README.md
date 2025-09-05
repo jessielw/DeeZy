@@ -695,7 +695,6 @@ deezy encode ddp -k -tmp "C:\debug\" input.mkv
 ## 🔗 Resources
 
 - **📖 Dolby Encoding Engine Documentation**: `docs/dolbyencodingengineusersguide.pdf`
-- **💡 Example Projects**: `example_project_using_thd/`
 - **🔧 Channel Layout Reference**: `deezy/enums/`
 - **🎵 Audio Filter Documentation**: DEE user guide for advanced filtering
 
