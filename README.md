@@ -6,7 +6,8 @@ A powerful, portable audio encoding tool built around the Dolby Encoding Engine 
 
 - **🎵 Multiple Audio Formats**: Support for Dolby Digital (DD), Dolby Digital Plus (DDP), and Dolby Atmos
 - **🔧 Portable**: No installation required - just download and run
-- **🎛️ Flexible Configuration**: Automatic channel detection, custom bitrates, and advanced audio processing
+- **⚙️ Smart Configuration**: TOML-based config system with dependency paths and encoding defaults
+- **🎛️ Flexible Encoding**: Automatic channel detection, custom bitrates, and advanced audio processing
 - **🌟 Atmos Support**: Full support for JOC (5.1.2/5.1.4) and BluRay Atmos (7.1.2/7.1.4) encoding
 - **📁 Batch Processing**: Process multiple files or use glob patterns for bulk operations
 - **🎚️ Advanced Controls**: Dynamic range compression, stereo downmix options, and audio normalization
@@ -42,6 +43,106 @@ deezy.exe (or deezy on Linux)
 - **DEE (Dolby Encoding Engine)** - Required for DD/DDP encoding
 - **TrueHDD** - Only required when encoding Atmos content
 
+## ⚙️ Configuration System
+
+DeeZy includes a powerful TOML-based configuration system that eliminates repetitive command-line arguments and allows you to set encoding defaults.
+
+### Quick Configuration Setup
+
+```bash
+# Generate a default configuration file
+deezy config generate
+
+# Check configuration status
+deezy config info
+
+# Overwrite existing configuration
+deezy config generate --overwrite
+```
+
+### Configuration File Structure
+
+The configuration file supports:
+
+- **Dependency paths** (FFmpeg, DEE, TrueHD)
+- **Encoding defaults** per format (DD/DDP)
+- **Global preferences** (temp directory, progress mode)
+- **Custom presets** for common workflows
+
+```toml
+[dependencies]
+# Paths to external tools (leave empty for auto-detection)
+ffmpeg = "C:/tools/ffmpeg.exe"
+dee = "C:/apps/dee/dee.exe"
+truehdd = "C:/decoder/truehd.exe"
+
+[defaults.ddp]
+# Your preferred DDP encoding defaults
+channels = "5.1"
+bitrate = 768
+drc = "FILM_LIGHT"
+normalize = true
+
+[presets]
+# Custom encoding presets for different workflows
+streaming = { format = "ddp", channels = "5.1", bitrate = 768, normalize = true }
+bluray_atmos = { format = "ddp", channels = "ATMOS_7_1_4", bitrate = 1664, atmos = true }
+quick_test = { format = "ddp", channels = "stereo", bitrate = 256 }
+```
+
+### Configuration Locations
+
+DeeZy automatically searches for configuration files in:
+
+1. **Portable**: `deezy-config.toml` beside the executable
+2. **User directory**:
+   - Windows: `%APPDATA%/DeeZy/config.toml`
+   - Linux/macOS: `~/.config/deezy/config.toml`
+
+### Priority System
+
+Configuration values are applied in order of priority:
+**CLI Arguments** > **Config File** > **Built-in Defaults**
+
+### Multiple Workflows with Presets
+
+The preset system is **fully implemented** and allows you to define multiple encoding profiles in a single config file:
+
+```toml
+[presets]
+# Different workflows for your encoding needs
+streaming = { format = "ddp", channels = "5.1", bitrate = 768, normalize = true }
+bluray_atmos = { format = "ddp", channels = "ATMOS_7_1_4", bitrate = 1664, atmos = true }
+quick_test = { format = "ddp", channels = "stereo", bitrate = 256 }
+```
+
+**Usage:**
+
+```bash
+# Use a preset for encoding
+deezy encode ddp --preset streaming input.mkv
+
+# Override preset settings as needed
+deezy encode ddp --preset bluray_atmos --bitrate 1024 input.mkv
+
+# List available presets
+deezy config info
+```
+
+### Benefits
+
+**Before Configuration:**
+
+```bash
+deezy encode ddp --ffmpeg "C:/tools/ffmpeg.exe" --dee "C:/apps/dee.exe" -c 5.1 -b 768 -drc FILM_LIGHT input.mkv
+```
+
+**After Configuration:**
+
+```bash
+deezy encode ddp input.mkv  # Uses your configured defaults!
+```
+
 ## 🚀 Quick Start
 
 ```bash
@@ -50,6 +151,9 @@ deezy encode ddp input.mkv
 
 # Encode to Dolby Atmos (5.1.4 layout)
 deezy encode ddp --atmos -c 5.1.4 input.mkv
+
+# Use a predefined preset
+deezy encode ddp --preset streaming input.mkv
 
 # Batch encode multiple files
 deezy encode ddp *.mkv
@@ -74,6 +178,9 @@ deezy find "**/*.mkv"
 
 # Analyze audio streams
 deezy info input.mkv
+
+# Manage configuration
+deezy config generate
 ```
 
 ### Global Options
@@ -82,6 +189,15 @@ deezy info input.mkv
 | --------------- | -------------------- |
 | `-v, --version` | Show program version |
 | `-h, --help`    | Show help message    |
+
+### Main Commands
+
+| Command  | Description                  |
+| -------- | ---------------------------- |
+| `encode` | Audio encoding operations    |
+| `find`   | File discovery with patterns |
+| `info`   | Audio stream analysis        |
+| `config` | Configuration management     |
 
 ## 🎵 Audio Encoding
 
@@ -114,7 +230,8 @@ deezy encode dd -o "output.ac3" -k input.mkv
 usage: DeeZy encode dd [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                        [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
                        [-p {STANDARD[0],DEBUG[1],SILENT[2]}] [-tmp TEMP_DIR]
-                       [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
+                       [-o OUTPUT] [--preset PRESET]
+                       [-s {STANDARD[0],DPLII[1]}]
                        [-c {AUTO[0],MONO[1],STEREO[2],SURROUND[6]}]
                        [-drc {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}]
                        INPUT [INPUT ...]
@@ -146,6 +263,8 @@ options:
    Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.
   -o, --output, OUTPUT
    The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
+  --preset, PRESET
+   Use a predefined configuration preset from config file.
   -s, --stereo-down-mix, {STANDARD[0],DPLII[1]}
    Down mix method for stereo.
   -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6]}
@@ -154,10 +273,6 @@ options:
    Dynamic range compression settings.
 ```
 
--drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
-Dynamic range compression settings.
-
-````
 </details>
 
 ### Dolby Digital Plus (DDP) Encoding
@@ -176,7 +291,7 @@ deezy encode ddp --atmos -c 5.1.4 -b 768 input.mkv
 
 # Dolby Atmos encoding (BluRay - 7.1.4)
 deezy encode ddp --atmos -c 7.1.4 -b 1536 input.mkv
-````
+```
 
 **Key Features:**
 
@@ -197,7 +312,8 @@ deezy encode ddp --atmos -c 7.1.4 -b 1536 input.mkv
 usage: DeeZy encode ddp [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                         [-t TRACK_INDEX] [-b BITRATE] [-d DELAY] [-k]
                         [-p {STANDARD[0],DEBUG[1],SILENT[2]}] [-tmp TEMP_DIR]
-                        [-o OUTPUT] [-s {STANDARD[0],DPLII[1]}]
+                        [-o OUTPUT] [--preset PRESET]
+                        [-s {STANDARD[0],DPLII[1]}]
                         [-c {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8],ATMOS_5_1_2[512],ATMOS_5_1_4[514],ATMOS_7_1_2[712],ATMOS_7_1_4[714]}]
                         [-n] [--atmos] [--no-bed-conform]
                         [-drc {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}]
@@ -230,6 +346,8 @@ options:
    Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.
   -o, --output, OUTPUT
    The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
+  --preset, PRESET
+   Use a predefined configuration preset from config file.
   -s, --stereo-down-mix, {STANDARD[0],DPLII[1]}
    Down mix method for stereo.
   -c, --channels, {AUTO[0],MONO[1],STEREO[2],SURROUND[6],SURROUNDEX[8],ATMOS_5_1_2[512],ATMOS_5_1_4[514],ATMOS_7_1_2[712],ATMOS_7_1_4[714]}
@@ -241,13 +359,9 @@ options:
   --no-bed-conform
    Disable bed conform for Atmos
   -drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
-   Dynamic range compression settings
+   Dynamic range compression settings.
 ```
 
--drc, --dynamic-range-compression, {FILM_STANDARD[0],FILM_LIGHT[1],MUSIC_STANDARD[2],MUSIC_LIGHT[3],SPEECH[4]}
-Dynamic range compression settings
-
-````
 </details>
 
 ## 🔍 File Management & Analysis
@@ -265,7 +379,7 @@ deezy find "**/*.{mkv,mp4,avi}"
 
 # Show only filenames (not full paths)
 deezy find -n "**/*.mkv"
-````
+```
 
 <details>
 <summary>📖 Full Find Usage</summary>
@@ -340,6 +454,77 @@ Forced              : No
 
 `Track ... : 0` corresponds to the `-t / --track-index` arg when selecting your track to encode with dd/ddp
 
+</details>
+
+### Configuration Management
+
+Manage DeeZy's configuration system for streamlined workflows.
+
+```bash
+# Generate default configuration file
+deezy config generate
+
+# Show current configuration status
+deezy config info
+
+# Generate config with overwrite protection disabled
+deezy config generate --overwrite
+```
+
+<details>
+<summary>📖 Full Config Usage</summary>
+
+```
+usage: DeeZy config [-h] {generate,info} ...
+
+positional arguments:
+  {generate,info}
+    generate       Generate configuration file
+    info           Show configuration information
+
+options:
+  -h, --help       show this help message and exit
+```
+
+#### Generate Command
+
+```
+usage: DeeZy config generate [-h] [-o OUTPUT] [--overwrite] [--from-args]
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Output path for config file (default: auto-detect)
+  --overwrite           Overwrite existing config file
+  --from-args           Generate config from current CLI arguments (use with encode command)
+```
+
+#### Info Command
+
+```
+usage: DeeZy config info [-h] [--path PATH]
+
+options:
+  -h, --help       show this help message and exit
+  --path PATH      Show specific config file path
+```
+
+**Example Output:**
+
+```bash
+# No config file
+deezy config info
+# Output: No configuration file found. Using built-in defaults.
+#         Default config location: C:\Users\...\AppData\Roaming\DeeZy\config.toml
+
+# With active config
+deezy config info
+# Output: Active config file: C:\Users\...\AppData\Roaming\DeeZy\config.toml
+#         Presets available: streaming, bluray_atmos
+```
+
+</details>
+
 ## 🎯 Input Types & Patterns
 
 DeeZy supports flexible input handling for batch processing:
@@ -368,6 +553,37 @@ deezy encode ddp "*TrueHD*.mkv"
 ```
 
 ## 🛠️ Advanced Configuration
+
+### Configuration-Driven Workflows
+
+The configuration system enables powerful workflow optimizations:
+
+```bash
+# Set up your environment once
+deezy config generate
+# Edit config file with your tool paths and preferred settings
+
+# Now use clean commands for different scenarios:
+
+# Streaming workflow - uses config defaults
+deezy encode ddp input.mkv
+
+# Override specific settings when needed
+deezy encode ddp -b 1024 -c 7.1 input.mkv
+
+# Atmos workflow - automatically detects need for TrueHD
+deezy encode ddp --atmos -c 7.1.4 input.truehd
+
+# Batch processing with consistent settings
+deezy encode ddp "season01/**/*.mkv"
+```
+
+**Configuration Benefits:**
+
+- **Eliminate repetitive arguments** - Set tool paths and defaults once
+- **Project consistency** - Same encoding settings across files
+- **Environment portability** - Share config files between machines
+- **Workflow optimization** - Different configs for different use cases
 
 ### Bitrate Guidelines
 
@@ -403,10 +619,13 @@ Use `-k/--keep-temp` to retain intermediate files for debugging or manual proces
 # 1. Analyze the source
 deezy info "Movie.Name.2023.UHD.mkv"
 
-# 2. Encode with optimal settings
+# 2. Encode with optimal settings using preset
+deezy encode ddp --preset bluray_atmos "Movie.Name.2023.UHD.mkv"
+
+# 3. Or customize settings manually
 deezy encode ddp --atmos -c 7.1.4 -b 1536 -drc FILM_LIGHT "Movie.Name.2023.UHD.mkv"
 
-# 3. Verify output
+# 4. Verify output
 deezy info "Movie.Name.2023.UHD.DDP.Atmos.ec3"
 ```
 
@@ -416,7 +635,10 @@ deezy info "Movie.Name.2023.UHD.DDP.Atmos.ec3"
 # Find all episodes
 deezy find "TV.Series.S01**/*.mkv"
 
-# Encode entire season
+# Encode entire season with streaming preset
+deezy encode ddp --preset streaming "TV.Series.S01**/*.mkv"
+
+# Or with custom settings
 deezy encode ddp -c 5.1 -b 640 -drc SPEECH "TV.Series.S01**/*.mkv"
 ```
 
@@ -452,7 +674,13 @@ deezy encode ddp -k input.mkv
 **"DEE executable not found"**
 
 - Install Dolby Encoding Engine
-- Set DEE path with `--dee` parameter
+- Set DEE path with `--dee` parameter or in config file
+
+**"Configuration file issues"**
+
+- Use `deezy config info` to check config status
+- Regenerate config with `deezy config generate --overwrite`
+- Ensure TOML syntax is valid in manual edits
 
 ### Debug Mode
 
@@ -476,5 +704,3 @@ deezy encode ddp -k -tmp "C:\debug\" input.mkv
 This project is licensed under the terms specified in the LICENSE file.
 
 ---
-
-**Made with ❤️ for audio encoding enthusiasts**
