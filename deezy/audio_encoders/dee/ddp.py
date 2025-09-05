@@ -272,8 +272,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         elif desired_channels is DolbyDigitalPlusChannels.SURROUNDEX:
             return list(dee_ddp_bitrates.get("ddp_71_combined", ()))
 
-        # final fallback
-        return ()
+        raise ValueError("No channel layout found")
 
     @staticmethod
     def _get_down_mix_config(
@@ -303,12 +302,11 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         wav_file_name: str,
     ) -> list[str]:
         # work out if we need to do a complex or simple resample
+        bits_per_sample = 32
         if sample_rate and sample_rate != 48000:
-            bits_per_sample = 32
             sample_rate = 48000
             resample = True
         else:
-            bits_per_sample = 32
             resample = False
 
         # resample and add swap channels
