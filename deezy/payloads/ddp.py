@@ -9,6 +9,6 @@ from deezy.payloads.shared import BaseArgsPayload
 class DDPPayload(BaseArgsPayload):
     channels: DolbyDigitalPlusChannels = DolbyDigitalPlusChannels.AUTO
     normalize: bool = False
-    drc: DeeDRC = DeeDRC.FILM_STANDARD
+    drc: DeeDRC = DeeDRC.FILM_LIGHT
     atmos: bool = False
     no_bed_conform: bool = False

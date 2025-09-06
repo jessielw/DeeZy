@@ -202,7 +202,7 @@ def cli_parser(base_wd: Path):
         type=case_insensitive_enum(DeeDRC),
         choices=list(DeeDRC),
         metavar=enum_choices(DeeDRC),
-        default=DeeDRC.MUSIC_LIGHT,
+        default=DeeDRC.FILM_LIGHT,
         help="Dynamic range compression settings.",
     )
 

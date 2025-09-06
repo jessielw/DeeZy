@@ -8,4 +8,4 @@ from deezy.payloads.shared import BaseArgsPayload
 @dataclass(slots=True)
 class DDPayload(BaseArgsPayload):
     channels: DolbyDigitalChannels = DolbyDigitalChannels.AUTO
-    drc: DeeDRC = DeeDRC.FILM_STANDARD
+    drc: DeeDRC = DeeDRC.FILM_LIGHT
