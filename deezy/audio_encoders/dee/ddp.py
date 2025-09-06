@@ -159,6 +159,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 progress_mode=self.payload.progress_mode,
                 steps=True,
                 duration=audio_track_info.duration,
+                step_info={"current": 1, "total": 3, "name": "FFMPEG"},
             )
         else:
             # Check if TrueHD path is available for Atmos processing
@@ -175,6 +176,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 truehdd_path=self.payload.truehdd_path,
                 progress_mode=self.payload.progress_mode,
                 duration=audio_track_info.duration,
+                step_info={"current": 1, "total": 2, "name": "TrueHD extract & decode"},
             )
             if atmos_job:
                 input_file_name = atmos_job.name
@@ -208,8 +210,17 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         )
 
         # process dee command
+        if self.payload.atmos:
+            # atmos workflow: 2 steps total (truehdd was step 1, DEE is step 2)
+            step_info = {"current": 2, "total": 2, "name": "DEE Atmos encode"}
+        else:
+            # regular workflow: 3 steps total (FFMPEG was step 1, DEE measure is step 2, DEE encode is step 3)
+            step_info = {"current": 2, "total": 3, "name": "DEE measure"}
+
         _dee_job = process_dee_job(
-            cmd=dee_cmd, progress_mode=self.payload.progress_mode
+            cmd=dee_cmd,
+            progress_mode=self.payload.progress_mode,
+            step_info=step_info,
         )
 
         # move file to output path

@@ -11,6 +11,7 @@ def process_ffmpeg_job(
     progress_mode: ProgressMode,
     steps: bool,
     duration: Union[float, None],
+    step_info: dict | None = None,
 ):
     """Processes file with FFMPEG while generating progress depending on progress_mode.
 
@@ -19,6 +20,7 @@ def process_ffmpeg_job(
         progress_mode (ProgressMode): Options are ProgressMode.STANDARD or ProgressMode.DEBUG
         steps (bool): True or False, to disable updating encode steps
         duration (Union[float, None]): Can be None or duration in milliseconds
+        step_info (dict | None): Optional step context with 'current', 'total', 'name' keys
         If set to None the generic FFMPEG output will be displayed
         If duration is passed then we can calculate the total progress for FFMPEG
     """
@@ -31,7 +33,13 @@ def process_ffmpeg_job(
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True) as proc:
         if progress_mode is ProgressMode.STANDARD and steps:
-            print("---- Step 1 of 3 ---- [FFMPEG]")
+            if step_info:
+                step_name = step_info.get("name", "FFMPEG")
+                current = step_info.get("current", 1)
+                total = step_info.get("total", 3)
+                print(f"---- Step {current} of {total} ---- [{step_name}]")
+            else:
+                print("---- Step 1 of 3 ---- [FFMPEG]")
 
         # initiate print on same line
         print_same_line = PrintSameLine()
@@ -49,7 +57,8 @@ def process_ffmpeg_job(
                             if percentage != "100.0%":
                                 print_same_line.print_msg(percentage)
                             else:
-                                print_same_line.print_msg("100.0%\n")
+                                # clear the progress line when we hit 100%
+                                print_same_line.clear()
                                 break
                 else:
                     print(line.strip())

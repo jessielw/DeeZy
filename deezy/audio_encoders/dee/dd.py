@@ -137,6 +137,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
             progress_mode=self.payload.progress_mode,
             steps=True,
             duration=audio_track_info.duration,
+            step_info={"current": 1, "total": 3, "name": "FFMPEG"},
         )
 
         # generate XML
@@ -162,8 +163,9 @@ class DDEncoderDEE(BaseDeeAudioEncoder):
         )
 
         # process dee command
+        step_info = {"current": 2, "total": 3, "name": "DEE measure"}
         _dee_job = process_dee_job(
-            cmd=dee_cmd, progress_mode=self.payload.progress_mode
+            cmd=dee_cmd, progress_mode=self.payload.progress_mode, step_info=step_info
         )
 
         # move file to output path

@@ -18,6 +18,7 @@ def decode_truehd_to_atmos(
     progress_mode: ProgressMode,
     no_bed_conform: bool = False,
     duration: float | None = None,
+    step_info: dict | None = None,
 ) -> Path:
     """
     Extract the TrueHD track and run truehdd decode to produce .atmos files.
@@ -70,6 +71,14 @@ def decode_truehd_to_atmos(
     if no_bed_conform:
         truehdd_cmd.remove("--bed-conform")
 
+    # print step info if in standard mode
+    if progress_mode == ProgressMode.STANDARD:
+        if step_info:
+            step_name = step_info.get("name", "TrueHD extract & decode")
+            current = step_info.get("current", 1)
+            total = step_info.get("total", 2)
+            print(f"---- Step {current} of {total} ---- [{step_name}]")
+
     ffmpeg_proc = subprocess.Popen(
         ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
@@ -106,7 +115,11 @@ def decode_truehd_to_atmos(
                         percent = convert_ffmpeg_to_percent(line, duration)
                         if percent:
                             # print on same line like ffmpeg.py does
-                            print_same_line.print_msg(percent)
+                            if percent != "100.0%":
+                                print_same_line.print_msg(percent)
+                            else:
+                                # clear the progress line when we hit 100%
+                                print_same_line.clear()
                             sink.append(percent)
                             # don't print raw ffmpeg line
                             continue

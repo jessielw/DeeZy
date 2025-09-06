@@ -5,12 +5,15 @@ from deezy.enums.shared import ProgressMode
 from deezy.utils.utils import PrintSameLine
 
 
-def process_dee_job(cmd: list, progress_mode: ProgressMode) -> bool:
+def process_dee_job(
+    cmd: list, progress_mode: ProgressMode, step_info: dict | None = None
+) -> bool:
     """Processes file with DEE while generating progress depending on progress_mode.
 
     Args:
         cmd (list): Base DEE cmd list
         progress_mode (ProgressMode): Options are ProgressMode.STANDARD or ProgressMode.DEBUG
+        step_info (dict | None): Optional step context with 'current', 'total', 'name' keys
     """
 
     # inject verbosity level into cmd list depending on progress_mode
@@ -25,7 +28,13 @@ def process_dee_job(cmd: list, progress_mode: ProgressMode) -> bool:
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
         if progress_mode == ProgressMode.STANDARD:
-            print("---- Step 2 of 3 ---- [DEE measure]")
+            if step_info:
+                step_name = step_info.get("name", "DEE measure")
+                current = step_info.get("current", 2)
+                total = step_info.get("total", 3)
+                print(f"---- Step {current} of {total} ---- [{step_name}]")
+            else:
+                print("---- Step 2 of 3 ---- [DEE measure]")
 
         # initiate print on same line
         print_same_line = PrintSameLine()
@@ -46,13 +55,23 @@ def process_dee_job(cmd: list, progress_mode: ProgressMode) -> bool:
                         # So we can print the start of step 3
                         if progress:
                             if last_number > progress:
-                                print("\n---- Step 3 of 3 ---- [DEE encode]")
+                                # clear the previous progress line before printing next step
+                                print_same_line.clear()
+                                if step_info:
+                                    encode_step = step_info.get("current", 2) + 1
+                                    total = step_info.get("total", 3)
+                                    print(
+                                        f"---- Step {encode_step} of {total} ---- [DEE encode]"
+                                    )
+                                else:
+                                    print("---- Step 3 of 3 ---- [DEE encode]")
 
                             # update progress but break when 100% is met to prevent printing 100% multiple times
                             if progress < 100.0:
                                 print_same_line.print_msg(str(progress) + "%")
                             elif progress == 100.0 and last_number < 100.0:
-                                print_same_line.print_msg(str(progress) + "%")
+                                # clear the progress line when we hit 100%
+                                print_same_line.clear()
 
                             # update last number
                             last_number = progress
