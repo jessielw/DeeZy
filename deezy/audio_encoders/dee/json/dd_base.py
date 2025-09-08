@@ -1,5 +1,5 @@
 """
-All 'None' values MUST be replaced during generation.
+All 'None' values MUST be replaced during generation..
 """
 
 dd_base = {
@@ -27,7 +27,7 @@ dd_base = {
                             "speech_threshold": None,  # int
                         }
                     },
-                    "encoder_mode": "dd",
+                    "encoder_mode": None,  # str [dd | ddp]
                     "bitstream_mode": "complete_main",
                     "downmix_config": None,  # str
                     "data_rate": None,  # int
@@ -64,12 +64,17 @@ dd_base = {
                 }
             }
         },
-        "output": {
+        "output": {  # we'll remove ac3/ec3 depending on the flow
             "ac3": {
                 "-version": "1",
                 "file_name": None,  # str (full windows style double quoted path)
                 "storage": {"local_multi_path": {"path": "-"}},
-            }
+            },
+            "ec3": {
+                "-version": "1",
+                "file_name": None,  # str (full windows style double quoted path)
+                "storage": {"local_multi_path": {"path": "-"}},
+            },
         },
         "misc": {
             "temp_dir": {

@@ -2,7 +2,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
-from deezy.audio_encoders.dee.json.dd_base import dd_or_ddp_51_or_less_base
+from deezy.audio_encoders.dee.json.dd_base import dd_base
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.shared import DeeDRC, DeeDelay, DeeFPS
@@ -47,7 +47,7 @@ class DeeJSONGenerator:
     ) -> Path:
         """Set up DD encoding."""
         # init base
-        json_base = deepcopy(dd_or_ddp_51_or_less_base)
+        json_base = deepcopy(dd_base)
 
         #### input section ####
         input_section = json_base["job_config"]["input"]["audio"]["wav"]
