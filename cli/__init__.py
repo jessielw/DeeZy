@@ -1,14 +1,20 @@
 import argparse
 from pathlib import Path
+from pprint import pprint
 
-from cli.utils import CustomHelpFormatter, validate_track_index
+from cli.utils import (
+    CustomHelpFormatter,
+    dialnorm_options,
+    int_0_100,
+    validate_track_index,
+)
 from deezy.audio_encoders.dee.dd import DDEncoderDEE
 from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
 from deezy.config import get_config_integration
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
-from deezy.enums.shared import DeeDRC, ProgressMode, StereoDownmix
+from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix
 from deezy.info import parse_audio_streams
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
@@ -16,15 +22,32 @@ from deezy.utils._version import __version__, program_name
 from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.file_parser import parse_input_s
+from deezy.utils.logger import logger_manager, logger
 
 
 def cli_parser(base_wd: Path):
     # Top-level parser
     parser = argparse.ArgumentParser(prog=program_name)
-
-    # Add a global -v flag
     parser.add_argument(
-        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
+    parser.add_argument(
+        "--log-level",
+        type=case_insensitive_enum(LogLevel),
+        default=LogLevel.INFO,
+        choices=tuple(LogLevel),
+        metavar=enum_choices(LogLevel),
+        help="Sets the log level (defaults to INFO).",
+    )
+    parser.add_argument(
+        "--log-to-file",
+        action="store_true",
+        help="Write log to file (defaults to input path with suffix of .log).",
+    )
+    parser.add_argument(
+        "--no-progress-bars",
+        action="store_true",
+        help="Disables progress bars on level INFO (disabled for DEBUG or higher).",
     )
 
     # Sub-command parser
@@ -63,51 +86,39 @@ def cli_parser(base_wd: Path):
     encode_group.add_argument(
         "--dee",
         type=str,
-        help="Path to DEE (Dolby Encoding Engine) executable.",
+        help="Path to Dolby Encoding Engine executable.",
     )
     encode_group.add_argument(
-        "-t",
         "--track-index",
         type=validate_track_index,
         default=0,
         help="The index of the audio track to use.",
     )
     encode_group.add_argument(
-        "-b", "--bitrate", type=int, default=None, help="The bitrate in Kbps."
-    )
-    encode_group.add_argument(
-        "-d",
         "--delay",
         type=str,
-        help="The delay in milliseconds or seconds. Note '-d=' is required! (-d=-10ms / -d=10s).",
+        help="The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).",
     )
     encode_group.add_argument(
-        "-k",
         "--keep-temp",
         action="store_true",
-        help="Keeps the temp files after finishing (usually a wav and an xml for DEE).",
-    )
-    # TODO add a SILENT mode (already in enums)
-    encode_group.add_argument(
-        "-p",
-        "--progress-mode",
-        type=case_insensitive_enum(ProgressMode),
-        default=ProgressMode.STANDARD,
-        choices=list(ProgressMode),
-        metavar=enum_choices(ProgressMode),
-        help="Sets progress output mode verbosity.",
+        help="Keeps the temp files after finishing.",
     )
     encode_group.add_argument(
-        "-tmp",
         "--temp-dir",
         type=str,
-        help="Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.",
+        help=(
+            "Path to store temporary files to. If not specified this will "
+            "automatically happen in the temp dir of the os."
+        ),
     )
     encode_group.add_argument(
-        "-o",
         "--output",
         type=str,
-        help="The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.",
+        help=(
+            "The output file path. If not specified we will attempt to automatically add "
+            "Delay/Language string to output file name."
+        ),
     )
     encode_group.add_argument(
         "--preset",
@@ -115,22 +126,125 @@ def cli_parser(base_wd: Path):
         help="Use a predefined configuration preset from config file.",
     )
 
-    # downmix group
-    downmix_group = argparse.ArgumentParser(add_help=False)
-    downmix_group.add_argument(
-        "-s",
+    # codec group
+    codec_group = argparse.ArgumentParser(add_help=False)
+    codec_group.add_argument(
+        "--bitrate",
+        type=int,
+        default=None,
+        help=(
+            "The bitrate in Kbps (If too high or low for you desired layout, "
+            "the bitrate will automatically be adjusted to the closest allowed bitrate)."
+        ),
+    )
+    codec_group.add_argument(
+        "--drc-line-mode",
+        type=case_insensitive_enum(DeeDRC),
+        choices=tuple(DeeDRC),
+        metavar=enum_choices(DeeDRC),
+        default=DeeDRC.FILM_LIGHT,
+        help="Dynamic range compression settings.",
+    )
+    codec_group.add_argument(
+        "--drc-rf-mode",
+        type=case_insensitive_enum(DeeDRC),
+        choices=tuple(DeeDRC),
+        metavar=enum_choices(DeeDRC),
+        default=DeeDRC.FILM_LIGHT,
+        help="Dynamic range compression settings.",
+    )
+    codec_group.add_argument(
+        "--custom-dialnorm",
+        type=dialnorm_options,
+        default=0,
+        help="Custom dialnorm (0 disables custom dialnorm).",
+    )
+
+    # dialogue intelligence group
+    shared_loudness_args = argparse.ArgumentParser(add_help=False)
+    shared_loudness_args.add_argument(
+        "--no-dialogue-intelligence",
+        action="store_false",
+        help="Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.",
+    )
+    shared_loudness_args.add_argument(
+        "--speech-threshold",
+        type=int_0_100,
+        default=15,
+        help=(
+            "[0-100] If the percentage of speech is higher than the threshold, the encoder uses speech "
+            "gating to set the dialnorm value. (Otherwise, the encoder uses level gating)."
+        ),
+    )
+
+    # dd/ddp (no atmos) only group
+    dd_ddp_only_group = argparse.ArgumentParser(add_help=False)
+    dd_ddp_only_group.add_argument(
+        "--no-low-pass-filter",
+        action="store_false",
+        help="Disables low pass filter.",
+    )
+    dd_ddp_only_group.add_argument(
+        "--no-surround-3db",
+        action="store_false",
+        help="Disables surround 3db attenuation.",
+    )
+    dd_ddp_only_group.add_argument(
+        "--no-surround-90-deg-phase-shift",
+        action="store_false",
+        help="Disables surround 90 degree phase shift.",
+    )
+
+    # down mixing metadata
+    downmix_metadata_group = argparse.ArgumentParser(add_help=False)
+    downmix_metadata_group.add_argument(
         "--stereo-down-mix",
         type=case_insensitive_enum(StereoDownmix),
-        choices=list(StereoDownmix),
-        default=StereoDownmix.STANDARD,
+        choices=tuple(StereoDownmix),
+        default=StereoDownmix.LORO,
         metavar=enum_choices(StereoDownmix),
         help="Down mix method for stereo.",
+    )
+    downmix_metadata_group.add_argument(
+        "--lt-rt-center",
+        type=str,
+        choices=("+3", "+1.5", "0", "-1.5", "-3", "-4.5", "-6", "-inf"),
+        default="-3",
+        help="Lt/Rt center downmix level.",
+    )
+    downmix_metadata_group.add_argument(
+        "--lt-rt-surround",
+        type=str,
+        choices=("-1.5", "-3", "-4.5", "-6", "-inf"),
+        default="-3",
+        help="Lt/Rt surround downmix level.",
+    )
+    downmix_metadata_group.add_argument(
+        "--lo-ro-center",
+        type=str,
+        choices=("+3", "+1.5", "0", "-1.5", "-3", "-4.5", "-6", "-inf"),
+        default="-3",
+        help="Lo/Ro center downmix level.",
+    )
+    downmix_metadata_group.add_argument(
+        "--lo-ro-surround",
+        type=str,
+        choices=("-1.5", "-3", "-4.5", "-6", "-inf"),
+        default="-3",
+        help="Lo/Ro surround downmix level.",
     )
 
     ### Dolby Digital Command ###
     encode_dd_parser = encode_subparsers.add_parser(
         "dd",
-        parents=[input_group, encode_group, downmix_group],
+        parents=(
+            input_group,
+            encode_group,
+            codec_group,
+            shared_loudness_args,
+            dd_ddp_only_group,
+            downmix_metadata_group,
+        ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
             width=78,
@@ -138,30 +252,26 @@ def cli_parser(base_wd: Path):
         ),
     )
     encode_dd_parser.add_argument(
-        "-c",
         "--channels",
         type=case_insensitive_enum(DolbyDigitalChannels),
-        choices=list(DolbyDigitalChannels),
+        choices=tuple(DolbyDigitalChannels),
         default=DolbyDigitalChannels.AUTO,
         metavar=enum_choices(DolbyDigitalChannels),
         help="The number of channels.",
     )
-    # TODO this will likely only be valid for DEE, so we'll need to
-    # decide what we want to do here
     encode_dd_parser.add_argument(
-        "-drc",
-        "--dynamic-range-compression",
-        type=case_insensitive_enum(DeeDRC),
-        choices=list(DeeDRC),
-        metavar=enum_choices(DeeDRC),
-        default=DeeDRC.FILM_LIGHT,
-        help="Dynamic range compression settings.",
+        "--metering-mode",
+        type=case_insensitive_enum(MeteringMode),
+        choices=tuple(MeteringMode),
+        metavar=enum_choices(MeteringMode),
+        default=MeteringMode.MODE_1770_3,
+        help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
     ### Dolby Digital Plus Command ###
     encode_ddp_parser = encode_subparsers.add_parser(
         "ddp",
-        parents=[input_group, encode_group, downmix_group],
+        # parents=[input_group, encode_group, downmix_group],
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
             width=78,
@@ -172,7 +282,7 @@ def cli_parser(base_wd: Path):
         "-c",
         "--channels",
         type=case_insensitive_enum(DolbyDigitalPlusChannels),
-        choices=list(DolbyDigitalPlusChannels),
+        choices=tuple(DolbyDigitalPlusChannels),
         default=DolbyDigitalPlusChannels.AUTO,
         metavar=enum_choices(DolbyDigitalPlusChannels),
         help="The number of channels.",
@@ -196,15 +306,16 @@ def cli_parser(base_wd: Path):
         action="store_true",
         help="Disable bed conform for Atmos",
     )
-    encode_ddp_parser.add_argument(
-        "-drc",
-        "--dynamic-range-compression",
-        type=case_insensitive_enum(DeeDRC),
-        choices=list(DeeDRC),
-        metavar=enum_choices(DeeDRC),
-        default=DeeDRC.FILM_LIGHT,
-        help="Dynamic range compression settings.",
-    )
+    # TODO: need to re add this like dd but with it's own default
+    # encode_ddp_parser.add_argument(
+    #     "-drc",
+    #     "--dynamic-range-compression",
+    #     type=case_insensitive_enum(DeeDRC),
+    #     choices=tuple(DeeDRC),
+    #     metavar=enum_choices(DeeDRC),
+    #     default=DeeDRC.FILM_LIGHT,
+    #     help="Dynamic range compression settings.",
+    # )
 
     #############################################################
     ## Find Command (placeholder, expect this would essentially just run
@@ -265,6 +376,9 @@ def cli_parser(base_wd: Path):
     # parse the arguments
     args = parser.parse_args()
 
+    # init logger
+    logger_manager.set_level(args.log_level.to_logging_level())
+
     if not args.sub_command:
         if not hasattr(args, "version"):
             parser.print_usage()
@@ -279,43 +393,55 @@ def cli_parser(base_wd: Path):
         # apply config defaults for encoding commands
         if args.sub_command == "encode":
             format_type = getattr(args, "format_command", None)
-            
+
             # handle preset if specified
             if hasattr(args, "preset") and args.preset:
                 preset_config = config_integration.loader.get_preset(args.preset)
                 if preset_config is None:
                     available_presets = config_integration.loader.list_presets()
-                    preset_list = ", ".join(available_presets) if available_presets else "None"
+                    preset_list = (
+                        ", ".join(available_presets) if available_presets else "None"
+                    )
                     exit_application(
                         f"Preset '{args.preset}' not found. Available presets: {preset_list}",
-                        EXIT_FAIL
+                        EXIT_FAIL,
                     )
-                
+
                 # apply preset values to args (only if not already set by CLI)
                 for key, value in preset_config.items():
                     if key == "format":
                         continue  # skip format since it's handled by subcommand
-                    
+
                     # convert key to arg attribute name
                     arg_name = key.replace("-", "_")
-                    
+
                     # only set if not already provided via CLI
                     if not hasattr(args, arg_name) or getattr(args, arg_name) is None:
                         # handle enum conversions
                         if arg_name == "channels":
                             if format_type == "ddp":
-                                value = DolbyDigitalPlusChannels(value) if isinstance(value, str) else value
+                                value = (
+                                    DolbyDigitalPlusChannels(value)
+                                    if isinstance(value, str)
+                                    else value
+                                )
                             elif format_type == "dd":
-                                value = DolbyDigitalChannels(value) if isinstance(value, str) else value
+                                value = (
+                                    DolbyDigitalChannels(value)
+                                    if isinstance(value, str)
+                                    else value
+                                )
                         elif arg_name == "drc":
                             value = DeeDRC(value) if isinstance(value, str) else value
                         elif arg_name == "stereo_mix":
-                            value = StereoDownmix(value) if isinstance(value, str) else value
-                        elif arg_name == "progress_mode":
-                            value = ProgressMode(value) if isinstance(value, str) else value
-                        
+                            value = (
+                                StereoDownmix(value)
+                                if isinstance(value, str)
+                                else value
+                            )
+
                         setattr(args, arg_name, value)
-            
+
             args = config_integration.merge_args_with_config(args, format_type)
 
     # detect tool dependencies
@@ -384,15 +510,17 @@ def cli_parser(base_wd: Path):
                 or not args.channels
                 or int(args.channels.value) == 0
             ):
-                print(
-                    "No channel(s) specified, will automatically detect highest quality "
+                print(  # TODO: use logger
+                    "No channels specified, will automatically detect highest quality "
                     "supported channel based on codec."
                 )
 
             # final fallback for bitrate if config system didn't set it
-            if not hasattr(args, "bitrate") or args.bitrate is None:
-                print("No bitrate specified, defaulting to 448k.")
-                setattr(args, "bitrate", 448)
+            # TODO: this needs to happen based on channel
+            # cli > config > defaults
+            # if not hasattr(args, "bitrate") or args.bitrate is None:
+            #     print("No bitrate specified, defaulting to 448k.")
+            #     setattr(args, "bitrate", 448)
 
         # parse all possible file inputs
         file_inputs = parse_input_s(args.input)
@@ -419,24 +547,41 @@ def cli_parser(base_wd: Path):
             # update payload
             try:
                 for input_file in file_inputs:
+                    # update logger to write to file if needed
+                    if args.log_to_file:
+                        logger_manager.set_file(input_file.with_suffix(".log"))
                     payload = DDPayload(
-                        file_input=input_file,
-                        track_index=args.track_index,
-                        bitrate=args.bitrate,
-                        delay=args.delay,
-                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
-                        keep_temp=args.keep_temp,
-                        file_output=Path(args.output) if args.output else None,
-                        progress_mode=args.progress_mode,
-                        stereo_mix=args.stereo_down_mix,
-                        channels=args.channels,
-                        drc=args.dynamic_range_compression,
+                        no_progress_bars=args.no_progress_bars,
                         ffmpeg_path=ffmpeg_path,
                         truehdd_path=truehdd_path,
                         dee_path=dee_path,
+                        file_input=input_file,
+                        track_index=args.track_index,
+                        bitrate=args.bitrate,  # TODO: this needs to possibly accept none or determine it here?
+                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                        delay=args.delay,
+                        keep_temp=args.keep_temp,
+                        file_output=Path(args.output) if args.output else None,
+                        stereo_mix=args.stereo_down_mix,
+                        metering_mode=args.metering_mode,
+                        drc_line_mode=args.drc_line_mode,
+                        drc_rf_mode=args.drc_rf_mode,
+                        dialogue_intelligence=args.no_dialogue_intelligence,
+                        speech_threshold=args.speech_threshold,  # int,
+                        custom_dialnorm=str(args.custom_dialnorm),
+                        channels=args.channels,
+                        lfe_lowpass_filter=args.no_low_pass_filter,
+                        surround_90_degree_phase_shift=args.no_surround_3db,
+                        surround_3db_attenuation=args.no_surround_90_deg_phase_shift,
+                        loro_center_mix_level=args.lo_ro_center,
+                        loro_surround_mix_level=args.lo_ro_surround,
+                        ltrt_center_mix_level=args.lt_rt_center,
+                        ltrt_surround_mix_level=args.lt_rt_surround,
+                        preferred_downmix_mode=args.stereo_down_mix,
                     )
+                    # pprint(payload, indent=3)
                     dd = DDEncoderDEE(payload).encode()
-                    print(f"Job successful! Output file path:\n{dd}")
+                    logger.info(f"Job successful! Output file path:\n{dd}")
             except Exception as e:
                 exit_application(str(e), EXIT_FAIL)
 
@@ -450,28 +595,28 @@ def cli_parser(base_wd: Path):
             # update payload
             try:
                 for input_file in file_inputs:
-                    payload = DDPPayload(
-                        file_input=input_file,
-                        track_index=args.track_index,
-                        bitrate=args.bitrate,
-                        delay=args.delay,
-                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
-                        keep_temp=args.keep_temp,
-                        file_output=Path(args.output) if args.output else None,
-                        progress_mode=args.progress_mode,
-                        stereo_mix=args.stereo_down_mix,
-                        channels=args.channels,
-                        normalize=args.normalize,
-                        drc=args.dynamic_range_compression,
-                        atmos=args.atmos,
-                        no_bed_conform=args.no_bed_conform,
-                        ffmpeg_path=ffmpeg_path,
-                        truehdd_path=truehdd_path,
-                        dee_path=dee_path,
-                    )
+                    raise NotImplementedError
+                    # payload = DDPPayload(
+                    #     file_input=input_file,
+                    #     track_index=args.track_index,
+                    #     bitrate=args.bitrate,
+                    #     delay=args.delay,
+                    #     temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                    #     keep_temp=args.keep_temp,
+                    #     file_output=Path(args.output) if args.output else None,
+                    #     stereo_mix=args.stereo_down_mix,
+                    #     channels=args.channels,
+                    #     normalize=args.normalize,
+                    #     drc=args.dynamic_range_compression,
+                    #     atmos=args.atmos,
+                    #     no_bed_conform=args.no_bed_conform,
+                    #     ffmpeg_path=ffmpeg_path,
+                    #     truehdd_path=truehdd_path,
+                    #     dee_path=dee_path,
+                    # )
 
-                    # encoder
-                    ddp = DDPEncoderDEE(payload).encode()
+                    # # encoder
+                    # ddp = DDPEncoderDEE(payload).encode()
                     print(f"Job successful! Output file path:\n{ddp}")
             except Exception as e:
                 # TODO not sure if we wanna exit or continue for batch?
