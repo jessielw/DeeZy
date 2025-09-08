@@ -8,7 +8,8 @@ from deezy.audio_encoders.delay import get_dee_delay
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.enums.ddp import DolbyDigitalPlusChannels
-from deezy.enums.shared import StereoDownmix
+from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
+from deezy.enums.shared import DDEncodingMode, StereoDownmix
 from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.shared import ChannelBitrates
@@ -19,7 +20,7 @@ from deezy.utils.logger import logger
 class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
     """Dolby Digital Plus Encoder."""
 
-    __slots__ = "payload"
+    __slots__ = ("payload",)
 
     def __init__(self, payload: DDPPayload):
         super().__init__()
@@ -173,12 +174,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             fps=fps,
             delay=delay,
             temp_dir=temp_dir,
-            ddp_mode=True
-            if self.payload.channels is not DolbyDigitalPlusChannels.SURROUNDEX
-            else False,
-            ddp71_mode=False
-            if self.payload.channels is not DolbyDigitalPlusChannels.SURROUNDEX
-            else True,
+            dd_mode=self._determine_output_mode(),
         )
         logger.debug(f"{json_path=}.")
 
@@ -216,8 +212,14 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
 
     @staticmethod
     def _get_channel_bitrate_object(
-        desired_channels: DolbyDigitalPlusChannels, source_channels: int
+        desired_channels: DolbyDigitalPlusChannels | DolbyDigitalPlusBlurayChannels,
+        source_channels: int,
     ) -> ChannelBitrates:
+        # handle DolbyDigitalPlusBlurayChannels
+        if isinstance(desired_channels, DolbyDigitalPlusBlurayChannels):
+            return DolbyDigitalPlusBlurayChannels.SURROUNDEX.get_bitrate_obj()
+
+        # handle normal DolbyDigitalPlusChannels
         if desired_channels is DolbyDigitalPlusChannels.AUTO:
             if source_channels == 1:
                 return DolbyDigitalPlusChannels.MONO.get_bitrate_obj()
@@ -232,11 +234,16 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
 
     @staticmethod
     def _get_down_mix_config(
-        channels: DolbyDigitalPlusChannels,
+        channels: DolbyDigitalPlusChannels | DolbyDigitalPlusBlurayChannels,
         input_channels: int,
         stereo_downmix: StereoDownmix,
         dee_allowed_input: bool,
     ) -> str:
+        # handle DolbyDigitalPlusBlurayChannels
+        if isinstance(channels, DolbyDigitalPlusBlurayChannels):
+            return channels.to_dee_cmd()
+
+        # handle normal DolbyDigitalPlusChannels
         if channels.value == input_channels or not dee_allowed_input:
             return DolbyDigitalPlusChannels.AUTO.to_dee_cmd()
         return channels.to_dee_cmd()
@@ -247,46 +254,48 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         file_input: Path,
         track_index: int,
         sample_rate: int | None,
-        channels: DolbyDigitalPlusChannels,
+        channels: DolbyDigitalPlusChannels | DolbyDigitalPlusBlurayChannels,
         ffmpeg_down_mix: bool | int,
         output_dir: Path,
         wav_file_name: str,
     ) -> list[str]:
-        # work out if we need to do a complex or simple resample
         bits_per_sample = 32
+        pan_7_1 = "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5"
+        resample_str = "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0"
+        audio_filter_args = []
+
+        is_bluray = isinstance(channels, DolbyDigitalPlusBlurayChannels)
+        is_surround_ex = (
+            channels == DolbyDigitalPlusChannels.SURROUNDEX if not is_bluray else True
+        )
+
+        # work out if we need to do a complex or simple resample
         if sample_rate and sample_rate != 48000:
             sample_rate = 48000
             resample = True
         else:
             resample = False
 
-        # resample and add swap channels
-        audio_filter_args = []
-        if resample:
-            if channels == DolbyDigitalPlusChannels.SURROUNDEX:
+        if is_surround_ex:
+            if resample:
                 audio_filter_args = [
                     "-af",
-                    (
-                        "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,"
-                        "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0"
-                    ),
+                    f"{pan_7_1},{resample_str}",
                     "-ar",
                     str(sample_rate),
                 ]
-            elif channels != DolbyDigitalPlusChannels.SURROUNDEX:
+            else:
                 audio_filter_args = [
                     "-af",
-                    "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
-                    "-ar",
-                    str(sample_rate),
+                    pan_7_1,
                 ]
-
-        elif not resample:
-            if channels == DolbyDigitalPlusChannels.SURROUNDEX:
-                audio_filter_args = [
-                    "-af",
-                    "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
-                ]
+        elif resample:
+            audio_filter_args = [
+                "-af",
+                resample_str,
+                "-ar",
+                str(sample_rate),
+            ]
 
         # utilize ffmpeg to downmix for channels that aren't supported by DEE
         if ffmpeg_down_mix:
@@ -304,3 +313,12 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         )
 
         return ffmpeg_cmd
+
+    def _determine_output_mode(self) -> DDEncodingMode:
+        if isinstance(self.payload.channels, DolbyDigitalPlusBlurayChannels):
+            return DDEncodingMode.BLURAY
+        else:
+            if self.payload.channels.value == 8:
+                return DDEncodingMode.DDP71
+            else:
+                return DDEncodingMode.DDP
