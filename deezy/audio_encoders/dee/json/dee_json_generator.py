@@ -3,9 +3,7 @@ import json
 from pathlib import Path
 
 from deezy.audio_encoders.dee.json.dd_base import dd_base
-from deezy.enums.dd import DolbyDigitalChannels
-from deezy.enums.ddp import DolbyDigitalPlusChannels
-from deezy.enums.shared import DeeDRC, DeeDelay, DeeFPS
+from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 
@@ -42,8 +40,7 @@ class DeeJSONGenerator:
         fps: DeeFPS,
         delay: DeeDelay | None,
         temp_dir: Path,
-        ddp_mode: bool = False,
-        ddp71_mode: bool = False,
+        dd_mode: DDEncodingMode,
     ) -> Path:
         """Set up DD encoding."""
         # init base
@@ -60,12 +57,7 @@ class DeeJSONGenerator:
         loudness["metering_mode"] = payload.metering_mode.to_dee_cmd()
         loudness["dialogue_intelligence"] = payload.dialogue_intelligence
         loudness["speech_threshold"] = payload.speech_threshold
-        if not ddp_mode and not ddp71_mode:
-            filter_section["encoder_mode"] = "dd"
-        elif ddp_mode:
-            filter_section["encoder_mode"] = "ddp"
-        else:
-            filter_section["encoder_mode"] = "ddp71"
+        filter_section["encoder_mode"] = dd_mode.get_encoder_mode()
         filter_section["downmix_config"] = payload.channels.to_dee_cmd()
         if delay:
             filter_section[delay.MODE.value] = delay.DELAY
@@ -89,7 +81,7 @@ class DeeJSONGenerator:
 
         #### output section ####
         output_section = json_base["job_config"]["output"]
-        if not ddp_mode and not ddp71_mode:
+        if dd_mode.get_output_mode() == "ac3":
             output_section["ac3"]["file_name"] = self._create_dee_file_path(
                 self.output_file_path
             )
