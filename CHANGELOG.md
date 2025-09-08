@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `--lo-ro-surround`: Lo/Ro surround downmix level.
   - DD:
     - `--metering-mode`: Loudness measuring mode according to one of the broadcast standards.
+  - DDP-BluRay:
+    - `ddp-bluray`: Added a new encoder mode to allow higher bitrates for channel 7.1 layouts.
 
 ### Fixed
 
@@ -52,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - **All shorthand arguments** (-c, etc.).
+- Removed `--normalize`.
 
 ## [1.0.0] - 2025-09-05
 

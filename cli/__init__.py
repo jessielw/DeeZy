@@ -1,6 +1,5 @@
 import argparse
 from pathlib import Path
-from pprint import pprint
 
 from cli.utils import (
     CustomHelpFormatter,
@@ -14,6 +13,7 @@ from deezy.config import get_config_integration
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
+from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
 from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix
 from deezy.info import parse_audio_streams
 from deezy.payloads.dd import DDPayload
@@ -300,19 +300,33 @@ def cli_parser(base_wd: Path):
         metavar=enum_choices(DolbyDigitalPlusChannels),
         help="The number of channels.",
     )
-    # encode_ddp_parser.add_argument(
-    #     "--atmos",
-    #     action="store_true",
-    #     help=(
-    #         "Enable Atmos encoding mode for TrueHD input files with Atmos content "
-    #         "(automatically falls back to DDP if no Atmos is detected)."
-    #     ),
-    # )
-    # encode_ddp_parser.add_argument(
-    #     "--no-bed-conform",
-    #     action="store_true",
-    #     help="Disable bed conform for Atmos",
-    # )
+
+    ### Dolby Digital Plus BluRay Command ###
+    encode_ddp_bluray_parser = encode_subparsers.add_parser(
+        "ddp-bluray",
+        parents=(
+            input_group,
+            encode_group,
+            codec_group,
+            shared_loudness_args,
+            dd_ddp_only_group,
+            downmix_metadata_group,
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=3,
+        ),
+    )
+    encode_ddp_bluray_parser.add_argument(
+        "-c",
+        "--channels",
+        type=case_insensitive_enum(DolbyDigitalPlusBlurayChannels),
+        choices=tuple(DolbyDigitalPlusBlurayChannels),
+        default=DolbyDigitalPlusBlurayChannels.SURROUNDEX,
+        metavar=enum_choices(DolbyDigitalPlusBlurayChannels),
+        help="The number of channels.",
+    )
 
     #############################################################
     ## Find Command (placeholder, expect this would essentially just run
@@ -576,14 +590,13 @@ def cli_parser(base_wd: Path):
                         ltrt_surround_mix_level=args.lt_rt_surround,
                         preferred_downmix_mode=args.stereo_down_mix,
                     )
-                    # pprint(payload, indent=3)
                     dd = DDEncoderDEE(payload).encode()
                     logger.info(f"Job successful! Output file path:\n{dd}")
             except Exception as e:
                 exit_application(str(e), EXIT_FAIL)
 
         # Encode Dolby Digital Plus
-        elif args.format_command == "ddp":
+        elif args.format_command in ("ddp", "ddp-bluray"):
             # TODO We will need to catch all expected expectations possible and wrap this in a try except
             # with the exit application output. That way we're not catching all generic issues.
             # exit_application(e, EXIT_FAIL)
