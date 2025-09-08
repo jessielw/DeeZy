@@ -8,7 +8,7 @@ from deezy.audio_encoders.delay import get_dee_delay
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.enums.dd import DolbyDigitalChannels
-from deezy.enums.shared import StereoDownmix
+from deezy.enums.shared import DDEncodingMode, StereoDownmix
 from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.shared import ChannelBitrates
@@ -19,7 +19,7 @@ from deezy.utils.logger import logger
 class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
     """Dolby Digital Encoder."""
 
-    __slots__ = "payload"
+    __slots__ = ("payload",)
 
     def __init__(self, payload: DDPayload):
         super().__init__()
@@ -175,8 +175,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             fps=fps,
             delay=delay,
             temp_dir=temp_dir,
-            ddp_mode=False,
-            ddp71_mode=False,
+            dd_mode=DDEncodingMode.DD,
         )
         logger.debug(f"{json_path=}.")
 
