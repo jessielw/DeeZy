@@ -1,42 +1,42 @@
-class NotEnoughSpaceError(Exception):
+class DeeZyError(Exception):
+    """Base DeeZy error"""
+
+
+class NotEnoughSpaceError(DeeZyError):
     """Custom error class to for insufficient storage"""
 
 
-class PathTooLongError(Exception):
+class PathTooLongError(DeeZyError):
     """Custom error class to for path names that are too long"""
 
 
-class InvalidExtensionError(Exception):
+class InvalidExtensionError(DeeZyError):
     """Custom error class for invalid file extensions"""
 
 
-class ChannelMixError(Exception):
+class ChannelMixError(DeeZyError):
     """Custom error class for invalid channel mix configurations"""
 
 
-class AutoChannelDetectionError(Exception):
+class AutoChannelDetectionError(DeeZyError):
     """Custom error class for failure to automatically calculate output channels"""
 
 
-class InputFileNotFoundError(Exception):
+class InputFileNotFoundError(DeeZyError):
     """Custom error class for missing input files"""
 
 
-class OutputFileNotFoundError(Exception):
+class OutputFileNotFoundError(DeeZyError):
     """Custom error class for missing input files"""
 
 
-class MediaInfoError(Exception):
+class MediaInfoError(DeeZyError):
     """Custom class for MediaInfo errors"""
 
 
-class DependencyNotFoundError(Exception):
+class DependencyNotFoundError(DeeZyError):
     """Custom exception class to call when a dependency is not found"""
 
 
-class XMLFileNotFoundError(Exception):
-    """Custom class to return if XML file output was not found"""
-
-
-class InvalidDelayError(Exception):
+class InvalidDelayError(DeeZyError):
     """Class to raise in the event of an invalid delay input"""
