@@ -2,14 +2,12 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
-from deezy.audio_encoders.dee.json.dd_base import dd_base
-from deezy.audio_encoders.dee.xml.atmos_base_xml import xml_atmos_base_ddp
-from deezy.audio_encoders.dee.xml.dd_ddp_base_xml import xml_audio_base_ddp
+from deezy.audio_encoders.dee.json.dd_base import dd_or_ddp_51_or_less_base
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.shared import DeeDRC, DeeDelay, DeeFPS
-from deezy.exceptions import XMLFileNotFoundError
 from deezy.payloads.dd import DDPayload
+from deezy.payloads.ddp import DDPPayload
 
 
 class DeeJSONGenerator:
@@ -39,15 +37,17 @@ class DeeJSONGenerator:
 
     def dd_json(
         self,
-        payload: DDPayload,
+        payload: DDPayload | DDPPayload,
         bitrate: int,
         fps: DeeFPS,
         delay: DeeDelay | None,
         temp_dir: Path,
+        ddp_mode: bool = False,
+        ddp71_mode: bool = False,
     ) -> Path:
         """Set up DD encoding."""
         # init base
-        json_base = deepcopy(dd_base)
+        json_base = deepcopy(dd_or_ddp_51_or_less_base)
 
         #### input section ####
         input_section = json_base["job_config"]["input"]["audio"]["wav"]
@@ -60,6 +60,12 @@ class DeeJSONGenerator:
         loudness["metering_mode"] = payload.metering_mode.to_dee_cmd()
         loudness["dialogue_intelligence"] = payload.dialogue_intelligence
         loudness["speech_threshold"] = payload.speech_threshold
+        if not ddp_mode and not ddp71_mode:
+            filter_section["encoder_mode"] = "dd"
+        elif ddp_mode:
+            filter_section["encoder_mode"] = "ddp"
+        else:
+            filter_section["encoder_mode"] = "ddp71"
         filter_section["downmix_config"] = payload.channels.to_dee_cmd()
         if delay:
             filter_section[delay.MODE.value] = delay.DELAY
@@ -83,9 +89,16 @@ class DeeJSONGenerator:
 
         #### output section ####
         output_section = json_base["job_config"]["output"]
-        output_section["ac3"]["file_name"] = self._create_dee_file_path(
-            self.output_file_path
-        )
+        if not ddp_mode and not ddp71_mode:
+            output_section["ac3"]["file_name"] = self._create_dee_file_path(
+                self.output_file_path
+            )
+            del output_section["ec3"]
+        else:
+            output_section["ec3"]["file_name"] = self._create_dee_file_path(
+                self.output_file_path
+            )
+            del output_section["ac3"]
 
         #### misc section ####
         misc_section = json_base["job_config"]["misc"]

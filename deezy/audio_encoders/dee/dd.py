@@ -19,9 +19,12 @@ from deezy.utils.logger import logger
 class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
     """Dolby Digital Encoder."""
 
+    __slots__ = "payload"
+
     def __init__(self, payload: DDPayload):
         super().__init__()
         self.payload = payload
+        logger.debug("Starting DDEncoder.")
 
     def encode(self):
         """Handles converting everything needed for DEE."""
@@ -172,6 +175,8 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             fps=fps,
             delay=delay,
             temp_dir=temp_dir,
+            ddp_mode=False,
+            ddp71_mode=False,
         )
         logger.debug(f"{json_path=}.")
 
@@ -259,7 +264,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         stereo_down_mix: StereoDownmix,
         output_dir: Path,
         wav_file_name: str,
-    ):
+    ) -> list[str]:
         # work out if we need to do a complex or simple resample
         bits_per_sample = 32
         if sample_rate and sample_rate != 48000:
