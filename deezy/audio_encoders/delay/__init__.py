@@ -17,7 +17,7 @@ def get_dee_delay(delay: str, compensate: bool = True) -> DeeDelay | None:
         this compensates for dee's 256 added samples
 
     Returns:
-        DeeDelay dataclass with needed values for XML.
+        DeeDelay dataclass with needed values for processing (XML/JSON).
 
     Raises:
         InvalidDelayError: If the delay input contains invalid characters or is
