@@ -1,98 +1,116 @@
-import re
+import logging
 from subprocess import PIPE, Popen, STDOUT
 
-from deezy.enums.shared import ProgressMode
-from deezy.utils.utils import PrintSameLine
+from deezy.utils.logger import logger
+from deezy.utils.progress import DEEProgressHandler
 
 
 def process_dee_job(
-    cmd: list, progress_mode: ProgressMode, step_info: dict | None = None
+    cmd: list, step_info: dict | None = None, no_progress_bars: bool = False
 ) -> bool:
     """Processes file with DEE while generating progress depending on progress_mode.
 
     Args:
-        cmd (list): Base DEE cmd list
-        progress_mode (ProgressMode): Options are ProgressMode.STANDARD or ProgressMode.DEBUG
-        step_info (dict | None): Optional step context with 'current', 'total', 'name' keys
+        cmd (list): Base DEE cmd list.
+        step_info (dict | None): Optional step context with 'current', 'total', 'name' keys.
+        no_progress_bars (bool): Disable progress bars.
     """
-
-    # inject verbosity level into cmd list depending on progress_mode
+    # inject verbosity level into cmd list depending on logging level
+    logger_level = logger.getEffectiveLevel()
     inject = cmd.index("--verbose") + 1
-    if progress_mode == ProgressMode.STANDARD:
-        cmd.insert(inject, "info")
-    elif progress_mode == ProgressMode.DEBUG:
+    if logger_level == logging.DEBUG:
         cmd.insert(inject, "debug")
+    else:
+        cmd.insert(inject, "info")
 
-    # variable to update to print step 3
-    last_number = 0
+    # setup DEE progress handler
+    handler = DEEProgressHandler(logger_level, no_progress_bars, step_info)
 
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-        if progress_mode == ProgressMode.STANDARD:
-            if step_info:
-                step_name = step_info.get("name", "DEE measure")
-                current = step_info.get("current", 2)
-                total = step_info.get("total", 3)
-                print(f"---- Step {current} of {total} ---- [{step_name}]")
-            else:
-                print("---- Step 2 of 3 ---- [DEE measure]")
+        measure_done = False
+        last_measure = 0.0
+        last_encode = 0.0
+        encode_task_id = None
 
-        # initiate print on same line
-        print_same_line = PrintSameLine()
+        with handler.dee_progress_context() as (progress, measure_task_id, _):
+            if proc.stdout:
+                for line in proc.stdout:
+                    logger.debug(line.strip())
+                    if "ERROR " in line:
+                        raise ValueError(f"There was a DEE error: {line}")
 
-        if proc.stdout:
-            for line in proc.stdout:
-                # check for all dee errors
-                if "ERROR " in line:
-                    raise ValueError(f"There was a DEE error: {line}")
+                    progress_data, is_encode = handler.parse_dee_line(line)
+                    if progress_data:
+                        if is_encode:
+                            # handle encode phase
+                            if (
+                                progress
+                                and encode_task_id is None
+                                and measure_task_id is not None
+                            ):
+                                # complete measure and start encode
+                                progress.update(measure_task_id, completed=100)
+                                progress.refresh()
+                                measure_done = True
+                                encode_task_id = progress.add_task(
+                                    handler.encode_task_desc, total=100
+                                )
 
-                # If progress mode is quiet let's clean up progress output
-                if progress_mode == ProgressMode.STANDARD:
-                    # We need to wait for 'Stage progress' to prevent any errors
-                    if "Stage progress" in line:
-                        progress = _filter_dee_progress(line)
+                            if progress and encode_task_id is not None:
+                                progress.update(
+                                    encode_task_id, completed=progress_data.value
+                                )
+                                logger.debug(
+                                    f"{handler.encode_task_desc} {progress_data.formatted}"
+                                )
+                            else:
+                                print(
+                                    f"{handler.encode_task_desc} {progress_data.formatted}"
+                                )
+                                logger.debug(
+                                    f"{handler.encode_task_desc} {progress_data.formatted}"
+                                )
 
-                        # If last number is greater than progress, this means we have already hit 100% on step 2
-                        # So we can print the start of step 3
-                        if progress:
-                            if last_number > progress:
-                                # clear the previous progress line before printing next step
-                                print_same_line.clear()
-                                if step_info:
-                                    encode_step = step_info.get("current", 2) + 1
-                                    total = step_info.get("total", 3)
-                                    print(
-                                        f"---- Step {encode_step} of {total} ---- [DEE encode]"
+                            last_encode = progress_data.value
+                        else:
+                            # Handle measure phase
+                            if not measure_done:
+                                if progress and measure_task_id is not None:
+                                    progress.update(
+                                        measure_task_id, completed=progress_data.value
+                                    )
+                                    logger.debug(
+                                        f"{handler.measure_task_desc} {progress_data.formatted}"
                                     )
                                 else:
-                                    print("---- Step 3 of 3 ---- [DEE encode]")
+                                    print(
+                                        f"{handler.measure_task_desc} {progress_data.formatted}"
+                                    )
+                                    logger.debug(
+                                        f"{handler.measure_task_desc} {progress_data.formatted}"
+                                    )
 
-                            # update progress but break when 100% is met to prevent printing 100% multiple times
-                            if progress < 100.0:
-                                print_same_line.print_msg(str(progress) + "%")
-                            elif progress == 100.0 and last_number < 100.0:
-                                # clear the progress line when we hit 100%
-                                print_same_line.clear()
+                                last_measure = progress_data.value
+                                if progress_data.value == 100.0:
+                                    measure_done = True
 
-                            # update last number
-                            last_number = progress
-                else:
-                    print(line.strip())
+            # ensure completion for both phases
+            if progress:
+                # progress bars handle completion automatically
+                if encode_task_id is None and last_measure == 100.0:
+                    encode_task_id = progress.add_task(
+                        handler.encode_task_desc, total=100
+                    )
+                    progress.update(encode_task_id, completed=100)
+                    progress.refresh()
+                elif encode_task_id is not None and last_encode < 100.0:
+                    progress.update(encode_task_id, completed=100)
+                    progress.refresh()
+            else:
+                # raw mode completion
+                handler.ensure_completion(last_measure, handler.measure_task_desc)
+                handler.ensure_completion(last_encode, handler.encode_task_desc)
 
-    if proc.returncode != 0:
-        raise ValueError("There was an DEE error. Please re-run in debug mode.")
-    else:
-        return True
-
-
-def _filter_dee_progress(line: str) -> float | None:
-    """Filters dee's total progress output
-
-    Args:
-        line (str): Dee's cli output
-
-    Returns:
-        float: Progress output
-    """
-    get_progress = re.search(r"Stage\sprogress:\s(.+),", line)
-    if get_progress:
-        return float(get_progress.group(1))
+    if proc.wait() != 0:
+        raise ValueError("There was a DEE error. Please re-run in debug mode.")
+    return True
