@@ -3,6 +3,46 @@ from enum import Enum
 from typing import Type
 
 
+def _missing_func(cls, value):
+    """Helper function to check member/value for a match."""
+    if value is None:
+        return
+
+    value_str = str(value).lower() if isinstance(value, str) else value
+
+    for member in cls:
+        member_name = member.name.lower()
+        member_value = member.value
+
+        # compare member name (case-insensitive)
+        if isinstance(value, str):
+            if member_name == value_str or member_name.replace("_", " ") == value_str:
+                return member
+
+        # compare member value
+        if isinstance(member_value, str) and isinstance(value, str):
+            member_value_lower = member_value.lower()
+            if (
+                member_value_lower == value_str
+                or member_value_lower.replace("_", " ") == value_str
+            ):
+                return member
+        elif member_value == value:
+            return member
+
+
+class CaseInsensitiveEnum(Enum):
+    """Case insensitive Enum that will attempt to match on both the value and member."""
+
+    @classmethod
+    def _missing_(cls, value):
+        """Override this method to ignore case sensitivity"""
+        missing = _missing_func(cls, value)
+        if missing:
+            return missing
+        raise ValueError(f"No {cls.__name__} member with value '{value}'")
+
+
 def case_insensitive_enum(enum_class):
     """Return a converter that takes a string and returns the corresponding
     enumeration value, regardless of case.
@@ -20,7 +60,7 @@ def case_insensitive_enum(enum_class):
     """
 
     def converter(value):
-        v = value.strip()
+        v = value.strip() # TODO: be sure to check this when we remove the weird atmos input channel names
         try:
             # numeric form e.g. "514"
             if v.isdigit():
@@ -53,23 +93,5 @@ def case_insensitive_enum(enum_class):
 def enum_choices(enum_class: Type[Enum]) -> str:
     """
     Returns a string representation of all possible choices in the given enumeration class.
-
-    Args:
-        enum_class (Enum): The enumeration class to retrieve choices from.
-
-    Returns:
-        A string with the format "{choice1[choice_value1]},{choice2[choice_value2]},...".
-
-    Example:
-        If the enumeration class is defined as follows:
-
-        class DolbyDigitalChannels(Enum):
-            MONO = 1
-            STEREO = 2
-            SURROUND = 6
-
-        The function will return the following string:
-
-        "{MONO[1]},{STEREO[2]},{SURROUND[6]}"
     """
-    return f"{{{','.join(e.name + '[' + str(e.value) + ']' for e in enum_class)}}}"
+    return f"{{{','.join(str(e.value) for e in enum_class)}}}"
