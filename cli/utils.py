@@ -30,7 +30,7 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
         return f"{option_strings}, {args_string}"
 
 
-def validate_track_index(value: Any):
+def validate_track_index(value: Any) -> int:
     """
     Determines if the input is a valid number.
     If it's not returns the default of 0.
@@ -47,3 +47,20 @@ def validate_track_index(value: Any):
         return int(value)
     # If the input is invalid, return the default value
     return 0
+
+
+def int_0_100(value: str) -> int:
+    """Validate it's in range from 0-100"""
+    val = int(value)
+    if val < 0 or val > 100:
+        raise argparse.ArgumentTypeError("Value must be between 0 and 100")
+    return val
+
+
+def dialnorm_options(value: str) -> int:
+    val = int(value)
+    if val < -31 or val > 0:
+        raise argparse.ArgumentTypeError(
+            "Value must be between -31 and 0 (0 sets disables custom dialnorm)"
+        )
+    return val
