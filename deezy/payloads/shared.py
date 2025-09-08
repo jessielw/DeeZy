@@ -24,6 +24,14 @@ class BaseArgsPayload:
     dialogue_intelligence: bool
     speech_threshold: int
     custom_dialnorm: str  # str[int] (-1 - -31) but "0" disables it
+    lfe_lowpass_filter: bool
+    surround_90_degree_phase_shift: bool
+    surround_3db_attenuation: bool
+    loro_center_mix_level: str
+    loro_surround_mix_level: str
+    ltrt_center_mix_level: str
+    ltrt_surround_mix_level: str
+    preferred_downmix_mode: StereoDownmix
 
 
 @dataclass(frozen=True, slots=True)
