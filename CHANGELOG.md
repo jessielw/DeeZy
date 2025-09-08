@@ -9,19 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Logging that will show substantially more information when used with DEBUG.
 - Program wide configurable logger (defaults to INFO).
+- CLI args:
+  - General:
+    - `--log-level`: Sets the log level (defaults to INFO).
+    - `--log-to-file`: Write log to file (defaults to input path with suffix of .log).
+    - `--no-progress-bars`: Disables progress bars on level INFO (disabled for DEBUG or higher).
+    - `--drc-line-mode`: Dynamic range compression settings.
+    - `--drc-rf-mode`: Dynamic range compression settings.
+    - `--custom-dialnorm`: Custom dialnorm (0 disables custom dialnorm).
+    - `--no-dialogue-intelligence`: Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.
+    - `--speech-threshold`: If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
+    - `--no-low-pass-filter`: Disables low pass filter.
+    - `--no-surround-3db`: Disables surround 3db attenuation.
+    - `--no-surround-90-deg-phase-shift`: Disables surround 90 degree phase shift.
+    - `--lt-rt-center`: Lt/Rt center downmix level.
+    - `--lt-rt-surround`: Lt/Rt surround downmix level.
+    - `--lo-ro-center`: Lo/Ro center downmix level.
+    - `--lo-ro-surround`: Lo/Ro surround downmix level.
+  - DD:
+    - `--metering-mode`: Loudness measuring mode according to one of the broadcast standards.
 
 ### Fixed
 
 - Steps in progress output could be incorrect.
+- Issues where progress sometimes wasn't reported correctly for very tiny file sizes.
 
 ### Changed
 
+- Help portions of the CLI are now cleaner, using user friendly strings instead of raw enums.
+- Improved automatic bitrate selection when the user choses an invalid bitrate, if 2 valid bitrates are returned it now automatically chooses the next highest quality.
+- Re-wrote DD encoder module.
+- DEE is no longer fed XML, it's handled via JSON.
 - DRC default is now FILM_LIGHT.
+- Updated numerous help strings for CLI args to be more descriptive/nicer.
+- Progress Changes:
+  - For very tiny files once the progress returns 0 where the progress could sometimes only be calculated to 99%, progress is now updated to 100%.
+  - Added progress bars for each task/step _(this can be toggled via `--no-progress-bars` or by setting `--log-level` to DEBUG)_ .
+  - Unified all logic for progress, easier to maintain and update if needed later.
 
 ### Removed
 
--
+- **All shorthand arguments** (-c, etc.).
 
 ## [1.0.0] - 2025-09-05
 
