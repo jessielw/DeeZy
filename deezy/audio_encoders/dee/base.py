@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
 import shutil
@@ -9,6 +8,7 @@ from typing import Generic, TypeVar
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.enums.shared import DeeFPS
 from deezy.exceptions import PathTooLongError
+from deezy.payloads.shared import ChannelBitrates
 
 DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
 
@@ -16,11 +16,10 @@ DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
 class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
     @staticmethod
     @abstractmethod
-    def _get_accepted_bitrates(
-        desired_channels: DolbyChannelType,
-        source_channels: int,
-    ) -> Sequence[int]:
-        """Gets a list of accepted bitrates for the channel type"""
+    def _get_channel_bitrate_object(
+        desired_channels: DolbyChannelType, source_channels: int
+    ) -> ChannelBitrates:
+        """Gets a ChannelBitrates object"""
 
     @staticmethod
     @abstractmethod
@@ -32,11 +31,9 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         """Method to generate FFMPEG command to process"""
 
     @staticmethod
-    def _dee_allowed_input(input_channels: int):
+    def _dee_allowed_input(input_channels: int) -> bool:
         """Check's if the input channels are in the DEE allowed input channel list"""
-        if input_channels in [1, 2, 6, 8]:
-            return True
-        return False
+        return input_channels in (1, 2, 6, 8)
 
     @staticmethod
     def _get_ffmpeg_cmd(
@@ -107,6 +104,30 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             "-x",
             str(xml_path),
             "--disable-xml-validation",
+        ]
+        return dee_cmd
+
+    @staticmethod
+    def get_dee_json_cmd(dee_path: Path, json_path: Path):
+        """
+        Generate the command for running DEE using the specified DEE and JSON paths.
+
+        Args:
+            dee_path (Path): The path to the DEE executable.
+            json_path (Path): The path to the input JSON file.
+
+        Returns:
+            List[str]: The DEE command with the specified paths.
+        """
+        dee_cmd = [
+            str(dee_path),
+            "--progress-interval",
+            "500",
+            "--diagnostics-interval",
+            "90000",
+            "--verbose",
+            "-j",
+            str(json_path),
         ]
         return dee_cmd
 
