@@ -22,7 +22,7 @@ from deezy.utils._version import __version__, program_name
 from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.file_parser import parse_input_s
-from deezy.utils.logger import logger_manager, logger
+from deezy.utils.logger import logger, logger_manager
 
 
 def cli_parser(base_wd: Path):
@@ -162,6 +162,20 @@ def cli_parser(base_wd: Path):
 
     # dialogue intelligence group
     shared_loudness_args = argparse.ArgumentParser(add_help=False)
+    dd_ddp_metering_choices = (
+        MeteringMode.MODE_1770_1,
+        MeteringMode.MODE_1770_2,
+        MeteringMode.MODE_1770_3,
+        MeteringMode.MODE_LEQA,
+    )
+    shared_loudness_args.add_argument(
+        "--metering-mode",
+        type=case_insensitive_enum(MeteringMode),
+        choices=dd_ddp_metering_choices,
+        metavar="{" + ",".join(str(e.value) for e in dd_ddp_metering_choices) + "}",
+        default=MeteringMode.MODE_1770_3,
+        help="Loudness measuring mode according to one of the broadcast standards.",
+    )
     shared_loudness_args.add_argument(
         "--no-dialogue-intelligence",
         action="store_false",
@@ -259,19 +273,18 @@ def cli_parser(base_wd: Path):
         metavar=enum_choices(DolbyDigitalChannels),
         help="The number of channels.",
     )
-    encode_dd_parser.add_argument(
-        "--metering-mode",
-        type=case_insensitive_enum(MeteringMode),
-        choices=tuple(MeteringMode),
-        metavar=enum_choices(MeteringMode),
-        default=MeteringMode.MODE_1770_3,
-        help="Loudness measuring mode according to one of the broadcast standards.",
-    )
 
     ### Dolby Digital Plus Command ###
     encode_ddp_parser = encode_subparsers.add_parser(
         "ddp",
-        # parents=[input_group, encode_group, downmix_group],
+        parents=(
+            input_group,
+            encode_group,
+            codec_group,
+            shared_loudness_args,
+            dd_ddp_only_group,
+            downmix_metadata_group,
+        ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
             width=78,
@@ -287,34 +300,18 @@ def cli_parser(base_wd: Path):
         metavar=enum_choices(DolbyDigitalPlusChannels),
         help="The number of channels.",
     )
-    encode_ddp_parser.add_argument(
-        "-n",
-        "--normalize",
-        action="store_true",
-        help="Normalize audio for DDP (ignored for DDP channels above 6).",
-    )
-    encode_ddp_parser.add_argument(
-        "--atmos",
-        action="store_true",
-        help=(
-            "Enable Atmos encoding mode for TrueHD input files with Atmos content "
-            "(automatically falls back to DDP if no Atmos is detected)."
-        ),
-    )
-    encode_ddp_parser.add_argument(
-        "--no-bed-conform",
-        action="store_true",
-        help="Disable bed conform for Atmos",
-    )
-    # TODO: need to re add this like dd but with it's own default
     # encode_ddp_parser.add_argument(
-    #     "-drc",
-    #     "--dynamic-range-compression",
-    #     type=case_insensitive_enum(DeeDRC),
-    #     choices=tuple(DeeDRC),
-    #     metavar=enum_choices(DeeDRC),
-    #     default=DeeDRC.FILM_LIGHT,
-    #     help="Dynamic range compression settings.",
+    #     "--atmos",
+    #     action="store_true",
+    #     help=(
+    #         "Enable Atmos encoding mode for TrueHD input files with Atmos content "
+    #         "(automatically falls back to DDP if no Atmos is detected)."
+    #     ),
+    # )
+    # encode_ddp_parser.add_argument(
+    #     "--no-bed-conform",
+    #     action="store_true",
+    #     help="Disable bed conform for Atmos",
     # )
 
     #############################################################
@@ -557,7 +554,7 @@ def cli_parser(base_wd: Path):
                         dee_path=dee_path,
                         file_input=input_file,
                         track_index=args.track_index,
-                        bitrate=args.bitrate,  # TODO: this needs to possibly accept none or determine it here?
+                        bitrate=args.bitrate,
                         temp_dir=Path(args.temp_dir) if args.temp_dir else None,
                         delay=args.delay,
                         keep_temp=args.keep_temp,
@@ -567,7 +564,7 @@ def cli_parser(base_wd: Path):
                         drc_line_mode=args.drc_line_mode,
                         drc_rf_mode=args.drc_rf_mode,
                         dialogue_intelligence=args.no_dialogue_intelligence,
-                        speech_threshold=args.speech_threshold,  # int,
+                        speech_threshold=args.speech_threshold,
                         custom_dialnorm=str(args.custom_dialnorm),
                         channels=args.channels,
                         lfe_lowpass_filter=args.no_low_pass_filter,
@@ -595,29 +592,40 @@ def cli_parser(base_wd: Path):
             # update payload
             try:
                 for input_file in file_inputs:
-                    raise NotImplementedError
-                    # payload = DDPPayload(
-                    #     file_input=input_file,
-                    #     track_index=args.track_index,
-                    #     bitrate=args.bitrate,
-                    #     delay=args.delay,
-                    #     temp_dir=Path(args.temp_dir) if args.temp_dir else None,
-                    #     keep_temp=args.keep_temp,
-                    #     file_output=Path(args.output) if args.output else None,
-                    #     stereo_mix=args.stereo_down_mix,
-                    #     channels=args.channels,
-                    #     normalize=args.normalize,
-                    #     drc=args.dynamic_range_compression,
-                    #     atmos=args.atmos,
-                    #     no_bed_conform=args.no_bed_conform,
-                    #     ffmpeg_path=ffmpeg_path,
-                    #     truehdd_path=truehdd_path,
-                    #     dee_path=dee_path,
-                    # )
-
-                    # # encoder
-                    # ddp = DDPEncoderDEE(payload).encode()
-                    print(f"Job successful! Output file path:\n{ddp}")
+                    # update logger to write to file if needed
+                    if args.log_to_file:
+                        logger_manager.set_file(input_file.with_suffix(".log"))
+                    payload = DDPPayload(
+                        no_progress_bars=args.no_progress_bars,
+                        ffmpeg_path=ffmpeg_path,
+                        truehdd_path=truehdd_path,
+                        dee_path=dee_path,
+                        file_input=input_file,
+                        track_index=args.track_index,
+                        bitrate=args.bitrate,
+                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                        delay=args.delay,
+                        keep_temp=args.keep_temp,
+                        file_output=Path(args.output) if args.output else None,
+                        stereo_mix=args.stereo_down_mix,
+                        metering_mode=args.metering_mode,
+                        drc_line_mode=args.drc_line_mode,
+                        drc_rf_mode=args.drc_rf_mode,
+                        dialogue_intelligence=args.no_dialogue_intelligence,
+                        speech_threshold=args.speech_threshold,
+                        custom_dialnorm=str(args.custom_dialnorm),
+                        channels=args.channels,
+                        lfe_lowpass_filter=args.no_low_pass_filter,
+                        surround_90_degree_phase_shift=args.no_surround_3db,
+                        surround_3db_attenuation=args.no_surround_90_deg_phase_shift,
+                        loro_center_mix_level=args.lo_ro_center,
+                        loro_surround_mix_level=args.lo_ro_surround,
+                        ltrt_center_mix_level=args.lt_rt_center,
+                        ltrt_surround_mix_level=args.lt_rt_surround,
+                        preferred_downmix_mode=args.stereo_down_mix,
+                    )
+                    ddp = DDPEncoderDEE(payload).encode()
+                    logger.info(f"Job successful! Output file path:\n{ddp}")
             except Exception as e:
                 # TODO not sure if we wanna exit or continue for batch?
                 exit_application(str(e), EXIT_FAIL)
