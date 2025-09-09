@@ -101,32 +101,26 @@ jobs:
         run: |
           set -e  # Exit on any error
 
-          echo "=== Preparing binaries ==="
-          # Rename binaries to final names for easier upload
-          cp ./deezy-linux-x64/deezy ./deezy-linux-x64-renamed
-          cp ./deezy-macos-x64/deezy ./deezy-macos-x64-renamed  
-          cp ./deezy-windows-x64.exe/deezy.exe ./deezy-windows-x64-renamed.exe
-
           echo "=== File sizes ==="
-          ls -lh deezy-*
+          ls -lh ./*/deezy* || ls -lh ./deezy-*/*
 
           echo "=== Uploading Linux binary ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            deezy-linux-x64-renamed \
+            ./deezy-linux-x64/deezy#deezy-linux-x64 \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Linux binary uploaded successfully"
 
           echo "=== Uploading macOS binary ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            deezy-macos-x64-renamed \
+            ./deezy-macos-x64/deezy#deezy-macos-x64 \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ macOS binary uploaded successfully"
 
           echo "=== Uploading Windows binary ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            deezy-windows-x64-renamed.exe \
+            ./deezy-windows-x64.exe/deezy.exe#deezy-windows-x64.exe \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Windows binary uploaded successfully"
