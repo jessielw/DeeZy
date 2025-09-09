@@ -107,35 +107,41 @@ jobs:
           echo "=== Uploading Linux binary ==="
           echo "File info: $(file ./deezy-linux-x64/deezy || echo 'file command not available')"
           echo "File permissions: $(ls -la ./deezy-linux-x64/deezy)"
-          
-          # Try uploading Linux binary with explicit name
-          echo "Attempting upload with explicit filename..."
+
+          # Copy to final name to ensure correct naming
+          cp ./deezy-linux-x64/deezy ./deezy-linux-x64
+          chmod +x ./deezy-linux-x64
+
+          echo "Uploading with proper filename..."
           gh release upload ${{ github.event.release.tag_name }} \
-            "./deezy-linux-x64/deezy#deezy-linux-x64" \
-            --repo "${{ github.repository }}" \
+            ./deezy-linux-x64 \
+            --repo ${{ github.repository }} \
             --clobber
-          
-          # Verify the upload worked
-          echo "Checking if Linux binary appears in release..."
-          gh release view ${{ github.event.release.tag_name }} --repo ${{ github.repository }} | grep -i linux || echo "❌ Linux binary not found in release"
-          echo "✅ Linux binary upload attempted"
+          echo "✅ Linux binary uploaded successfully"
 
           echo "=== Uploading macOS binary ==="
+          # Copy to final name to ensure correct naming
+          cp ./deezy-macos-x64/deezy ./deezy-macos-x64
+          chmod +x ./deezy-macos-x64
+
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-macos-x64/deezy#deezy-macos-x64 \
+            ./deezy-macos-x64 \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ macOS binary uploaded successfully"
 
           echo "=== Uploading Windows binary ==="
+          # Copy to final name to ensure correct naming
+          cp ./deezy-windows-x64.exe/deezy.exe ./deezy-windows-x64.exe
+
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-windows-x64.exe/deezy.exe#deezy-windows-x64.exe \
+            ./deezy-windows-x64.exe \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Windows binary uploaded successfully"
 
           echo "🎉 All binaries uploaded successfully!"
-          
+
           echo "=== Final Release Assets ==="
           gh release view ${{ github.event.release.tag_name }} --repo ${{ github.repository }}
         env:
