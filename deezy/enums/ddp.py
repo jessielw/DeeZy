@@ -1,5 +1,9 @@
 from enum import Enum
 
+from typing_extensions import override
+
+from deezy.payloads.shared import ChannelBitrates
+
 
 class DolbyDigitalPlusChannels(Enum):
     AUTO = 0
@@ -7,21 +11,9 @@ class DolbyDigitalPlusChannels(Enum):
     STEREO = 2
     SURROUND = 6
     SURROUNDEX = 8
-    # atmos layouts
-    ATMOS_5_1_2 = 512
-    ATMOS_5_1_4 = 514
-    ATMOS_7_1_2 = 712
-    ATMOS_7_1_4 = 714
 
-    @staticmethod
-    def get_values_list() -> list[int]:
-        return [
-            x.value
-            for x in DolbyDigitalPlusChannels
-            if x != DolbyDigitalPlusChannels.AUTO
-        ]
-
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         if self is DolbyDigitalPlusChannels.AUTO:
             return "Auto"
         elif self is DolbyDigitalPlusChannels.MONO:
@@ -30,78 +22,177 @@ class DolbyDigitalPlusChannels(Enum):
             return "2.0"
         elif self is DolbyDigitalPlusChannels.SURROUND:
             return "5.1"
-        elif self is DolbyDigitalPlusChannels.SURROUNDEX:
+        # surroundex
+        else:
             return "7.1"
-        elif self is DolbyDigitalPlusChannels.ATMOS_5_1_2:
-            return "5.1.2"
-        elif self is DolbyDigitalPlusChannels.ATMOS_5_1_4:
-            return "5.1.4"
-        elif self is DolbyDigitalPlusChannels.ATMOS_7_1_2:
-            return "7.1.2"
-        elif self is DolbyDigitalPlusChannels.ATMOS_7_1_4:
-            return "7.1.4"
+
+    def to_dee_cmd(self) -> str:
+        if self is DolbyDigitalPlusChannels.AUTO:
+            return "off"
+        elif self is DolbyDigitalPlusChannels.MONO:
+            return "mono"
+        elif self is DolbyDigitalPlusChannels.STEREO:
+            return "stereo"
+        elif self is DolbyDigitalPlusChannels.SURROUND:
+            return "5.1"
+        # surroundex
         else:
-            return "Unknown"
+            return "off"
 
-    def is_atmos(self):
-        """Check if this is an Atmos channel layout."""
-        return self in (
-            DolbyDigitalPlusChannels.ATMOS_5_1_2,
-            DolbyDigitalPlusChannels.ATMOS_5_1_4,
-            DolbyDigitalPlusChannels.ATMOS_7_1_2,
-            DolbyDigitalPlusChannels.ATMOS_7_1_4,
-        )
-
-    def is_joc_atmos(self):
-        """Check if this is a JOC Atmos layout (5.1.X only)."""
-        return self in (
-            DolbyDigitalPlusChannels.ATMOS_5_1_2,
-            DolbyDigitalPlusChannels.ATMOS_5_1_4,
-        )
-
-    def is_bluray_atmos(self):
-        """Check if this is a BluRay Atmos layout (7.1.X)."""
-        return self in (
-            DolbyDigitalPlusChannels.ATMOS_7_1_2,
-            DolbyDigitalPlusChannels.ATMOS_7_1_4,
-        )
-
-    def get_fallback_layout(self):
-        """Get the fallback non-Atmos layout for when source doesn't have Atmos."""
-        if self in (
-            DolbyDigitalPlusChannels.ATMOS_5_1_2,
-            DolbyDigitalPlusChannels.ATMOS_5_1_4,
-        ):
-            return DolbyDigitalPlusChannels.SURROUND
-        elif self in (
-            DolbyDigitalPlusChannels.ATMOS_7_1_2,
-            DolbyDigitalPlusChannels.ATMOS_7_1_4,
-        ):
-            return DolbyDigitalPlusChannels.SURROUNDEX
+    def get_bitrate_obj(self) -> ChannelBitrates:
+        if self is DolbyDigitalPlusChannels.MONO:
+            return ChannelBitrates(
+                default=64,
+                choices=(
+                    32,
+                    40,
+                    48,
+                    56,
+                    64,
+                    72,
+                    80,
+                    88,
+                    96,
+                    104,
+                    112,
+                    120,
+                    128,
+                    144,
+                    160,
+                    176,
+                    192,
+                    200,
+                    208,
+                    216,
+                    224,
+                    232,
+                    240,
+                    248,
+                    256,
+                    272,
+                    288,
+                    304,
+                    320,
+                    336,
+                    352,
+                    368,
+                    384,
+                    400,
+                    448,
+                    512,
+                    576,
+                    640,
+                    704,
+                    768,
+                    832,
+                    896,
+                    960,
+                    1008,
+                    1024,
+                ),
+            )
+        elif self is DolbyDigitalPlusChannels.STEREO:
+            return ChannelBitrates(
+                default=128,
+                choices=(
+                    96,
+                    104,
+                    112,
+                    120,
+                    128,
+                    144,
+                    160,
+                    176,
+                    192,
+                    200,
+                    208,
+                    216,
+                    224,
+                    232,
+                    240,
+                    248,
+                    256,
+                    272,
+                    288,
+                    304,
+                    320,
+                    336,
+                    352,
+                    368,
+                    384,
+                    400,
+                    448,
+                    512,
+                    576,
+                    640,
+                    704,
+                    768,
+                    832,
+                    896,
+                    960,
+                    1008,
+                    1024,
+                ),
+            )
+        elif self is DolbyDigitalPlusChannels.SURROUND:
+            return ChannelBitrates(
+                default=192,
+                choices=(
+                    192,
+                    200,
+                    208,
+                    216,
+                    224,
+                    232,
+                    240,
+                    248,
+                    256,
+                    272,
+                    288,
+                    304,
+                    320,
+                    336,
+                    352,
+                    368,
+                    384,
+                    400,
+                    448,
+                    512,
+                    576,
+                    640,
+                    704,
+                    768,
+                    832,
+                    896,
+                    960,
+                    1008,
+                    1024,
+                ),
+            )
+        # surroundex
         else:
-            return self
+            return ChannelBitrates(
+                default=384,
+                choices=(
+                    384,
+                    448,
+                    504,
+                    576,
+                    640,
+                    704,
+                    768,
+                    832,
+                    896,
+                    960,
+                    1008,
+                    1024,
+                ),
+            )
 
-    @classmethod
-    def from_string(cls, value):
-        """Parse channel layout from string (e.g., '5.1.2' -> ATMOS_5_1_2)."""
-        if isinstance(value, str):
-            # standard layouts
-            if value == "1.0":
-                return cls.MONO
-            elif value == "2.0":
-                return cls.STEREO
-            elif value == "5.1":
-                return cls.SURROUND
-            elif value == "7.1":
-                return cls.SURROUNDEX
-            # atmos layouts
-            elif value == "5.1.2":
-                return cls.ATMOS_5_1_2
-            elif value == "5.1.4":
-                return cls.ATMOS_5_1_4
-            elif value == "7.1.2":
-                return cls.ATMOS_7_1_2
-            elif value == "7.1.4":
-                return cls.ATMOS_7_1_4
-        # return original value if no conversion found
-        return value
+    @staticmethod
+    def get_values_list() -> list[int]:
+        return [
+            x.value
+            for x in DolbyDigitalPlusChannels
+            if x != DolbyDigitalPlusChannels.AUTO
+        ]

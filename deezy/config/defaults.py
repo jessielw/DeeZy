@@ -1,45 +1,101 @@
-"""Default configuration values for DeeZy."""
-
 from pathlib import Path
 from typing import Any
 
-from deezy.enums.dd import DolbyDigitalChannels
-from deezy.enums.ddp import DolbyDigitalPlusChannels
-from deezy.enums.shared import DeeDRC, ProgressMode, StereoDownmix
+from deezy.utils.utils import get_working_dir
 
 
 # default configuration structure
 DEFAULT_CONFIG: dict[str, Any] = {
+    # dependencies (auto-detected if empty)
     "dependencies": {
-        "ffmpeg": "",  # Auto-detect
-        "dee": "",  # Auto-detect
-        "truehd": "",  # Auto-detect (optional)
+        "ffmpeg": "",
+        "dee": "",
+        "truehd": "",
     },
-    "defaults": {
-        "global": {
-            "progress_mode": ProgressMode.STANDARD.name,
-            "keep_temp": False,
-            "temp_dir": "",  # Use system temp
-            "track_index": 0,
-        },
+    # global settings applied to all formats
+    "global_defaults": {
+        "keep_temp": False,
+        "temp_dir": "",
+        "track_index": 0,
+        "drc_line_mode": "film_light",
+        "drc_rf_mode": "film_light",
+        "custom_dialnorm": 0,
+        "metering_mode": "1770_3",
+        "dialogue_intelligence": True,
+        "speech_threshold": 15,
+        "stereo_down_mix": "loro",
+        "lt_rt_center": "-3",
+        "lt_rt_surround": "-3",
+        "lo_ro_center": "-3",
+        "lo_ro_surround": "-3",
+    },
+    # default bitrates for each codec/channel combination
+    # users can customize these values
+    "default_bitrates": {
         "dd": {
-            "channels": DolbyDigitalChannels.AUTO.name,
-            "bitrate": 448,
-            "drc": DeeDRC.FILM_LIGHT.name,
-            "stereo_down_mix": StereoDownmix.STANDARD.name,
+            "mono": 192,  # DD 1.0
+            "stereo": 224,  # DD 2.0
+            "surround": 448,  # DD 5.1
         },
         "ddp": {
-            "channels": DolbyDigitalPlusChannels.AUTO.name,
-            "bitrate": 640,
-            "drc": DeeDRC.FILM_LIGHT.name,
-            "stereo_down_mix": StereoDownmix.STANDARD.name,
-            "normalize": False,
-            "atmos": False,
-            "no_bed_conform": False,
+            "mono": 64,  # DDP 1.0
+            "stereo": 128,  # DDP 2.0
+            "surround": 192,  # DDP 5.1
+            "surroundex": 384,  # DDP 7.1
+        },
+        "ddp_bluray": {
+            "surroundex": 384,  # DDP Bluray 7.1
+        },
+        "atmos": {
+            "streaming": 448,  # Atmos Streaming
+            "bluray": 448,  # Atmos Bluray
         },
     },
+    # format-specific settings (override global_defaults)
+    "format_defaults": {
+        "dd": {
+            "channels": "auto",
+            "lfe_lowpass_filter": True,
+            "surround_3db_attenuation": True,
+            "surround_90_degree_phase_shift": True,
+        },
+        "ddp": {
+            "channels": "auto",
+            "lfe_lowpass_filter": True,
+            "surround_3db_attenuation": True,
+            "surround_90_degree_phase_shift": True,
+        },
+        "ddp_bluray": {
+            "channels": "surroundex",
+            "lfe_lowpass_filter": True,
+            "surround_3db_attenuation": True,
+            "surround_90_degree_phase_shift": True,
+        },
+        "atmos": {
+            "atmos_mode": "streaming",
+            "thd_warp_mode": "normal",
+            "no_bed_conform": True,
+        },
+    },
+    # user-defined presets
     "presets": {
-        # User-defined presets will be added here
+        # example presets (will be added by default)
+        "streaming_ddp": {
+            "format": "ddp",
+            "channels": "surround",
+            "bitrate": 448,
+            "atmos_mode": "streaming",
+        },
+        "bluray_atmos": {
+            "format": "atmos",
+            "atmos_mode": "bluray",
+            "bitrate": 768,
+        },
+        "quick_stereo": {
+            "format": "ddp",
+            "channels": "stereo",
+            "bitrate": 192,
+        },
     },
 }
 
@@ -49,36 +105,12 @@ def get_config_locations() -> list[Path]:
 
     Returns:
         List of Path objects for potential config locations:
-        1. Portable config beside executable
-        2. User config directory
-        3. System config directory (future)
+        1. Portable config beside executable (deezy-conf.toml)
     """
-    import os
-    import sys
-
     locations = []
-
-    # 1. Portable config beside executable
-    if getattr(sys, "frozen", False):
-        # Running as compiled executable
-        exe_dir = Path(sys.executable).parent
-    else:
-        # Running as script - use current working directory
-        exe_dir = Path.cwd()
-
-    portable_config = exe_dir / "deezy-config.toml"
+    exe_dir = get_working_dir()
+    portable_config = exe_dir / "deezy-conf.toml"
     locations.append(portable_config)
-
-    # 2. User config directory
-    if os.name == "nt":  # Windows
-        appdata = os.environ.get("APPDATA")
-        if appdata:
-            user_config = Path(appdata) / "DeeZy" / "config.toml"
-            locations.append(user_config)
-    else:  # Linux/macOS
-        home = Path.home()
-        user_config = home / ".config" / "deezy" / "config.toml"
-        locations.append(user_config)
 
     return locations
 
@@ -90,10 +122,4 @@ def get_default_config_path() -> Path:
         Path where new config files should be created.
     """
     locations = get_config_locations()
-
-    # For new configs, prefer user directory over portable
-    # unless we're in a portable environment
-    if len(locations) > 1:
-        return locations[1]  # User config directory
-    else:
-        return locations[0]  # Fallback to portable
+    return locations[0]

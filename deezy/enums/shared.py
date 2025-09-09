@@ -1,16 +1,37 @@
 from dataclasses import dataclass
 from enum import Enum
+import logging
+
+from typing_extensions import override
+
+from deezy.enums import CaseInsensitiveEnum
 
 
-class ProgressMode(Enum):
-    STANDARD = 0
-    DEBUG = 1
-    SILENT = 2
+class LogLevel(CaseInsensitiveEnum):
+    CRITICAL = "critical"
+    ERROR = "error"
+    WARNING = "warning"
+    INFO = "info"
+    DEBUG = "debug"
+
+    def to_logging_level(self) -> int:
+        """Must be called before being sent to init_logger method."""
+        return getattr(logging, self.name)
 
 
-class StereoDownmix(Enum):
-    STANDARD = 0
-    DPLII = 1
+class StereoDownmix(CaseInsensitiveEnum):
+    NOT_INDICATED = "auto"
+    LORO = "loro"
+    LTRT = "ltrt"
+    DPLII = "dpl2"
+
+    def to_dee_cmd(self) -> str:
+        if self is StereoDownmix.NOT_INDICATED:
+            return "not_indicated"
+        elif self is StereoDownmix.DPLII:
+            return "ltrt-pl2"
+        else:
+            return self.value
 
 
 class DeeDelayModes(Enum):
@@ -36,46 +57,80 @@ class DeeFPS(Enum):
     FPS_59_94 = 59.94
     FPS_60 = 60
 
-    def __str__(self):
-        if self == DeeFPS.FPS_NOT_INDICATED:
+    def to_dee_cmd(self) -> str:
+        if self is DeeFPS.FPS_NOT_INDICATED:
             return "not_indicated"
-        elif self == DeeFPS.FPS_23_976:
+        elif self is DeeFPS.FPS_23_976:
             return "23.976"
-        elif self == DeeFPS.FPS_24:
+        elif self is DeeFPS.FPS_24:
             return "24"
-        elif self == DeeFPS.FPS_25:
+        elif self is DeeFPS.FPS_25:
             return "25"
-        elif self == DeeFPS.FPS_29_97:
+        elif self is DeeFPS.FPS_29_97:
             return "29.97"
-        elif self == DeeFPS.FPS_30:
+        elif self is DeeFPS.FPS_30:
             return "30"
-        elif self == DeeFPS.FPS_48:
+        elif self is DeeFPS.FPS_48:
             return "48"
-        elif self == DeeFPS.FPS_50:
+        elif self is DeeFPS.FPS_50:
             return "50"
-        elif self == DeeFPS.FPS_59_94:
+        elif self is DeeFPS.FPS_59_94:
             return "59.94"
-        elif self == DeeFPS.FPS_60:
+        elif self is DeeFPS.FPS_60:
             return "60"
-        raise ValueError("Failed to determine FPS")
+        return "not_indicated"
 
 
 class DeeDRC(Enum):
-    FILM_STANDARD = 0
-    FILM_LIGHT = 1
-    MUSIC_STANDARD = 2
-    MUSIC_LIGHT = 3
-    SPEECH = 4
+    FILM_STANDARD = "film_standard"
+    FILM_LIGHT = "film_light"
+    MUSIC_STANDARD = "music_standard"
+    MUSIC_LIGHT = "music_light"
+    SPEECH = "speech"
 
+    @override
     def __str__(self):
-        if self == DeeDRC.FILM_STANDARD:
-            return "film_standard"
-        elif self == DeeDRC.FILM_LIGHT:
-            return "film_light"
-        elif self == DeeDRC.MUSIC_STANDARD:
-            return "music_standard"
-        elif self == DeeDRC.MUSIC_LIGHT:
-            return "music_light"
-        elif self == DeeDRC.SPEECH:
-            return "speech"
-        raise ValueError("Failed to determine DRC")
+        return self.value
+
+    def to_dee_cmd(self) -> str:
+        return str(self)
+
+
+class MeteringMode(CaseInsensitiveEnum):
+    MODE_1770_1 = "1770_1"
+    MODE_1770_2 = "1770_2"
+    MODE_1770_3 = "1770_3"
+    MODE_1770_4 = "1770_4"
+    MODE_LEQA = "leqa"
+
+    @override
+    def __str__(self) -> str:
+        return self.value.replace("_", "-")
+
+    def to_dee_cmd(self) -> str:
+        if self is MeteringMode.MODE_1770_1:
+            return "1770-1"
+        elif self is MeteringMode.MODE_1770_2:
+            return "1770-2"
+        elif self is MeteringMode.MODE_1770_3:
+            return "1770-3"
+        elif self is MeteringMode.MODE_1770_4:
+            return "1770-4"
+        else:
+            return "LeqA"
+
+
+class DDEncodingMode(CaseInsensitiveEnum):
+    DD = "dd"
+    DDP = "ddp"
+    DDP71 = "ddp71"
+    BLURAY = "bluray"
+
+    def get_encoder_mode(self) -> str:
+        return self.value
+
+    def get_output_mode(self) -> str:
+        if self is DDEncodingMode.DD:
+            return "ac3"
+        else:
+            return "ec3"
