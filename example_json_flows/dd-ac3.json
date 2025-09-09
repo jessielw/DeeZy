@@ -1,0 +1,85 @@
+{
+  "job_config": {
+    "input": {
+      "audio": {
+        "wav": {
+          "-version": "1",
+          "file_name": "\"C:\\Users\\user\\.wav\"",
+          "timecode_frame_rate": "23.976",
+          "offset": "00:00:00:00",
+          "ffoa": "auto",
+          "storage": {
+            "local_multi_path": {
+              "path": "-"
+            }
+          }
+        }
+      }
+    },
+    "filter": {
+      "audio": {
+        "pcm_to_ddp": {
+          "-version": "3",
+          "loudness": {
+            "measure_only": {
+              "metering_mode": "1770-3",
+              "dialogue_intelligence": true,
+              "speech_threshold": 15
+            }
+          },
+          "encoder_mode": "dd",
+          "bitstream_mode": "complete_main",
+          "downmix_config": "5.1",
+          "data_rate": 384,
+          "timecode_frame_rate": "23.976",
+          "start": "00:00:00:00",
+          "end": "00:03:07:18",
+          "time_base": "embedded_timecode",
+          "prepend_silence_duration": "0f",
+          "append_silence_duration": "0f",
+          "lfe_on": "true",
+          "dolby_surround_mode": "not_indicated",
+          "dolby_surround_ex_mode": "no",
+          "user_data": "-1",
+          "drc": {
+            "line_mode_drc_profile": "film_light",
+            "rf_mode_drc_profile": "film_light"
+          },
+          "lfe_lowpass_filter": true,
+          "surround_90_degree_phase_shift": true,
+          "surround_3db_attenuation": true,
+          "downmix": {
+            "loro_center_mix_level": "-3",
+            "loro_surround_mix_level": "-3",
+            "ltrt_center_mix_level": "-3",
+            "ltrt_surround_mix_level": "-3",
+            "preferred_downmix_mode": "loro"
+          },
+          "allow_hybrid_downmix": "false",
+          "embedded_timecodes": {
+            "starting_timecode": "off",
+            "frame_rate": "auto"
+          },
+          "custom_dialnorm": "0"
+        }
+      }
+    },
+    "output": {
+      "ac3": {
+        "-version": "1",
+        "file_name": "\"C:\\Users\\user\\.ac3\"",
+        "storage": {
+          "local_multi_path": {
+            "path": "-"
+          }
+        }
+      }
+    },
+    "misc": {
+      "temp_dir": {
+        "clean_temp": "true",
+        "path": "PATH"
+      }
+    }
+  }
+}
