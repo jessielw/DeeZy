@@ -49,7 +49,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
             logger.info(
                 f"Bitrate {runtime_bitrate} is invalid for this configuration. "
-                f"Using the next highest allowed bitrate: {fixed_bitrate}."
+                f"Using the next closest allowed bitrate: {fixed_bitrate}."
             )
             runtime_bitrate = fixed_bitrate
         else:
@@ -124,7 +124,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         # file output (if an output is a defined check users extension and use their output)
         if self.payload.file_output:
             output = Path(self.payload.file_output)
-            if output.suffix not in [".ec3", ".eac3"]:
+            if output.suffix not in (".ec3", ".eac3"):
                 raise InvalidExtensionError(
                     "DDP output must must end with the suffix '.eac3' or '.ec3'."
                 )

@@ -48,7 +48,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
             logger.info(
                 f"Bitrate {runtime_bitrate} is invalid for this configuration. "
-                f"Using the next highest allowed bitrate: {fixed_bitrate}."
+                f"Using the next closest allowed bitrate: {fixed_bitrate}."
             )
             runtime_bitrate = fixed_bitrate
         else:
