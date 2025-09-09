@@ -3,7 +3,6 @@
 apps/
 __pycache__/
 env/
-config.ini
 packages/tmdb_key.py
 packages/user_pw_key.py
 *.bin
@@ -12,9 +11,9 @@ packages/user_pw_key.py
 packages/github_token.py
 *.db
 /pyinstaller_build
-deezy_config.ini
 .vscode/
 deezy.code-workspace
 test.py
 custom-pyinstaller/
 deezy.egg-info
+deezy-conf.toml
