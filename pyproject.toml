@@ -11,9 +11,6 @@ dependencies = [
     "rich>=14.1.0",
 ]
 
-[project.optional-dependencies]
-build = ["pyinstaller-hooks-contrib>=2025.1", "pyinstaller>=6.9.0"]
-
 [tool.ruff]
 line-length = 88
 
@@ -35,3 +32,4 @@ testpaths = ["tests"]
 
 [dependency-groups]
 dev = ["ruff", "pytest", "pytest-cov"]
+build = ["pyinstaller-hooks-contrib>=2025.1", "pyinstaller>=6.9.0"]

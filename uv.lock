@@ -111,13 +111,11 @@ dependencies = [
     { name = "typing-extensions" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 build = [
     { name = "pyinstaller" },
     { name = "pyinstaller-hooks-contrib" },
 ]
-
-[package.dev-dependencies]
 dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -126,16 +124,17 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "pyinstaller", marker = "extra == 'build'", specifier = ">=6.9.0" },
-    { name = "pyinstaller-hooks-contrib", marker = "extra == 'build'", specifier = ">=2025.1" },
     { name = "pymediainfo" },
     { name = "rich", specifier = ">=14.1.0" },
     { name = "tomlkit" },
     { name = "typing-extensions", specifier = ">=4.15.0" },
 ]
-provides-extras = ["build"]
 
 [package.metadata.requires-dev]
+build = [
+    { name = "pyinstaller", specifier = ">=6.9.0" },
+    { name = "pyinstaller-hooks-contrib", specifier = ">=2025.1" },
+]
 dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
