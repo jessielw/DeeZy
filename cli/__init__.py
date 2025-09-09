@@ -7,15 +7,18 @@ from cli.utils import (
     int_0_100,
     validate_track_index,
 )
+from deezy.audio_encoders.dee.atmos import AtmosEncoder
 from deezy.audio_encoders.dee.dd import DDEncoderDEE
 from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
 from deezy.config import get_config_integration
 from deezy.enums import case_insensitive_enum, enum_choices
+from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
 from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix
 from deezy.info import parse_audio_streams
+from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.utils._version import __version__, program_name
@@ -209,9 +212,9 @@ def cli_parser(base_wd: Path):
         help="Disables surround 90 degree phase shift.",
     )
 
-    # down mixing metadata
-    downmix_metadata_group = argparse.ArgumentParser(add_help=False)
-    downmix_metadata_group.add_argument(
+    # dd stereo downmix
+    stereo_downmix_metadata_group = argparse.ArgumentParser(add_help=False)
+    stereo_downmix_metadata_group.add_argument(
         "--stereo-down-mix",
         type=case_insensitive_enum(StereoDownmix),
         choices=tuple(StereoDownmix),
@@ -219,6 +222,9 @@ def cli_parser(base_wd: Path):
         metavar=enum_choices(StereoDownmix),
         help="Down mix method for stereo.",
     )
+
+    # down mixing metadata
+    downmix_metadata_group = argparse.ArgumentParser(add_help=False)
     downmix_metadata_group.add_argument(
         "--lt-rt-center",
         type=str,
@@ -257,6 +263,7 @@ def cli_parser(base_wd: Path):
             codec_group,
             shared_loudness_args,
             dd_ddp_only_group,
+            stereo_downmix_metadata_group,
             downmix_metadata_group,
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
@@ -283,6 +290,7 @@ def cli_parser(base_wd: Path):
             codec_group,
             shared_loudness_args,
             dd_ddp_only_group,
+            stereo_downmix_metadata_group,
             downmix_metadata_group,
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
@@ -292,7 +300,6 @@ def cli_parser(base_wd: Path):
         ),
     )
     encode_ddp_parser.add_argument(
-        "-c",
         "--channels",
         type=case_insensitive_enum(DolbyDigitalPlusChannels),
         choices=tuple(DolbyDigitalPlusChannels),
@@ -310,6 +317,7 @@ def cli_parser(base_wd: Path):
             codec_group,
             shared_loudness_args,
             dd_ddp_only_group,
+            stereo_downmix_metadata_group,
             downmix_metadata_group,
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
@@ -319,13 +327,50 @@ def cli_parser(base_wd: Path):
         ),
     )
     encode_ddp_bluray_parser.add_argument(
-        "-c",
         "--channels",
         type=case_insensitive_enum(DolbyDigitalPlusBlurayChannels),
         choices=tuple(DolbyDigitalPlusBlurayChannels),
         default=DolbyDigitalPlusBlurayChannels.SURROUNDEX,
         metavar=enum_choices(DolbyDigitalPlusBlurayChannels),
         help="The number of channels.",
+    )
+
+    ### Atmos Command ###
+    encode_atmos_parser = encode_subparsers.add_parser(
+        "atmos",
+        parents=(
+            input_group,
+            encode_group,
+            codec_group,
+            shared_loudness_args,
+            downmix_metadata_group,
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=3,
+        ),
+    )
+    encode_atmos_parser.add_argument(
+        "--atmos-mode",
+        type=case_insensitive_enum(AtmosMode),
+        choices=tuple(AtmosMode),
+        default=AtmosMode.STREAMING,
+        metavar=enum_choices(AtmosMode),
+        help="Atmos encoding mode.",
+    )
+    encode_atmos_parser.add_argument(
+        "--thd-warp-mode",
+        type=case_insensitive_enum(WarpMode),
+        choices=tuple(WarpMode),
+        default=WarpMode.NORMAL,
+        metavar=enum_choices(WarpMode),
+        help="Specify warp mode when not present in metadata (truehdd).",
+    )
+    encode_atmos_parser.add_argument(
+        "--no-bed-conform",
+        action="store_false",
+        help="Disables bed conformance for Atmos content (truehdd).",
     )
 
     #############################################################
@@ -639,6 +684,56 @@ def cli_parser(base_wd: Path):
                     )
                     ddp = DDPEncoderDEE(payload).encode()
                     logger.info(f"Job successful! Output file path:\n{ddp}")
+            except Exception as e:
+                # TODO not sure if we wanna exit or continue for batch?
+                exit_application(str(e), EXIT_FAIL)
+
+        # Encode Atmos
+        elif args.format_command == "atmos":
+            # TODO We will need to catch all expected expectations possible and wrap this in a try except
+            # with the exit application output. That way we're not catching all generic issues.
+            # exit_application(e, EXIT_FAIL)
+            # TODO we need to catch all errors that we know will happen here in the scope
+
+            # update payload
+            try:
+                for input_file in file_inputs:
+                    # update logger to write to file if needed
+                    if args.log_to_file:
+                        logger_manager.set_file(input_file.with_suffix(".log"))
+                    payload = AtmosPayload(
+                        no_progress_bars=args.no_progress_bars,
+                        ffmpeg_path=ffmpeg_path,
+                        truehdd_path=truehdd_path,
+                        dee_path=dee_path,
+                        file_input=input_file,
+                        track_index=args.track_index,
+                        bitrate=args.bitrate,
+                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                        delay=args.delay,
+                        keep_temp=args.keep_temp,
+                        file_output=Path(args.output) if args.output else None,
+                        stereo_mix=StereoDownmix.NOT_INDICATED,  # this is unused but must be passed
+                        metering_mode=args.metering_mode,
+                        drc_line_mode=args.drc_line_mode,
+                        drc_rf_mode=args.drc_rf_mode,
+                        dialogue_intelligence=args.no_dialogue_intelligence,
+                        speech_threshold=args.speech_threshold,
+                        custom_dialnorm=str(args.custom_dialnorm),
+                        lfe_lowpass_filter=False,  # this is unused but must be passed
+                        surround_90_degree_phase_shift=False,  # this is unused but must be passed
+                        surround_3db_attenuation=False,  # this is unused but must be passed
+                        loro_center_mix_level=args.lo_ro_center,
+                        loro_surround_mix_level=args.lo_ro_surround,
+                        ltrt_center_mix_level=args.lt_rt_center,
+                        ltrt_surround_mix_level=args.lt_rt_surround,
+                        preferred_downmix_mode=StereoDownmix.LORO,
+                        atmos_mode=args.atmos_mode,
+                        thd_wrap_mode=args.thd_warp_mode,
+                        no_bed_conform=args.no_bed_conform,
+                    )
+                    atmos_job = AtmosEncoder(payload).encode()
+                    logger.info(f"Job successful! Output file path:\n{atmos_job}")
             except Exception as e:
                 # TODO not sure if we wanna exit or continue for batch?
                 exit_application(str(e), EXIT_FAIL)
