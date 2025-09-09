@@ -269,7 +269,7 @@ def cli_parser(base_wd: Path):
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
             width=78,
-            max_help_position=3,
+            max_help_position=7,
         ),
     )
     encode_dd_parser.add_argument(
@@ -296,7 +296,7 @@ def cli_parser(base_wd: Path):
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
             width=78,
-            max_help_position=3,
+            max_help_position=7,
         ),
     )
     encode_ddp_parser.add_argument(
@@ -323,7 +323,7 @@ def cli_parser(base_wd: Path):
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
             width=78,
-            max_help_position=3,
+            max_help_position=7,
         ),
     )
     encode_ddp_bluray_parser.add_argument(
@@ -348,7 +348,7 @@ def cli_parser(base_wd: Path):
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
             width=78,
-            max_help_position=3,
+            max_help_position=7,
         ),
     )
     encode_atmos_parser.add_argument(
