@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `--metering-mode`: Loudness measuring mode according to one of the broadcast standards.
   - DDP-BluRay:
     - `ddp-bluray`: Added a new encoder mode to allow higher bitrates for channel 7.1 layouts.
+  - Atmos:
+    - `atmos`: Added a new encoder mode to separate Atmos from DDP.
+    - `--atmos-mode`: Atmos encoding mode (streaming/bluray).
+    - `thd-warp-mode`: Specify warp mode when not present in metadata (truehdd).
+    - `--no-bed-conform`: Disables bed conformance for Atmos content (truehdd).
 
 ### Fixed
 
@@ -50,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - For very tiny files once the progress returns 0 where the progress could sometimes only be calculated to 99%, progress is now updated to 100%.
   - Added progress bars for each task/step _(this can be toggled via `--no-progress-bars` or by setting `--log-level` to DEBUG)_ .
   - Unified all logic for progress, easier to maintain and update if needed later.
+- CLI help indent has been slightly increased.
 
 ### Removed
 
