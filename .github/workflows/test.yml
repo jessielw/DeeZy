@@ -37,6 +37,8 @@ jobs:
 
     - name: Run tests with pytest
       run: uv run pytest --cov=deezy --cov-report=xml
+      env:
+        PYTHONPATH: ${{ github.workspace }}
 
     - name: Upload coverage to Codecov
       if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'

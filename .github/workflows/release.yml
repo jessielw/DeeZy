@@ -49,6 +49,8 @@ jobs:
 
     - name: Run tests
       run: uv run pytest
+      env:
+        PYTHONPATH: ${{ github.workspace }}
 
     - name: Build executable
       run: uv run python build.py

@@ -61,6 +61,8 @@ jobs:
     - name: Run tests
       if: steps.should_build.outputs.should_build == 'true'
       run: uv run pytest
+      env:
+        PYTHONPATH: ${{ github.workspace }}
 
     - name: Build executable
       if: steps.should_build.outputs.should_build == 'true'

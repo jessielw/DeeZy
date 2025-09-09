@@ -103,7 +103,7 @@ toml = [
 [[package]]
 name = "deezy"
 version = "1.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "pymediainfo" },
     { name = "rich" },
