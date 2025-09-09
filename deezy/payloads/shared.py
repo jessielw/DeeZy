@@ -41,10 +41,15 @@ class ChannelBitrates:
 
     def get_closest_bitrate(self, target: int) -> int:
         """
-        Find the closest allowed bitrate to the target and select the highest if
-        there are two matches.
+        Find the closest allowed bitrate to the target, preferring the next higher or equal,
+        else the closest lower if no higher exists.
         """
-        return min(self.choices, key=lambda x: (abs(x - target), -x))
+        higher_or_equal = [b for b in self.choices if b >= target]
+        if higher_or_equal:
+            return min(higher_or_equal)
+        else:
+            # all choices are lower than target, pick the highest available
+            return max(self.choices)
 
     def is_valid_bitrate(self, bitrate: int) -> bool:
         """Check if a bitrate is in the allowed choices."""
