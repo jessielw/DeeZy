@@ -105,11 +105,20 @@ jobs:
           ls -lh ./*/deezy* || ls -lh ./deezy-*/*
 
           echo "=== Uploading Linux binary ==="
+          echo "File info: $(file ./deezy-linux-x64/deezy || echo 'file command not available')"
+          echo "File permissions: $(ls -la ./deezy-linux-x64/deezy)"
+          
+          # Try uploading Linux binary with explicit name
+          echo "Attempting upload with explicit filename..."
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-linux-x64/deezy#deezy-linux-x64 \
-            --repo ${{ github.repository }} \
+            "./deezy-linux-x64/deezy#deezy-linux-x64" \
+            --repo "${{ github.repository }}" \
             --clobber
-          echo "✅ Linux binary uploaded successfully"
+          
+          # Verify the upload worked
+          echo "Checking if Linux binary appears in release..."
+          gh release view ${{ github.event.release.tag_name }} --repo ${{ github.repository }} | grep -i linux || echo "❌ Linux binary not found in release"
+          echo "✅ Linux binary upload attempted"
 
           echo "=== Uploading macOS binary ==="
           gh release upload ${{ github.event.release.tag_name }} \
@@ -126,5 +135,8 @@ jobs:
           echo "✅ Windows binary uploaded successfully"
 
           echo "🎉 All binaries uploaded successfully!"
+          
+          echo "=== Final Release Assets ==="
+          gh release view ${{ github.event.release.tag_name }} --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
