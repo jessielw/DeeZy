@@ -79,7 +79,7 @@ dd_base = {
         "misc": {
             "temp_dir": {
                 "clean_temp": None,  # "true" or "false" string bool
-                "path": None,  # str
+                "path": None,  # str (full windows style double quoted path)
             }
         },
     }
