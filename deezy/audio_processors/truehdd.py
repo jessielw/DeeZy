@@ -1,10 +1,11 @@
+import logging
 from pathlib import Path
 import subprocess
 import threading
 
-from deezy.audio_processors.ffmpeg import convert_ffmpeg_to_percent
-from deezy.enums.shared import ProgressMode
-from deezy.utils.utils import PrintSameLine
+from deezy.enums.atmos import WarpMode
+from deezy.utils.logger import logger
+from deezy.utils.progress import ProgressHandler, create_ffmpeg_parser
 
 BASE_ATMOS_FILE_NAME = "atmos_meta"
 
@@ -15,10 +16,11 @@ def decode_truehd_to_atmos(
     track_index: int,
     ffmpeg_path: Path,
     truehdd_path: Path,
-    progress_mode: ProgressMode,
-    no_bed_conform: bool = False,
+    no_bed_conform: bool,
+    warp_mode: WarpMode,
     duration: float | None = None,
     step_info: dict | None = None,
+    no_progress_bars: bool = False,
 ) -> Path:
     """
     Extract the TrueHD track and run truehdd decode to produce .atmos files.
@@ -51,12 +53,13 @@ def decode_truehd_to_atmos(
         "-stats",
     ]
 
-    # inject verbosity level into cmd list depending on progress_mode
+    # inject verbosity level into cmd list depending on logging level
+    logger_level = logger.getEffectiveLevel()
     inject = ffmpeg_cmd.index("-v") + 1
-    if progress_mode is ProgressMode.STANDARD:
-        ffmpeg_cmd.insert(inject, "quiet")
-    elif progress_mode is ProgressMode.DEBUG:
+    if logger_level == logging.DEBUG:
         ffmpeg_cmd.insert(inject, "info")
+    else:
+        ffmpeg_cmd.insert(inject, "quiet")
 
     truehdd_cmd = [
         str(truehdd_path),
@@ -64,20 +67,14 @@ def decode_truehd_to_atmos(
         "decode",
         "--output-path",
         str(output_dir / BASE_ATMOS_FILE_NAME),
+        "--warp-mode",
+        warp_mode.to_truehdd_cmd(),
         "--bed-conform",
         "-",
     ]
     # remove bed conform if desired
     if no_bed_conform:
         truehdd_cmd.remove("--bed-conform")
-
-    # print step info if in standard mode
-    if progress_mode == ProgressMode.STANDARD:
-        if step_info:
-            step_name = step_info.get("name", "TrueHD extract & decode")
-            current = step_info.get("current", 1)
-            total = step_info.get("total", 2)
-            print(f"---- Step {current} of {total} ---- [{step_name}]")
 
     ffmpeg_proc = subprocess.Popen(
         ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
@@ -94,72 +91,111 @@ def decode_truehd_to_atmos(
         if ffmpeg_proc.stdout:
             ffmpeg_proc.stdout.close()
 
-    # helpers
-    print_same_line = PrintSameLine()
-
     ffmpeg_err_lines: list[str] = []
     truehdd_err_lines: list[str] = []
     truehdd_out_lines: list[str] = []
 
-    def _stream_reader(prefix: str, stream, sink: list[str]):
+    # setup progress handler
+    progress_handler = ProgressHandler(logger_level, no_progress_bars, step_info)
+    step_label = progress_handler.get_step_label(
+        "TrueHD extract & decode", default_current=1, default_total=2
+    )
+    ffmpeg_parser = create_ffmpeg_parser(duration) if duration else None
+
+    def _stream_reader(
+        prefix: str,
+        stream,
+        sink: list[str],
+        progress=None,
+        task_id=None,
+    ):
         try:
+            last_percent = 0.0
             for line in iter(stream.readline, ""):
                 line = line.rstrip("\r\n")
                 if not line:
                     continue
 
-                # special handling for ffmpeg progress lines
-                if prefix == "ffmpeg":
-                    # try to convert to percentage when duration provided
-                    if duration:
-                        percent = convert_ffmpeg_to_percent(line, duration)
-                        if percent:
-                            # print on same line like ffmpeg.py does
-                            if percent != "100.0%":
-                                print_same_line.print_msg(percent)
-                            else:
-                                # clear the progress line when we hit 100%
-                                print_same_line.clear()
-                            sink.append(percent)
-                            # don't print raw ffmpeg line
-                            continue
+                # Handle ffmpeg progress lines
+                if prefix == "ffmpeg" and ffmpeg_parser and duration:
+                    percent_data = ffmpeg_parser(line)
+                    if percent_data:
+                        last_percent = percent_data.value
+                        if progress and task_id is not None:
+                            progress.update(task_id, completed=percent_data.value)
+                            logger.debug(f"{step_label} {percent_data.formatted}")
+                        else:
+                            print(f"{step_label} {percent_data.formatted}")
+                            logger.debug(f"{step_label} {percent_data.formatted}")
+                        sink.append(percent_data.formatted)
+                        continue
 
-                # default printing
-                if progress_mode is ProgressMode.DEBUG:
-                    print(f"[{prefix}] {line}")
+                # default debug logging
+                if logger_level == logging.DEBUG:
+                    logger.debug(f"[{prefix}] {line}")
                     sink.append(line)
+
+            # ensure 100% completion
+            if prefix == "ffmpeg" and last_percent < 100.0 and duration:
+                if progress and task_id is not None:
+                    progress.update(task_id, completed=100)
+                    progress.refresh()
+                else:
+                    print(f"{step_label} 100.0%")
+                    logger.debug(f"{step_label} 100.0%")
+
         finally:
             try:
                 stream.close()
             except Exception:
                 pass
 
-    threads = (
-        threading.Thread(
-            target=_stream_reader,
-            args=("ffmpeg", ffmpeg_proc.stderr, ffmpeg_err_lines),
-            daemon=True,
-        ),
-        threading.Thread(
-            target=_stream_reader,
-            args=("truehdd-err", truehdd_proc.stderr, truehdd_err_lines),
-            daemon=True,
-        ),
-        threading.Thread(
-            target=_stream_reader,
-            args=("truehdd-out", truehdd_proc.stdout, truehdd_out_lines),
-            daemon=True,
-        ),
-    )
+    # run with or without progress bars
+    with progress_handler.progress_context(step_label) as (progress, task_id):
+        threads = (
+            threading.Thread(
+                target=_stream_reader,
+                args=(
+                    "ffmpeg",
+                    ffmpeg_proc.stderr,
+                    ffmpeg_err_lines,
+                    progress,
+                    task_id,
+                ),
+                daemon=True,
+            ),
+            threading.Thread(
+                target=_stream_reader,
+                args=(
+                    "truehdd-err",
+                    truehdd_proc.stderr,
+                    truehdd_err_lines,
+                    None,
+                    None,
+                ),
+                daemon=True,
+            ),
+            threading.Thread(
+                target=_stream_reader,
+                args=(
+                    "truehdd-out",
+                    truehdd_proc.stdout,
+                    truehdd_out_lines,
+                    None,
+                    None,
+                ),
+                daemon=True,
+            ),
+        )
 
-    for t in threads:
-        t.start()
+        for t in threads:
+            t.start()
 
-    truehdd_return = truehdd_proc.wait()
-    ffmpeg_return = ffmpeg_proc.wait()
+        truehdd_return = truehdd_proc.wait()
+        ffmpeg_return = ffmpeg_proc.wait()
 
-    for t in threads:
-        t.join(timeout=0.1)
+        for t in threads:
+            t.join(timeout=0.1)
 
     ffmpeg_err = "\n".join(ffmpeg_err_lines)
     truehdd_err = "\n".join(truehdd_err_lines)
