@@ -28,8 +28,8 @@ from deezy.utils.file_parser import parse_input_s
 from deezy.utils.logger import logger, logger_manager
 
 
-def cli_parser(base_wd: Path):
-    # Top-level parser
+def create_main_parser():
+    """Create the main argument parser with global options."""
     parser = argparse.ArgumentParser(prog=program_name)
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
@@ -52,26 +52,15 @@ def cli_parser(base_wd: Path):
         action="store_true",
         help="Disables progress bars on level INFO (disabled for DEBUG or higher).",
     )
+    return parser
 
-    # Sub-command parser
-    subparsers = parser.add_subparsers(dest="sub_command")
 
-    #############################################################
-    ### Common args (re-used across one or more sub commands) ###
-    #############################################################
+def create_common_argument_groups():
+    """Create reusable argument groups."""
     # Input files argument group
     input_group = argparse.ArgumentParser(add_help=False)
     input_group.add_argument(
         "input", nargs="+", help="Input file paths or directories", metavar="INPUT"
-    )
-
-    #############################################################
-    ###################### Encode Command #######################
-    #############################################################
-    # Encode command parser
-    encode_parser = subparsers.add_parser("encode")
-    encode_subparsers = encode_parser.add_subparsers(
-        dest="format_command", required=True
     )
 
     # Common Encode Args
@@ -254,17 +243,36 @@ def cli_parser(base_wd: Path):
         help="Lo/Ro surround downmix level.",
     )
 
+    return {
+        "input_group": input_group,
+        "encode_group": encode_group,
+        "codec_group": codec_group,
+        "shared_loudness_args": shared_loudness_args,
+        "dd_ddp_only_group": dd_ddp_only_group,
+        "stereo_downmix_metadata_group": stereo_downmix_metadata_group,
+        "downmix_metadata_group": downmix_metadata_group,
+    }
+
+
+def create_encode_parsers(subparsers, argument_groups):
+    """Create encode command parsers."""
+    # Encode command parser
+    encode_parser = subparsers.add_parser("encode")
+    encode_subparsers = encode_parser.add_subparsers(
+        dest="format_command", required=True
+    )
+
     ### Dolby Digital Command ###
     encode_dd_parser = encode_subparsers.add_parser(
         "dd",
         parents=(
-            input_group,
-            encode_group,
-            codec_group,
-            shared_loudness_args,
-            dd_ddp_only_group,
-            stereo_downmix_metadata_group,
-            downmix_metadata_group,
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["codec_group"],
+            argument_groups["shared_loudness_args"],
+            argument_groups["dd_ddp_only_group"],
+            argument_groups["stereo_downmix_metadata_group"],
+            argument_groups["downmix_metadata_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -285,13 +293,13 @@ def cli_parser(base_wd: Path):
     encode_ddp_parser = encode_subparsers.add_parser(
         "ddp",
         parents=(
-            input_group,
-            encode_group,
-            codec_group,
-            shared_loudness_args,
-            dd_ddp_only_group,
-            stereo_downmix_metadata_group,
-            downmix_metadata_group,
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["codec_group"],
+            argument_groups["shared_loudness_args"],
+            argument_groups["dd_ddp_only_group"],
+            argument_groups["stereo_downmix_metadata_group"],
+            argument_groups["downmix_metadata_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -312,13 +320,13 @@ def cli_parser(base_wd: Path):
     encode_ddp_bluray_parser = encode_subparsers.add_parser(
         "ddp-bluray",
         parents=(
-            input_group,
-            encode_group,
-            codec_group,
-            shared_loudness_args,
-            dd_ddp_only_group,
-            stereo_downmix_metadata_group,
-            downmix_metadata_group,
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["codec_group"],
+            argument_groups["shared_loudness_args"],
+            argument_groups["dd_ddp_only_group"],
+            argument_groups["stereo_downmix_metadata_group"],
+            argument_groups["downmix_metadata_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -339,11 +347,11 @@ def cli_parser(base_wd: Path):
     encode_atmos_parser = encode_subparsers.add_parser(
         "atmos",
         parents=(
-            input_group,
-            encode_group,
-            codec_group,
-            shared_loudness_args,
-            downmix_metadata_group,
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["codec_group"],
+            argument_groups["shared_loudness_args"],
+            argument_groups["downmix_metadata_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -373,12 +381,13 @@ def cli_parser(base_wd: Path):
         help="Disables bed conformance for Atmos content (truehdd).",
     )
 
-    #############################################################
-    ## Find Command (placeholder, expect this would essentially just run
-    ## the globs and print the filepaths it finds)
-    #############################################################
+
+def create_other_parsers(subparsers, argument_groups):
+    """Create find, info, and config command parsers."""
     # Find command parser
-    find_parser = subparsers.add_parser("find", parents=[input_group])
+    find_parser = subparsers.add_parser(
+        "find", parents=[argument_groups["input_group"]]
+    )
     find_parser.add_argument(
         "-n",
         "--name",
@@ -386,15 +395,11 @@ def cli_parser(base_wd: Path):
         help="Only display names instead of full paths.",
     )
 
-    #############################################################
-    ## Info Command (placeholder, would print stream info for the input file(s)) ###
-    #############################################################
     # Info command parser
-    _info_parser = subparsers.add_parser("info", parents=[input_group])
+    _info_parser = subparsers.add_parser(
+        "info", parents=[argument_groups["input_group"]]
+    )
 
-    #############################################################
-    ## Config Command ###
-    #############################################################
     # Config command parser
     config_parser = subparsers.add_parser("config", help="Configuration management")
     config_subparsers = config_parser.add_subparsers(
@@ -426,21 +431,43 @@ def cli_parser(base_wd: Path):
     )
     info_parser.add_argument("--path", type=str, help="Show specific config file path")
 
-    #############################################################
-    ######################### Execute ###########################
-    #############################################################
-    # parse the arguments
-    args = parser.parse_args()
 
-    # init logger
-    logger_manager.set_level(args.log_level.to_logging_level())
+def cli_parser(base_wd: Path):
+    """Main CLI parser entry point."""
+    # Create parser and subcommands
+    parser = create_main_parser()
+    subparsers = parser.add_subparsers(dest="sub_command")
+
+    # Create argument groups and parsers
+    argument_groups = create_common_argument_groups()
+    create_encode_parsers(subparsers, argument_groups)
+    create_other_parsers(subparsers, argument_groups)
+
+    # Parse arguments and initialize
+    args = parser.parse_args()
+    setup_logging(args)
 
     if not args.sub_command:
         if not hasattr(args, "version"):
             parser.print_usage()
         exit_application("", EXIT_FAIL)
 
-    # load configuration and apply defaults if not a config command
+    # Handle configuration and dependencies
+    config_integration = handle_configuration(args)
+    dependencies = handle_dependencies(args, base_wd, config_integration)
+    file_inputs = handle_file_inputs(args)
+
+    # Execute the appropriate command
+    execute_command(args, file_inputs, dependencies, config_integration)
+
+
+def setup_logging(args):
+    """Initialize logging based on arguments."""
+    logger_manager.set_level(args.log_level.to_logging_level())
+
+
+def handle_configuration(args):
+    """Load configuration and apply defaults."""
     config_integration = None
     if args.sub_command != "config":
         config_integration = get_config_integration()
@@ -500,325 +527,326 @@ def cli_parser(base_wd: Path):
 
             args = config_integration.merge_args_with_config(args, format_type)
 
-    # detect tool dependencies
+    return config_integration
+
+
+def handle_dependencies(args, base_wd, config_integration):
+    """Handle tool dependencies detection."""
+    if args.sub_command in {"config"}:
+        return None
+
+    # get dependency paths from CLI args or config
     ffmpeg_arg = None
     truehdd_arg = None
     dee_arg = None
-    atmos_required = False
-    ffmpeg_path = None
-    truehdd_path = None
-    dee_path = None
 
-    if args.sub_command not in {"config"}:
-        # get dependency paths from CLI args or config
-        if config_integration:
-            ffmpeg_arg = (
-                args.ffmpeg
-                if hasattr(args, "ffmpeg") and args.ffmpeg
-                else config_integration.get_dependency_path("ffmpeg")
-            )
-            truehdd_arg = (
-                args.truehdd
-                if hasattr(args, "truehdd") and args.truehdd
-                else config_integration.get_dependency_path("truehdd")
-            )
-            dee_arg = (
-                args.dee
-                if hasattr(args, "dee") and args.dee
-                else config_integration.get_dependency_path("dee")
-            )
-        else:
-            ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
-            truehdd_arg = args.truehdd if hasattr(args, "truehdd") else None
-            dee_arg = args.dee if hasattr(args, "dee") else None
-
-        # check if Atmos is being used (only available for DDP)
-        atmos_required = (
-            hasattr(args, "atmos")
-            and args.atmos
-            and args.sub_command == "encode"
-            and hasattr(args, "format_command")
-            and args.format_command == "ddp"
+    if config_integration:
+        ffmpeg_arg = (
+            args.ffmpeg
+            if hasattr(args, "ffmpeg") and args.ffmpeg
+            else config_integration.get_dependency_path("ffmpeg")
         )
-
-    if args.sub_command not in {"config"}:
-        try:
-            tools = FindDependencies().get_dependencies(
-                base_wd,
-                ffmpeg_arg,
-                truehdd_arg,
-                dee_arg,
-                require_truehdd=atmos_required,
-            )
-        except DependencyNotFoundError as e:
-            exit_application(str(e), EXIT_FAIL)
-        ffmpeg_path = Path(tools.ffmpeg)
-        truehdd_path = Path(tools.truehdd) if tools.truehdd else None
-        dee_path = Path(tools.dee)
-
-        if not hasattr(args, "input") or not args.input:
-            exit_application("", EXIT_FAIL)
-
-        if args.sub_command not in ("find", "info"):
-            # config system now handles defaults, but provide fallbacks for edge cases
-            if (
-                not hasattr(args, "channels")
-                or not args.channels
-                or int(args.channels.value) == 0
-            ):
-                print(  # TODO: use logger
-                    "No channels specified, will automatically detect highest quality "
-                    "supported channel based on codec."
-                )
-
-            # final fallback for bitrate if config system didn't set it
-            # TODO: this needs to happen based on channel
-            # cli > config > defaults
-            # if not hasattr(args, "bitrate") or args.bitrate is None:
-            #     print("No bitrate specified, defaulting to 448k.")
-            #     setattr(args, "bitrate", 448)
-
-        # parse all possible file inputs
-        file_inputs = parse_input_s(args.input)
-        if not file_inputs:
-            exit_application("No input files we're found.", EXIT_FAIL)
+        truehdd_arg = (
+            args.truehdd
+            if hasattr(args, "truehdd") and args.truehdd
+            else config_integration.get_dependency_path("truehdd")
+        )
+        dee_arg = (
+            args.dee
+            if hasattr(args, "dee") and args.dee
+            else config_integration.get_dependency_path("dee")
+        )
     else:
-        # for config command, no file inputs needed
-        file_inputs = []
+        ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
+        truehdd_arg = args.truehdd if hasattr(args, "truehdd") else None
+        dee_arg = args.dee if hasattr(args, "dee") else None
 
+    # check if Atmos is being used (only available for DDP)
+    atmos_required = hasattr(args, "format_command") and args.format_command == "atmos"
+
+    try:
+        tools = FindDependencies().get_dependencies(
+            base_wd,
+            ffmpeg_arg,
+            truehdd_arg,
+            dee_arg,
+            require_truehdd=atmos_required,
+        )
+    except DependencyNotFoundError as e:
+        exit_application(str(e), EXIT_FAIL)
+
+    return {
+        "ffmpeg_path": Path(tools.ffmpeg),
+        "truehdd_path": Path(tools.truehdd) if tools.truehdd else None,
+        "dee_path": Path(tools.dee),
+    }
+
+
+def handle_file_inputs(args):
+    """Parse and validate file inputs."""
+    if not hasattr(args, "input") or not args.input:
+        if args.sub_command not in {"config"}:
+            exit_application("", EXIT_FAIL)
+        return []
+
+    if args.sub_command not in ("find", "info", "encode"):
+        return []
+
+    # parse all possible file inputs
+    file_inputs = parse_input_s(args.input)
+    if not file_inputs and args.sub_command in ("find", "info", "encode"):
+        exit_application("No input files were found.", EXIT_FAIL)
+
+    return file_inputs
+
+
+def execute_command(args, file_inputs, dependencies, config_integration):
+    """Execute the appropriate command based on parsed arguments."""
     if args.sub_command == "encode":
-        # ensure dependency paths are available for encoding
-        if ffmpeg_path is None or dee_path is None:
-            exit_application(
-                "Dependency paths not available for encoding commands", EXIT_FAIL
+        execute_encode_command(args, file_inputs, dependencies)
+    elif args.sub_command == "find":
+        execute_find_command(args, file_inputs)
+    elif args.sub_command == "info":
+        execute_info_command(args, file_inputs)
+    elif args.sub_command == "config":
+        execute_config_command(args, config_integration)
+
+
+def execute_encode_command(args, file_inputs, dependencies):
+    """Execute encoding commands."""
+    ffmpeg_path = dependencies["ffmpeg_path"]
+    truehdd_path = dependencies["truehdd_path"]
+    dee_path = dependencies["dee_path"]
+
+    if args.sub_command not in ("find", "info"):
+        # config system now handles defaults, but provide fallbacks for edge cases
+        if (
+            not hasattr(args, "channels")
+            or not args.channels
+            or int(args.channels.value) == 0
+        ):
+            print(  # TODO: use logger
+                "No channels specified, will automatically detect highest quality "
+                "supported channel based on codec."
             )
 
-        # encode Dolby Digital
-        if args.format_command == "dd":
-            # TODO We will need to catch all expected expectations possible and wrap this in a try except
-            # with the exit application output. That way we're not catching all generic issues.
-            # exit_application(e, EXIT_FAIL)
-            # TODO we need to catch all errors that we know will happen here in the scope
+        # final fallback for bitrate if config system didn't set it
+        # TODO: this needs to happen based on channel
+        # cli > config > defaults
+        # if not hasattr(args, "bitrate") or args.bitrate is None:
+        #     print("No bitrate specified, defaulting to 448k.")
+        #     setattr(args, "bitrate", 448)
 
-            # update payload
-            try:
-                for input_file in file_inputs:
-                    # update logger to write to file if needed
-                    if args.log_to_file:
-                        logger_manager.set_file(input_file.with_suffix(".log"))
-                    payload = DDPayload(
-                        no_progress_bars=args.no_progress_bars,
-                        ffmpeg_path=ffmpeg_path,
-                        truehdd_path=truehdd_path,
-                        dee_path=dee_path,
-                        file_input=input_file,
-                        track_index=args.track_index,
-                        bitrate=args.bitrate,
-                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
-                        delay=args.delay,
-                        keep_temp=args.keep_temp,
-                        file_output=Path(args.output) if args.output else None,
-                        stereo_mix=args.stereo_down_mix,
-                        metering_mode=args.metering_mode,
-                        drc_line_mode=args.drc_line_mode,
-                        drc_rf_mode=args.drc_rf_mode,
-                        dialogue_intelligence=args.no_dialogue_intelligence,
-                        speech_threshold=args.speech_threshold,
-                        custom_dialnorm=str(args.custom_dialnorm),
-                        channels=args.channels,
-                        lfe_lowpass_filter=args.no_low_pass_filter,
-                        surround_90_degree_phase_shift=args.no_surround_3db,
-                        surround_3db_attenuation=args.no_surround_90_deg_phase_shift,
-                        loro_center_mix_level=args.lo_ro_center,
-                        loro_surround_mix_level=args.lo_ro_surround,
-                        ltrt_center_mix_level=args.lt_rt_center,
-                        ltrt_surround_mix_level=args.lt_rt_surround,
-                        preferred_downmix_mode=args.stereo_down_mix,
-                    )
-                    dd = DDEncoderDEE(payload).encode()
-                    logger.info(f"Job successful! Output file path:\n{dd}")
-            except Exception as e:
-                exit_application(str(e), EXIT_FAIL)
-
-        # Encode Dolby Digital Plus
-        elif args.format_command in ("ddp", "ddp-bluray"):
-            # TODO We will need to catch all expected expectations possible and wrap this in a try except
-            # with the exit application output. That way we're not catching all generic issues.
-            # exit_application(e, EXIT_FAIL)
-            # TODO we need to catch all errors that we know will happen here in the scope
-
-            # update payload
-            try:
-                for input_file in file_inputs:
-                    # update logger to write to file if needed
-                    if args.log_to_file:
-                        logger_manager.set_file(input_file.with_suffix(".log"))
-                    payload = DDPPayload(
-                        no_progress_bars=args.no_progress_bars,
-                        ffmpeg_path=ffmpeg_path,
-                        truehdd_path=truehdd_path,
-                        dee_path=dee_path,
-                        file_input=input_file,
-                        track_index=args.track_index,
-                        bitrate=args.bitrate,
-                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
-                        delay=args.delay,
-                        keep_temp=args.keep_temp,
-                        file_output=Path(args.output) if args.output else None,
-                        stereo_mix=args.stereo_down_mix,
-                        metering_mode=args.metering_mode,
-                        drc_line_mode=args.drc_line_mode,
-                        drc_rf_mode=args.drc_rf_mode,
-                        dialogue_intelligence=args.no_dialogue_intelligence,
-                        speech_threshold=args.speech_threshold,
-                        custom_dialnorm=str(args.custom_dialnorm),
-                        channels=args.channels,
-                        lfe_lowpass_filter=args.no_low_pass_filter,
-                        surround_90_degree_phase_shift=args.no_surround_3db,
-                        surround_3db_attenuation=args.no_surround_90_deg_phase_shift,
-                        loro_center_mix_level=args.lo_ro_center,
-                        loro_surround_mix_level=args.lo_ro_surround,
-                        ltrt_center_mix_level=args.lt_rt_center,
-                        ltrt_surround_mix_level=args.lt_rt_surround,
-                        preferred_downmix_mode=args.stereo_down_mix,
-                    )
-                    ddp = DDPEncoderDEE(payload).encode()
-                    logger.info(f"Job successful! Output file path:\n{ddp}")
-            except Exception as e:
-                # TODO not sure if we wanna exit or continue for batch?
-                exit_application(str(e), EXIT_FAIL)
-
-        # Encode Atmos
-        elif args.format_command == "atmos":
-            # TODO We will need to catch all expected expectations possible and wrap this in a try except
-            # with the exit application output. That way we're not catching all generic issues.
-            # exit_application(e, EXIT_FAIL)
-            # TODO we need to catch all errors that we know will happen here in the scope
-
-            # update payload
-            try:
-                for input_file in file_inputs:
-                    # update logger to write to file if needed
-                    if args.log_to_file:
-                        logger_manager.set_file(input_file.with_suffix(".log"))
-                    payload = AtmosPayload(
-                        no_progress_bars=args.no_progress_bars,
-                        ffmpeg_path=ffmpeg_path,
-                        truehdd_path=truehdd_path,
-                        dee_path=dee_path,
-                        file_input=input_file,
-                        track_index=args.track_index,
-                        bitrate=args.bitrate,
-                        temp_dir=Path(args.temp_dir) if args.temp_dir else None,
-                        delay=args.delay,
-                        keep_temp=args.keep_temp,
-                        file_output=Path(args.output) if args.output else None,
-                        stereo_mix=StereoDownmix.NOT_INDICATED,  # this is unused but must be passed
-                        metering_mode=args.metering_mode,
-                        drc_line_mode=args.drc_line_mode,
-                        drc_rf_mode=args.drc_rf_mode,
-                        dialogue_intelligence=args.no_dialogue_intelligence,
-                        speech_threshold=args.speech_threshold,
-                        custom_dialnorm=str(args.custom_dialnorm),
-                        lfe_lowpass_filter=False,  # this is unused but must be passed
-                        surround_90_degree_phase_shift=False,  # this is unused but must be passed
-                        surround_3db_attenuation=False,  # this is unused but must be passed
-                        loro_center_mix_level=args.lo_ro_center,
-                        loro_surround_mix_level=args.lo_ro_surround,
-                        ltrt_center_mix_level=args.lt_rt_center,
-                        ltrt_surround_mix_level=args.lt_rt_surround,
-                        preferred_downmix_mode=StereoDownmix.LORO,
-                        atmos_mode=args.atmos_mode,
-                        thd_wrap_mode=args.thd_warp_mode,
-                        no_bed_conform=args.no_bed_conform,
-                    )
-                    atmos_job = AtmosEncoder(payload).encode()
-                    logger.info(f"Job successful! Output file path:\n{atmos_job}")
-            except Exception as e:
-                # TODO not sure if we wanna exit or continue for batch?
-                exit_application(str(e), EXIT_FAIL)
-
-    elif args.sub_command == "find":
-        file_names = []
-        for input_file in file_inputs:
-            # if name only is used, print only the name of the file.
-            if args.name:
-                input_file = input_file.name
-            file_names.append(str(input_file))
-
-        exit_application("\n".join(file_names), EXIT_SUCCESS)
-
-    elif args.sub_command == "info":
-        track_s_info = ""
-        for input_file in file_inputs:
-            info = parse_audio_streams(input_file)
-            if info.media_info:
-                track_s_info = (
-                    track_s_info
-                    + f"File: {input_file.name}\nAudio tracks: {info.track_list}\n"
-                    + info.media_info
-                    + "\n\n"
+    # encode Dolby Digital
+    if args.format_command == "dd":
+        try:
+            for input_file in file_inputs:
+                # update logger to write to file if needed
+                if args.log_to_file:
+                    logger_manager.set_file(input_file.with_suffix(".log"))
+                payload = DDPayload(
+                    no_progress_bars=args.no_progress_bars,
+                    ffmpeg_path=ffmpeg_path,
+                    truehdd_path=truehdd_path,
+                    dee_path=dee_path,
+                    file_input=input_file,
+                    track_index=args.track_index,
+                    bitrate=args.bitrate,
+                    temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                    delay=args.delay,
+                    keep_temp=args.keep_temp,
+                    file_output=Path(args.output) if args.output else None,
+                    stereo_mix=args.stereo_down_mix,
+                    metering_mode=args.metering_mode,
+                    drc_line_mode=args.drc_line_mode,
+                    drc_rf_mode=args.drc_rf_mode,
+                    dialogue_intelligence=args.no_dialogue_intelligence,
+                    speech_threshold=args.speech_threshold,
+                    custom_dialnorm=str(args.custom_dialnorm),
+                    channels=args.channels,
+                    lfe_lowpass_filter=args.no_low_pass_filter,
+                    surround_90_degree_phase_shift=args.no_surround_3db,
+                    surround_3db_attenuation=args.no_surround_90_deg_phase_shift,
+                    loro_center_mix_level=args.lo_ro_center,
+                    loro_surround_mix_level=args.lo_ro_surround,
+                    ltrt_center_mix_level=args.lt_rt_center,
+                    ltrt_surround_mix_level=args.lt_rt_surround,
+                    preferred_downmix_mode=args.stereo_down_mix,
                 )
-        exit_application(track_s_info, EXIT_SUCCESS)
+                dd = DDEncoderDEE(payload).encode()
+                logger.info(f"Job successful! Output file path:\n{dd}")
+        except Exception as e:
+            exit_application(str(e), EXIT_FAIL)
 
-    elif args.sub_command == "config":
-        # config commands need their own integration instance
-        if config_integration is None:
-            config_integration = get_config_integration()
+    # Encode Dolby Digital Plus
+    elif args.format_command in ("ddp", "ddp-bluray"):
+        try:
+            for input_file in file_inputs:
+                # update logger to write to file if needed
+                if args.log_to_file:
+                    logger_manager.set_file(input_file.with_suffix(".log"))
+                payload = DDPPayload(
+                    no_progress_bars=args.no_progress_bars,
+                    ffmpeg_path=ffmpeg_path,
+                    truehdd_path=truehdd_path,
+                    dee_path=dee_path,
+                    file_input=input_file,
+                    track_index=args.track_index,
+                    bitrate=args.bitrate,
+                    temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                    delay=args.delay,
+                    keep_temp=args.keep_temp,
+                    file_output=Path(args.output) if args.output else None,
+                    stereo_mix=args.stereo_down_mix,
+                    metering_mode=args.metering_mode,
+                    drc_line_mode=args.drc_line_mode,
+                    drc_rf_mode=args.drc_rf_mode,
+                    dialogue_intelligence=args.no_dialogue_intelligence,
+                    speech_threshold=args.speech_threshold,
+                    custom_dialnorm=str(args.custom_dialnorm),
+                    channels=args.channels,
+                    lfe_lowpass_filter=args.no_low_pass_filter,
+                    surround_90_degree_phase_shift=args.no_surround_3db,
+                    surround_3db_attenuation=args.no_surround_90_deg_phase_shift,
+                    loro_center_mix_level=args.lo_ro_center,
+                    loro_surround_mix_level=args.lo_ro_surround,
+                    ltrt_center_mix_level=args.lt_rt_center,
+                    ltrt_surround_mix_level=args.lt_rt_surround,
+                    preferred_downmix_mode=args.stereo_down_mix,
+                )
+                ddp = DDPEncoderDEE(payload).encode()
+                logger.info(f"Job successful! Output file path:\n{ddp}")
+        except Exception as e:
+            exit_application(str(e), EXIT_FAIL)
 
-        if args.config_command == "generate":
-            try:
-                output_path = Path(args.output) if args.output else None
+    # Encode Atmos
+    elif args.format_command == "atmos":
+        try:
+            for input_file in file_inputs:
+                # update logger to write to file if needed
+                if args.log_to_file:
+                    logger_manager.set_file(input_file.with_suffix(".log"))
+                payload = AtmosPayload(
+                    no_progress_bars=args.no_progress_bars,
+                    ffmpeg_path=ffmpeg_path,
+                    truehdd_path=truehdd_path,
+                    dee_path=dee_path,
+                    file_input=input_file,
+                    track_index=args.track_index,
+                    bitrate=args.bitrate,
+                    temp_dir=Path(args.temp_dir) if args.temp_dir else None,
+                    delay=args.delay,
+                    keep_temp=args.keep_temp,
+                    file_output=Path(args.output) if args.output else None,
+                    stereo_mix=StereoDownmix.NOT_INDICATED,  # this is unused but must be passed
+                    metering_mode=args.metering_mode,
+                    drc_line_mode=args.drc_line_mode,
+                    drc_rf_mode=args.drc_rf_mode,
+                    dialogue_intelligence=args.no_dialogue_intelligence,
+                    speech_threshold=args.speech_threshold,
+                    custom_dialnorm=str(args.custom_dialnorm),
+                    lfe_lowpass_filter=False,  # this is unused but must be passed
+                    surround_90_degree_phase_shift=False,  # this is unused but must be passed
+                    surround_3db_attenuation=False,  # this is unused but must be passed
+                    loro_center_mix_level=args.lo_ro_center,
+                    loro_surround_mix_level=args.lo_ro_surround,
+                    ltrt_center_mix_level=args.lt_rt_center,
+                    ltrt_surround_mix_level=args.lt_rt_surround,
+                    preferred_downmix_mode=StereoDownmix.LORO,
+                    atmos_mode=args.atmos_mode,
+                    thd_wrap_mode=args.thd_warp_mode,
+                    no_bed_conform=args.no_bed_conform,
+                )
+                atmos_job = AtmosEncoder(payload).encode()
+                logger.info(f"Job successful! Output file path:\n{atmos_job}")
+        except Exception as e:
+            exit_application(str(e), EXIT_FAIL)
 
-                if args.from_args:
-                    # for generating from args, we need to parse the full command
-                    # this is a bit tricky since we're in the middle of execution
-                    # for now, just use default generation
-                    config_path = config_integration.generate_config(
-                        output_path=output_path, overwrite=args.overwrite
-                    )
+
+def execute_find_command(args, file_inputs):
+    """Execute find command."""
+    file_names = []
+    for input_file in file_inputs:
+        # if name only is used, print only the name of the file.
+        if args.name:
+            input_file = input_file.name
+        file_names.append(str(input_file))
+
+    exit_application("\n".join(file_names), EXIT_SUCCESS)
+
+
+def execute_info_command(args, file_inputs):
+    """Execute info command."""
+    track_s_info = ""
+    for input_file in file_inputs:
+        info = parse_audio_streams(input_file)
+        if info.media_info:
+            track_s_info = (
+                track_s_info
+                + f"File: {input_file.name}\nAudio tracks: {info.track_list}\n"
+                + info.media_info
+                + "\n\n"
+            )
+    exit_application(track_s_info, EXIT_SUCCESS)
+
+
+def execute_config_command(args, config_integration):
+    """Execute config command."""
+    # config commands need their own integration instance
+    if config_integration is None:
+        config_integration = get_config_integration()
+
+    if args.config_command == "generate":
+        try:
+            output_path = Path(args.output) if args.output else None
+
+            if args.from_args:
+                # for generating from args, we need to parse the full command
+                # this is a bit tricky since we're in the middle of execution
+                # for now, just use default generation
+                config_path = config_integration.generate_config(
+                    output_path=output_path, overwrite=args.overwrite
+                )
+            else:
+                config_path = config_integration.generate_config(
+                    output_path=output_path, overwrite=args.overwrite
+                )
+
+            exit_application(
+                f"Configuration file generated: {config_path}", EXIT_SUCCESS
+            )
+
+        except FileExistsError:
+            exit_application(
+                "Configuration file already exists. Use --overwrite to replace it.",
+                EXIT_FAIL,
+            )
+        except Exception as e:
+            exit_application(f"Failed to generate config: {e}", EXIT_FAIL)
+
+    elif args.config_command == "info":
+        try:
+            if args.path:
+                config_path = Path(args.path)
+                if config_path.exists():
+                    exit_application(f"Config file: {config_path}", EXIT_SUCCESS)
                 else:
-                    config_path = config_integration.generate_config(
-                        output_path=output_path, overwrite=args.overwrite
+                    exit_application(f"Config file not found: {config_path}", EXIT_FAIL)
+            else:
+                config_integration.load_config()
+                if config_integration.loader.config_path:
+                    info_text = (
+                        f"Active config file: {config_integration.loader.config_path}\n"
                     )
-
-                exit_application(
-                    f"Configuration file generated: {config_path}", EXIT_SUCCESS
-                )
-
-            except FileExistsError:
-                exit_application(
-                    "Configuration file already exists. Use --overwrite to replace it.",
-                    EXIT_FAIL,
-                )
-            except Exception as e:
-                exit_application(f"Failed to generate config: {e}", EXIT_FAIL)
-
-        elif args.config_command == "info":
-            try:
-                if args.path:
-                    config_path = Path(args.path)
-                    if config_path.exists():
-                        exit_application(f"Config file: {config_path}", EXIT_SUCCESS)
-                    else:
-                        exit_application(
-                            f"Config file not found: {config_path}", EXIT_FAIL
-                        )
+                    info_text += f"Presets available: {', '.join(config_integration.loader.list_presets()) or 'None'}"
                 else:
-                    config_integration.load_config()
-                    if config_integration.loader.config_path:
-                        info_text = f"Active config file: {config_integration.loader.config_path}\n"
-                        info_text += f"Presets available: {', '.join(config_integration.loader.list_presets()) or 'None'}"
-                    else:
-                        info_text = (
-                            "No configuration file found. Using built-in defaults.\n"
-                        )
-                        from deezy.config.defaults import get_default_config_path
+                    info_text = (
+                        "No configuration file found. Using built-in defaults.\n"
+                    )
+                    from deezy.config.defaults import get_default_config_path
 
-                        info_text += (
-                            f"Default config location: {get_default_config_path()}"
-                        )
+                    info_text += f"Default config location: {get_default_config_path()}"
 
-                    exit_application(info_text, EXIT_SUCCESS)
-            except Exception as e:
-                exit_application(f"Failed to load config info: {e}", EXIT_FAIL)
+                exit_application(info_text, EXIT_SUCCESS)
+        except Exception as e:
+            exit_application(f"Failed to load config info: {e}", EXIT_FAIL)
