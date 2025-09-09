@@ -2,8 +2,11 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
+from deezy.audio_encoders.dee.json.atmos_base import atmos_base
 from deezy.audio_encoders.dee.json.dd_base import dd_base
+from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS
+from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 
@@ -91,6 +94,66 @@ class DeeJSONGenerator:
                 self.output_file_path
             )
             del output_section["ac3"]
+
+        #### misc section ####
+        misc_section = json_base["job_config"]["misc"]
+        # string bool lowered (true/false)
+        misc_section["temp_dir"]["clean_temp"] = str(not payload.keep_temp).lower()
+        misc_section["temp_dir"]["path"] = self._create_dee_file_path(temp_dir)
+
+        return self._write_json(json_base)
+
+    def atmos_json(
+        self,
+        payload: AtmosPayload,
+        bitrate: int,
+        fps: DeeFPS,
+        delay: DeeDelay | None,
+        temp_dir: Path,
+        atmos_mode: AtmosMode,
+    ) -> Path:
+        """Set up Atmos encoding."""
+        # init base
+        json_base = deepcopy(atmos_base)
+
+        #### input section ####
+        input_section = json_base["job_config"]["input"]["audio"]["atmos_mezz"]
+        input_section["file_name"] = self._create_dee_file_path(self.input_file_path)
+        input_section["timecode_frame_rate"] = fps.to_dee_cmd()
+
+        #### filter section ####
+        filter_section = json_base["job_config"]["filter"]["audio"][
+            "encode_to_atmos_ddp"
+        ]
+        loudness = filter_section["loudness"]["measure_only"]
+        loudness["metering_mode"] = payload.metering_mode.to_dee_cmd()
+        loudness["dialogue_intelligence"] = payload.dialogue_intelligence
+        loudness["speech_threshold"] = payload.speech_threshold
+        filter_section["data_rate"] = bitrate
+        if delay:
+            filter_section[delay.MODE.value] = delay.DELAY
+        filter_section["timecode_frame_rate"] = fps.to_dee_cmd()
+        drc = filter_section["drc"]
+        drc["line_mode_drc_profile"] = payload.drc_line_mode.to_dee_cmd()
+        drc["rf_mode_drc_profile"] = payload.drc_rf_mode.to_dee_cmd()
+        downmix = filter_section["downmix"]
+        downmix["loro_center_mix_level"] = payload.loro_center_mix_level
+        downmix["loro_surround_mix_level"] = payload.loro_surround_mix_level
+        downmix["ltrt_center_mix_level"] = payload.ltrt_center_mix_level
+        downmix["ltrt_surround_mix_level"] = payload.ltrt_surround_mix_level
+        downmix["preferred_downmix_mode"] = payload.preferred_downmix_mode.to_dee_cmd()
+        filter_section["custom_dialnorm"] = payload.custom_dialnorm
+
+        # add encoding_backend and encoder mode if atmos 7.1 (bluray)
+        if atmos_mode is AtmosMode.BLURAY:
+            filter_section["encoding_backend"] = "atmosprocessor"
+            filter_section["encoder_mode"] = "bluray"
+
+        #### output section ####
+        output_section = json_base["job_config"]["output"]
+        output_section["ec3"]["file_name"] = self._create_dee_file_path(
+            self.output_file_path
+        )
 
         #### misc section ####
         misc_section = json_base["job_config"]["misc"]
