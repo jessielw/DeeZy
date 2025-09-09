@@ -105,7 +105,7 @@ jobs:
           # Rename binaries to final names for easier upload
           cp ./deezy-linux-x64/deezy ./deezy-linux-x64-renamed
           cp ./deezy-macos-x64/deezy ./deezy-macos-x64-renamed  
-          cp ./deezy-windows-x64.exe/deezy.exe ./deezy-windows-x64.exe
+          cp ./deezy-windows-x64.exe/deezy.exe ./deezy-windows-x64-renamed.exe
 
           echo "=== File sizes ==="
           ls -lh deezy-*
@@ -126,7 +126,7 @@ jobs:
 
           echo "=== Uploading Windows binary ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            deezy-windows-x64.exe \
+            deezy-windows-x64-renamed.exe \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Windows binary uploaded successfully"
