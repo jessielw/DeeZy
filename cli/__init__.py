@@ -10,7 +10,7 @@ from cli.utils import (
 from deezy.audio_encoders.dee.atmos import AtmosEncoder
 from deezy.audio_encoders.dee.dd import DDEncoderDEE
 from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
-from deezy.config import get_config_integration
+from deezy.config.manager import get_config_manager
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
@@ -33,6 +33,12 @@ def create_main_parser():
     parser = argparse.ArgumentParser(prog=program_name)
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to configuration file (default: deezy-conf.toml beside executable)",
+        metavar="CONFIG_FILE",
     )
     parser.add_argument(
         "--log-level",
@@ -453,12 +459,12 @@ def cli_parser(base_wd: Path):
         exit_application("", EXIT_FAIL)
 
     # Handle configuration and dependencies
-    config_integration = handle_configuration(args)
-    dependencies = handle_dependencies(args, base_wd, config_integration)
+    config_manager = handle_configuration(args)
+    dependencies = handle_dependencies(args, base_wd, config_manager)
     file_inputs = handle_file_inputs(args)
 
     # Execute the appropriate command
-    execute_command(args, file_inputs, dependencies, config_integration)
+    execute_command(args, file_inputs, dependencies, config_manager)
 
 
 def setup_logging(args):
@@ -468,69 +474,27 @@ def setup_logging(args):
 
 def handle_configuration(args):
     """Load configuration and apply defaults."""
-    config_integration = None
+    config_manager = None
     if args.sub_command != "config":
-        config_integration = get_config_integration()
-        config_integration.load_config()
+        config_manager = get_config_manager()
 
-        # apply config defaults for encoding commands
+        # use explicit config path if provided, otherwise auto-detect deezy-conf.toml
+        config_path = None
+        if hasattr(args, "config") and args.config:
+            from pathlib import Path
+
+            config_path = Path(args.config)
+
+        config_manager.load_config(config_path)
+
+        # Apply configuration to arguments (handles presets and defaults)
         if args.sub_command == "encode":
-            format_type = getattr(args, "format_command", None)
+            args = config_manager.apply_config_to_args(args)
 
-            # handle preset if specified
-            if hasattr(args, "preset") and args.preset:
-                preset_config = config_integration.loader.get_preset(args.preset)
-                if preset_config is None:
-                    available_presets = config_integration.loader.list_presets()
-                    preset_list = (
-                        ", ".join(available_presets) if available_presets else "None"
-                    )
-                    exit_application(
-                        f"Preset '{args.preset}' not found. Available presets: {preset_list}",
-                        EXIT_FAIL,
-                    )
-
-                # apply preset values to args (only if not already set by CLI)
-                for key, value in preset_config.items():
-                    if key == "format":
-                        continue  # skip format since it's handled by subcommand
-
-                    # convert key to arg attribute name
-                    arg_name = key.replace("-", "_")
-
-                    # only set if not already provided via CLI
-                    if not hasattr(args, arg_name) or getattr(args, arg_name) is None:
-                        # handle enum conversions
-                        if arg_name == "channels":
-                            if format_type == "ddp":
-                                value = (
-                                    DolbyDigitalPlusChannels(value)
-                                    if isinstance(value, str)
-                                    else value
-                                )
-                            elif format_type == "dd":
-                                value = (
-                                    DolbyDigitalChannels(value)
-                                    if isinstance(value, str)
-                                    else value
-                                )
-                        elif arg_name == "drc":
-                            value = DeeDRC(value) if isinstance(value, str) else value
-                        elif arg_name == "stereo_mix":
-                            value = (
-                                StereoDownmix(value)
-                                if isinstance(value, str)
-                                else value
-                            )
-
-                        setattr(args, arg_name, value)
-
-            args = config_integration.merge_args_with_config(args, format_type)
-
-    return config_integration
+    return config_manager
 
 
-def handle_dependencies(args, base_wd, config_integration):
+def handle_dependencies(args, base_wd, config_manager):
     """Handle tool dependencies detection."""
     if args.sub_command in {"config"}:
         return None
@@ -540,21 +504,21 @@ def handle_dependencies(args, base_wd, config_integration):
     truehdd_arg = None
     dee_arg = None
 
-    if config_integration:
+    if config_manager:
         ffmpeg_arg = (
             args.ffmpeg
             if hasattr(args, "ffmpeg") and args.ffmpeg
-            else config_integration.get_dependency_path("ffmpeg")
+            else config_manager.get_dependency_path("ffmpeg")
         )
         truehdd_arg = (
             args.truehdd
             if hasattr(args, "truehdd") and args.truehdd
-            else config_integration.get_dependency_path("truehdd")
+            else config_manager.get_dependency_path("truehdd")
         )
         dee_arg = (
             args.dee
             if hasattr(args, "dee") and args.dee
-            else config_integration.get_dependency_path("dee")
+            else config_manager.get_dependency_path("dee")
         )
     else:
         ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
@@ -600,7 +564,7 @@ def handle_file_inputs(args):
     return file_inputs
 
 
-def execute_command(args, file_inputs, dependencies, config_integration):
+def execute_command(args, file_inputs, dependencies, config_manager):
     """Execute the appropriate command based on parsed arguments."""
     if args.sub_command == "encode":
         execute_encode_command(args, file_inputs, dependencies)
@@ -609,7 +573,7 @@ def execute_command(args, file_inputs, dependencies, config_integration):
     elif args.sub_command == "info":
         execute_info_command(args, file_inputs)
     elif args.sub_command == "config":
-        execute_config_command(args, config_integration)
+        execute_config_command(args, config_manager)
 
 
 def execute_encode_command(args, file_inputs, dependencies):
@@ -790,27 +754,25 @@ def execute_info_command(args, file_inputs):
     exit_application(track_s_info, EXIT_SUCCESS)
 
 
-def execute_config_command(args, config_integration):
+def execute_config_command(args, config_manager):
     """Execute config command."""
-    # config commands need their own integration instance
-    if config_integration is None:
-        config_integration = get_config_integration()
+    # config commands need their own manager instance
+    if config_manager is None:
+        config_manager = get_config_manager()
+
+        # use explicit config path if provided for config info command
+        if args.config_command == "info" and hasattr(args, "config") and args.config:
+            config_path = Path(args.config)
+            config_manager.load_config(config_path)
 
     if args.config_command == "generate":
         try:
             output_path = Path(args.output) if args.output else None
 
-            if args.from_args:
-                # for generating from args, we need to parse the full command
-                # this is a bit tricky since we're in the middle of execution
-                # for now, just use default generation
-                config_path = config_integration.generate_config(
-                    output_path=output_path, overwrite=args.overwrite
-                )
-            else:
-                config_path = config_integration.generate_config(
-                    output_path=output_path, overwrite=args.overwrite
-                )
+            # generate config (simplified - no from_args support yet)
+            config_path = config_manager.generate_config(
+                output_path=output_path, overwrite=args.overwrite
+            )
 
             exit_application(
                 f"Configuration file generated: {config_path}", EXIT_SUCCESS
@@ -833,12 +795,10 @@ def execute_config_command(args, config_integration):
                 else:
                     exit_application(f"Config file not found: {config_path}", EXIT_FAIL)
             else:
-                config_integration.load_config()
-                if config_integration.loader.config_path:
-                    info_text = (
-                        f"Active config file: {config_integration.loader.config_path}\n"
-                    )
-                    info_text += f"Presets available: {', '.join(config_integration.loader.list_presets()) or 'None'}"
+                config_manager.load_config()
+                if config_manager.config_path:
+                    info_text = f"Active config file: {config_manager.config_path}\n"
+                    info_text += f"Presets available: {', '.join(config_manager.list_presets()) or 'None'}"
                 else:
                     info_text = (
                         "No configuration file found. Using built-in defaults.\n"
