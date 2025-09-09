@@ -1,0 +1,86 @@
+name: Build Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_platforms:
+        description: 'Platforms to test (comma-separated: linux,macos,windows or all)'
+        required: true
+        default: 'all'
+
+jobs:
+  build-test:
+    name: Test Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            executable: deezy
+          - os: macos-latest  
+            platform: macos
+            executable: deezy
+          - os: windows-latest
+            platform: windows
+            executable: deezy.exe
+
+    steps:
+    - name: Check if platform should be built
+      id: should_build
+      shell: bash
+      run: |
+        if [[ "${{ github.event.inputs.test_platforms }}" == "all" ]]; then
+          echo "should_build=true" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.event.inputs.test_platforms }}" == *"${{ matrix.platform }}"* ]]; then
+          echo "should_build=true" >> $GITHUB_OUTPUT
+        else
+          echo "should_build=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Checkout code
+      if: steps.should_build.outputs.should_build == 'true'
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      if: steps.should_build.outputs.should_build == 'true'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install uv
+      if: steps.should_build.outputs.should_build == 'true'
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      if: steps.should_build.outputs.should_build == 'true'
+      run: uv sync --group dev --group build
+
+    - name: Run tests
+      if: steps.should_build.outputs.should_build == 'true'
+      run: uv run pytest
+
+    - name: Build executable
+      if: steps.should_build.outputs.should_build == 'true'
+      run: uv run python build.py
+
+    - name: Test executable
+      if: steps.should_build.outputs.should_build == 'true'
+      shell: bash
+      run: |
+        cd pyinstaller_build/dist/
+        if [ "${{ matrix.platform }}" == "windows" ]; then
+          ./deezy.exe --help
+        else
+          ./deezy --help
+        fi
+
+    - name: Upload test artifact
+      if: steps.should_build.outputs.should_build == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-build-${{ matrix.platform }}
+        path: pyinstaller_build/dist/${{ matrix.executable }}
+        retention-days: 1

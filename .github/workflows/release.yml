@@ -1,0 +1,121 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            executable: deezy
+            artifact_name: deezy-linux-x64
+          - os: macos-latest
+            platform: macos
+            executable: deezy
+            artifact_name: deezy-macos-x64
+          - os: windows-latest
+            platform: windows
+            executable: deezy.exe
+            artifact_name: deezy-windows-x64.exe
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: uv sync --group dev --group build
+
+    - name: Run tests
+      run: uv run pytest
+
+    - name: Build executable
+      run: uv run python build.py
+
+    - name: Verify build output
+      shell: bash
+      run: |
+        if [ "${{ matrix.platform }}" == "windows" ]; then
+          ls -la pyinstaller_build/dist/
+          if [ ! -f "pyinstaller_build/dist/deezy.exe" ]; then
+            echo "Build failed: deezy.exe not found"
+            exit 1
+          fi
+        else
+          ls -la pyinstaller_build/dist/
+          if [ ! -f "pyinstaller_build/dist/deezy" ]; then
+            echo "Build failed: deezy executable not found"
+            exit 1
+          fi
+        fi
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: pyinstaller_build/dist/${{ matrix.executable }}
+        retention-days: 7
+
+  release:
+    name: Create Release Assets
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Display structure of downloaded files
+      run: ls -R
+
+    - name: Upload Linux binary to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./deezy-linux-x64/deezy
+        asset_name: deezy-linux-x64
+        asset_content_type: application/octet-stream
+
+    - name: Upload macOS binary to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./deezy-macos-x64/deezy
+        asset_name: deezy-macos-x64
+        asset_content_type: application/octet-stream
+
+    - name: Upload Windows binary to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./deezy-windows-x64.exe/deezy.exe
+        asset_name: deezy-windows-x64.exe
+        asset_content_type: application/octet-stream
