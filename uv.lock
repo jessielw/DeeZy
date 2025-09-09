@@ -122,6 +122,13 @@ dev = [
     { name = "ruff" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "pyinstaller", marker = "extra == 'build'", specifier = ">=6.9.0" },
@@ -135,6 +142,13 @@ requires-dist = [
     { name = "typing-extensions", specifier = ">=4.15.0" },
 ]
 provides-extras = ["build", "dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
 
 [[package]]
 name = "iniconfig"

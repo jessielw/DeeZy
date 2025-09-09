@@ -13,7 +13,6 @@ dependencies = [
 
 [project.optional-dependencies]
 build = ["pyinstaller-hooks-contrib>=2025.1", "pyinstaller>=6.9.0"]
-dev = ["ruff", "pytest", "pytest-cov"]
 
 [tool.ruff]
 line-length = 88
@@ -28,3 +27,6 @@ py-modules = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = ["ruff", "pytest", "pytest-cov"]
