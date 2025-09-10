@@ -15,6 +15,7 @@ from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
 from deezy.enums.shared import DeeDRC, MeteringMode, StereoDownmix
+from deezy.utils.exit import EXIT_FAIL, exit_application
 from deezy.utils.logger import logger
 
 
@@ -149,6 +150,13 @@ class ConfigManager:
         presets = self.config.get("presets", {})
         return presets.get(preset_name)
 
+    def get_preset_format(self, preset_name: str) -> str | None:
+        """Get the format specified in a preset."""
+        preset = self.get_preset(preset_name)
+        if preset:
+            return preset.get("format")
+        return None
+
     def list_presets(self) -> list[str]:
         """Get list of available preset names."""
         presets = self.config.get("presets", {})
@@ -165,25 +173,33 @@ class ConfigManager:
         if not self._loaded:
             self.load_config()
 
-        # handle presets first
-        if hasattr(args, "preset") and args.preset:
-            self._apply_preset(args, args.preset)
-
-        # apply format specific defaults
-        if hasattr(args, "format_command") and args.format_command:
-            self._apply_format_defaults(args, args.format_command)
+        # handle preset command (format determined from preset)
+        if hasattr(args, "format_command") and args.format_command == "preset":
+            if hasattr(args, "preset_name") and args.preset_name:
+                # apply preset and get format for routing
+                format_type = self.apply_preset_with_format(args, args.preset_name)
+                # apply format-specific defaults
+                self._apply_format_defaults(args, format_type)
+            else:
+                exit_application(
+                    "Preset name is required when using 'preset' command.", EXIT_FAIL
+                )
+        else:
+            # apply format specific defaults for direct format commands
+            if hasattr(args, "format_command") and args.format_command:
+                self._apply_format_defaults(args, args.format_command)
 
         # apply default bitrates if no bitrate specified
         self._apply_default_bitrate(args)
 
         return args
 
-    def _apply_preset(self, args: argparse.Namespace, preset_name: str) -> None:
+    def _apply_preset(
+        self, args: argparse.Namespace, preset_name: str, include_format: bool = False
+    ) -> None:
         """Apply preset configuration to arguments."""
         preset = self.get_preset(preset_name)
         if not preset:
-            from deezy.utils.exit import EXIT_FAIL, exit_application
-
             available = ", ".join(self.list_presets()) or "None"
             exit_application(
                 f"Preset '{preset_name}' not found. Available: {available}", EXIT_FAIL
@@ -191,8 +207,8 @@ class ConfigManager:
 
         # apply preset values (CLI args take precedence)
         for key, value in preset.items():
-            if key == "format":
-                # format handled by subcommand
+            if key == "format" and not include_format:
+                # format handled by subcommand, unless explicitly requested
                 continue
 
             arg_name = key.replace("-", "_")
@@ -203,6 +219,229 @@ class ConfigManager:
                 ):
                     converted_value = self._convert_value(arg_name, value)
                     setattr(args, arg_name, converted_value)
+
+    def apply_preset_with_format(
+        self, args: argparse.Namespace, preset_name: str
+    ) -> str:
+        """Apply preset configuration including format, return the format for routing."""
+        preset = self.get_preset(preset_name)
+        if not preset:
+            available = ", ".join(self.list_presets()) or "None"
+            exit_application(
+                f"Preset '{preset_name}' not found. Available: {available}", EXIT_FAIL
+            )
+
+        format_type = preset.get("format")
+        if not format_type:
+            exit_application(
+                f"Preset '{preset_name}' does not specify a format. "
+                f"Please add 'format = \"dd|ddp|ddp-bluray|atmos\"' to the preset.",
+                EXIT_FAIL,
+            )
+
+        # set the format_command for routing
+        setattr(args, "format_command", format_type)
+
+        # apply all preset values with format-aware conversion
+        self._apply_preset_with_format_context(args, preset_name, format_type)
+
+        return format_type
+
+    def _apply_preset_with_format_context(
+        self, args: argparse.Namespace, preset_name: str, format_type: str
+    ) -> None:
+        """Apply preset configuration with format context for proper type conversion."""
+        preset = self.get_preset(preset_name)
+        if not preset:
+            return
+
+        # validate preset compatibility with format first
+        self._validate_preset_format_compatibility(preset, format_type, preset_name)
+
+        # apply preset values (CLI args take precedence)
+        for key, value in preset.items():
+            arg_name = key.replace("-", "_")
+            if hasattr(args, arg_name):
+                current_value = getattr(args, arg_name)
+                if current_value is None or self._should_override(
+                    arg_name, current_value
+                ):
+                    converted_value = self._convert_value_with_format(
+                        arg_name, value, format_type
+                    )
+                    setattr(args, arg_name, converted_value)
+            elif key != "format":  # format is special and handled elsewhere
+                # check for common key naming mistakes and provide helpful suggestions
+                self._suggest_correct_preset_key(key, preset_name, format_type)
+
+    def _validate_preset_format_compatibility(
+        self, preset: dict[str, Any], format_type: str, preset_name: str
+    ) -> None:
+        """Validate that all preset arguments are compatible with the detected format."""
+        # define format-specific valid arguments
+        format_specific_args = {
+            "dd": {
+                "valid": [
+                    "format",
+                    "channels",
+                    "bitrate",
+                    "drc_line_mode",
+                    "drc_rf_mode",
+                    "custom_dialnorm",
+                    "metering_mode",
+                    "dialogue_intelligence",
+                    "speech_threshold",
+                    "stereo_down_mix",
+                    "lfe_lowpass_filter",
+                    "surround_3db_attenuation",
+                    "surround_90_degree_phase_shift",
+                    "lt_rt_center",
+                    "lt_rt_surround",
+                    "lo_ro_center",
+                    "lo_ro_surround",
+                ],
+                "invalid": ["atmos_mode", "thd_warp_mode", "no_bed_conform"],
+            },
+            "ddp": {
+                "valid": [
+                    "format",
+                    "channels",
+                    "bitrate",
+                    "drc_line_mode",
+                    "drc_rf_mode",
+                    "custom_dialnorm",
+                    "metering_mode",
+                    "dialogue_intelligence",
+                    "speech_threshold",
+                    "stereo_down_mix",
+                    "lfe_lowpass_filter",
+                    "surround_3db_attenuation",
+                    "surround_90_degree_phase_shift",
+                    "lt_rt_center",
+                    "lt_rt_surround",
+                    "lo_ro_center",
+                    "lo_ro_surround",
+                ],
+                "invalid": ["atmos_mode", "thd_warp_mode", "no_bed_conform"],
+            },
+            "ddp-bluray": {
+                "valid": [
+                    "format",
+                    "channels",
+                    "bitrate",
+                    "drc_line_mode",
+                    "drc_rf_mode",
+                    "custom_dialnorm",
+                    "metering_mode",
+                    "dialogue_intelligence",
+                    "speech_threshold",
+                    "stereo_down_mix",
+                    "lfe_lowpass_filter",
+                    "surround_3db_attenuation",
+                    "surround_90_degree_phase_shift",
+                    "lt_rt_center",
+                    "lt_rt_surround",
+                    "lo_ro_center",
+                    "lo_ro_surround",
+                ],
+                "invalid": ["atmos_mode", "thd_warp_mode", "no_bed_conform"],
+            },
+            "atmos": {
+                "valid": [
+                    "format",
+                    "bitrate",
+                    "drc_line_mode",
+                    "drc_rf_mode",
+                    "custom_dialnorm",
+                    "metering_mode",
+                    "dialogue_intelligence",
+                    "speech_threshold",
+                    "lt_rt_center",
+                    "lt_rt_surround",
+                    "lo_ro_center",
+                    "lo_ro_surround",
+                    "atmos_mode",
+                    "thd_warp_mode",
+                    "no_bed_conform",
+                ],
+                "invalid": [
+                    "channels",
+                    "stereo_down_mix",
+                    "lfe_lowpass_filter",
+                    "surround_3db_attenuation",
+                    "surround_90_degree_phase_shift",
+                ],
+            },
+        }
+
+        format_rules = format_specific_args.get(format_type)
+        if not format_rules:
+            # unknown format, skip validation
+            return
+
+        # check for invalid arguments
+        for key in preset.keys():
+            if key in format_rules["invalid"]:
+                exit_application(
+                    f"Invalid argument '{key}' in preset '{preset_name}' for format '{format_type}'. "
+                    f"Argument '{key}' is not supported by {format_type.upper()} encoder.",
+                    EXIT_FAIL,
+                )
+
+    def _suggest_correct_preset_key(
+        self, key: str, preset_name: str, format_type: str
+    ) -> None:
+        """Suggest correct preset key for common naming mistakes."""
+        # common CLI-to-preset key mappings
+        cli_to_preset = {
+            "--bitrate": "bitrate",
+            "--channels": "channels",
+            "--atmos-mode": "atmos_mode",
+            "--drc-line-mode": "drc_line_mode",
+            "--drc-rf-mode": "drc_rf_mode",
+            "--custom-dialnorm": "custom_dialnorm",
+            "--metering-mode": "metering_mode",
+            "--dialogue-intelligence": "dialogue_intelligence",
+            "--speech-threshold": "speech_threshold",
+            "--stereo-down-mix": "stereo_down_mix",
+            "--thd-warp-mode": "thd_warp_mode",
+            "--no-bed-conform": "no_bed_conform",
+            "--track-index": "track_index",
+            "--keep-temp": "keep_temp",
+            "--temp-dir": "temp_dir",
+            "--delay": "delay",
+            "--output": "output",
+        }
+
+        # check if user used CLI argument name instead of preset key
+        cli_equivalent = f"--{key.replace('_', '-')}"
+        if cli_equivalent in cli_to_preset:
+            correct_key = cli_to_preset[cli_equivalent]
+            if correct_key != key:
+                exit_application(
+                    f"Unknown preset key '{key}' in preset '{preset_name}'. "
+                    f"Did you mean '{correct_key}'? "
+                    f"(CLI argument '{cli_equivalent}' maps to preset key '{correct_key}')",
+                    EXIT_FAIL,
+                )
+
+        # check for reverse case - used correct key but it's not supported by this argument parser
+        reverse_lookup = {v: k for k, v in cli_to_preset.items()}
+        if key in reverse_lookup:
+            cli_arg = reverse_lookup[key]
+            exit_application(
+                f"Preset key '{key}' in preset '{preset_name}' is not supported by format '{format_type}'. "
+                f"This key corresponds to CLI argument '{cli_arg}'. "
+                f"Check the format compatibility in the configuration file comments.",
+                EXIT_FAIL,
+            )
+        else:
+            # generic unknown key error
+            exit_application(
+                f"Unknown preset key '{key}' in preset '{preset_name}'. "
+                f"Check the configuration file comments for valid preset keys and format compatibility.",
+                EXIT_FAIL,
+            )
 
     def _apply_format_defaults(
         self, args: argparse.Namespace, format_type: str
@@ -329,10 +568,91 @@ class ConfigManager:
             else:
                 return value
         except (KeyError, ValueError, AttributeError):
-            logger.warning(
-                f"Failed to convert config value '{value}' for argument '{arg_name}'"
+            # Use the same strict error handling as format-aware conversion
+            self._handle_conversion_error(arg_name, value, "unknown")
+
+    def _convert_value_with_format(
+        self, arg_name: str, value: Any, format_type: str
+    ) -> Any:
+        """Convert config value to appropriate type for argument with format context."""
+        try:
+            if arg_name == "channels":
+                # convert channels based on format type
+                value_upper = str(value).upper()
+                if format_type == "dd":
+                    return DolbyDigitalChannels[value_upper]
+                elif format_type == "ddp":
+                    return DolbyDigitalPlusChannels[value_upper]
+                elif format_type == "ddp-bluray":
+                    return DolbyDigitalPlusBlurayChannels[value_upper]
+                elif format_type == "atmos":
+                    # atmos doesn't use channels argument, return as-is
+                    return value
+                else:
+                    # fallback to original method
+                    return self._convert_value(arg_name, value)
+            else:
+                # use standard conversion for non-channel arguments
+                return self._convert_value(arg_name, value)
+        except (KeyError, ValueError, AttributeError):
+            # provide specific error messages for different validation failures
+            self._handle_conversion_error(arg_name, value, format_type)
+
+    def _handle_conversion_error(
+        self, arg_name: str, value: Any, format_type: str
+    ) -> None:
+        """Handle configuration value conversion errors with helpful messages."""
+        if arg_name == "channels":
+            # get valid options based on format
+            if format_type == "dd":
+                valid_options = [e.name.lower() for e in DolbyDigitalChannels]
+            elif format_type == "ddp":
+                valid_options = [e.name.lower() for e in DolbyDigitalPlusChannels]
+            elif format_type == "ddp-bluray":
+                valid_options = [e.name.lower() for e in DolbyDigitalPlusBlurayChannels]
+            else:
+                valid_options = ["auto", "mono", "stereo", "surround"]
+
+            exit_application(
+                f"Invalid 'channels' value '{value}' for format '{format_type}'. "
+                f"Valid options: {', '.join(valid_options)}",
+                EXIT_FAIL,
             )
-            return value
+        elif arg_name in ("drc_line_mode", "drc_rf_mode"):
+            valid_options = [e.name.lower() for e in DeeDRC]
+            exit_application(
+                f"Invalid '{arg_name}' value '{value}'. "
+                f"Valid options: {', '.join(valid_options)}",
+                EXIT_FAIL,
+            )
+        elif arg_name == "stereo_down_mix":
+            valid_options = [e.name.lower() for e in StereoDownmix]
+            exit_application(
+                f"Invalid 'stereo_down_mix' value '{value}'. "
+                f"Valid options: {', '.join(valid_options)}",
+                EXIT_FAIL,
+            )
+        elif arg_name == "metering_mode":
+            valid_options = ["1770_1", "1770_2", "1770_3", "leqa"]
+            exit_application(
+                f"Invalid 'metering_mode' value '{value}'. "
+                f"Valid options: {', '.join(valid_options)}",
+                EXIT_FAIL,
+            )
+        elif arg_name == "atmos_mode":
+            valid_options = [e.name.lower() for e in AtmosMode]
+            exit_application(
+                f"Invalid 'atmos_mode' value '{value}'. "
+                f"Valid options: {', '.join(valid_options)}",
+                EXIT_FAIL,
+            )
+        else:
+            # generic error for other validation failures
+            exit_application(
+                f"Invalid configuration value '{value}' for '{arg_name}'. "
+                f"Please check the configuration file for correct format and values.",
+                EXIT_FAIL,
+            )
 
     def _merge_configs(
         self, base: dict[str, Any], update: dict[str, Any]
@@ -443,16 +763,60 @@ class ConfigManager:
         for format_name, format_settings in DEFAULT_CONFIG["format_defaults"].items():
             format_table = tomlkit.table()
             for key, value in format_settings.items():
+                # skip no_bed_conform if it's false (default value, can be omitted)
+                if key == "no_bed_conform" and value is False:
+                    continue # TODO: check if we need these checks for no conform?
                 format_table[key] = value
             format_defaults.add(format_name, format_table)
 
         doc.add(tomlkit.nl())
 
-        # [resets section
+        # presets section
         presets = tomlkit.table()
         presets.add(tomlkit.comment("Define custom presets for common workflows"))
         presets.add(
-            tomlkit.comment("Usage: deezy encode ddp --preset streaming input.mkv")
+            tomlkit.comment("Usage: deezy encode preset --name streaming_ddp input.mkv")
+        )
+        presets.add(tomlkit.comment(""))
+        presets.add(tomlkit.comment("PRESET KEY MAPPING (CLI argument → preset key):"))
+        presets.add(tomlkit.comment("--bitrate → bitrate"))
+        presets.add(tomlkit.comment("--channels → channels"))
+        presets.add(tomlkit.comment("--atmos-mode → atmos_mode"))
+        presets.add(tomlkit.comment("--drc-line-mode → drc_line_mode"))
+        presets.add(tomlkit.comment("--drc-rf-mode → drc_rf_mode"))
+        presets.add(tomlkit.comment("--custom-dialnorm → custom_dialnorm"))
+        presets.add(tomlkit.comment("--metering-mode → metering_mode"))
+        presets.add(tomlkit.comment("--dialogue-intelligence → dialogue_intelligence"))
+        presets.add(tomlkit.comment("--speech-threshold → speech_threshold"))
+        presets.add(tomlkit.comment("--stereo-down-mix → stereo_down_mix"))
+        presets.add(tomlkit.comment("--thd-warp-mode → thd_warp_mode"))
+        presets.add(tomlkit.comment("--no-bed-conform → no_bed_conform"))
+        presets.add(tomlkit.comment("--track-index → track_index"))
+        presets.add(tomlkit.comment("--keep-temp → keep_temp"))
+        presets.add(tomlkit.comment("--temp-dir → temp_dir"))
+        presets.add(tomlkit.comment("--delay → delay"))
+        presets.add(tomlkit.comment("--output → output"))
+        presets.add(tomlkit.comment(""))
+        presets.add(tomlkit.comment("FORMAT-SPECIFIC COMPATIBILITY:"))
+        presets.add(
+            tomlkit.comment(
+                "DD/DDP/DDP-Bluray: format, channels, bitrate, drc_*, metering_mode,"
+            )
+        )
+        presets.add(
+            tomlkit.comment(
+                "                   dialogue_intelligence, speech_threshold, stereo_down_mix"
+            )
+        )
+        presets.add(
+            tomlkit.comment(
+                "Atmos: format, bitrate, drc_*, metering_mode, dialogue_intelligence,"
+            )
+        )
+        presets.add(
+            tomlkit.comment(
+                "       speech_threshold, atmos_mode, thd_warp_mode, no_bed_conform"
+            )
         )
         doc["presets"] = presets
         doc.add(tomlkit.nl())
@@ -460,6 +824,9 @@ class ConfigManager:
         for preset_name, preset_settings in DEFAULT_CONFIG["presets"].items():
             preset_table = tomlkit.table()
             for key, value in preset_settings.items():
+                # skip no_bed_conform if it's false (default value, can be omitted)
+                if key == "no_bed_conform" and value is False:
+                    continue
                 preset_table[key] = value
             presets.add(preset_name, preset_table)
 
