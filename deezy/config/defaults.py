@@ -74,7 +74,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "atmos": {
             "atmos_mode": "streaming",
             "thd_warp_mode": "normal",
-            "no_bed_conform": True,
+            "no_bed_conform": False,
         },
     },
     # user-defined presets
@@ -84,11 +84,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "format": "ddp",
             "channels": "surround",
             "bitrate": 448,
-            "atmos_mode": "streaming",
         },
         "bluray_atmos": {
             "format": "atmos",
-            "atmos_mode": "bluray",
+            "atmos_mode": "streaming",
             "bitrate": 768,
         },
         "quick_stereo": {
