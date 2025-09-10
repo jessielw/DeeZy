@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `--lt-rt-surround`: Lt/Rt surround downmix level.
     - `--lo-ro-center`: Lo/Ro center downmix level.
     - `--lo-ro-surround`: Lo/Ro surround downmix level.
-     - `--metering-mode`: Loudness measuring mode according to one of the broadcast standards.
+    - `--metering-mode`: Loudness measuring mode according to one of the broadcast standards.
   - DDP-BluRay:
     - `ddp-bluray`: Added a new encoder mode to allow higher bitrates for channel 7.1 layouts.
   - Atmos:
