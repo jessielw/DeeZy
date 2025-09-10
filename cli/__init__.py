@@ -118,11 +118,6 @@ def create_common_argument_groups():
             "Delay/Language string to output file name."
         ),
     )
-    encode_group.add_argument(
-        "--preset",
-        type=str,
-        help="Use a predefined configuration preset from config file.",
-    )
 
     # codec group
     codec_group = argparse.ArgumentParser(add_help=False)
@@ -384,7 +379,59 @@ def create_encode_parsers(subparsers, argument_groups):
     encode_atmos_parser.add_argument(
         "--no-bed-conform",
         action="store_false",
-        help="Disables bed conformance for Atmos content (truehdd).",
+        help="Disables bed conformance for Atmos content (truehd).",
+    )
+
+    ### Preset Command ###
+    encode_preset_parser = encode_subparsers.add_parser(
+        "preset",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["codec_group"],
+            argument_groups["shared_loudness_args"],
+            argument_groups["dd_ddp_only_group"],
+            argument_groups["stereo_downmix_metadata_group"],
+            argument_groups["downmix_metadata_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+        help="Encode using a preset configuration (format determined from preset).",
+    )
+    encode_preset_parser.add_argument(
+        "--name",
+        dest="preset_name",
+        required=True,
+        help="Name of the preset to use for encoding.",
+        metavar="PRESET_NAME",
+    )
+    # add format-specific arguments that might be needed
+    encode_preset_parser.add_argument(
+        "--channels",
+        type=str,
+        help="Override channels setting from preset (format depends on preset's format).",
+    )
+    encode_preset_parser.add_argument(
+        "--atmos-mode",
+        type=case_insensitive_enum(AtmosMode),
+        choices=tuple(AtmosMode),
+        metavar=enum_choices(AtmosMode),
+        help="Atmos encoding mode (only used if preset format is atmos).",
+    )
+    encode_preset_parser.add_argument(
+        "--thd-warp-mode",
+        type=case_insensitive_enum(WarpMode),
+        choices=tuple(WarpMode),
+        metavar=enum_choices(WarpMode),
+        help="Specify warp mode when not present in metadata (only used if preset format is atmos).",
+    )
+    encode_preset_parser.add_argument(
+        "--no-bed-conform",
+        action="store_false",
+        help="Disables bed conformance for Atmos content (only used if preset format is atmos).",
     )
 
 
@@ -725,6 +772,14 @@ def execute_encode_command(args, file_inputs, dependencies):
                 logger.info(f"Job successful! Output file path:\n{atmos_job}")
         except Exception as e:
             exit_application(str(e), EXIT_FAIL)
+
+    # encode using preset (format_command was set by config manager based on preset)
+    elif args.format_command == "preset":
+        # this should not happen since config manager converts "preset" to actual format
+        exit_application(
+            "Preset format conversion failed. This is a bug in the configuration system.",
+            EXIT_FAIL,
+        )
 
 
 def execute_find_command(args, file_inputs):
