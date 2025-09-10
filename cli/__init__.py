@@ -703,20 +703,6 @@ def execute_encode_command(args, file_inputs, dependencies):
     truehdd_path = dependencies["truehdd_path"]
     dee_path = dependencies["dee_path"]
 
-    if args.sub_command not in ("find", "info"):
-        # config system now handles defaults, but provide fallbacks for edge cases
-        if (
-            not hasattr(args, "channels")
-            or not args.channels
-            or int(args.channels.value) == 0
-        ):
-            print(  # TODO: use logger
-                "No channels specified, will automatically detect highest quality "
-                "supported channel based on codec."
-            )
-
-        # Bitrate is now applied earlier in the flow via apply_default_bitrate()
-
     # encode Dolby Digital
     if args.format_command == "dd":
         try:
@@ -933,7 +919,7 @@ def execute_config_command(args, config_manager):
                 exit_application("No configuration file found to validate.", EXIT_FAIL)
 
             if args.preset:
-                # calidate specific preset
+                # validate specific preset
                 if args.preset not in config_manager.list_presets():
                     available = ", ".join(config_manager.list_presets()) or "None"
                     exit_application(
