@@ -114,10 +114,10 @@ streaming = 448   # Dolby Atmos Streaming mode
 bluray = 448      # Dolby Atmos Bluray mode
 
 [presets]
-# Define custom presets for common workflows
-streaming_ddp = { format = "ddp", channels = "surround", bitrate = 448 }
-bluray_atmos = { format = "atmos", atmos_mode = "bluray", atmos_mode = "streaming", bitrate = 768 }
-quick_stereo = { format = "ddp", channels = "stereo", bitrate = 192 }
+# Define custom presets as command strings
+streaming_ddp = "encode ddp --channels surround --bitrate 448"
+bluray_atmos = "encode atmos --atmos-mode bluray --bitrate 768"
+quick_stereo = "encode ddp --channels stereo --bitrate 192"
 ```
 
 ### Configuration Location
@@ -127,11 +127,18 @@ DeeZy looks for `deezy-conf.toml` beside the executable for portable usage. You 
 ### Priority System
 
 Configuration values are applied in order of priority:
-**CLI Arguments** > **Config Presets** > **Config Defaults** > **Built-in Defaults**
+**CLI Arguments** > **Config Defaults** > **Format-Specific Defaults** > **Built-in Fallback Defaults**
 
-### Smart Default Bitrates
+- **CLI Arguments**: Any argument provided directly on the command line takes highest priority
+- **Config Defaults**: Values from the `[global_defaults]` section of your config file
+- **Format-Specific Defaults**: Smart defaults based on encoding format (e.g., DD/DDP use 1770-3 metering, Atmos uses 1770-4)
+- **Built-in Fallback Defaults**: Hardcoded defaults when nothing else is configured
 
-The new default bitrate system automatically selects appropriate bitrates based on codec and channel layout when no `--bitrate` is specified:
+### Smart Defaults System
+
+DeeZy automatically applies intelligent defaults based on the encoding format when arguments are not specified:
+
+**Smart Default Bitrates** (based on codec and channel layout):
 
 - **DD 5.1**: 448 kbps (configurable)
 - **DDP Stereo**: 128 kbps (configurable)
@@ -139,9 +146,21 @@ The new default bitrate system automatically selects appropriate bitrates based 
 - **DDP 7.1**: 384 kbps (configurable)
 - **Atmos Streaming**: 448 kbps (configurable)
 
+**Smart Channel Defaults** (when `--channels` not specified):
+
+- **DD**: AUTO (automatically detects best channel layout)
+- **DDP**: AUTO (automatically detects best channel layout)
+- **DDP-BluRay**: SURROUNDEX (7.1 for BluRay releases)
+- **Atmos**: No channel argument (uses source layout)
+
+**Smart Metering Mode Defaults** (when `--metering-mode` not specified):
+
+- **DD/DDP**: 1770-3 (standard for traditional surround formats)
+- **Atmos**: 1770-4 (supports advanced Atmos loudness requirements)
+
 ### Preset System
 
-Create reusable encoding profiles for different workflows:
+Create reusable encoding profiles for different workflows using simple command strings:
 
 ```bash
 # Use a preset for encoding (format determined from preset)
@@ -154,58 +173,42 @@ deezy encode preset --name bluray_atmos --bitrate 1024 input.mkv
 deezy config info
 ```
 
-### Preset Key Mapping
+### Preset Configuration
 
-When creating presets, CLI argument names need to be converted to TOML key names by replacing hyphens with underscores:
-
-| CLI Argument | Preset Key | Example Value |
-|--------------|------------|---------------|
-| `--bitrate` | `bitrate` | `448` |
-| `--channels` | `channels` | `"surround"` |
-| `--drc-line-mode` | `drc_line_mode` | `"music_standard"` |
-| `--drc-rf-mode` | `drc_rf_mode` | `"film_light"` |
-| `--custom-dialnorm` | `custom_dialnorm` | `5` |
-| `--metering-mode` | `metering_mode` | `"1770_3"` |
-| `--speech-threshold` | `speech_threshold` | `15` |
-| `--stereo-down-mix` | `stereo_down_mix` | `"loro"` |
-| `--lt-rt-center` | `lt_rt_center` | `"+3"` |
-| `--lt-rt-surround` | `lt_rt_surround` | `"-3"` |
-| `--lo-ro-center` | `lo_ro_center` | `"0"` |
-| `--lo-ro-surround` | `lo_ro_surround` | `"-3"` |
-| `--atmos-mode` | `atmos_mode` | `"streaming"` |
-| `--thd-warp-mode` | `thd_warp_mode` | `"normal"` |
-
-**Common Examples:**
+Presets are defined as command strings in the `[presets]` section of your config file. This makes them simple to create and understand:
 
 ```toml
-# Streaming DDP preset
-[presets.streaming_ddp]
-format = "ddp"
-channels = "surround"  
-bitrate = 448
-drc_line_mode = "music_standard"
-custom_dialnorm = 5
+[presets]
+# Simple preset examples using command strings
+streaming_ddp = "encode ddp --channels surround --bitrate 448"
+bluray_dd = "encode dd --channels surround --bitrate 640"
+auto_stereo_ddp = "encode ddp --channels stereo"
+streaming_atmos = "encode atmos --atmos-mode streaming"
 
-# Blu-ray Atmos preset  
-[presets.bluray_atmos]
-format = "atmos"
-atmos_mode = "bluray"
-bitrate = 768
-drc_line_mode = "film_light"
-metering_mode = "1770_3"
-
-# Stereo streaming preset
-[presets.stereo_stream]
-format = "ddp"
-channels = "stereo"
-bitrate = 192
-stereo_down_mix = "loro"
+# Advanced presets with multiple options
+high_quality_ddp = "encode ddp --channels surround --bitrate 768 --drc-line-mode music_standard"
+custom_atmos = "encode atmos --atmos-mode bluray --bitrate 1024 --custom-dialnorm 5"
+legacy_dd = "encode dd --channels surround --bitrate 448 --drc-line-mode film_light --metering-mode 1770_3"
 ```
 
-**Error Handling:** If you use an incorrect key name, DeeZy will suggest the correct key:
-```
-Error: Unknown preset key 'custom-dialnorm' in preset 'my_preset'
-Did you mean 'custom_dialnorm'?
+**Preset Benefits:**
+
+- **Simple format**: Just write the command as you would use it on the CLI
+- **Easy to read**: Command strings are self-documenting
+- **Override capable**: Add extra arguments when using the preset to override settings
+- **Validation**: DeeZy validates preset commands and suggests fixes for errors
+
+**Usage Examples:**
+
+```bash
+# Use preset as-is
+deezy encode preset --name streaming_ddp input.mkv
+
+# Override preset bitrate
+deezy encode preset --name streaming_ddp --bitrate 640 input.mkv
+
+# Use preset with additional options
+deezy encode preset --name auto_stereo_ddp --keep-temp --output custom.ec3 input.mkv
 ```
 
 ### Benefits
@@ -278,16 +281,16 @@ deezy config generate
 
 ### Main Commands
 
-| Command             | Description                                |
-| ------------------- | ------------------------------------------ |
-| `encode dd`         | Dolby Digital encoding                     |
-| `encode ddp`        | Dolby Digital Plus encoding                |
-| `encode ddp-bluray` | Dolby Digital Plus BluRay encoding         |
-| `encode atmos`      | Dolby Atmos encoding                       |
+| Command             | Description                                  |
+| ------------------- | -------------------------------------------- |
+| `encode dd`         | Dolby Digital encoding                       |
+| `encode ddp`        | Dolby Digital Plus encoding                  |
+| `encode ddp-bluray` | Dolby Digital Plus BluRay encoding           |
+| `encode atmos`      | Dolby Atmos encoding                         |
 | `encode preset`     | Preset-based encoding (format auto-detected) |
-| `find`              | File discovery with glob patterns          |
-| `info`              | Audio stream analysis and metadata display |
-| `config`            | Configuration file management              |
+| `find`              | File discovery with glob patterns            |
+| `info`              | Audio stream analysis and metadata display   |
+| `config`            | Configuration file management                |
 
 ## 🎵 Audio Encoding
 
@@ -470,21 +473,22 @@ The configuration system enables powerful workflow optimizations:
 ```bash
 # Set up your environment once
 deezy config generate
-# Edit config file with your tool paths and preferred settings
+# Edit config file with your tool paths, defaults, and presets
 
 # Now use clean commands for different scenarios:
 
-# Streaming workflow - uses config defaults
+# Use smart defaults - automatically applies format-specific settings
 deezy encode ddp input.mkv
 
+# Use presets for consistent workflows
+deezy encode preset --name streaming_ddp input.mkv
+deezy encode preset --name bluray_atmos input.mkv
+
 # Override specific settings when needed
-deezy encode ddp -b 1024 -c 7.1 input.mkv
+deezy encode preset --name streaming_ddp --bitrate 1024 input.mkv
 
-# Atmos workflow - automatically detects need for TrueHD
-deezy encode ddp --atmos -c 7.1.4 input.truehd
-
-# Batch processing with consistent settings
-deezy encode ddp "season01/**/*.mkv"
+# Batch processing with consistent preset settings
+deezy encode preset --name streaming_ddp "season01/**/*.mkv"
 ```
 
 **Configuration Benefits:**
