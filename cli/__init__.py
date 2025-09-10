@@ -91,25 +91,22 @@ def create_common_argument_groups():
     encode_group.add_argument(
         "--track-index",
         type=validate_track_index,
-        default=argparse.SUPPRESS,
+        default=0,
         help="The index of the audio track to use.",
     )
     encode_group.add_argument(
         "--delay",
         type=str,
-        default=argparse.SUPPRESS,
         help="The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).",
     )
     encode_group.add_argument(
         "--keep-temp",
         action="store_true",
-        default=argparse.SUPPRESS,
         help="Keeps the temp files after finishing.",
     )
     encode_group.add_argument(
         "--temp-dir",
         type=str,
-        default=argparse.SUPPRESS,
         help=(
             "Path to store temporary files to. If not specified this will "
             "automatically happen in the temp dir of the os."
@@ -129,7 +126,7 @@ def create_common_argument_groups():
     codec_group.add_argument(
         "--bitrate",
         type=int,
-        default=argparse.SUPPRESS,
+        default=None,
         help=(
             "The bitrate in Kbps (If too high or low for you desired layout, "
             "the bitrate will automatically be adjusted to the closest allowed bitrate)."
@@ -140,7 +137,7 @@ def create_common_argument_groups():
         type=case_insensitive_enum(DeeDRC),
         choices=tuple(DeeDRC),
         metavar=enum_choices(DeeDRC),
-        default=argparse.SUPPRESS,
+        default=DeeDRC.FILM_LIGHT,
         help="Dynamic range compression settings.",
     )
     codec_group.add_argument(
@@ -148,13 +145,13 @@ def create_common_argument_groups():
         type=case_insensitive_enum(DeeDRC),
         choices=tuple(DeeDRC),
         metavar=enum_choices(DeeDRC),
-        default=argparse.SUPPRESS,
+        default=DeeDRC.FILM_LIGHT,
         help="Dynamic range compression settings.",
     )
     codec_group.add_argument(
         "--custom-dialnorm",
         type=dialnorm_options,
-        default=argparse.SUPPRESS,
+        default=0,
         help="Custom dialnorm (0 disables custom dialnorm).",
     )
 
@@ -171,19 +168,18 @@ def create_common_argument_groups():
         type=case_insensitive_enum(MeteringMode),
         choices=dd_ddp_metering_choices,
         metavar="{" + ",".join(str(e.value) for e in dd_ddp_metering_choices) + "}",
-        default=argparse.SUPPRESS,
+        default=MeteringMode.MODE_1770_3,
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
     shared_loudness_args.add_argument(
         "--no-dialogue-intelligence",
         action="store_false",
-        default=argparse.SUPPRESS,
         help="Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.",
     )
     shared_loudness_args.add_argument(
         "--speech-threshold",
         type=int_0_100,
-        default=argparse.SUPPRESS,
+        default=15,
         help=(
             "[0-100] If the percentage of speech is higher than the threshold, the encoder uses speech "
             "gating to set the dialnorm value. (Otherwise, the encoder uses level gating)."
@@ -198,19 +194,18 @@ def create_common_argument_groups():
         type=case_insensitive_enum(MeteringMode),
         choices=atmos_metering_choices,
         metavar="{" + ",".join(str(e.value) for e in atmos_metering_choices) + "}",
-        default=argparse.SUPPRESS,
+        default=MeteringMode.MODE_1770_4,
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
     atmos_loudness_args.add_argument(
         "--no-dialogue-intelligence",
         action="store_false",
-        default=argparse.SUPPRESS,
         help="Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.",
     )
     atmos_loudness_args.add_argument(
         "--speech-threshold",
         type=int_0_100,
-        default=argparse.SUPPRESS,
+        default=15,
         help=(
             "[0-100] If the percentage of speech is higher than the threshold, the encoder uses speech "
             "gating to set the dialnorm value. (Otherwise, the encoder uses level gating)."
@@ -222,19 +217,16 @@ def create_common_argument_groups():
     dd_ddp_only_group.add_argument(
         "--no-low-pass-filter",
         action="store_false",
-        default=argparse.SUPPRESS,
         help="Disables low pass filter.",
     )
     dd_ddp_only_group.add_argument(
         "--no-surround-3db",
         action="store_false",
-        default=argparse.SUPPRESS,
         help="Disables surround 3db attenuation.",
     )
     dd_ddp_only_group.add_argument(
         "--no-surround-90-deg-phase-shift",
         action="store_false",
-        default=argparse.SUPPRESS,
         help="Disables surround 90 degree phase shift.",
     )
 
@@ -244,7 +236,7 @@ def create_common_argument_groups():
         "--stereo-down-mix",
         type=case_insensitive_enum(StereoDownmix),
         choices=tuple(StereoDownmix),
-        default=argparse.SUPPRESS,
+        default=StereoDownmix.LORO,
         metavar=enum_choices(StereoDownmix),
         help="Down mix method for stereo.",
     )
@@ -255,28 +247,28 @@ def create_common_argument_groups():
         "--lt-rt-center",
         type=str,
         choices=("+3", "+1.5", "0", "-1.5", "-3", "-4.5", "-6", "-inf"),
-        default=argparse.SUPPRESS,
+        default="-3",
         help="Lt/Rt center downmix level.",
     )
     downmix_metadata_group.add_argument(
         "--lt-rt-surround",
         type=str,
         choices=("-1.5", "-3", "-4.5", "-6", "-inf"),
-        default=argparse.SUPPRESS,
+        default="-3",
         help="Lt/Rt surround downmix level.",
     )
     downmix_metadata_group.add_argument(
         "--lo-ro-center",
         type=str,
         choices=("+3", "+1.5", "0", "-1.5", "-3", "-4.5", "-6", "-inf"),
-        default=argparse.SUPPRESS,
+        default="-3",
         help="Lo/Ro center downmix level.",
     )
     downmix_metadata_group.add_argument(
         "--lo-ro-surround",
         type=str,
         choices=("-1.5", "-3", "-4.5", "-6", "-inf"),
-        default=argparse.SUPPRESS,
+        default="-3",
         help="Lo/Ro surround downmix level.",
     )
 
@@ -322,7 +314,7 @@ def create_encode_parsers(subparsers, argument_groups):
         "--channels",
         type=case_insensitive_enum(DolbyDigitalChannels),
         choices=tuple(DolbyDigitalChannels),
-        default=argparse.SUPPRESS,
+        default=DolbyDigitalChannels.AUTO,
         metavar=enum_choices(DolbyDigitalChannels),
         help="The number of channels.",
     )
@@ -349,7 +341,7 @@ def create_encode_parsers(subparsers, argument_groups):
         "--channels",
         type=case_insensitive_enum(DolbyDigitalPlusChannels),
         choices=tuple(DolbyDigitalPlusChannels),
-        default=argparse.SUPPRESS,
+        default=DolbyDigitalPlusChannels.AUTO,
         metavar=enum_choices(DolbyDigitalPlusChannels),
         help="The number of channels.",
     )
@@ -376,7 +368,7 @@ def create_encode_parsers(subparsers, argument_groups):
         "--channels",
         type=case_insensitive_enum(DolbyDigitalPlusBlurayChannels),
         choices=tuple(DolbyDigitalPlusBlurayChannels),
-        default=argparse.SUPPRESS,
+        default=DolbyDigitalPlusBlurayChannels.SURROUNDEX,
         metavar=enum_choices(DolbyDigitalPlusBlurayChannels),
         help="The number of channels.",
     )
@@ -401,7 +393,7 @@ def create_encode_parsers(subparsers, argument_groups):
         "--atmos-mode",
         type=case_insensitive_enum(AtmosMode),
         choices=tuple(AtmosMode),
-        default=argparse.SUPPRESS,
+        default=AtmosMode.STREAMING,
         metavar=enum_choices(AtmosMode),
         help="Atmos encoding mode.",
     )
@@ -409,14 +401,13 @@ def create_encode_parsers(subparsers, argument_groups):
         "--thd-warp-mode",
         type=case_insensitive_enum(WarpMode),
         choices=tuple(WarpMode),
-        default=argparse.SUPPRESS,
+        default=WarpMode.NORMAL,
         metavar=enum_choices(WarpMode),
         help="Specify warp mode when not present in metadata (truehdd).",
     )
     encode_atmos_parser.add_argument(
         "--no-bed-conform",
         action="store_false",
-        default=argparse.SUPPRESS,
         help="Disables bed conformance for Atmos content (truehd).",
     )
 
@@ -450,14 +441,13 @@ def create_encode_parsers(subparsers, argument_groups):
     encode_preset_parser.add_argument(
         "--channels",
         type=str,
-        default=argparse.SUPPRESS,
         help="Override channels setting from preset (format depends on preset's format).",
     )
     encode_preset_parser.add_argument(
         "--atmos-mode",
         type=case_insensitive_enum(AtmosMode),
         choices=tuple(AtmosMode),
-        default=argparse.SUPPRESS,
+        default=AtmosMode.STREAMING,
         metavar=enum_choices(AtmosMode),
         help="Atmos encoding mode (only used if preset format is atmos).",
     )
@@ -465,14 +455,13 @@ def create_encode_parsers(subparsers, argument_groups):
         "--thd-warp-mode",
         type=case_insensitive_enum(WarpMode),
         choices=tuple(WarpMode),
-        default=argparse.SUPPRESS,
+        default=WarpMode.NORMAL,
         metavar=enum_choices(WarpMode),
         help="Specify warp mode when not present in metadata (only used if preset format is atmos).",
     )
     encode_preset_parser.add_argument(
         "--no-bed-conform",
         action="store_false",
-        default=argparse.SUPPRESS,
         help="Disables bed conformance for Atmos content (only used if preset format is atmos).",
     )
 
@@ -541,68 +530,73 @@ def create_other_parsers(subparsers, argument_groups):
     )
 
 
-def handle_preset_command(args, base_wd: Path):
-    """Handle preset command by re-parsing with the preset's command string."""
-    # load config to get preset
-    config_manager = get_config_manager()
+def apply_default_bitrate(args, config_manager):
+    """Apply default bitrate based on format and channels/mode if none specified."""
+    if not hasattr(args, "bitrate") or args.bitrate is None:
+        # determine the channel/mode key based on format
+        channels_or_mode = None
+        if args.format_command == "atmos":
+            # for Atmos, use the mode (streaming/bluray)
+            if hasattr(args, "atmos_mode") and args.atmos_mode:
+                channels_or_mode = (
+                    args.atmos_mode.value
+                    if hasattr(args.atmos_mode, "value")
+                    else str(args.atmos_mode)
+                )
+        else:
+            # for DD/DDP, use channels
+            if hasattr(args, "channels") and args.channels:
+                channels_or_mode = args.channels
 
-    # get parsed preset arguments
-    preset_args = config_manager.parse_preset_command(args.preset_name)
+        # get default bitrate from config
+        default_bitrate = config_manager.get_default_bitrate(
+            args.format_command, channels_or_mode
+        )
 
-    # get the input files from the original command
-    input_files = getattr(args, "input", [])
+        if default_bitrate:
+            args.bitrate = default_bitrate
+            logger.info(
+                f"No bitrate specified, using default {default_bitrate}k for {args.format_command}"
+            )
 
-    # build new argv with preset command
-    new_argv = [sys.argv[0]] + preset_args
 
-    # add CLI overrides (they take precedence over preset values)
-    cli_overrides = []
+def handle_preset_injection():
+    """Handle preset injection into sys.argv before argparse runs."""
 
-    # common overrides that apply to all formats
-    if getattr(args, "bitrate", None) is not None:
-        cli_overrides.extend(["--bitrate", str(args.bitrate)])
-    if getattr(args, "output", None) is not None:
-        cli_overrides.extend(["--output", args.output])
-    if getattr(args, "delay", None) is not None:
-        cli_overrides.extend(["--delay", args.delay])
-    if getattr(args, "keep_temp", None):
-        cli_overrides.append("--keep-temp")
-    if getattr(args, "temp_dir", None) is not None:
-        cli_overrides.extend(["--temp-dir", args.temp_dir])
+    # check if this is a preset command
+    if len(sys.argv) >= 4 and "preset" in sys.argv and "--name" in sys.argv:
+        try:
+            name_idx = sys.argv.index("--name")
 
-    # format-specific overrides
-    if getattr(args, "channels", None) is not None:
-        cli_overrides.extend(["--channels", str(args.channels)])
-    if getattr(args, "atmos_mode", None) is not None:
-        cli_overrides.extend(["--atmos-mode", str(args.atmos_mode)])
-    if getattr(args, "thd_warp_mode", None) is not None:
-        cli_overrides.extend(["--thd-warp-mode", str(args.thd_warp_mode)])
-    if getattr(args, "no_bed_conform", None) is False:
-        cli_overrides.append("--no-bed-conform")
+            # get preset name (should be right after --name)
+            if name_idx + 1 < len(sys.argv):
+                preset_name = sys.argv[name_idx + 1]
 
-    # insert overrides before input files
-    new_argv.extend(cli_overrides)
-    new_argv.extend(input_files)
+                # load config and get preset
+                config_manager = get_config_manager()
+                config_manager.load_config()
+                config_manager.inject_preset_args(preset_name)
 
-    # replace sys.argv and re-parse
-    sys.argv = new_argv
-
-    # recursive call with new arguments
-    cli_parser(base_wd)
+        except (ValueError, IndexError):
+            # preset parsing failed, let argparse handle the error
+            pass
 
 
 def cli_parser(base_wd: Path):
     """Main CLI parser entry point."""
-    # Create parser and subcommands
+    # handle presets by injecting args before parsing
+    handle_preset_injection()
+
+    # create parser and subcommands
     parser = create_main_parser()
     subparsers = parser.add_subparsers(dest="sub_command")
 
-    # Create argument groups and parsers
+    # create argument groups and parsers
     argument_groups = create_common_argument_groups()
     create_encode_parsers(subparsers, argument_groups)
     create_other_parsers(subparsers, argument_groups)
 
-    # Parse arguments and initialize
+    # parse arguments and initialize
     args = parser.parse_args()
     setup_logging(args)
 
@@ -611,21 +605,16 @@ def cli_parser(base_wd: Path):
             parser.print_usage()
         exit_application("", EXIT_FAIL)
 
-    # Handle preset command specially by re-parsing
-    if (
-        args.sub_command == "encode"
-        and hasattr(args, "format_command")
-        and args.format_command == "preset"
-    ):
-        handle_preset_command(args, base_wd)
-        return
-
-    # Handle configuration and dependencies
+    # handle configuration and dependencies
     config_manager = handle_configuration(args)
+
+    # apply default bitrates for encoding commands
+    if args.sub_command == "encode" and hasattr(args, "format_command"):
+        apply_default_bitrate(args, config_manager)
     dependencies = handle_dependencies(args, base_wd, config_manager)
     file_inputs = handle_file_inputs(args)
 
-    # Execute the appropriate command
+    # execute the appropriate command
     execute_command(args, file_inputs, dependencies, config_manager)
 
 
@@ -635,15 +624,11 @@ def setup_logging(args):
 
 
 def handle_configuration(args):
-    """Load configuration and apply defaults."""
+    """Load configuration manager."""
     config_manager = None
     if args.sub_command != "config":
         config_manager = get_config_manager()
-
-        # Simple config manager loads default config automatically
-        # Apply config defaults to arguments
-        if args.sub_command == "encode":
-            config_manager.apply_defaults_to_args(args)
+        # config is already loaded by preset injection if needed
 
     return config_manager
 
@@ -730,12 +715,7 @@ def execute_encode_command(args, file_inputs, dependencies):
                 "supported channel based on codec."
             )
 
-        # final fallback for bitrate if config system didn't set it
-        # TODO: this needs to happen based on channel
-        # cli > config > defaults
-        # if not hasattr(args, "bitrate") or args.bitrate is None:
-        #     print("No bitrate specified, defaulting to 448k.")
-        #     setattr(args, "bitrate", 448)
+        # Bitrate is now applied earlier in the flow via apply_default_bitrate()
 
     # encode Dolby Digital
     if args.format_command == "dd":
