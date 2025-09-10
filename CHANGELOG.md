@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Generated config had invalid pre defined presets.
 - Major bug where the user defined bitrate wouldn't be set on all 3 encoders.
+- Use case insensitive checks for DRC.
 
 ### Changed
 

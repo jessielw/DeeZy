@@ -31,8 +31,7 @@ CONF_DEFAULT = """\
 # Preset arguments can be overridden by additional CLI flags.
 
 [dependencies]
-# Path to FFmpeg executable (leave empty for auto-detection)
-ffmpeg = ""
+ffmpeg = "" # Path to FFmpeg executable (leave empty for auto-detection)
 dee = ""    # Path to Dolby Encoding Engine (DEE) executable
 truehd = "" # Path to TrueHD executable  
 

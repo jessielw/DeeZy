@@ -34,7 +34,7 @@ class StereoDownmix(CaseInsensitiveEnum):
             return self.value
 
 
-class DeeDelayModes(Enum):
+class DeeDelayModes(CaseInsensitiveEnum):
     NEGATIVE = "start"
     POSITIVE = "prepend_silence_duration"
 
@@ -81,7 +81,7 @@ class DeeFPS(Enum):
         return "not_indicated"
 
 
-class DeeDRC(Enum):
+class DeeDRC(CaseInsensitiveEnum):
     FILM_STANDARD = "film_standard"
     FILM_LIGHT = "film_light"
     MUSIC_STANDARD = "music_standard"
