@@ -266,22 +266,23 @@ class TestConfigManagerPresets:
 class TestConfigManagerArgumentIntegration:
     """Test integration with argparse arguments."""
 
-    def test_apply_config_to_args_preset(self):
-        """Test applying preset configuration to arguments."""
+    def test_apply_config_to_args_preset_command(self):
+        """Test applying preset configuration with new preset command."""
         cm = ConfigManager()
         cm.config = DEFAULT_CONFIG.copy()
         cm._loaded = True
 
-        # Create args namespace with preset
+        # Create args namespace with new preset command
         args = argparse.Namespace()
-        args.preset = "streaming_ddp"
-        args.format_command = "ddp"
+        args.format_command = "preset"
+        args.preset_name = "streaming_ddp"
         args.bitrate = None
         args.channels = None
 
         result_args = cm.apply_config_to_args(args)
 
-        # Should apply preset values
+        # Should apply preset values and set format_command from preset
+        assert result_args.format_command == "ddp"  # Set from preset format
         assert result_args.bitrate == 448
         assert result_args.channels == DolbyDigitalPlusChannels.SURROUND
 
@@ -329,10 +330,10 @@ class TestConfigManagerArgumentIntegration:
         cm.config = DEFAULT_CONFIG.copy()
         cm._loaded = True
 
-        # Create args namespace with explicit CLI values
+        # Create args namespace with explicit CLI values using new preset command
         args = argparse.Namespace()
-        args.preset = "streaming_ddp"  # This has bitrate=448
-        args.format_command = "ddp"
+        args.format_command = "preset"
+        args.preset_name = "streaming_ddp"  # This has bitrate=448
         args.bitrate = 320  # Explicit CLI value
         args.channels = None
 
@@ -340,6 +341,52 @@ class TestConfigManagerArgumentIntegration:
 
         # CLI bitrate should be preserved
         assert result_args.bitrate == 320
+
+    def test_apply_preset_with_format_validation_error(self):
+        """Test format compatibility validation for presets."""
+        cm = ConfigManager()
+        cm.config = DEFAULT_CONFIG.copy()
+        cm._loaded = True
+
+        # Add invalid preset with atmos-specific args for ddp format
+        cm.config["presets"]["invalid_preset"] = {
+            "format": "ddp",
+            "channels": "surround",
+            "bitrate": 448,
+            "atmos_mode": "streaming",  # Invalid for DDP
+        }
+
+        args = argparse.Namespace()
+        args.format_command = "preset"
+        args.preset_name = "invalid_preset"
+        args.channels = None
+        args.atmos_mode = None
+
+        # Should raise exit_application due to validation error
+        with pytest.raises(SystemExit):
+            cm.apply_config_to_args(args)
+
+    def test_suggest_correct_preset_key_hyphen_error(self):
+        """Test preset key suggestion for hyphen vs underscore mistakes."""
+        cm = ConfigManager()
+        cm.config = DEFAULT_CONFIG.copy()
+        cm._loaded = True
+
+        # Add preset with unknown key that will trigger suggestion
+        cm.config["presets"]["bad_preset"] = {
+            "format": "ddp",
+            "channels": "surround",
+            "unknown_key": 5,  # This won't match hasattr, will trigger suggestion
+        }
+
+        args = argparse.Namespace()
+        args.format_command = "preset"
+        args.preset_name = "bad_preset"
+        args.channels = None
+
+        # Should raise exit_application with helpful suggestion
+        with pytest.raises(SystemExit):
+            cm.apply_config_to_args(args)
 
 
 class TestConfigManagerConversion:
@@ -360,6 +407,23 @@ class TestConfigManagerConversion:
         # Test channels conversion (DDP)
         result = cm._convert_value("channels", "stereo")
         assert result == DolbyDigitalPlusChannels.STEREO
+
+    def test_convert_value_with_format_context(self):
+        """Test format-aware value conversion."""
+        cm = ConfigManager()
+
+        # Test DDP channels conversion
+        result = cm._convert_value_with_format("channels", "stereo", "ddp")
+        assert result == DolbyDigitalPlusChannels.STEREO
+
+        # Test DD channels conversion - should use DD enum
+        from deezy.enums.dd import DolbyDigitalChannels
+        result = cm._convert_value_with_format("channels", "surround", "dd")
+        assert result == DolbyDigitalChannels.SURROUND
+
+        # Test atmos channels - should pass through as-is
+        result = cm._convert_value_with_format("channels", "auto", "atmos")
+        assert result == "auto"
 
     def test_convert_boolean_values(self):
         """Test conversion of boolean values."""
@@ -385,9 +449,9 @@ class TestConfigManagerConversion:
         """Test handling of invalid conversion values."""
         cm = ConfigManager()
 
-        # Invalid enum value should return original and log warning
-        result = cm._convert_value("drc_line_mode", "invalid_mode")
-        assert result == "invalid_mode"
+        # Invalid enum value should raise SystemExit via exit_application
+        with pytest.raises(SystemExit):
+            cm._convert_value("drc_line_mode", "invalid_mode")
 
 
 class TestConfigManagerMerging:
