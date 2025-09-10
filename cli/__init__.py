@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+import sys
 
 from cli.utils import (
     CustomHelpFormatter,
@@ -10,6 +11,7 @@ from cli.utils import (
 from deezy.audio_encoders.dee.atmos import AtmosEncoder
 from deezy.audio_encoders.dee.dd import DDEncoderDEE
 from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
+from deezy.config.defaults import get_default_config_path
 from deezy.config.manager import get_config_manager
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.atmos import AtmosMode, WarpMode
@@ -89,22 +91,25 @@ def create_common_argument_groups():
     encode_group.add_argument(
         "--track-index",
         type=validate_track_index,
-        default=0,
+        default=argparse.SUPPRESS,
         help="The index of the audio track to use.",
     )
     encode_group.add_argument(
         "--delay",
         type=str,
+        default=argparse.SUPPRESS,
         help="The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).",
     )
     encode_group.add_argument(
         "--keep-temp",
         action="store_true",
+        default=argparse.SUPPRESS,
         help="Keeps the temp files after finishing.",
     )
     encode_group.add_argument(
         "--temp-dir",
         type=str,
+        default=argparse.SUPPRESS,
         help=(
             "Path to store temporary files to. If not specified this will "
             "automatically happen in the temp dir of the os."
@@ -124,7 +129,7 @@ def create_common_argument_groups():
     codec_group.add_argument(
         "--bitrate",
         type=int,
-        default=None,
+        default=argparse.SUPPRESS,
         help=(
             "The bitrate in Kbps (If too high or low for you desired layout, "
             "the bitrate will automatically be adjusted to the closest allowed bitrate)."
@@ -135,7 +140,7 @@ def create_common_argument_groups():
         type=case_insensitive_enum(DeeDRC),
         choices=tuple(DeeDRC),
         metavar=enum_choices(DeeDRC),
-        default=DeeDRC.FILM_LIGHT,
+        default=argparse.SUPPRESS,
         help="Dynamic range compression settings.",
     )
     codec_group.add_argument(
@@ -143,13 +148,13 @@ def create_common_argument_groups():
         type=case_insensitive_enum(DeeDRC),
         choices=tuple(DeeDRC),
         metavar=enum_choices(DeeDRC),
-        default=DeeDRC.FILM_LIGHT,
+        default=argparse.SUPPRESS,
         help="Dynamic range compression settings.",
     )
     codec_group.add_argument(
         "--custom-dialnorm",
         type=dialnorm_options,
-        default=0,
+        default=argparse.SUPPRESS,
         help="Custom dialnorm (0 disables custom dialnorm).",
     )
 
@@ -166,18 +171,46 @@ def create_common_argument_groups():
         type=case_insensitive_enum(MeteringMode),
         choices=dd_ddp_metering_choices,
         metavar="{" + ",".join(str(e.value) for e in dd_ddp_metering_choices) + "}",
-        default=MeteringMode.MODE_1770_3,
+        default=argparse.SUPPRESS,
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
     shared_loudness_args.add_argument(
         "--no-dialogue-intelligence",
         action="store_false",
+        default=argparse.SUPPRESS,
         help="Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.",
     )
     shared_loudness_args.add_argument(
         "--speech-threshold",
         type=int_0_100,
-        default=15,
+        default=argparse.SUPPRESS,
+        help=(
+            "[0-100] If the percentage of speech is higher than the threshold, the encoder uses speech "
+            "gating to set the dialnorm value. (Otherwise, the encoder uses level gating)."
+        ),
+    )
+
+    # atmos loudness args (supports all metering modes including 1770-4)
+    atmos_loudness_args = argparse.ArgumentParser(add_help=False)
+    atmos_metering_choices = tuple(MeteringMode)
+    atmos_loudness_args.add_argument(
+        "--metering-mode",
+        type=case_insensitive_enum(MeteringMode),
+        choices=atmos_metering_choices,
+        metavar="{" + ",".join(str(e.value) for e in atmos_metering_choices) + "}",
+        default=argparse.SUPPRESS,
+        help="Loudness measuring mode according to one of the broadcast standards.",
+    )
+    atmos_loudness_args.add_argument(
+        "--no-dialogue-intelligence",
+        action="store_false",
+        default=argparse.SUPPRESS,
+        help="Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.",
+    )
+    atmos_loudness_args.add_argument(
+        "--speech-threshold",
+        type=int_0_100,
+        default=argparse.SUPPRESS,
         help=(
             "[0-100] If the percentage of speech is higher than the threshold, the encoder uses speech "
             "gating to set the dialnorm value. (Otherwise, the encoder uses level gating)."
@@ -189,16 +222,19 @@ def create_common_argument_groups():
     dd_ddp_only_group.add_argument(
         "--no-low-pass-filter",
         action="store_false",
+        default=argparse.SUPPRESS,
         help="Disables low pass filter.",
     )
     dd_ddp_only_group.add_argument(
         "--no-surround-3db",
         action="store_false",
+        default=argparse.SUPPRESS,
         help="Disables surround 3db attenuation.",
     )
     dd_ddp_only_group.add_argument(
         "--no-surround-90-deg-phase-shift",
         action="store_false",
+        default=argparse.SUPPRESS,
         help="Disables surround 90 degree phase shift.",
     )
 
@@ -208,7 +244,7 @@ def create_common_argument_groups():
         "--stereo-down-mix",
         type=case_insensitive_enum(StereoDownmix),
         choices=tuple(StereoDownmix),
-        default=StereoDownmix.LORO,
+        default=argparse.SUPPRESS,
         metavar=enum_choices(StereoDownmix),
         help="Down mix method for stereo.",
     )
@@ -219,28 +255,28 @@ def create_common_argument_groups():
         "--lt-rt-center",
         type=str,
         choices=("+3", "+1.5", "0", "-1.5", "-3", "-4.5", "-6", "-inf"),
-        default="-3",
+        default=argparse.SUPPRESS,
         help="Lt/Rt center downmix level.",
     )
     downmix_metadata_group.add_argument(
         "--lt-rt-surround",
         type=str,
         choices=("-1.5", "-3", "-4.5", "-6", "-inf"),
-        default="-3",
+        default=argparse.SUPPRESS,
         help="Lt/Rt surround downmix level.",
     )
     downmix_metadata_group.add_argument(
         "--lo-ro-center",
         type=str,
         choices=("+3", "+1.5", "0", "-1.5", "-3", "-4.5", "-6", "-inf"),
-        default="-3",
+        default=argparse.SUPPRESS,
         help="Lo/Ro center downmix level.",
     )
     downmix_metadata_group.add_argument(
         "--lo-ro-surround",
         type=str,
         choices=("-1.5", "-3", "-4.5", "-6", "-inf"),
-        default="-3",
+        default=argparse.SUPPRESS,
         help="Lo/Ro surround downmix level.",
     )
 
@@ -249,6 +285,7 @@ def create_common_argument_groups():
         "encode_group": encode_group,
         "codec_group": codec_group,
         "shared_loudness_args": shared_loudness_args,
+        "atmos_loudness_args": atmos_loudness_args,
         "dd_ddp_only_group": dd_ddp_only_group,
         "stereo_downmix_metadata_group": stereo_downmix_metadata_group,
         "downmix_metadata_group": downmix_metadata_group,
@@ -285,7 +322,7 @@ def create_encode_parsers(subparsers, argument_groups):
         "--channels",
         type=case_insensitive_enum(DolbyDigitalChannels),
         choices=tuple(DolbyDigitalChannels),
-        default=DolbyDigitalChannels.AUTO,
+        default=argparse.SUPPRESS,
         metavar=enum_choices(DolbyDigitalChannels),
         help="The number of channels.",
     )
@@ -312,7 +349,7 @@ def create_encode_parsers(subparsers, argument_groups):
         "--channels",
         type=case_insensitive_enum(DolbyDigitalPlusChannels),
         choices=tuple(DolbyDigitalPlusChannels),
-        default=DolbyDigitalPlusChannels.AUTO,
+        default=argparse.SUPPRESS,
         metavar=enum_choices(DolbyDigitalPlusChannels),
         help="The number of channels.",
     )
@@ -339,7 +376,7 @@ def create_encode_parsers(subparsers, argument_groups):
         "--channels",
         type=case_insensitive_enum(DolbyDigitalPlusBlurayChannels),
         choices=tuple(DolbyDigitalPlusBlurayChannels),
-        default=DolbyDigitalPlusBlurayChannels.SURROUNDEX,
+        default=argparse.SUPPRESS,
         metavar=enum_choices(DolbyDigitalPlusBlurayChannels),
         help="The number of channels.",
     )
@@ -351,7 +388,7 @@ def create_encode_parsers(subparsers, argument_groups):
             argument_groups["input_group"],
             argument_groups["encode_group"],
             argument_groups["codec_group"],
-            argument_groups["shared_loudness_args"],
+            argument_groups["atmos_loudness_args"],
             argument_groups["downmix_metadata_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
@@ -364,7 +401,7 @@ def create_encode_parsers(subparsers, argument_groups):
         "--atmos-mode",
         type=case_insensitive_enum(AtmosMode),
         choices=tuple(AtmosMode),
-        default=AtmosMode.STREAMING,
+        default=argparse.SUPPRESS,
         metavar=enum_choices(AtmosMode),
         help="Atmos encoding mode.",
     )
@@ -372,13 +409,14 @@ def create_encode_parsers(subparsers, argument_groups):
         "--thd-warp-mode",
         type=case_insensitive_enum(WarpMode),
         choices=tuple(WarpMode),
-        default=WarpMode.NORMAL,
+        default=argparse.SUPPRESS,
         metavar=enum_choices(WarpMode),
         help="Specify warp mode when not present in metadata (truehdd).",
     )
     encode_atmos_parser.add_argument(
         "--no-bed-conform",
         action="store_false",
+        default=argparse.SUPPRESS,
         help="Disables bed conformance for Atmos content (truehd).",
     )
 
@@ -412,12 +450,14 @@ def create_encode_parsers(subparsers, argument_groups):
     encode_preset_parser.add_argument(
         "--channels",
         type=str,
+        default=argparse.SUPPRESS,
         help="Override channels setting from preset (format depends on preset's format).",
     )
     encode_preset_parser.add_argument(
         "--atmos-mode",
         type=case_insensitive_enum(AtmosMode),
         choices=tuple(AtmosMode),
+        default=argparse.SUPPRESS,
         metavar=enum_choices(AtmosMode),
         help="Atmos encoding mode (only used if preset format is atmos).",
     )
@@ -425,12 +465,14 @@ def create_encode_parsers(subparsers, argument_groups):
         "--thd-warp-mode",
         type=case_insensitive_enum(WarpMode),
         choices=tuple(WarpMode),
+        default=argparse.SUPPRESS,
         metavar=enum_choices(WarpMode),
         help="Specify warp mode when not present in metadata (only used if preset format is atmos).",
     )
     encode_preset_parser.add_argument(
         "--no-bed-conform",
         action="store_false",
+        default=argparse.SUPPRESS,
         help="Disables bed conformance for Atmos content (only used if preset format is atmos).",
     )
 
@@ -478,11 +520,75 @@ def create_other_parsers(subparsers, argument_groups):
         help="Generate config from current CLI arguments (use with encode command)",
     )
 
-    # Info config subcommand
+    # info config subcommand
     info_parser = config_subparsers.add_parser(
         "info", help="Show configuration information"
     )
     info_parser.add_argument("--path", type=str, help="Show specific config file path")
+
+    # validate config subcommand
+    validate_parser = config_subparsers.add_parser(
+        "validate", help="Validate configuration file"
+    )
+    validate_parser.add_argument("--preset", type=str, help="Validate specific preset")
+
+    # list presets subcommand
+    list_parser = config_subparsers.add_parser(
+        "list-presets", help="List available presets"
+    )
+    list_parser.add_argument(
+        "--detailed", action="store_true", help="Show detailed preset information"
+    )
+
+
+def handle_preset_command(args, base_wd: Path):
+    """Handle preset command by re-parsing with the preset's command string."""
+    # load config to get preset
+    config_manager = get_config_manager()
+
+    # get parsed preset arguments
+    preset_args = config_manager.parse_preset_command(args.preset_name)
+
+    # get the input files from the original command
+    input_files = getattr(args, "input", [])
+
+    # build new argv with preset command
+    new_argv = [sys.argv[0]] + preset_args
+
+    # add CLI overrides (they take precedence over preset values)
+    cli_overrides = []
+
+    # common overrides that apply to all formats
+    if getattr(args, "bitrate", None) is not None:
+        cli_overrides.extend(["--bitrate", str(args.bitrate)])
+    if getattr(args, "output", None) is not None:
+        cli_overrides.extend(["--output", args.output])
+    if getattr(args, "delay", None) is not None:
+        cli_overrides.extend(["--delay", args.delay])
+    if getattr(args, "keep_temp", None):
+        cli_overrides.append("--keep-temp")
+    if getattr(args, "temp_dir", None) is not None:
+        cli_overrides.extend(["--temp-dir", args.temp_dir])
+
+    # format-specific overrides
+    if getattr(args, "channels", None) is not None:
+        cli_overrides.extend(["--channels", str(args.channels)])
+    if getattr(args, "atmos_mode", None) is not None:
+        cli_overrides.extend(["--atmos-mode", str(args.atmos_mode)])
+    if getattr(args, "thd_warp_mode", None) is not None:
+        cli_overrides.extend(["--thd-warp-mode", str(args.thd_warp_mode)])
+    if getattr(args, "no_bed_conform", None) is False:
+        cli_overrides.append("--no-bed-conform")
+
+    # insert overrides before input files
+    new_argv.extend(cli_overrides)
+    new_argv.extend(input_files)
+
+    # replace sys.argv and re-parse
+    sys.argv = new_argv
+
+    # recursive call with new arguments
+    cli_parser(base_wd)
 
 
 def cli_parser(base_wd: Path):
@@ -505,6 +611,15 @@ def cli_parser(base_wd: Path):
             parser.print_usage()
         exit_application("", EXIT_FAIL)
 
+    # Handle preset command specially by re-parsing
+    if (
+        args.sub_command == "encode"
+        and hasattr(args, "format_command")
+        and args.format_command == "preset"
+    ):
+        handle_preset_command(args, base_wd)
+        return
+
     # Handle configuration and dependencies
     config_manager = handle_configuration(args)
     dependencies = handle_dependencies(args, base_wd, config_manager)
@@ -525,18 +640,10 @@ def handle_configuration(args):
     if args.sub_command != "config":
         config_manager = get_config_manager()
 
-        # use explicit config path if provided, otherwise auto-detect deezy-conf.toml
-        config_path = None
-        if hasattr(args, "config") and args.config:
-            from pathlib import Path
-
-            config_path = Path(args.config)
-
-        config_manager.load_config(config_path)
-
-        # Apply configuration to arguments (handles presets and defaults)
+        # Simple config manager loads default config automatically
+        # Apply config defaults to arguments
         if args.sub_command == "encode":
-            args = config_manager.apply_config_to_args(args)
+            config_manager.apply_defaults_to_args(args)
 
     return config_manager
 
@@ -549,28 +656,10 @@ def handle_dependencies(args, base_wd, config_manager):
     # get dependency paths from CLI args or config
     ffmpeg_arg = None
     truehdd_arg = None
-    dee_arg = None
-
-    if config_manager:
-        ffmpeg_arg = (
-            args.ffmpeg
-            if hasattr(args, "ffmpeg") and args.ffmpeg
-            else config_manager.get_dependency_path("ffmpeg")
-        )
-        truehdd_arg = (
-            args.truehdd
-            if hasattr(args, "truehdd") and args.truehdd
-            else config_manager.get_dependency_path("truehdd")
-        )
-        dee_arg = (
-            args.dee
-            if hasattr(args, "dee") and args.dee
-            else config_manager.get_dependency_path("dee")
-        )
-    else:
-        ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") else None
-        truehdd_arg = args.truehdd if hasattr(args, "truehdd") else None
-        dee_arg = args.dee if hasattr(args, "dee") else None
+    # Simple dependency handling - just use what's provided in args or empty string for auto-detection
+    ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") and args.ffmpeg else ""
+    truehdd_arg = args.truehdd if hasattr(args, "truehdd") and args.truehdd else ""
+    dee_arg = args.dee if hasattr(args, "dee") and args.dee else ""
 
     # check if Atmos is being used (only available for DDP)
     atmos_required = hasattr(args, "format_command") and args.format_command == "atmos"
@@ -815,11 +904,6 @@ def execute_config_command(args, config_manager):
     if config_manager is None:
         config_manager = get_config_manager()
 
-        # use explicit config path if provided for config info command
-        if args.config_command == "info" and hasattr(args, "config") and args.config:
-            config_path = Path(args.config)
-            config_manager.load_config(config_path)
-
     if args.config_command == "generate":
         try:
             output_path = Path(args.output) if args.output else None
@@ -850,7 +934,6 @@ def execute_config_command(args, config_manager):
                 else:
                     exit_application(f"Config file not found: {config_path}", EXIT_FAIL)
             else:
-                config_manager.load_config()
                 if config_manager.config_path:
                     info_text = f"Active config file: {config_manager.config_path}\n"
                     info_text += f"Presets available: {', '.join(config_manager.list_presets()) or 'None'}"
@@ -858,10 +941,71 @@ def execute_config_command(args, config_manager):
                     info_text = (
                         "No configuration file found. Using built-in defaults.\n"
                     )
-                    from deezy.config.defaults import get_default_config_path
-
                     info_text += f"Default config location: {get_default_config_path()}"
 
                 exit_application(info_text, EXIT_SUCCESS)
         except Exception as e:
             exit_application(f"Failed to load config info: {e}", EXIT_FAIL)
+
+    elif args.config_command == "validate":
+        try:
+            if not config_manager.has_valid_config():
+                exit_application("No configuration file found to validate.", EXIT_FAIL)
+
+            if args.preset:
+                # calidate specific preset
+                if args.preset not in config_manager.list_presets():
+                    available = ", ".join(config_manager.list_presets()) or "None"
+                    exit_application(
+                        f"Preset '{args.preset}' not found. Available: {available}",
+                        EXIT_FAIL,
+                    )
+
+                if config_manager.validate_preset(args.preset):
+                    exit_application(f"Preset '{args.preset}' is valid.", EXIT_SUCCESS)
+                else:
+                    exit_application(f"Preset '{args.preset}' is invalid.", EXIT_FAIL)
+            else:
+                # validate all presets
+                presets = config_manager.list_presets()
+                if not presets:
+                    exit_application("No presets found in configuration.", EXIT_SUCCESS)
+
+                invalid_presets = []
+                for preset in presets:
+                    if not config_manager.validate_preset(preset):
+                        invalid_presets.append(preset)
+
+                if invalid_presets:
+                    exit_application(
+                        f"Invalid presets found: {', '.join(invalid_presets)}",
+                        EXIT_FAIL,
+                    )
+                else:
+                    exit_application(
+                        f"All {len(presets)} presets are valid.", EXIT_SUCCESS
+                    )
+
+        except Exception as e:
+            exit_application(f"Failed to validate config: {e}", EXIT_FAIL)
+
+    elif args.config_command == "list-presets":
+        try:
+            presets = config_manager.list_presets()
+            if not presets:
+                exit_application("No presets found in configuration.", EXIT_SUCCESS)
+
+            if args.detailed:
+                info_lines = ["Available presets:"]
+                for preset in presets:
+                    preset_info = config_manager.get_preset_info(preset)
+                    valid = "✓" if config_manager.validate_preset(preset) else "✗"
+                    info_lines.append(f"  {valid} {preset}: {preset_info['command']}")
+                exit_application("\n".join(info_lines), EXIT_SUCCESS)
+            else:
+                exit_application(
+                    f"Available presets: {', '.join(presets)}", EXIT_SUCCESS
+                )
+
+        except Exception as e:
+            exit_application(f"Failed to list presets: {e}", EXIT_FAIL)
