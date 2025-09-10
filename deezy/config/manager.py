@@ -147,7 +147,7 @@ class ConfigManager:
             "drc_rf_mode": "film_light",
             "custom_dialnorm": 0,
             # metering_mode: handled per-format (DD/DDP=1770-3, Atmos=1770-4)
-            "dialogue_intelligence": True,
+            "no_dialogue_intelligence": False,
             "speech_threshold": 15,
             # downmix settings
             "stereo_down_mix": "loro",
