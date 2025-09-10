@@ -115,8 +115,8 @@ bluray = 448      # Dolby Atmos Bluray mode
 
 [presets]
 # Define custom presets for common workflows
-streaming_ddp = { format = "ddp", channels = "surround", bitrate = 448, atmos_mode = "streaming" }
-bluray_atmos = { format = "atmos", atmos_mode = "bluray", bitrate = 768 }
+streaming_ddp = { format = "ddp", channels = "surround", bitrate = 448 }
+bluray_atmos = { format = "atmos", atmos_mode = "bluray", atmos_mode = "streaming", bitrate = 768 }
 quick_stereo = { format = "ddp", channels = "stereo", bitrate = 192 }
 ```
 
@@ -144,14 +144,68 @@ The new default bitrate system automatically selects appropriate bitrates based 
 Create reusable encoding profiles for different workflows:
 
 ```bash
-# Use a preset for encoding
-deezy encode ddp --preset streaming_ddp input.mkv
+# Use a preset for encoding (format determined from preset)
+deezy encode preset --name streaming_ddp input.mkv
 
 # Override preset settings as needed
-deezy encode atmos --preset bluray_atmos --bitrate 1024 input.mkv
+deezy encode preset --name bluray_atmos --bitrate 1024 input.mkv
 
 # List available presets
 deezy config info
+```
+
+### Preset Key Mapping
+
+When creating presets, CLI argument names need to be converted to TOML key names by replacing hyphens with underscores:
+
+| CLI Argument | Preset Key | Example Value |
+|--------------|------------|---------------|
+| `--bitrate` | `bitrate` | `448` |
+| `--channels` | `channels` | `"surround"` |
+| `--drc-line-mode` | `drc_line_mode` | `"music_standard"` |
+| `--drc-rf-mode` | `drc_rf_mode` | `"film_light"` |
+| `--custom-dialnorm` | `custom_dialnorm` | `5` |
+| `--metering-mode` | `metering_mode` | `"1770_3"` |
+| `--speech-threshold` | `speech_threshold` | `15` |
+| `--stereo-down-mix` | `stereo_down_mix` | `"loro"` |
+| `--lt-rt-center` | `lt_rt_center` | `"+3"` |
+| `--lt-rt-surround` | `lt_rt_surround` | `"-3"` |
+| `--lo-ro-center` | `lo_ro_center` | `"0"` |
+| `--lo-ro-surround` | `lo_ro_surround` | `"-3"` |
+| `--atmos-mode` | `atmos_mode` | `"streaming"` |
+| `--thd-warp-mode` | `thd_warp_mode` | `"normal"` |
+
+**Common Examples:**
+
+```toml
+# Streaming DDP preset
+[presets.streaming_ddp]
+format = "ddp"
+channels = "surround"  
+bitrate = 448
+drc_line_mode = "music_standard"
+custom_dialnorm = 5
+
+# Blu-ray Atmos preset  
+[presets.bluray_atmos]
+format = "atmos"
+atmos_mode = "bluray"
+bitrate = 768
+drc_line_mode = "film_light"
+metering_mode = "1770_3"
+
+# Stereo streaming preset
+[presets.stereo_stream]
+format = "ddp"
+channels = "stereo"
+bitrate = 192
+stereo_down_mix = "loro"
+```
+
+**Error Handling:** If you use an incorrect key name, DeeZy will suggest the correct key:
+```
+Error: Unknown preset key 'custom-dialnorm' in preset 'my_preset'
+Did you mean 'custom_dialnorm'?
 ```
 
 ### Benefits
@@ -181,7 +235,7 @@ deezy encode ddp input.mkv
 deezy encode atmos --atmos-mode streaming input.mkv
 
 # Use a predefined preset
-deezy encode ddp --preset streaming_ddp input.mkv
+deezy encode preset --name streaming_ddp input.mkv
 
 # Batch encode multiple files
 deezy encode ddp *.mkv
@@ -230,6 +284,7 @@ deezy config generate
 | `encode ddp`        | Dolby Digital Plus encoding                |
 | `encode ddp-bluray` | Dolby Digital Plus BluRay encoding         |
 | `encode atmos`      | Dolby Atmos encoding                       |
+| `encode preset`     | Preset-based encoding (format auto-detected) |
 | `find`              | File discovery with glob patterns          |
 | `info`              | Audio stream analysis and metadata display |
 | `config`            | Configuration file management              |
@@ -491,7 +546,7 @@ deezy config generate
 deezy info "Movie.Name.2023.UHD.mkv"
 
 # 3. Encode with preset for consistency
-deezy encode ddp --preset bluray_atmos "Movie.Name.2023.UHD.mkv"
+deezy encode preset --name bluray_atmos "Movie.Name.2023.UHD.mkv"
 
 # 4. Or customize settings manually
 deezy encode atmos --atmos-mode bluray --bitrate 768 "Movie.Name.2023.UHD.mkv"
@@ -507,7 +562,7 @@ deezy info "Movie.Name.2023.UHD.DDP.Atmos.ec3"
 deezy find "TV.Series.S01**/*.mkv"
 
 # Encode entire season with streaming preset
-deezy encode ddp --preset streaming_ddp "TV.Series.S01**/*.mkv"
+deezy encode preset --name streaming_ddp "TV.Series.S01**/*.mkv"
 
 # Or with custom settings for dialogue-heavy content
 deezy encode ddp --channels 6 --bitrate 448 --drc-line-mode speech "TV.Series.S01**/*.mkv"
