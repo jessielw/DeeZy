@@ -175,20 +175,21 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         Returns:
             Path: Path object representing the path to the temporary directory.
         """
-
-        TEMP_PREFIX = "deezy_"
-
         if temp_dir:
-            temp_dir = Path(tempfile.mkdtemp(prefix=TEMP_PREFIX, dir=temp_dir))
-            if len(file_input.name) + len(str(temp_dir)) > 259:
+            # create job folder in user-specified temp directory
+            temp_directory = Path(tempfile.mkdtemp(dir=temp_dir))
+            if len(file_input.name) + len(str(temp_directory)) > 259:
                 raise PathTooLongError(
                     "Path provided with input file exceeds path length for DEE."
                 )
-            temp_directory = Path(temp_dir)
-            temp_directory.mkdir(exist_ok=True)
-
         else:
-            temp_directory = Path(tempfile.mkdtemp(prefix=TEMP_PREFIX))
+            # create deezy parent folder in system temp if it doesn't exist
+            system_temp = Path(tempfile.gettempdir())
+            deezy_temp_base = system_temp / "deezy"
+            deezy_temp_base.mkdir(exist_ok=True)
+
+            # create job-specific folder without deezy_ prefix
+            temp_directory = Path(tempfile.mkdtemp(dir=deezy_temp_base))
 
         return temp_directory
 
