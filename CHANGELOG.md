@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-09-11
+
+### Added
+
+- Automatic detection for tty terminals to disable rich progress bars when DeeZy is called as a subprocess.
+
+### Fixed
+
+- TrueHD files with off time codes could sometimes have a FFMPEG warning (that is harmless) that could cause issues with reporting progress.
+
+### Changed
+
+- DeeZy now only buffers one line for real time progress when called as a progress.
+
 ## [1.2.0] - 2025-09-10
 
 ### Added
