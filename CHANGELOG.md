@@ -10,17 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Now checks for valid arguments on presets and gives the user helpful error messages.
+- For formats that don't have a duration available (THD, other raw elementary formats) there is now a loading circle for progress when processing with FFMPEG.
+- DEE related errors will be displayed without deezy running in DEBUG mode. (You may still need to run in debug for edge cases).
+- `deezy config generate` now generates a cleaner and more descriptive default template.
 
 ### Fixed
 
 - Generated config had invalid pre defined presets.
-- Major bug where the user defined bitrate wouldn't be set on all 3 encoders.
+- Major bug where the user defined bitrate wouldn't be set on all 3 encoders since the re-work.
 - Use case insensitive checks for DRC.
+- DEE config `prepend_silence_duration` and `append_silence_duration` set to defaults.
+- Fixed an issue opening files with no FPS/duration data (only effected elementary files).
 
 ### Changed
 
+- Rebuilt config to be more maintainable with improved error handling.
 - Preset arg has changed:
   - You now call preset as it's own "encoder" `deezy encode preset --name YOUR_PRESET_NAME`.
+- DEE key `time_base` is now set to `file_position` instead of `embedded_timecode`.
 
 ### Removed
 
