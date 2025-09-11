@@ -4,7 +4,9 @@ import sys
 
 from cli.utils import (
     CustomHelpFormatter,
+    clean_deezy_temp_folders,
     dialnorm_options,
+    get_deezy_temp_info,
     int_0_100,
     validate_track_index,
 )
@@ -12,7 +14,7 @@ from deezy.audio_encoders.dee.atmos import AtmosEncoder
 from deezy.audio_encoders.dee.dd import DDEncoderDEE
 from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
 from deezy.config.defaults import get_default_config_path
-from deezy.config.manager import get_config_manager
+from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
@@ -30,7 +32,7 @@ from deezy.utils.file_parser import parse_input_s
 from deezy.utils.logger import logger, logger_manager
 
 
-def create_main_parser():
+def create_main_parser() -> argparse.ArgumentParser:
     """Create the main argument parser with global options."""
     parser = argparse.ArgumentParser(prog=program_name)
     parser.add_argument(
@@ -63,15 +65,15 @@ def create_main_parser():
     return parser
 
 
-def create_common_argument_groups():
+def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     """Create reusable argument groups."""
-    # Input files argument group
+    # input files argument group
     input_group = argparse.ArgumentParser(add_help=False)
     input_group.add_argument(
         "input", nargs="+", help="Input file paths or directories", metavar="INPUT"
     )
 
-    # Common Encode Args
+    # common Encode Args
     encode_group = argparse.ArgumentParser(add_help=False)
     encode_group.add_argument(
         "--ffmpeg",
@@ -284,10 +286,13 @@ def create_common_argument_groups():
     }
 
 
-def create_encode_parsers(subparsers, argument_groups):
+def create_encode_parsers(
+    subparsers: argparse._SubParsersAction,
+    argument_groups: dict[str, argparse.ArgumentParser],
+) -> None:
     """Create encode command parsers."""
-    # Encode command parser
-    encode_parser = subparsers.add_parser("encode")
+    # encode command parser
+    encode_parser = subparsers.add_parser("encode", help="Encode management")
     encode_subparsers = encode_parser.add_subparsers(
         dest="format_command", required=True
     )
@@ -466,11 +471,14 @@ def create_encode_parsers(subparsers, argument_groups):
     )
 
 
-def create_other_parsers(subparsers, argument_groups):
+def create_other_parsers(
+    subparsers: argparse._SubParsersAction,
+    argument_groups: dict[str, argparse.ArgumentParser],
+) -> None:
     """Create find, info, and config command parsers."""
-    # Find command parser
+    # find command parser
     find_parser = subparsers.add_parser(
-        "find", parents=[argument_groups["input_group"]]
+        "find", parents=[argument_groups["input_group"]], help="Find management"
     )
     find_parser.add_argument(
         "-n",
@@ -479,18 +487,18 @@ def create_other_parsers(subparsers, argument_groups):
         help="Only display names instead of full paths.",
     )
 
-    # Info command parser
+    # info command parser
     _info_parser = subparsers.add_parser(
-        "info", parents=[argument_groups["input_group"]]
+        "info", parents=[argument_groups["input_group"]], help="Info management"
     )
 
-    # Config command parser
+    # config command parser
     config_parser = subparsers.add_parser("config", help="Configuration management")
     config_subparsers = config_parser.add_subparsers(
         dest="config_command", required=True
     )
 
-    # Generate config subcommand
+    # generate config subcommand
     generate_parser = config_subparsers.add_parser(
         "generate", help="Generate configuration file"
     )
@@ -529,8 +537,31 @@ def create_other_parsers(subparsers, argument_groups):
         "--detailed", action="store_true", help="Show detailed preset information"
     )
 
+    # temp management command parser
+    temp_parser = subparsers.add_parser("temp", help="Temporary folder management")
+    temp_subparsers = temp_parser.add_subparsers(dest="temp_command", required=True)
 
-def apply_default_bitrate(args, config_manager):
+    # clean temp subcommand
+    clean_parser = temp_subparsers.add_parser("clean", help="Clean DeeZy temp folders")
+    clean_parser.add_argument(
+        "--max-age",
+        type=int,
+        default=24,
+        help="Remove folders older than N hours (default: 24)",
+        metavar="HOURS",
+    )
+    clean_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be deleted without actually deleting",
+    )
+    # info temp subcommand
+    temp_subparsers.add_parser("info", help="Show temp folder information")
+
+
+def apply_default_bitrate(
+    args: argparse.Namespace, config_manager: ConfigManager | None
+) -> None:
     """Apply default bitrate based on format and channels/mode if none specified."""
     if not hasattr(args, "bitrate") or args.bitrate is None:
         # determine the channel/mode key based on format
@@ -549,18 +580,19 @@ def apply_default_bitrate(args, config_manager):
                 channels_or_mode = args.channels
 
         # get default bitrate from config
-        default_bitrate = config_manager.get_default_bitrate(
-            args.format_command, channels_or_mode
-        )
-
-        if default_bitrate:
-            args.bitrate = default_bitrate
-            logger.info(
-                f"No bitrate specified, using default {default_bitrate}k for {args.format_command}"
+        if config_manager is not None:
+            default_bitrate = config_manager.get_default_bitrate(
+                args.format_command, channels_or_mode
             )
 
+            if default_bitrate:
+                args.bitrate = default_bitrate
+                logger.debug(
+                    f"No bitrate specified, using default {default_bitrate}k for {args.format_command}"
+                )
 
-def handle_preset_injection():
+
+def handle_preset_injection() -> None:
     """Handle preset injection into sys.argv before argparse runs."""
 
     # check if this is a preset command
@@ -582,7 +614,7 @@ def handle_preset_injection():
             pass
 
 
-def cli_parser(base_wd: Path):
+def cli_parser(base_wd: Path) -> None:
     """Main CLI parser entry point."""
     # handle presets by injecting args before parsing
     handle_preset_injection()
@@ -618,24 +650,24 @@ def cli_parser(base_wd: Path):
     execute_command(args, file_inputs, dependencies, config_manager)
 
 
-def setup_logging(args):
+def setup_logging(args: argparse.Namespace) -> None:
     """Initialize logging based on arguments."""
     logger_manager.set_level(args.log_level.to_logging_level())
 
 
-def handle_configuration(args):
+def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
     """Load configuration manager."""
     config_manager = None
     if args.sub_command != "config":
         config_manager = get_config_manager()
-        # config is already loaded by preset injection if needed
-
     return config_manager
 
 
-def handle_dependencies(args, base_wd, config_manager):
+def handle_dependencies(
+    args: argparse.Namespace, base_wd: Path, _config_manager: ConfigManager | None
+) -> dict[str, Path | None] | None:
     """Handle tool dependencies detection."""
-    if args.sub_command in {"config"}:
+    if args.sub_command in {"config", "temp"}:
         return None
 
     # get dependency paths from CLI args or config
@@ -667,10 +699,10 @@ def handle_dependencies(args, base_wd, config_manager):
     }
 
 
-def handle_file_inputs(args):
+def handle_file_inputs(args: argparse.Namespace) -> list[Path]:
     """Parse and validate file inputs."""
     if not hasattr(args, "input") or not args.input:
-        if args.sub_command not in {"config"}:
+        if args.sub_command not in {"config", "temp"}:
             exit_application("", EXIT_FAIL)
         return []
 
@@ -685,9 +717,16 @@ def handle_file_inputs(args):
     return file_inputs
 
 
-def execute_command(args, file_inputs, dependencies, config_manager):
+def execute_command(
+    args: argparse.Namespace,
+    file_inputs: list[Path],
+    dependencies: dict[str, Path | None] | None,
+    config_manager: ConfigManager | None,
+) -> None:
     """Execute the appropriate command based on parsed arguments."""
     if args.sub_command == "encode":
+        if dependencies is None:
+            exit_application("Dependencies not found for encoding.", EXIT_FAIL)
         execute_encode_command(args, file_inputs, dependencies)
     elif args.sub_command == "find":
         execute_find_command(args, file_inputs)
@@ -695,13 +734,23 @@ def execute_command(args, file_inputs, dependencies, config_manager):
         execute_info_command(args, file_inputs)
     elif args.sub_command == "config":
         execute_config_command(args, config_manager)
+    elif args.sub_command == "temp":
+        execute_temp_command(args)
 
 
-def execute_encode_command(args, file_inputs, dependencies):
+def execute_encode_command(
+    args: argparse.Namespace,
+    file_inputs: list[Path],
+    dependencies: dict[str, Path | None],
+) -> None:
     """Execute encoding commands."""
     ffmpeg_path = dependencies["ffmpeg_path"]
     truehdd_path = dependencies["truehdd_path"]
     dee_path = dependencies["dee_path"]
+
+    # assert required paths are not None
+    assert ffmpeg_path is not None, "ffmpeg_path is required for encoding"
+    assert dee_path is not None, "dee_path is required for encoding"
 
     # encode Dolby Digital
     if args.format_command == "dd":
@@ -837,7 +886,7 @@ def execute_encode_command(args, file_inputs, dependencies):
         )
 
 
-def execute_find_command(args, file_inputs):
+def execute_find_command(args: argparse.Namespace, file_inputs: list[Path]) -> None:
     """Execute find command."""
     file_names = []
     for input_file in file_inputs:
@@ -849,7 +898,7 @@ def execute_find_command(args, file_inputs):
     exit_application("\n".join(file_names), EXIT_SUCCESS)
 
 
-def execute_info_command(args, file_inputs):
+def execute_info_command(_args: argparse.Namespace, file_inputs: list[Path]) -> None:
     """Execute info command."""
     track_s_info = ""
     for input_file in file_inputs:
@@ -864,7 +913,9 @@ def execute_info_command(args, file_inputs):
     exit_application(track_s_info, EXIT_SUCCESS)
 
 
-def execute_config_command(args, config_manager):
+def execute_config_command(
+    args: argparse.Namespace, config_manager: ConfigManager | None
+) -> None:
     """Execute config command."""
     # config commands need their own manager instance
     if config_manager is None:
@@ -975,3 +1026,40 @@ def execute_config_command(args, config_manager):
 
         except Exception as e:
             exit_application(f"Failed to list presets: {e}", EXIT_FAIL)
+
+
+def execute_temp_command(args: argparse.Namespace) -> None:
+    """Execute temp management commands."""
+    if args.temp_command == "clean":
+        removed_count, size_mb = clean_deezy_temp_folders(
+            max_age_hours=args.max_age, dry_run=args.dry_run
+        )
+
+        if args.dry_run:
+            if removed_count == 0:
+                exit_application("No temp folders to clean.", EXIT_SUCCESS)
+            else:
+                exit_application(
+                    f"Would remove {removed_count} folders ({size_mb:.1f} MB)",
+                    EXIT_SUCCESS,
+                )
+        else:
+            if removed_count == 0:
+                exit_application("No temp folders to clean.", EXIT_SUCCESS)
+            else:
+                exit_application(
+                    f"Removed {removed_count} temp folders ({size_mb:.1f} MB)",
+                    EXIT_SUCCESS,
+                )
+
+    elif args.temp_command == "info":
+        deezy_temp_base, job_folders, total_size_mb = get_deezy_temp_info()
+
+        if not job_folders:
+            exit_application("No DeeZy temp folders found.", EXIT_SUCCESS)
+
+        message = f"DeeZy temp folder: {deezy_temp_base}\n"
+        message += f"Job folders: {len(job_folders)}\n"
+        message += f"Total size: {total_size_mb:.1f} MB"
+
+        exit_application(message, EXIT_SUCCESS)
