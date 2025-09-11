@@ -45,14 +45,19 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         )
         # check to see if the users bitrate is allowed
         runtime_bitrate = self.payload.bitrate
-        if runtime_bitrate and not bitrate_obj.is_valid_bitrate(runtime_bitrate):
-            fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
-            logger.info(
-                f"Bitrate {runtime_bitrate} is invalid for this configuration. "
-                f"Using the next closest allowed bitrate: {fixed_bitrate}."
-            )
-            runtime_bitrate = fixed_bitrate
+        if runtime_bitrate:
+            # user/preset provided a bitrate - validate it
+            if not bitrate_obj.is_valid_bitrate(runtime_bitrate):
+                fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
+                logger.info(
+                    f"Bitrate {runtime_bitrate} is invalid for this configuration. "
+                    f"Using the next closest allowed bitrate: {fixed_bitrate}."
+                )
+                runtime_bitrate = fixed_bitrate
+            else:
+                logger.debug(f"Using provided bitrate: {runtime_bitrate}.")
         else:
+            # no bitrate provided - use default
             runtime_bitrate = bitrate_obj.default
             logger.debug(f"No supplied bitrate, defaulting to {runtime_bitrate}.")
 

@@ -54,18 +54,20 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             file_input (Path): Path to the input audio file.
             track_index (int): Index of the audio track to extract.
             bits_per_sample (int): Number of bits per sample of the output WAV file.
-            audio_filter_args (list): List of additional audio filter arguments to apply.
+            audio_filter_args (list): list of additional audio filter arguments to apply.
             output_dir (Path): Path to the directory where the output WAV file will be saved.
             wav_file_name (str): Name of the output WAV file.
 
         Returns:
-            List[str]: A list of strings representing the FFmpeg command.
+            list[str]: A list of strings representing the FFmpeg command.
         """
         ffmpeg_cmd = [
             str(ffmpeg_path),
             "-y",
             "-drc_scale",
             "0",
+            "-hide_banner",
+            "-v",  # verbosity level will be injected by processor
             "-i",
             str(Path(file_input)),
             "-map",
@@ -75,9 +77,6 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             *(audio_filter_args),
             "-rf64",
             "always",
-            "-hide_banner",
-            "-v",
-            "-stats",
             str(Path(output_dir / wav_file_name)),
         ]
         return ffmpeg_cmd
@@ -176,20 +175,21 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         Returns:
             Path: Path object representing the path to the temporary directory.
         """
-
-        TEMP_PREFIX = "deezy_"
-
         if temp_dir:
-            temp_dir = Path(tempfile.mkdtemp(prefix=TEMP_PREFIX, dir=temp_dir))
-            if len(file_input.name) + len(str(temp_dir)) > 259:
+            # create job folder in user-specified temp directory
+            temp_directory = Path(tempfile.mkdtemp(dir=temp_dir))
+            if len(file_input.name) + len(str(temp_directory)) > 259:
                 raise PathTooLongError(
                     "Path provided with input file exceeds path length for DEE."
                 )
-            temp_directory = Path(temp_dir)
-            temp_directory.mkdir(exist_ok=True)
-
         else:
-            temp_directory = Path(tempfile.mkdtemp(prefix=TEMP_PREFIX))
+            # create deezy parent folder in system temp if it doesn't exist
+            system_temp = Path(tempfile.gettempdir())
+            deezy_temp_base = system_temp / "deezy"
+            deezy_temp_base.mkdir(exist_ok=True)
+
+            # create job-specific folder without deezy_ prefix
+            temp_directory = Path(tempfile.mkdtemp(dir=deezy_temp_base))
 
         return temp_directory
 

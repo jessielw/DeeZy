@@ -5,10 +5,94 @@ from deezy.utils.logger import logger
 from deezy.utils.progress import DEEProgressHandler
 
 
+def _parse_dee_execution_summary(output_lines: list) -> str | None:
+    """Parse DEE output to extract execution summary and errors."""
+    summary_start = False
+    summary_lines = []
+    error_lines = []
+    time_elapsed = None
+
+    for line in output_lines:
+        line = line.strip()
+
+        # look for execution summary section
+        if "--- Execution summary starts here ---" in line:
+            summary_start = True
+            continue
+        elif "Time elapsed:" in line and summary_start:
+            time_elapsed = line
+            break
+        elif summary_start:
+            summary_lines.append(line)
+            if line.startswith("ERROR:"):
+                error_lines.append(line)
+
+    # only build error message if there are actual errors in the summary
+    if error_lines:
+        error_msg = "DEE execution failed:\n"
+        for error_line in error_lines:
+            error_msg += f"  {error_line}\n"
+
+        # add timing information if available
+        if time_elapsed:
+            error_msg += f"  ({time_elapsed})"
+
+        return error_msg.rstrip()
+
+    return
+
+
+def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None:
+    """Process a single line from DEE output for progress tracking."""
+    progress_data, is_encode = handler.parse_dee_line(line)
+    if not progress_data:
+        return
+
+    if is_encode:
+        # handle encode phase
+        if (
+            progress_state["progress"]
+            and progress_state["encode_task_id"] is None
+            and progress_state["measure_task_id"] is not None
+        ):
+            # complete measure and start encode
+            progress_state["progress"].update(
+                progress_state["measure_task_id"], completed=100
+            )
+            progress_state["progress"].refresh()
+            progress_state["measure_done"] = True
+            progress_state["encode_task_id"] = progress_state["progress"].add_task(
+                handler.encode_task_desc, total=100
+            )
+
+        if progress_state["progress"] and progress_state["encode_task_id"] is not None:
+            progress_state["progress"].update(
+                progress_state["encode_task_id"], completed=progress_data.value
+            )
+        logger.debug(f"{handler.encode_task_desc} {progress_data.formatted}")
+
+        progress_state["last_encode"] = progress_data.value
+    else:
+        # handle measure phase
+        if not progress_state["measure_done"]:
+            if (
+                progress_state["progress"]
+                and progress_state["measure_task_id"] is not None
+            ):
+                progress_state["progress"].update(
+                    progress_state["measure_task_id"], completed=progress_data.value
+                )
+            logger.debug(f"{handler.measure_task_desc} {progress_data.formatted}")
+
+            progress_state["last_measure"] = progress_data.value
+            if progress_data.value == 100.0:
+                progress_state["measure_done"] = True
+
+
 def process_dee_job(
     cmd: list, step_info: dict | None = None, no_progress_bars: bool = False
 ) -> bool:
-    """Processes file with DEE while generating progress depending on progress_mode.
+    """Processes file with DEE while generating progress and enhanced error reporting.
 
     Args:
         cmd (list): Base DEE cmd list.
@@ -26,91 +110,68 @@ def process_dee_job(
     # setup DEE progress handler
     handler = DEEProgressHandler(logger_level, no_progress_bars, step_info)
 
+    # collect all output for error parsing
+    output_lines = []
+
     with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
-        measure_done = False
-        last_measure = 0.0
-        last_encode = 0.0
-        encode_task_id = None
+        progress_state = {
+            "measure_done": False,
+            "last_measure": 0.0,
+            "last_encode": 0.0,
+            "encode_task_id": None,
+            "measure_task_id": None,
+            "progress": None,
+        }
 
         with handler.dee_progress_context() as (progress, measure_task_id, _):
+            progress_state["progress"] = progress
+            progress_state["measure_task_id"] = measure_task_id
+
             if proc.stdout:
                 for line in proc.stdout:
-                    logger.debug(line.strip())
-                    if "ERROR " in line:
-                        raise ValueError(f"There was a DEE error: {line}")
+                    line_stripped = line.strip()
+                    output_lines.append(line_stripped)
+                    logger.debug(line_stripped)
 
-                    progress_data, is_encode = handler.parse_dee_line(line)
-                    if progress_data:
-                        if is_encode:
-                            # handle encode phase
-                            if (
-                                progress
-                                and encode_task_id is None
-                                and measure_task_id is not None
-                            ):
-                                # complete measure and start encode
-                                progress.update(measure_task_id, completed=100)
-                                progress.refresh()
-                                measure_done = True
-                                encode_task_id = progress.add_task(
-                                    handler.encode_task_desc, total=100
-                                )
-
-                            if progress and encode_task_id is not None:
-                                progress.update(
-                                    encode_task_id, completed=progress_data.value
-                                )
-                                logger.debug(
-                                    f"{handler.encode_task_desc} {progress_data.formatted}"
-                                )
-                            else:
-                                print(
-                                    f"{handler.encode_task_desc} {progress_data.formatted}"
-                                )
-                                logger.debug(
-                                    f"{handler.encode_task_desc} {progress_data.formatted}"
-                                )
-
-                            last_encode = progress_data.value
-                        else:
-                            # Handle measure phase
-                            if not measure_done:
-                                if progress and measure_task_id is not None:
-                                    progress.update(
-                                        measure_task_id, completed=progress_data.value
-                                    )
-                                    logger.debug(
-                                        f"{handler.measure_task_desc} {progress_data.formatted}"
-                                    )
-                                else:
-                                    print(
-                                        f"{handler.measure_task_desc} {progress_data.formatted}"
-                                    )
-                                    logger.debug(
-                                        f"{handler.measure_task_desc} {progress_data.formatted}"
-                                    )
-
-                                last_measure = progress_data.value
-                                if progress_data.value == 100.0:
-                                    measure_done = True
+                    # process progress information
+                    _process_dee_progress_line(line_stripped, handler, progress_state)
 
             # ensure completion for both phases
             if progress:
                 # progress bars handle completion automatically
-                if encode_task_id is None and last_measure == 100.0:
-                    encode_task_id = progress.add_task(
+                if (
+                    progress_state["encode_task_id"] is None
+                    and progress_state["last_measure"] == 100.0
+                ):
+                    progress_state["encode_task_id"] = progress.add_task(
                         handler.encode_task_desc, total=100
                     )
-                    progress.update(encode_task_id, completed=100)
+                    progress.update(progress_state["encode_task_id"], completed=100)
                     progress.refresh()
-                elif encode_task_id is not None and last_encode < 100.0:
-                    progress.update(encode_task_id, completed=100)
+                elif (
+                    progress_state["encode_task_id"] is not None
+                    and progress_state["last_encode"] < 100.0
+                ):
+                    progress.update(progress_state["encode_task_id"], completed=100)
                     progress.refresh()
             else:
                 # raw mode completion
-                handler.ensure_completion(last_measure, handler.measure_task_desc)
-                handler.ensure_completion(last_encode, handler.encode_task_desc)
+                handler.ensure_completion(
+                    progress_state["last_measure"], handler.measure_task_desc
+                )
+                handler.ensure_completion(
+                    progress_state["last_encode"], handler.encode_task_desc
+                )
 
-    if proc.wait() != 0:
-        raise ValueError("There was a DEE error. Please re-run in debug mode.")
+    return_code = proc.wait()
+    if return_code != 0:
+        # parse the output for detailed error information
+        error_message = _parse_dee_execution_summary(output_lines)
+        if error_message:
+            raise ValueError(error_message)
+        else:
+            raise ValueError(
+                f"DEE execution failed with exit code {return_code}. Please re-run in debug mode."
+            )
+
     return True

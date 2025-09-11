@@ -114,10 +114,10 @@ streaming = 448   # Dolby Atmos Streaming mode
 bluray = 448      # Dolby Atmos Bluray mode
 
 [presets]
-# Define custom presets for common workflows
-streaming_ddp = { format = "ddp", channels = "surround", bitrate = 448, atmos_mode = "streaming" }
-bluray_atmos = { format = "atmos", atmos_mode = "bluray", bitrate = 768 }
-quick_stereo = { format = "ddp", channels = "stereo", bitrate = 192 }
+# Define custom presets as command strings
+streaming_ddp = "encode ddp --channels surround --bitrate 448"
+bluray_atmos = "encode atmos --atmos-mode bluray --bitrate 768"
+quick_stereo = "encode ddp --channels stereo --bitrate 192"
 ```
 
 ### Configuration Location
@@ -127,11 +127,18 @@ DeeZy looks for `deezy-conf.toml` beside the executable for portable usage. You 
 ### Priority System
 
 Configuration values are applied in order of priority:
-**CLI Arguments** > **Config Presets** > **Config Defaults** > **Built-in Defaults**
+**CLI Arguments** > **Config Defaults** > **Format-Specific Defaults** > **Built-in Fallback Defaults**
 
-### Smart Default Bitrates
+- **CLI Arguments**: Any argument provided directly on the command line takes highest priority
+- **Config Defaults**: Values from the `[global_defaults]` section of your config file
+- **Format-Specific Defaults**: Smart defaults based on encoding format (e.g., DD/DDP use 1770-3 metering, Atmos uses 1770-4)
+- **Built-in Fallback Defaults**: Hardcoded defaults when nothing else is configured
 
-The new default bitrate system automatically selects appropriate bitrates based on codec and channel layout when no `--bitrate` is specified:
+### Smart Defaults System
+
+DeeZy automatically applies intelligent defaults based on the encoding format when arguments are not specified:
+
+**Smart Default Bitrates** (based on codec and channel layout):
 
 - **DD 5.1**: 448 kbps (configurable)
 - **DDP Stereo**: 128 kbps (configurable)
@@ -139,19 +146,69 @@ The new default bitrate system automatically selects appropriate bitrates based 
 - **DDP 7.1**: 384 kbps (configurable)
 - **Atmos Streaming**: 448 kbps (configurable)
 
+**Smart Channel Defaults** (when `--channels` not specified):
+
+- **DD**: AUTO (automatically detects best channel layout)
+- **DDP**: AUTO (automatically detects best channel layout)
+- **DDP-BluRay**: SURROUNDEX (7.1 for BluRay releases)
+- **Atmos**: No channel argument (uses source layout)
+
+**Smart Metering Mode Defaults** (when `--metering-mode` not specified):
+
+- **DD/DDP**: 1770-3 (standard for traditional surround formats)
+- **Atmos**: 1770-4 (supports advanced Atmos loudness requirements)
+
 ### Preset System
 
-Create reusable encoding profiles for different workflows:
+Create reusable encoding profiles for different workflows using simple command strings:
 
 ```bash
-# Use a preset for encoding
-deezy encode ddp --preset streaming_ddp input.mkv
+# Use a preset for encoding (format determined from preset)
+deezy encode preset --name streaming_ddp input.mkv
 
 # Override preset settings as needed
-deezy encode atmos --preset bluray_atmos --bitrate 1024 input.mkv
+deezy encode preset --name bluray_atmos --bitrate 1024 input.mkv
 
 # List available presets
 deezy config info
+```
+
+### Preset Configuration
+
+Presets are defined as command strings in the `[presets]` section of your config file. This makes them simple to create and understand:
+
+```toml
+[presets]
+# Simple preset examples using command strings
+streaming_ddp = "encode ddp --channels surround --bitrate 448"
+bluray_dd = "encode dd --channels surround --bitrate 640"
+auto_stereo_ddp = "encode ddp --channels stereo"
+streaming_atmos = "encode atmos --atmos-mode streaming"
+
+# Advanced presets with multiple options
+high_quality_ddp = "encode ddp --channels surround --bitrate 768 --drc-line-mode music_standard"
+custom_atmos = "encode atmos --atmos-mode bluray --bitrate 1024 --custom-dialnorm 5"
+legacy_dd = "encode dd --channels surround --bitrate 448 --drc-line-mode film_light --metering-mode 1770_3"
+```
+
+**Preset Benefits:**
+
+- **Simple format**: Just write the command as you would use it on the CLI
+- **Easy to read**: Command strings are self-documenting
+- **Override capable**: Add extra arguments when using the preset to override settings
+- **Validation**: DeeZy validates preset commands and suggests fixes for errors
+
+**Usage Examples:**
+
+```bash
+# Use preset as-is
+deezy encode preset --name streaming_ddp input.mkv
+
+# Override preset bitrate
+deezy encode preset --name streaming_ddp --bitrate 640 input.mkv
+
+# Use preset with additional options
+deezy encode preset --name auto_stereo_ddp --keep-temp --output custom.ec3 input.mkv
 ```
 
 ### Benefits
@@ -181,13 +238,19 @@ deezy encode ddp input.mkv
 deezy encode atmos --atmos-mode streaming input.mkv
 
 # Use a predefined preset
-deezy encode ddp --preset streaming_ddp input.mkv
+deezy encode preset --name streaming_ddp input.mkv
 
 # Batch encode multiple files
 deezy encode ddp *.mkv
 
 # Get audio track information
 deezy info input.mkv
+
+# Check temp folder status
+deezy temp info
+
+# Clean old temp files
+deezy temp clean
 ```
 
 ## 📋 Usage
@@ -224,15 +287,17 @@ deezy config generate
 
 ### Main Commands
 
-| Command             | Description                                |
-| ------------------- | ------------------------------------------ |
-| `encode dd`         | Dolby Digital encoding                     |
-| `encode ddp`        | Dolby Digital Plus encoding                |
-| `encode ddp-bluray` | Dolby Digital Plus BluRay encoding         |
-| `encode atmos`      | Dolby Atmos encoding                       |
-| `find`              | File discovery with glob patterns          |
-| `info`              | Audio stream analysis and metadata display |
-| `config`            | Configuration file management              |
+| Command             | Description                                  |
+| ------------------- | -------------------------------------------- |
+| `encode dd`         | Dolby Digital encoding                       |
+| `encode ddp`        | Dolby Digital Plus encoding                  |
+| `encode ddp-bluray` | Dolby Digital Plus BluRay encoding           |
+| `encode atmos`      | Dolby Atmos encoding                         |
+| `encode preset`     | Preset-based encoding (format auto-detected) |
+| `find`              | File discovery with glob patterns            |
+| `info`              | Audio stream analysis and metadata display   |
+| `config`            | Configuration file management                |
+| `temp`              | Temporary folder management                  |
 
 ## 🎵 Audio Encoding
 
@@ -379,6 +444,67 @@ deezy config generate --overwrite
 
 Use `deezy config --help` for additional options and subcommands.
 
+### Temporary Folder Management
+
+DeeZy creates temporary folders during encoding operations. These folders contain intermediate files like WAV audio and DEE configuration files. The temp management system provides tools to monitor and clean up these folders.
+
+#### Temp Folder Structure
+
+DeeZy organizes temporary files in a clean structure:
+
+```
+%TEMP%/deezy/           # Parent folder for all DeeZy operations
+├── job_abc123/         # Individual job folders (no deezy_ prefix)
+├── job_def456/         # Each job gets a unique folder
+└── job_ghi789/         # Clean, organized structure
+```
+
+This approach keeps your system temp directory clean and makes it easy to manage DeeZy-related temporary files.
+
+#### Temp Management Commands
+
+```bash
+# Show temp folder information
+deezy temp info
+
+# Clean old temp folders (24 hours by default)
+deezy temp clean
+
+# Clean folders older than specific age
+deezy temp clean --max-age 1  # 1 hour
+
+# Preview what would be cleaned (dry run)
+deezy temp clean --dry-run
+
+# Clean very old folders with dry run
+deezy temp clean --max-age 168 --dry-run  # 1 week
+```
+
+**Temp Info Output:**
+
+```
+DeeZy temp folder: C:\Users\Username\AppData\Local\Temp\deezy
+Job folders: 3
+Total size: 2.1 MB
+```
+
+**Temp Clean Features:**
+
+- **Safe by default**: 24-hour age limit prevents accidental deletion of active jobs
+- **Dry run mode**: Preview what would be deleted without making changes
+- **Flexible age control**: Specify custom age thresholds in hours
+- **Size reporting**: Shows how much space will be freed
+- **Error handling**: Gracefully handles permission issues and locked files
+
+**When to Use Temp Management:**
+
+- **After batch processing**: Clean up after encoding many files
+- **Storage maintenance**: Free up disk space from old encoding jobs
+- **Debugging cleanup**: Remove temp files after troubleshooting
+- **Scheduled maintenance**: Regular cleanup of accumulated temp files
+
+Use `deezy temp --help` for additional options and subcommands.
+
 ## 🎯 Input Types & Patterns
 
 DeeZy supports flexible input handling for batch processing:
@@ -415,21 +541,22 @@ The configuration system enables powerful workflow optimizations:
 ```bash
 # Set up your environment once
 deezy config generate
-# Edit config file with your tool paths and preferred settings
+# Edit config file with your tool paths, defaults, and presets
 
 # Now use clean commands for different scenarios:
 
-# Streaming workflow - uses config defaults
+# Use smart defaults - automatically applies format-specific settings
 deezy encode ddp input.mkv
 
+# Use presets for consistent workflows
+deezy encode preset --name streaming_ddp input.mkv
+deezy encode preset --name bluray_atmos input.mkv
+
 # Override specific settings when needed
-deezy encode ddp -b 1024 -c 7.1 input.mkv
+deezy encode preset --name streaming_ddp --bitrate 1024 input.mkv
 
-# Atmos workflow - automatically detects need for TrueHD
-deezy encode ddp --atmos -c 7.1.4 input.truehd
-
-# Batch processing with consistent settings
-deezy encode ddp "season01/**/*.mkv"
+# Batch processing with consistent preset settings
+deezy encode preset --name streaming_ddp "season01/**/*.mkv"
 ```
 
 **Configuration Benefits:**
@@ -479,6 +606,21 @@ Use `-k/--keep-temp` to retain intermediate files for debugging or manual proces
 - **XML files**: DEE job configurations
 - **LOG files**: Encoding process details
 
+DeeZy automatically organizes temporary files under a dedicated `deezy` folder in your system temp directory. Use the temp management commands to monitor and clean up these files:
+
+```bash
+# Monitor temp folder usage
+deezy temp info
+
+# Clean up after batch processing
+deezy temp clean --max-age 1
+
+# Debug with temp files and clean up afterward
+deezy encode ddp --keep-temp input.mkv
+deezy temp clean --dry-run  # Check what will be cleaned
+deezy temp clean            # Clean up when ready
+```
+
 ## 📚 Examples & Workflows
 
 ### Movie Encoding Workflow
@@ -491,7 +633,7 @@ deezy config generate
 deezy info "Movie.Name.2023.UHD.mkv"
 
 # 3. Encode with preset for consistency
-deezy encode ddp --preset bluray_atmos "Movie.Name.2023.UHD.mkv"
+deezy encode preset --name bluray_atmos "Movie.Name.2023.UHD.mkv"
 
 # 4. Or customize settings manually
 deezy encode atmos --atmos-mode bluray --bitrate 768 "Movie.Name.2023.UHD.mkv"
@@ -507,10 +649,14 @@ deezy info "Movie.Name.2023.UHD.DDP.Atmos.ec3"
 deezy find "TV.Series.S01**/*.mkv"
 
 # Encode entire season with streaming preset
-deezy encode ddp --preset streaming_ddp "TV.Series.S01**/*.mkv"
+deezy encode preset --name streaming_ddp "TV.Series.S01**/*.mkv"
 
 # Or with custom settings for dialogue-heavy content
 deezy encode ddp --channels 6 --bitrate 448 --drc-line-mode speech "TV.Series.S01**/*.mkv"
+
+# Clean up temp files after batch processing
+deezy temp info         # Check temp folder status
+deezy temp clean        # Clean up old temp files
 ```
 
 ### Quality Control
@@ -552,6 +698,19 @@ deezy encode ddp --temp-dir "C:\debug\" input.mkv
 - Use `deezy config info` to check config status
 - Regenerate config with `deezy config generate --overwrite`
 - Ensure TOML syntax is valid in manual edits
+
+**"Disk space issues"**
+
+- Check temp folder usage with `deezy temp info`
+- Clean old temp files with `deezy temp clean`
+- Use `--temp-dir` to specify alternative temp location
+- Monitor temp folder growth during batch processing
+
+**"Temp folder permission errors"**
+
+- Ensure write permissions to system temp directory
+- Use `--temp-dir` to specify accessible location
+- Check `deezy temp info` for temp folder location
 
 ### Debug Mode
 

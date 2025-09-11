@@ -5,10 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- New CLI args to manage your the automatic temp directory.
+- Now checks for valid arguments on presets and gives the user helpful error messages.
+- For formats that don't have a duration available (THD, other raw elementary formats) there is now a loading circle for progress when processing with FFMPEG.
+- DEE related errors will be displayed without deezy running in DEBUG mode. (You may still need to run in debug for edge cases).
+- `deezy config generate` now generates a cleaner and more descriptive default template.
+- Checks for required executable dependencies in the CLI before attempting to run any encoders.
+- Some more arg parser help messages.
+
+### Fixed
+
+- Generated config had invalid pre defined presets.
+- Numerous issues with config.
+- Major bug where the user defined bitrate wouldn't be set on all 3 encoders since the re-work.
+- Use case insensitive checks for DRC.
+- DEE config `prepend_silence_duration` and `append_silence_duration` set to defaults.
+- Fixed an issue opening files with no FPS/duration data (only effected elementary files).
+
+### Changed
+
+- Rebuilt config to be more maintainable with improved error handling.
+- Preset arg has changed:
+  - You now call preset as it's own "encoder" `deezy encode preset --name YOUR_PRESET_NAME`.
+- DEE key `time_base` is now set to `file_position` instead of `embedded_timecode`.
+- Automatic temp directory now stores all job files in a parent folder `deezy`.
+- Set automatic bitrate selection when not supplied by the user to a **DEBUG** message instead of info.
+
+### Removed
+
+- Un-needed logging statement for channel defaults.
+
 ## [1.1.0] - 2025-09-09
 
 ### Added
 
+- Config system that allows user defined defaults and presets.
 - Logging that will show substantially more information when used with DEBUG.
 - Program wide configurable logger (defaults to INFO).
 - CLI args:
@@ -28,7 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `--lt-rt-surround`: Lt/Rt surround downmix level.
     - `--lo-ro-center`: Lo/Ro center downmix level.
     - `--lo-ro-surround`: Lo/Ro surround downmix level.
-  - DD:
     - `--metering-mode`: Loudness measuring mode according to one of the broadcast standards.
   - DDP-BluRay:
     - `ddp-bluray`: Added a new encoder mode to allow higher bitrates for channel 7.1 layouts.
@@ -49,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Help portions of the CLI are now cleaner, using user friendly strings instead of raw enums.
 - Improved automatic bitrate selection when the user choses an invalid bitrate, if 2 valid bitrates are returned it now automatically chooses the next highest quality.
 - Re-wrote DD encoder module.
+- Re-wrote DDP encoder module.
 - DEE is no longer fed XML, it's handled via JSON.
 - DRC default is now FILM_LIGHT.
 - Updated numerous help strings for CLI args to be more descriptive/nicer.
