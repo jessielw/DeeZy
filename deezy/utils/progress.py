@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 import logging
 import re
+import sys
 from typing import Any
 
 from rich.progress import (
@@ -27,7 +28,20 @@ class ProgressData:
 
 
 class ProgressHandler:
-    """Handles progress display logic for processors"""
+    """
+    Handles progress display logic for processors.
+
+    Automatically detects the appropriate progress display method:
+    - Rich progress bars for interactive terminals
+    - Simple text output for non-interactive environments, CI/CD, or when wrapped by other tools
+
+    Environment variables that disable rich progress:
+    - NO_COLOR: Standard env var to disable colored output
+    - DEEZY_NO_PROGRESS: DeeZy-specific flag to force simple text progress
+    - CI, GITHUB_ACTIONS, GITLAB_CI, etc.: Automatically detected CI environments
+
+    For wrapper applications, set DEEZY_NO_PROGRESS=1 to ensure clean text output.
+    """
 
     __slots__ = ("logger_level", "no_progress_bars", "step_info", "should_use_bars")
 
@@ -37,7 +51,24 @@ class ProgressHandler:
         self.logger_level = logger_level
         self.no_progress_bars = no_progress_bars
         self.step_info = step_info
-        self.should_use_bars = not no_progress_bars and logger_level > logging.DEBUG
+        self.should_use_bars = self._should_show_rich_progress()
+
+    def _should_show_rich_progress(self) -> bool:
+        """Determine if rich progress bars should be used"""
+        # user explicitly disabled progress bars
+        if self.no_progress_bars:
+            return False
+
+        # debug mode should use simple text output
+        if self.logger_level <= logging.DEBUG:
+            return False
+
+        # check if stdout is connected to a terminal (TTY)
+        if not sys.stdout.isatty():
+            return False
+
+        # all checks passed, use rich progress bars
+        return True
 
     def get_step_label(
         self, base_name: str, default_current: int = 1, default_total: int = 3
@@ -83,7 +114,7 @@ class ProgressHandler:
                 progress.update(task_id, completed=progress_data.value)
                 logger.debug(f"{step_label} {progress_data.formatted}")
             else:
-                print(f"{step_label} {progress_data.formatted}")
+                logger.info(f"{step_label} {progress_data.formatted}")
                 logger.debug(f"{step_label} {progress_data.formatted}")
             return progress_data
         return None
@@ -97,7 +128,7 @@ class ProgressHandler:
                 progress.update(task_id, completed=100)
                 progress.refresh()
             else:
-                print(f"{step_label} 100.0%")
+                logger.info(f"{step_label} 100.0%")
                 logger.debug(f"{step_label} 100.0%")
 
 
