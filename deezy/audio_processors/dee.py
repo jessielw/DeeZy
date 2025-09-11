@@ -69,7 +69,10 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
             progress_state["progress"].update(
                 progress_state["encode_task_id"], completed=progress_data.value
             )
-        logger.debug(f"{handler.encode_task_desc} {progress_data.formatted}")
+            logger.debug(f"{handler.encode_task_desc} {progress_data.formatted}")
+        else:
+            # fallback for when rich progress is disabled
+            logger.info(f"{handler.encode_task_desc} {progress_data.formatted}")
 
         progress_state["last_encode"] = progress_data.value
     else:
@@ -82,7 +85,10 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
                 progress_state["progress"].update(
                     progress_state["measure_task_id"], completed=progress_data.value
                 )
-            logger.debug(f"{handler.measure_task_desc} {progress_data.formatted}")
+                logger.debug(f"{handler.measure_task_desc} {progress_data.formatted}")
+            else:
+                # fallback for when rich progress is disabled
+                logger.info(f"{handler.measure_task_desc} {progress_data.formatted}")
 
             progress_state["last_measure"] = progress_data.value
             if progress_data.value == 100.0:
@@ -137,23 +143,27 @@ def process_dee_job(
                     _process_dee_progress_line(line_stripped, handler, progress_state)
 
             # ensure completion for both phases
-            if progress:
+            if progress_state["progress"]:
                 # progress bars handle completion automatically
                 if (
                     progress_state["encode_task_id"] is None
                     and progress_state["last_measure"] == 100.0
                 ):
-                    progress_state["encode_task_id"] = progress.add_task(
-                        handler.encode_task_desc, total=100
+                    progress_state["encode_task_id"] = progress_state[
+                        "progress"
+                    ].add_task(handler.encode_task_desc, total=100)
+                    progress_state["progress"].update(
+                        progress_state["encode_task_id"], completed=100
                     )
-                    progress.update(progress_state["encode_task_id"], completed=100)
-                    progress.refresh()
+                    progress_state["progress"].refresh()
                 elif (
                     progress_state["encode_task_id"] is not None
                     and progress_state["last_encode"] < 100.0
                 ):
-                    progress.update(progress_state["encode_task_id"], completed=100)
-                    progress.refresh()
+                    progress_state["progress"].update(
+                        progress_state["encode_task_id"], completed=100
+                    )
+                    progress_state["progress"].refresh()
             else:
                 # raw mode completion
                 handler.ensure_completion(

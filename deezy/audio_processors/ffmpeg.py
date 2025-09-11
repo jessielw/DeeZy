@@ -78,7 +78,10 @@ def _process_with_progress_bar(
                     last_percent = progress_data.value
                     if progress and task_id is not None:
                         progress.update(task_id, completed=progress_data.value)
-                    logger.debug(f"{step_label} {progress_data.formatted}")
+                        logger.debug(f"{step_label} {progress_data.formatted}")
+                    else:
+                        # fallback for when rich progress is disabled
+                        logger.info(f"{step_label} {progress_data.formatted}")
 
                     if progress_data.value >= 100.0:
                         break
@@ -92,19 +95,32 @@ def _process_with_progress_bar(
         handler.ensure_completion(last_percent, step_label, progress, task_id)
 
 
-def _process_with_spinner(proc: Popen, step_label: str) -> None:
+def _process_with_spinner(
+    proc: Popen, handler: ProgressHandler, step_label: str
+) -> None:
     """Handle FFMPEG process with loading spinner when duration is unknown."""
 
-    console = Console()
-    spinner = Spinner("dots", text=f"{step_label} processing...")
+    if handler.should_use_bars:
+        # use rich spinner for interactive terminals
+        console = Console()
+        spinner = Spinner("dots", text=f"{step_label} processing...")
 
-    with Live(spinner, console=console, refresh_per_second=10, transient=False):
+        with Live(spinner, console=console, refresh_per_second=10, transient=False):
+            if proc.stdout:
+                for line in proc.stdout:
+                    logger.debug(line.strip())
+
+        # show completion message
+        console.print(f"✓ {step_label} completed")
+    else:
+        # simple text output for non-interactive environments
+        logger.info(f"{step_label} processing...")
+
         if proc.stdout:
             for line in proc.stdout:
                 logger.debug(line.strip())
 
-    # show completion message
-    console.print(f"✓ {step_label} completed")
+        logger.info(f"{step_label} completed")
 
 
 def process_ffmpeg_job(
@@ -146,7 +162,7 @@ def process_ffmpeg_job(
         if duration:
             _process_with_progress_bar(proc, handler, step_label, duration)
         else:
-            _process_with_spinner(proc, step_label)
+            _process_with_spinner(proc, handler, step_label)
 
         # check return code
         return_code = proc.poll()
