@@ -79,19 +79,21 @@ jobs:
             ./deezy --help
           fi
 
-    - name: Create test ZIP archive (Windows)
-      if: steps.should_build.outputs.should_build == 'true' && matrix.platform == 'windows'
-      shell: pwsh
-      run: |
-        cd pyinstaller_build/dist/
-        Compress-Archive -Path deezy.exe -DestinationPath ../../test-build-${{ matrix.platform }}.zip -CompressionLevel Optimal
+      - name: Create test ZIP archive (Windows)
+        if: steps.should_build.outputs.should_build == 'true' && matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          cd pyinstaller_build/dist/
+          Compress-Archive -Path deezy.exe -DestinationPath ../../test-build-${{ matrix.platform }}.zip -CompressionLevel Optimal
 
-    - name: Create test ZIP archive (Unix)
-      if: steps.should_build.outputs.should_build == 'true' && matrix.platform != 'windows'
-      shell: bash
-      run: |
-        cd pyinstaller_build/dist/
-        zip -9 ../../test-build-${{ matrix.platform }}.zip deezy      - name: Upload test artifact
+      - name: Create test ZIP archive (Unix)
+        if: steps.should_build.outputs.should_build == 'true' && matrix.platform != 'windows'
+        shell: bash
+        run: |
+          cd pyinstaller_build/dist/
+          zip -9 ../../test-build-${{ matrix.platform }}.zip deezy
+
+      - name: Upload test artifact
         if: steps.should_build.outputs.should_build == 'true'
         uses: actions/upload-artifact@v4
         with:
