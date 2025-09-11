@@ -116,8 +116,13 @@ def decode_truehd_to_atmos(
                 if not line:
                     continue
 
-                # Handle ffmpeg progress lines
+                # handle ffmpeg progress lines
                 if prefix == "ffmpeg" and ffmpeg_parser and duration:
+                    if (
+                        "Application provided invalid, non monotonically increasing dts"
+                        in line
+                    ):
+                        continue
                     percent_data = ffmpeg_parser(line)
                     if percent_data:
                         last_percent = percent_data.value
@@ -125,7 +130,7 @@ def decode_truehd_to_atmos(
                             progress.update(task_id, completed=percent_data.value)
                             logger.debug(f"{step_label} {percent_data.formatted}")
                         else:
-                            print(f"{step_label} {percent_data.formatted}")
+                            logger.info(f"{step_label} {percent_data.formatted}")
                             logger.debug(f"{step_label} {percent_data.formatted}")
                         sink.append(percent_data.formatted)
                         continue
@@ -141,7 +146,7 @@ def decode_truehd_to_atmos(
                     progress.update(task_id, completed=100)
                     progress.refresh()
                 else:
-                    print(f"{step_label} 100.0%")
+                    logger.info(f"{step_label} 100.0%")
                     logger.debug(f"{step_label} 100.0%")
 
         finally:
