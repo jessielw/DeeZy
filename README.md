@@ -603,7 +603,7 @@ deezy encode ddp --drc-line-mode film_light --drc-rf-mode music_light input.mkv
 Use `-k/--keep-temp` to retain intermediate files for debugging or manual processing. Temporary files include:
 
 - **WAV files**: Decoded audio streams
-- **XML files**: DEE job configurations
+- **JSON files**: DEE job configurations
 - **LOG files**: Encoding process details
 
 DeeZy automatically organizes temporary files under a dedicated `deezy` folder in your system temp directory. Use the temp management commands to monitor and clean up these files:
