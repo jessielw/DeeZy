@@ -75,15 +75,19 @@ jobs:
             fi
           fi
 
-      - name: Create ZIP archive
+      - name: Create ZIP archive (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          cd pyinstaller_build/dist/
+          Compress-Archive -Path deezy.exe -DestinationPath ../../${{ matrix.artifact_name }}.zip -CompressionLevel Optimal
+
+      - name: Create ZIP archive (Unix)
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           cd pyinstaller_build/dist/
-          if [ "${{ matrix.platform }}" == "windows" ]; then
-            zip -9 ../../${{ matrix.artifact_name }}.zip deezy.exe
-          else
-            zip -9 ../../${{ matrix.artifact_name }}.zip deezy
-          fi
+          zip -9 ../../${{ matrix.artifact_name }}.zip deezy
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
