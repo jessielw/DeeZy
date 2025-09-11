@@ -31,9 +31,9 @@ atmos_base = {
                     "timecode_frame_rate": None,  # str
                     "start": "first_frame_of_action",
                     "end": "end_of_file",
-                    "time_base": "embedded_timecode",
-                    "prepend_silence_duration": "0f",
-                    "append_silence_duration": "0f",
+                    "time_base": "file_position",
+                    "prepend_silence_duration": "0", 
+                    "append_silence_duration": "0", 
                     "drc": {
                         "line_mode_drc_profile": None,  # str
                         "rf_mode_drc_profile": None,  # str
