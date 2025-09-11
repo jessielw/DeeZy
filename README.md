@@ -245,6 +245,12 @@ deezy encode ddp *.mkv
 
 # Get audio track information
 deezy info input.mkv
+
+# Check temp folder status
+deezy temp info
+
+# Clean old temp files
+deezy temp clean
 ```
 
 ## 📋 Usage
@@ -291,6 +297,7 @@ deezy config generate
 | `find`              | File discovery with glob patterns            |
 | `info`              | Audio stream analysis and metadata display   |
 | `config`            | Configuration file management                |
+| `temp`              | Temporary folder management                  |
 
 ## 🎵 Audio Encoding
 
@@ -437,6 +444,67 @@ deezy config generate --overwrite
 
 Use `deezy config --help` for additional options and subcommands.
 
+### Temporary Folder Management
+
+DeeZy creates temporary folders during encoding operations. These folders contain intermediate files like WAV audio and DEE configuration files. The temp management system provides tools to monitor and clean up these folders.
+
+#### Temp Folder Structure
+
+DeeZy organizes temporary files in a clean structure:
+
+```
+%TEMP%/deezy/           # Parent folder for all DeeZy operations
+├── job_abc123/         # Individual job folders (no deezy_ prefix)
+├── job_def456/         # Each job gets a unique folder
+└── job_ghi789/         # Clean, organized structure
+```
+
+This approach keeps your system temp directory clean and makes it easy to manage DeeZy-related temporary files.
+
+#### Temp Management Commands
+
+```bash
+# Show temp folder information
+deezy temp info
+
+# Clean old temp folders (24 hours by default)
+deezy temp clean
+
+# Clean folders older than specific age
+deezy temp clean --max-age 1  # 1 hour
+
+# Preview what would be cleaned (dry run)
+deezy temp clean --dry-run
+
+# Clean very old folders with dry run
+deezy temp clean --max-age 168 --dry-run  # 1 week
+```
+
+**Temp Info Output:**
+
+```
+DeeZy temp folder: C:\Users\Username\AppData\Local\Temp\deezy
+Job folders: 3
+Total size: 2.1 MB
+```
+
+**Temp Clean Features:**
+
+- **Safe by default**: 24-hour age limit prevents accidental deletion of active jobs
+- **Dry run mode**: Preview what would be deleted without making changes
+- **Flexible age control**: Specify custom age thresholds in hours
+- **Size reporting**: Shows how much space will be freed
+- **Error handling**: Gracefully handles permission issues and locked files
+
+**When to Use Temp Management:**
+
+- **After batch processing**: Clean up after encoding many files
+- **Storage maintenance**: Free up disk space from old encoding jobs
+- **Debugging cleanup**: Remove temp files after troubleshooting
+- **Scheduled maintenance**: Regular cleanup of accumulated temp files
+
+Use `deezy temp --help` for additional options and subcommands.
+
 ## 🎯 Input Types & Patterns
 
 DeeZy supports flexible input handling for batch processing:
@@ -538,6 +606,21 @@ Use `-k/--keep-temp` to retain intermediate files for debugging or manual proces
 - **XML files**: DEE job configurations
 - **LOG files**: Encoding process details
 
+DeeZy automatically organizes temporary files under a dedicated `deezy` folder in your system temp directory. Use the temp management commands to monitor and clean up these files:
+
+```bash
+# Monitor temp folder usage
+deezy temp info
+
+# Clean up after batch processing
+deezy temp clean --max-age 1
+
+# Debug with temp files and clean up afterward
+deezy encode ddp --keep-temp input.mkv
+deezy temp clean --dry-run  # Check what will be cleaned
+deezy temp clean            # Clean up when ready
+```
+
 ## 📚 Examples & Workflows
 
 ### Movie Encoding Workflow
@@ -570,6 +653,10 @@ deezy encode preset --name streaming_ddp "TV.Series.S01**/*.mkv"
 
 # Or with custom settings for dialogue-heavy content
 deezy encode ddp --channels 6 --bitrate 448 --drc-line-mode speech "TV.Series.S01**/*.mkv"
+
+# Clean up temp files after batch processing
+deezy temp info         # Check temp folder status
+deezy temp clean        # Clean up old temp files
 ```
 
 ### Quality Control
@@ -611,6 +698,19 @@ deezy encode ddp --temp-dir "C:\debug\" input.mkv
 - Use `deezy config info` to check config status
 - Regenerate config with `deezy config generate --overwrite`
 - Ensure TOML syntax is valid in manual edits
+
+**"Disk space issues"**
+
+- Check temp folder usage with `deezy temp info`
+- Clean old temp files with `deezy temp clean`
+- Use `--temp-dir` to specify alternative temp location
+- Monitor temp folder growth during batch processing
+
+**"Temp folder permission errors"**
+
+- Ensure write permissions to system temp directory
+- Use `--temp-dir` to specify accessible location
+- Check `deezy temp info` for temp folder location
 
 ### Debug Mode
 

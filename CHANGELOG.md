@@ -9,14 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New CLI args to manage your the automatic temp directory.
 - Now checks for valid arguments on presets and gives the user helpful error messages.
 - For formats that don't have a duration available (THD, other raw elementary formats) there is now a loading circle for progress when processing with FFMPEG.
 - DEE related errors will be displayed without deezy running in DEBUG mode. (You may still need to run in debug for edge cases).
 - `deezy config generate` now generates a cleaner and more descriptive default template.
+- Checks for required executable dependencies in the CLI before attempting to run any encoders.
+- Some more arg parser help messages.
 
 ### Fixed
 
 - Generated config had invalid pre defined presets.
+- Numerous issues with config.
 - Major bug where the user defined bitrate wouldn't be set on all 3 encoders since the re-work.
 - Use case insensitive checks for DRC.
 - DEE config `prepend_silence_duration` and `append_silence_duration` set to defaults.
@@ -28,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preset arg has changed:
   - You now call preset as it's own "encoder" `deezy encode preset --name YOUR_PRESET_NAME`.
 - DEE key `time_base` is now set to `file_position` instead of `embedded_timecode`.
+- Automatic temp directory now stores all job files in a parent folder `deezy`.
+- Set automatic bitrate selection when not supplied by the user to a **DEBUG** message instead of info.
 
 ### Removed
 
