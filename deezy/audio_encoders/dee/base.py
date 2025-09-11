@@ -54,18 +54,20 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             file_input (Path): Path to the input audio file.
             track_index (int): Index of the audio track to extract.
             bits_per_sample (int): Number of bits per sample of the output WAV file.
-            audio_filter_args (list): List of additional audio filter arguments to apply.
+            audio_filter_args (list): list of additional audio filter arguments to apply.
             output_dir (Path): Path to the directory where the output WAV file will be saved.
             wav_file_name (str): Name of the output WAV file.
 
         Returns:
-            List[str]: A list of strings representing the FFmpeg command.
+            list[str]: A list of strings representing the FFmpeg command.
         """
         ffmpeg_cmd = [
             str(ffmpeg_path),
             "-y",
             "-drc_scale",
             "0",
+            "-hide_banner",
+            "-v",  # verbosity level will be injected by processor
             "-i",
             str(Path(file_input)),
             "-map",
@@ -75,9 +77,6 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             *(audio_filter_args),
             "-rf64",
             "always",
-            "-hide_banner",
-            "-v",
-            "-stats",
             str(Path(output_dir / wav_file_name)),
         ]
         return ffmpeg_cmd
