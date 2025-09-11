@@ -116,25 +116,25 @@ jobs:
           set -e  # Exit on any error
 
           echo "=== File sizes ==="
-          ls -lh ./*.zip
+          ls -lh ./*/*.zip
 
           echo "=== Uploading Linux ZIP ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-linux-x64.zip \
+            ./deezy-linux-x64/deezy-linux-x64.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Linux ZIP uploaded successfully"
 
           echo "=== Uploading macOS ZIP ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-macos-x64.zip \
+            ./deezy-macos-x64/deezy-macos-x64.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ macOS ZIP uploaded successfully"
 
           echo "=== Uploading Windows ZIP ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-windows-x64.exe.zip \
+            ./deezy-windows-x64.exe/deezy-windows-x64.exe.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Windows ZIP uploaded successfully"
