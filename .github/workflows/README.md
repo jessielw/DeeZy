@@ -80,11 +80,13 @@ To test builds without creating a release:
 
 ### Release Assets
 
-When a release is created, the following assets are automatically generated:
+When a release is created, the following ZIP archives are automatically generated:
 
-- `deezy-linux-x64` - Linux executable
-- `deezy-macos-x64` - macOS executable
-- `deezy-windows-x64.exe` - Windows executable
+- `deezy-linux-x64.zip` - Contains `deezy` Linux executable
+- `deezy-macos-x64.zip` - Contains `deezy` macOS executable
+- `deezy-windows-x64.exe.zip` - Contains `deezy.exe` Windows executable
+
+Each ZIP file contains the executable with its proper name (`deezy` or `deezy.exe`), making it easy for users to extract and use directly.
 
 ## Requirements
 

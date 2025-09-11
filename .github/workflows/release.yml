@@ -75,11 +75,21 @@ jobs:
             fi
           fi
 
+      - name: Create ZIP archive
+        shell: bash
+        run: |
+          cd pyinstaller_build/dist/
+          if [ "${{ matrix.platform }}" == "windows" ]; then
+            zip -9 ../../${{ matrix.artifact_name }}.zip deezy.exe
+          else
+            zip -9 ../../${{ matrix.artifact_name }}.zip deezy
+          fi
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: pyinstaller_build/dist/${{ matrix.executable }}
+          path: ${{ matrix.artifact_name }}.zip
           retention-days: 7
 
   release:
@@ -102,45 +112,30 @@ jobs:
           set -e  # Exit on any error
 
           echo "=== File sizes ==="
-          ls -lh ./*/deezy* || ls -lh ./deezy-*/*
+          ls -lh ./*.zip
 
-          echo "=== Uploading Linux binary ==="
-          echo "File info: $(file ./deezy-linux-x64/deezy || echo 'file command not available')"
-          echo "File permissions: $(ls -la ./deezy-linux-x64/deezy)"
-
-          # Copy to final name to ensure correct naming
-          cp ./deezy-linux-x64/deezy ./deezy-linux-x64-binary
-          chmod +x ./deezy-linux-x64-binary
-
-          echo "Uploading with proper filename..."
+          echo "=== Uploading Linux ZIP ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-linux-x64-binary#deezy-linux-x64 \
+            ./deezy-linux-x64.zip \
             --repo ${{ github.repository }} \
             --clobber
-          echo "✅ Linux binary uploaded successfully"
+          echo "✅ Linux ZIP uploaded successfully"
 
-          echo "=== Uploading macOS binary ==="
-          # Copy to final name to ensure correct naming
-          cp ./deezy-macos-x64/deezy ./deezy-macos-x64-binary
-          chmod +x ./deezy-macos-x64-binary
-
+          echo "=== Uploading macOS ZIP ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-macos-x64-binary#deezy-macos-x64 \
+            ./deezy-macos-x64.zip \
             --repo ${{ github.repository }} \
             --clobber
-          echo "✅ macOS binary uploaded successfully"
+          echo "✅ macOS ZIP uploaded successfully"
 
-          echo "=== Uploading Windows binary ==="
-          # Copy to final name to ensure correct naming
-          cp ./deezy-windows-x64.exe/deezy.exe ./deezy-windows-x64-binary.exe
-
+          echo "=== Uploading Windows ZIP ==="
           gh release upload ${{ github.event.release.tag_name }} \
-            ./deezy-windows-x64-binary.exe#deezy-windows-x64.exe \
+            ./deezy-windows-x64.exe.zip \
             --repo ${{ github.repository }} \
             --clobber
-          echo "✅ Windows binary uploaded successfully"
+          echo "✅ Windows ZIP uploaded successfully"
 
-          echo "🎉 All binaries uploaded successfully!"
+          echo "🎉 All ZIP archives uploaded successfully!"
 
           echo "=== Final Release Assets ==="
           gh release view ${{ github.event.release.tag_name }} --repo ${{ github.repository }}
