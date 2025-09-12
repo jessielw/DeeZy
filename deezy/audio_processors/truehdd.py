@@ -38,6 +38,7 @@ def decode_truehd_to_atmos(
     # pipe mode: stream TrueHD from ffmpeg to truehdd stdin
     ffmpeg_cmd = [
         str(ffmpeg_path),
+        "-hide_banner",
         "-y",
         "-i",
         str(file_input),
@@ -48,7 +49,6 @@ def decode_truehd_to_atmos(
         "-f",
         "truehd",
         "-",
-        "-hide_banner",
         "-v",
         "-stats",
     ]
@@ -57,7 +57,7 @@ def decode_truehd_to_atmos(
     logger_level = logger.getEffectiveLevel()
     inject = ffmpeg_cmd.index("-v") + 1
     if logger_level == logging.DEBUG:
-        ffmpeg_cmd.insert(inject, "info")
+        ffmpeg_cmd.insert(inject, "warning")  # even in debug, suppress file info spam
     else:
         ffmpeg_cmd.insert(inject, "quiet")
 
@@ -135,8 +135,45 @@ def decode_truehd_to_atmos(
                         sink.append(percent_data.formatted)
                         continue
 
-                # default debug logging
-                if logger_level == logging.DEBUG:
+                # filter out ffmpeg metadata spam even in debug mode
+                if prefix == "ffmpeg":
+                    # suppress common metadata lines that clutter output
+                    if any(
+                        keyword in line
+                        for keyword in [
+                            "Input #",
+                            "Metadata:",
+                            "Duration:",
+                            "Stream #",
+                            "  ",
+                            "Output #",
+                            "Stream mapping:",
+                            "Press [q]",
+                            "configuration:",
+                            "built with",
+                            "libav",
+                            "encoder",
+                        ]
+                    ):
+                        continue
+                    # only log important ffmpeg lines (errors, warnings)
+                    if any(
+                        keyword in line
+                        for keyword in [
+                            "error",
+                            "Error",
+                            "ERROR",
+                            "warning",
+                            "Warning",
+                            "WARNING",
+                        ]
+                    ):
+                        logger.debug(f"[{prefix}] {line}")
+                        sink.append(line)
+                        continue
+
+                # default debug logging for non-ffmpeg streams
+                if logger_level == logging.DEBUG and prefix != "ffmpeg":
                     logger.debug(f"[{prefix}] {line}")
                     sink.append(line)
 
