@@ -49,7 +49,29 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
         return
 
     if is_encode:
-        # handle encode phase
+        # handle encode phase - normalize progress to start from 0%
+        if progress_state["encode_start_value"] is None:
+            # first encode progress line - record the starting value
+            progress_state["encode_start_value"] = progress_data.value
+            # mark measure phase as complete when encode starts
+            if not progress_state["measure_done"]:
+                progress_state["measure_done"] = True
+                # in no-progress-bars mode, explicitly show measure completion
+                if progress_state["progress"] is None:
+                    logger.info(f"{handler.measure_task_desc} 100.0%")
+
+        # normalize encode progress to 0-100% range
+        if progress_state["encode_start_value"] is not None:
+            normalized_progress = (
+                (progress_data.value - progress_state["encode_start_value"])
+                / (100 - progress_state["encode_start_value"])
+            ) * 100
+            normalized_progress = max(
+                0, min(100, normalized_progress)
+            )  # clamp to 0-100
+        else:
+            normalized_progress = progress_data.value
+
         if (
             progress_state["progress"]
             and progress_state["encode_task_id"] is None
@@ -60,21 +82,20 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
                 progress_state["measure_task_id"], completed=100
             )
             progress_state["progress"].refresh()
-            progress_state["measure_done"] = True
             progress_state["encode_task_id"] = progress_state["progress"].add_task(
                 handler.encode_task_desc, total=100
             )
 
         if progress_state["progress"] and progress_state["encode_task_id"] is not None:
             progress_state["progress"].update(
-                progress_state["encode_task_id"], completed=progress_data.value
+                progress_state["encode_task_id"], completed=normalized_progress
             )
-            logger.debug(f"{handler.encode_task_desc} {progress_data.formatted}")
+            logger.debug(f"{handler.encode_task_desc} {normalized_progress:.1f}%")
         else:
             # fallback for when rich progress is disabled
-            logger.info(f"{handler.encode_task_desc} {progress_data.formatted}")
+            logger.info(f"{handler.encode_task_desc} {normalized_progress:.1f}%")
 
-        progress_state["last_encode"] = progress_data.value
+        progress_state["last_encode"] = normalized_progress
     else:
         # handle measure phase
         if not progress_state["measure_done"]:
@@ -127,6 +148,7 @@ def process_dee_job(
             "encode_task_id": None,
             "measure_task_id": None,
             "progress": None,
+            "encode_start_value": None,
         }
 
         with handler.dee_progress_context() as (progress, measure_task_id, _):
@@ -165,10 +187,15 @@ def process_dee_job(
                     )
                     progress_state["progress"].refresh()
             else:
-                # raw mode completion
-                handler.ensure_completion(
-                    progress_state["last_measure"], handler.measure_task_desc
-                )
+                # raw mode completion - ensure both phases show 100%
+                if progress_state["measure_done"]:
+                    # if measure completed, show it as 100%
+                    handler.ensure_completion(100.0, handler.measure_task_desc)
+                else:
+                    # if measure didn't complete, show its last value
+                    handler.ensure_completion(
+                        progress_state["last_measure"], handler.measure_task_desc
+                    )
                 handler.ensure_completion(
                     progress_state["last_encode"], handler.encode_task_desc
                 )
