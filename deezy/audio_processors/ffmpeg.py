@@ -80,8 +80,7 @@ def _process_with_progress_bar(
                         progress.update(task_id, completed=progress_data.value)
                         logger.debug(f"{step_label} {progress_data.formatted}")
                     else:
-                        # fallback for when rich progress is disabled
-                        logger.info(f"{step_label} {progress_data.formatted}")
+                        logger.info(f"{step_label} {progress_data.value:.1f}%")
 
                     if progress_data.value >= 100.0:
                         break
