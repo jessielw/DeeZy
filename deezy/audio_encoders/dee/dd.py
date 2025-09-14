@@ -48,7 +48,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             # user/preset provided a bitrate - validate it
             if not bitrate_obj.is_valid_bitrate(runtime_bitrate):
                 fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
-                logger.info(
+                logger.warning(
                     f"Bitrate {runtime_bitrate} is invalid for this configuration. "
                     f"Using the next closest allowed bitrate: {fixed_bitrate}."
                 )
@@ -200,9 +200,9 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         logger.debug(f"Dee job: {_dee_job}.")
 
         # move file to output path
-        logger.info(f"Moving {output_file_path.name} to {output}.")
+        logger.debug(f"Moving {output_file_path.name} to {output}.")
         move_file = Path(shutil.move(output_file_path, output))
-        logger.info("Done.")
+        logger.debug("Done.")
 
         # delete temp folder and all files if enabled
         if not self.payload.keep_temp:
