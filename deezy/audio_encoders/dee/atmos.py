@@ -4,7 +4,6 @@ import tempfile
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
-from deezy.audio_encoders.delay import get_dee_delay
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
 from deezy.enums.atmos import AtmosMode
@@ -66,12 +65,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         )
 
         # delay
-        delay_str = "0ms"
-        if self.payload.delay:
-            delay_str = self.payload.delay
-        delay = get_dee_delay(delay_str)
-        if delay:
-            logger.debug(f"Generated delay {delay.MODE}:{delay.DELAY}.")
+        delay = self.get_delay(audio_track_info, self.payload.delay, file_input)
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
