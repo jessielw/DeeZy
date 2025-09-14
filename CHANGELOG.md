@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - In the generated config **dependency** `truehd` should be `truehdd`. This is fixed when you generate a new config, but you can manually modify it.
+- Dependencies was not being pulled from the config if provided.
 
 ### Removed
 
