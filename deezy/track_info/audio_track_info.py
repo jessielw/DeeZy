@@ -9,6 +9,7 @@ class AudioTrackInfo:
     mi_track: Track
     channels: int
     auto_name: Path
+    is_raw_audio: bool
     fps: float | None = None
     audio_only: bool = False
     recommended_free_space: int | None = None

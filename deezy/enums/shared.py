@@ -42,7 +42,11 @@ class DeeDelayModes(CaseInsensitiveEnum):
 @dataclass(slots=True)
 class DeeDelay:
     MODE: DeeDelayModes
-    DELAY: str
+    DELAY: str  # DEE specific delay i.e. '0:00:00.005333'
+
+    def is_delay(self) -> bool:
+        """If delay is anything other than the default Dolby compensation value return True."""
+        return self.DELAY != "0:00:00.005333"
 
 
 class DeeFPS(Enum):

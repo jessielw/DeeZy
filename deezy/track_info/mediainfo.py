@@ -25,6 +25,7 @@ class MediainfoParser:
         audio_info = AudioTrackInfo(
             mi_track=self.mi_audio_obj,
             auto_name=self._generate_output_filename(),
+            is_raw_audio=self.is_raw_audio(),
             fps=self._get_fps(),
             audio_only=False,
             recommended_free_space=self._recommended_free_space(),
@@ -203,3 +204,27 @@ class MediainfoParser:
         else:
             language_string = "[und]"
         return language_string
+
+    def is_raw_audio(self) -> bool:
+        """
+        Helper method to determine if the input is just raw audio.
+
+        Checks if count of audio streams is greater than 1 and ensures
+        there are any other tracks.
+        """
+        try:
+            general = self.mi_obj.general_tracks[0]
+            audio_streams = int(getattr(general, "count_of_audio_streams", 0) or 0)
+            if audio_streams != 1:
+                return False
+            other_tracks = sum(
+                int(getattr(general, key, 0) or 0)
+                for key in (
+                    "count_of_video_streams",
+                    "count_of_text_streams",
+                    "count_of_menu_streams",
+                )
+            )
+            return other_tracks == 0
+        except (IndexError, AttributeError, ValueError):
+            return False

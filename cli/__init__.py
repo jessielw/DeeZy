@@ -664,29 +664,34 @@ def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
 
 
 def handle_dependencies(
-    args: argparse.Namespace, base_wd: Path, _config_manager: ConfigManager | None
+    args: argparse.Namespace, base_wd: Path, config_manager: ConfigManager | None
 ) -> dict[str, Path | None] | None:
-    """Handle tool dependencies detection."""
-    if args.sub_command in {"config", "temp"}:
+    """
+    Handle tool dependencies detection.
+    
+    CLI > Config
+    """
+    if args.sub_command in ("config", "temp"):
         return None
 
-    # get dependency paths from CLI args or config
-    ffmpeg_arg = None
-    truehdd_arg = None
-    # Simple dependency handling - just use what's provided in args or empty string for auto-detection
-    ffmpeg_arg = args.ffmpeg if hasattr(args, "ffmpeg") and args.ffmpeg else ""
-    truehdd_arg = args.truehdd if hasattr(args, "truehdd") and args.truehdd else ""
-    dee_arg = args.dee if hasattr(args, "dee") and args.dee else ""
+    deps = {}
+    config_deps = (
+        config_manager.config.get("dependencies", {}) if config_manager else {}
+    )
 
-    # check if Atmos is being used (only available for DDP)
-    atmos_required = hasattr(args, "format_command") and args.format_command == "atmos"
+    for key in ("ffmpeg", "truehdd", "dee"):
+        cli_value = getattr(args, key, None)
+        config_value = config_deps.get(key)
+        deps[key] = cli_value or config_value
+
+    atmos_required = getattr(args, "format_command", None) == "atmos"
 
     try:
         tools = FindDependencies().get_dependencies(
             base_wd,
-            ffmpeg_arg,
-            truehdd_arg,
-            dee_arg,
+            deps["ffmpeg"],
+            deps["truehdd"],
+            deps["dee"],
             require_truehdd=atmos_required,
         )
     except DependencyNotFoundError as e:

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Will now read delay from file if it's not provided over CLI and the audio is not in a container with other streams (Video, audio, text, etc).
+
+### Changed
+
+- 
+
+### Fixed
+
+- In the generated config **dependency** `truehd` should be `truehdd`. This is fixed when you generate a new config, but you can manually modify it.
+- Dependencies was not being pulled from the config if provided.
+
+### Removed
+
+- 
+
 ## [1.2.2] - 2025-09-12
 
 ### Fixed

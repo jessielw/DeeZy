@@ -5,7 +5,7 @@ from deezy.enums.shared import DeeDelay, DeeDelayModes
 from deezy.exceptions import InvalidDelayError
 
 
-def get_dee_delay(delay: str, compensate: bool = True) -> DeeDelay | None:
+def get_dee_delay(delay: str, compensate: bool = True) -> DeeDelay:
     """
     Converts the delay string to the proper format, checks for invalid characters,
     and returns a tuple containing the Dee Delay mode and the delay in the
@@ -17,7 +17,7 @@ def get_dee_delay(delay: str, compensate: bool = True) -> DeeDelay | None:
         this compensates for dee's 256 added samples
 
     Returns:
-        DeeDelay dataclass with needed values for processing (XML/JSON).
+        DeeDelay dataclass with needed values for processing (JSON).
 
     Raises:
         InvalidDelayError: If the delay input contains invalid characters or is
@@ -50,22 +50,22 @@ def get_dee_delay(delay: str, compensate: bool = True) -> DeeDelay | None:
         # if delay is negative
         if s_delay < 0:
             dee_delay_mode = DeeDelayModes.NEGATIVE
-            delay_xml = str(timedelta(seconds=(abs(s_delay) / 1000)))
-            if "." not in delay_xml:
-                delay_xml = f"{delay_xml}.0"
+            delay_json = str(timedelta(seconds=(abs(s_delay) / 1000)))
+            if "." not in delay_json:
+                delay_json = f"{delay_json}.0"
 
         # if delay is positive
         else:
             dee_delay_mode = DeeDelayModes.POSITIVE
-            delay_xml = format(s_delay / 1000, ".6f")
+            delay_json = format(s_delay / 1000, ".6f")
 
         # create an internal data class
-        data_class = DeeDelay(dee_delay_mode, delay_xml)
+        data_class = DeeDelay(dee_delay_mode, delay_json)
 
         return data_class
 
-    # if no numbers was detected raise an error
-    elif not s_delay:
+    # if no numbers were detected raise an error
+    else:
         raise InvalidDelayError(
             "Delay input must be in the format of -10ms/10ms or -10s/10s"
         )

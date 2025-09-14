@@ -4,7 +4,6 @@ import tempfile
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
-from deezy.audio_encoders.delay import get_dee_delay
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.enums.ddp import DolbyDigitalPlusChannels
@@ -49,7 +48,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             # user/preset provided a bitrate - validate it
             if not bitrate_obj.is_valid_bitrate(runtime_bitrate):
                 fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
-                logger.info(
+                logger.warning(
                     f"Bitrate {runtime_bitrate} is invalid for this configuration. "
                     f"Using the next closest allowed bitrate: {fixed_bitrate}."
                 )
@@ -79,12 +78,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             logger.info(f"No supplied channels, defaulting to {self.payload.channels}.")
 
         # delay
-        delay_str = "0ms"
-        if self.payload.delay:
-            delay_str = self.payload.delay
-        delay = get_dee_delay(delay_str)
-        if delay:
-            logger.debug(f"Generated delay {delay.MODE}:{delay.DELAY}.")
+        delay = self.get_delay(audio_track_info, self.payload.delay, file_input)
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
@@ -199,9 +193,9 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         logger.debug(f"Dee job: {_dee_job}.")
 
         # move file to output path
-        logger.info(f"Moving {output_file_path.name} to {output}.")
+        logger.debug(f"Moving {output_file_path.name} to {output}.")
         move_file = Path(shutil.move(output_file_path, output))
-        logger.info("Done.")
+        logger.debug("Done.")
 
         # delete temp folder and all files if enabled
         if not self.payload.keep_temp:
