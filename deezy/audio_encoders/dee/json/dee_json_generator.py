@@ -2,10 +2,12 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
+from deezy.audio_encoders.dee.json.ac4_base import ac4_base
 from deezy.audio_encoders.dee.json.atmos_base import atmos_base
 from deezy.audio_encoders.dee.json.dd_base import dd_base
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS
+from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
@@ -152,6 +154,65 @@ class DeeJSONGenerator:
         #### output section ####
         output_section = json_base["job_config"]["output"]
         output_section["ec3"]["file_name"] = self._create_dee_file_path(
+            self.output_file_path
+        )
+
+        #### misc section ####
+        misc_section = json_base["job_config"]["misc"]
+        # string bool lowered (true/false)
+        misc_section["temp_dir"]["clean_temp"] = str(not payload.keep_temp).lower()
+        misc_section["temp_dir"]["path"] = self._create_dee_file_path(temp_dir)
+
+        return self._write_json(json_base)
+
+    def ac4_json(
+        self,
+        payload: Ac4Payload,
+        bitrate: int,
+        fps: DeeFPS,
+        delay: DeeDelay | None,
+        temp_dir: Path,
+    ) -> Path:
+        """Set up Atmos encoding."""
+        # init base
+        json_base = deepcopy(ac4_base)
+
+        #### input section ####
+        if self.input_file_path.suffix == ".atmos":
+            input_section = json_base["job_config"]["input"]["audio"]["atmos_mezz"]
+            del json_base["job_config"]["input"]["audio"]["wav"]
+        else:
+            input_section = json_base["job_config"]["input"]["audio"]["wav"]
+            del json_base["job_config"]["input"]["audio"]["atmos_mezz"]
+        input_section["file_name"] = self._create_dee_file_path(self.input_file_path)
+        input_section["timecode_frame_rate"] = fps.to_dee_cmd()
+
+        #### filter section ####
+        filter_section = json_base["job_config"]["filter"]["audio"]["encode_to_ims_ac4"]
+        filter_section["timecode_frame_rate"] = fps.to_dee_cmd()
+        if delay:
+            filter_section[delay.MODE.value] = delay.DELAY
+        loudness = filter_section["loudness"]["measure_only"]
+        loudness["metering_mode"] = payload.metering_mode.to_dee_cmd()
+        loudness["dialogue_intelligence"] = payload.dialogue_intelligence
+        loudness["speech_threshold"] = payload.speech_threshold
+        filter_section["data_rate"] = bitrate
+        filter_section["ac4_frame_rate"] = "native"
+        filter_section["ims_legacy_presentation"] = str(
+            payload.ims_legacy_presentation
+        ).lower()
+        filter_section["iframe_interval"] = 0
+        filter_section["encoding_profile"] = payload.encoding_profile.to_dee_cmd()
+        drc = filter_section["drc"]
+        drc["ddp_drc_profile"] = payload.ddp_drc.to_dee_cmd()
+        drc["flat_panel_drc_profile"] = payload.flat_panel_drc.to_dee_cmd()
+        drc["home_theatre_drc_profile"] = payload.home_theatre_drc.to_dee_cmd()
+        drc["portable_hp_drc_profile"] = payload.portable_headphones_drc.to_dee_cmd()
+        drc["portable_spkr_drc_profile"] = payload.portable_speakers_drc.to_dee_cmd()
+
+        #### output section ####
+        output_section = json_base["job_config"]["output"]
+        output_section["ac4"]["file_name"] = self._create_dee_file_path(
             self.output_file_path
         )
 
