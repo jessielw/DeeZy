@@ -9,10 +9,10 @@ from typing import Any
 from rich.progress import (
     BarColumn,
     Progress,
+    SpinnerColumn,
     TaskID,
     TaskProgressColumn,
     TextColumn,
-    TimeElapsedColumn,
     TimeRemainingColumn,
 )
 
@@ -78,8 +78,8 @@ class ProgressHandler:
             name = self.step_info.get("name", base_name)
             current = self.step_info.get("current", default_current)
             total = self.step_info.get("total", default_total)
-            return f"{name} ({current} of {total})"
-        return f"{base_name} ({default_current} of {default_total})"
+            return f"{name} ({current} of {total})".ljust(20)
+        return f"{base_name} ({default_current} of {default_total})".ljust(20)
 
     @contextmanager
     def progress_context(
@@ -91,8 +91,8 @@ class ProgressHandler:
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
-                TimeElapsedColumn(),
                 TimeRemainingColumn(),
+                SpinnerColumn(),
                 transient=False,
             ) as progress:
                 task_id = progress.add_task(task_desc, total=100)
@@ -223,8 +223,8 @@ class DEEProgressHandler(ProgressHandler):
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
-                TimeElapsedColumn(),
                 TimeRemainingColumn(),
+                SpinnerColumn(),
                 transient=False,
             ) as progress:
                 measure_task_id = progress.add_task(self.measure_task_desc, total=100)

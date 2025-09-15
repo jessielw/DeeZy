@@ -1,4 +1,5 @@
 from argparse import ArgumentTypeError
+from collections.abc import Sequence
 from enum import Enum
 from typing import Type
 
@@ -78,7 +79,7 @@ def case_insensitive_enum(enum_class):
     return converter
 
 
-def enum_choices(enum_class: Type[Enum]) -> str:
+def enum_choices(enum_class: Type[Enum] | Sequence[Enum]) -> str:
     """
     Returns a string representation of all possible choices in the given enumeration class.
     """

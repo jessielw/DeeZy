@@ -91,6 +91,7 @@ class DeeDRC(CaseInsensitiveEnum):
     MUSIC_STANDARD = "music_standard"
     MUSIC_LIGHT = "music_light"
     SPEECH = "speech"
+    NONE = "none"  # ac4 is the only codec that supports this
 
     @override
     def __str__(self):

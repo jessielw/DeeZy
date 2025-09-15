@@ -578,8 +578,8 @@ deezy encode preset --name streaming_ddp "season01/**/*.mkv"
 | DDP        | 5.1       | 192 kbps        | 192-1024 kbps  | Streaming services    |
 | DDP        | 7.1       | 384 kbps        | 384-1024 kbps  | High-quality releases |
 | DDP BluRay | 7.1       | 384 kbps        | 768-1664 kbps  | BluRay mastering      |
-| Atmos      | Streaming | 448 kbps        | 384-768 kbps   | Streaming Atmos       |
-| Atmos      | BluRay    | 448 kbps        | 1152-1664 kbps | BluRay Atmos          |
+| Atmos      | Streaming | 448 kbps        | 384-1024 kbps  | Streaming Atmos       |
+| Atmos      | BluRay    | 1280 kbps       | 1152-1664 kbps | BluRay Atmos          |
 
 _Note: All defaults are configurable via the configuration system_
 
