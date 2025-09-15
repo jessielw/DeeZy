@@ -768,7 +768,7 @@ def handle_dependencies(
         config_value = config_deps.get(key)
         deps[key] = cli_value or config_value
 
-    atmos_required = getattr(args, "format_command", None) == "atmos"
+    atmos_required = getattr(args, "format_command", None) in ("atmos", "ac4")
 
     try:
         tools = FindDependencies().get_dependencies(
