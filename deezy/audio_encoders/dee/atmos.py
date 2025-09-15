@@ -97,13 +97,10 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
             output = Path(audio_track_info.auto_name).with_suffix(".ec3")
         logger.debug(f"Output path {output}.")
 
-        # define .wav and .ac3/.ec3 file names (not full path)
-        wav_file_name = temp_filename + ".wav"
+        # define .ac3 file names (not full path) and output path
         output_file_name = temp_filename + ".ac3"
         output_file_path = temp_dir / output_file_name
-        logger.debug(
-            f"File paths: {wav_file_name=}, {output_file_name=}, {output_file_path=}."
-        )
+        logger.debug(f"File paths: {output_file_name=}, {output_file_path=}.")
 
         # decode TrueHD to atmos mezz
         if not self.payload.truehdd_path:
@@ -117,7 +114,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
             ffmpeg_path=self.payload.ffmpeg_path,
             truehdd_path=self.payload.truehdd_path,
             no_bed_conform=self.payload.no_bed_conform,
-            warp_mode=self.payload.thd_wrap_mode,
+            warp_mode=self.payload.thd_warp_mode,
             duration=audio_track_info.duration,
             step_info={"current": 1, "total": 3, "name": "truehdd"},
             no_progress_bars=self.payload.no_progress_bars,
