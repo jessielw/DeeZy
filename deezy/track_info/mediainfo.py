@@ -215,14 +215,17 @@ class MediainfoParser:
         Returns:
             The number of audio channels as an integer.
         """
-        base_channels = max(
-            int(x) for x in re.findall(r"\d+", mi_audio_obj.channel_s) if x
-        )
+        if isinstance(mi_audio_obj.channel_s, int):
+            base_channels = mi_audio_obj.channel_s
+        else:
+            base_channels = max(
+                int(x) for x in re.findall(r"\d+", str(mi_audio_obj.channel_s)) if x
+            )
         check_other = re.search(r"\d+", str(mi_audio_obj.other_channel_s[0]))
         check_other_2 = str(mi_audio_obj.channel_s__original)
 
         # create a list of values to find the maximum
-        values = [int(base_channels)]
+        values = [base_channels]
 
         if check_other:
             values.append(int(check_other.group()))
