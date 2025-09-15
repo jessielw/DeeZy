@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
--
+- Handle weird inputs with _multiple_ channel counts _(i.e. 8 / 6)_ and correctly determine the highest count.
 
 ### Removed
 

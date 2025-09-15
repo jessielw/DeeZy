@@ -1,5 +1,5 @@
 from pathlib import Path
-from re import search
+import re
 
 from pymediainfo import MediaInfo, Track
 
@@ -32,7 +32,7 @@ class MediainfoParser:
             duration=self._get_duration(),
             sample_rate=self.mi_audio_obj.sampling_rate,
             bit_depth=self.mi_audio_obj.bit_depth,
-            channels=self._get_channels(),
+            channels=self.get_channels(self.mi_audio_obj),
             thd_atmos=self._is_thd_atmos(),
         )
 
@@ -105,31 +105,6 @@ class MediainfoParser:
         """
         duration = self.mi_audio_obj.duration
         return float(duration) if duration else None
-
-    def _get_channels(self) -> int:
-        """
-        Get the number of audio channels for the specified track.
-
-        The added complexity for 'check_other' is to ensure we get a report
-        of the highest potential channel count.
-
-        Returns:
-            The number of audio channels as an integer.
-        """
-        base_channels = self.mi_audio_obj.channel_s
-        check_other = search(r"\d+", str(self.mi_audio_obj.other_channel_s[0]))
-        check_other_2 = str(self.mi_audio_obj.channel_s__original)
-
-        # create a list of values to find the maximum
-        values = [int(base_channels)]
-
-        if check_other:
-            values.append(int(check_other.group()))
-
-        if check_other_2.isdigit():
-            values.append(int(check_other_2))
-
-        return max(values)
 
     def _is_thd_atmos(self) -> bool:
         """Check if track is a THD Atmos file."""
@@ -228,3 +203,31 @@ class MediainfoParser:
             return other_tracks == 0
         except (IndexError, AttributeError, ValueError):
             return False
+
+    @staticmethod
+    def get_channels(mi_audio_obj: Track) -> int:
+        """
+        Get the number of audio channels for the specified track.
+
+        The added complexity for 'check_other' is to ensure we get a report
+        of the highest potential channel count.
+
+        Returns:
+            The number of audio channels as an integer.
+        """
+        base_channels = max(
+            int(x) for x in re.findall(r"\d+", mi_audio_obj.channel_s) if x
+        )
+        check_other = re.search(r"\d+", str(mi_audio_obj.other_channel_s[0]))
+        check_other_2 = str(mi_audio_obj.channel_s__original)
+
+        # create a list of values to find the maximum
+        values = [int(base_channels)]
+
+        if check_other:
+            values.append(int(check_other.group()))
+
+        if check_other_2.isdigit():
+            values.append(int(check_other_2))
+
+        return max(values)
