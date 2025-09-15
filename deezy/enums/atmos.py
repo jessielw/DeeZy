@@ -23,12 +23,13 @@ class AtmosMode(CaseInsensitiveEnum):
                     576,
                     640,
                     768,
+                    1024,
                 ),
             )
         # BLURAY
         else:
             return ChannelBitrates(
-                default=448,
+                default=1280,
                 choices=(1152, 1280, 1408, 1512, 1536, 1664),
             )
 
