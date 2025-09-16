@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from deezy.enums.shared import DeeDRC, MeteringMode, StereoDownmix
+from deezy.track_info.track_index import TrackIndex
 
 
 @dataclass(slots=True)
@@ -13,7 +14,7 @@ class CorePayload:
     truehdd_path: Path | None
     dee_path: Path
     file_input: Path
-    track_index: int
+    track_index: TrackIndex
     bitrate: int | None
     temp_dir: Path | None
     delay: str | None

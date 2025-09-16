@@ -8,10 +8,11 @@ from typing import Generic, TypeVar
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
-from deezy.enums.shared import DeeDelay, DeeFPS
+from deezy.enums.shared import DeeDelay, DeeFPS, TrackType
 from deezy.exceptions import PathTooLongError
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.audio_track_info import AudioTrackInfo
+from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
 
 DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
@@ -62,7 +63,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
     def _get_ffmpeg_cmd(
         ffmpeg_path: Path,
         file_input: Path,
-        track_index: int,
+        track_index: TrackIndex,
         bits_per_sample: int,
         audio_filter_args: list,
         output_dir: Path,
@@ -75,7 +76,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         Args:
             ffmpeg_path (Path): Path to the FFmpeg executable.
             file_input (Path): Path to the input audio file.
-            track_index (int): Index of the audio track to extract.
+            track_index (TrackIndex): TrackIndex object.
             bits_per_sample (int): Number of bits per sample of the output WAV file.
             audio_filter_args (list): list of additional audio filter arguments to apply.
             output_dir (Path): Path to the directory where the output WAV file will be saved.
@@ -94,7 +95,9 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             "-i",
             str(Path(file_input)),
             "-map",
-            f"0:a:{track_index}",
+            f"0:a:{track_index.index}"
+            if track_index.track_type is TrackType.AUDIO
+            else f"0:{track_index.index}",
             "-c",
             f"pcm_s{str(bits_per_sample)}le",
             *(audio_filter_args),

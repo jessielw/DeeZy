@@ -139,3 +139,12 @@ class DDEncodingMode(CaseInsensitiveEnum):
             return "ac3"
         else:
             return "ec3"
+
+
+class TrackType(CaseInsensitiveEnum):
+    AUDIO = "a"
+    STREAM = "s"
+
+    @override
+    def __str__(self) -> str:
+        return self.value

@@ -17,6 +17,7 @@ from deezy.exceptions import (
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.mediainfo import MediainfoParser
+from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
 
 
@@ -203,7 +204,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         self,
         ffmpeg_path: Path,
         file_input: Path,
-        track_index: int,
+        track_index: TrackIndex,
         sample_rate: int | None,
         output_dir: Path,
         wav_file_name: str,

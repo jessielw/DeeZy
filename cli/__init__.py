@@ -24,8 +24,10 @@ from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
+from deezy.enums.shared import TrackType
 from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix
 from deezy.info import parse_audio_streams
+from deezy.track_info.track_index import TrackIndex
 from deezy.utils._version import __version__, program_name
 from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
@@ -94,8 +96,8 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     encode_group.add_argument(
         "--track-index",
         type=validate_track_index,
-        default=0,
-        help="The index of the audio track to use.",
+        default=TrackIndex(TrackType.AUDIO, 0),
+        help="Track to use for encoding. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).",
     )
     encode_group.add_argument(
         "--delay",

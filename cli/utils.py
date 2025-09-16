@@ -6,6 +6,8 @@ import tempfile
 import time
 from typing import Any
 
+from deezy.track_info.track_index import TrackIndex
+
 
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
     """Custom help formatter for argparse that modifies the format of action invocations.
@@ -35,23 +37,16 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
         return f"{option_strings}, {args_string}"
 
 
-def validate_track_index(value: Any) -> int:
+def validate_track_index(value: Any) -> TrackIndex:
     """
-    Determines if the input is a valid number.
-    If it's not returns the default of 0.
+    Parse and validate track index input.
 
-    Args:
-        value (Any): Can be any input
-
-    Returns:
-        int: Corrected track index
+    Supports FFmpeg-style notation:
+    - a:N (audio track N)
+    - s:N (stream track N)
+    - N (defaults to audio track N)
     """
-
-    # check if the input is valid
-    if value.isdigit():
-        return int(value)
-    # if the input is invalid, return the default value
-    return 0
+    return TrackIndex.from_string(str(value))
 
 
 def int_0_100(value: str) -> int:
