@@ -59,7 +59,7 @@ def build_app():
         success_msgs.append("Onefile build did not complete successfully")
 
     # Check onedir (bundle) build
-    onedir_path = Path("bundle") / f"deezy{exe_str}"
+    onedir_path = Path("bundled_mode") / "deezy" / f"deezy{exe_str}"
     if onedir_path.is_file() and str(build_job_onedir.returncode) == "0":
         success_msgs.append(f"Bundle build success! Path: {Path.cwd() / onedir_path}")
     else:
