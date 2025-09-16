@@ -9,7 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Now captures **all** exceptions and log them in **debug** mode.
+- Now captures **all** exceptions and logs them in **debug** mode.
+- `--track-index`: _(where **N** is your typical track index)_
+  - `a:N`
+    - This is the same behavior as before.
+  - `s:N`
+    - Works identically to FFMPEG's `-map 0:N` command, it access the track based on the stream instead of audio.
+  - Note, backwards compatibility is retained, you can still simply pass `--track-index N`.
+- Added support for **AC4**:
+  - New `encode ac4` command for next-generation Dolby AC-4 encoding
+  - `--encoding-profile`: Support for IMS and IMS Music profiles
+  - `--ims-legacy-presentation`: Backward compatibility presentation option
+  - Multiple independent DRC settings for different playback scenarios:
+    - `--ddp-drc`: DDP-compatible DRC settings
+    - `--flat-panel-drc`: Flat panel TV speaker optimization
+    - `--home-theatre-drc`: Home theater system optimization
+    - `--portable-headphones-drc`: Portable device and headphone optimization
+    - `--portable-speakers-drc`: Small speaker optimization
+  - Automatic TrueHD Atmos metadata preservation in immersive stereo output
+  - Requires minimum 6-channel (5.1) input or higher
+  - Enhanced metering with full 1770-4 loudness standard support
 
 ### Changed
 

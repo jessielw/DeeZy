@@ -1,14 +1,15 @@
 # DeeZy
 
-A powerful, portable audio encoding tool built around the Dolby Encoding Engine (DEE) with support for Dolby Digital (DD), Dolby Digital Plus (DDP), DDP BluRay, and Dolby Atmos encoding.
+A powerful, portable audio encoding tool built around the Dolby Encoding Engine (DEE) with support for Dolby Digital (DD), Dolby Digital Plus (DDP), DDP BluRay, Dolby Atmos, and Dolby AC-4 encoding.
 
 ## ✨ Key Features
 
-- **🎵 Multiple Audio Formats**: Support for Dolby Digital (DD), Dolby Digital Plus (DDP), DDP BluRay, and Dolby Atmos
+- **🎵 Multiple Audio Formats**: Support for Dolby Digital (DD), Dolby Digital Plus (DDP), DDP BluRay, Dolby Atmos, and Dolby AC-4
 - **🔧 Portable**: No installation required - just download and run
 - **⚙️ Smart Configuration**: TOML-based config system with customizable default bitrates and presets
 - **🎛️ Flexible Encoding**: Automatic channel detection, smart bitrate defaults, and advanced audio processing
 - **🌟 Atmos Support**: Full support for streaming and BluRay Atmos encoding
+- **🆕 AC-4 Support**: Next-generation Dolby AC-4 codec with advanced features and device optimization
 - **📁 Batch Processing**: Process multiple files or use glob patterns for bulk operations
 - **🎚️ Advanced Controls**: Dynamic range compression, stereo downmix options, and loudness normalization
 - **⚡ Smart Dependencies**: Auto-detection of tools with fallback to portable structure
@@ -237,6 +238,9 @@ deezy encode ddp input.mkv
 # Encode to Dolby Atmos
 deezy encode atmos --atmos-mode streaming input.mkv
 
+# Encode to Dolby AC-4
+deezy encode ac4 input.mkv
+
 # Use a predefined preset
 deezy encode preset --name streaming_ddp input.mkv
 
@@ -293,6 +297,7 @@ deezy config generate
 | `encode ddp`        | Dolby Digital Plus encoding                  |
 | `encode ddp-bluray` | Dolby Digital Plus BluRay encoding           |
 | `encode atmos`      | Dolby Atmos encoding                         |
+| `encode ac4`        | Dolby AC-4 encoding                          |
 | `encode preset`     | Preset-based encoding (format auto-detected) |
 | `find`              | File discovery with glob patterns            |
 | `info`              | Audio stream analysis and metadata display   |
@@ -328,7 +333,7 @@ deezy encode dd --output "output.ac3" --keep-temp input.mkv
 
 **Advanced DD Options:**
 
-- `--track-index`: Select audio track (default: 0)
+- `--track-index`: Track selection with FFmpeg-style notation (see Track Selection section below)
 - `--delay`: Audio delay adjustment (--delay=-10ms or --delay=10s)
 - `--custom-dialnorm`: Custom dialnorm value (0 to disable)
 - `--metering-mode`: Loudness metering (1770_1, 1770_2, 1770_3, leqa)
@@ -390,7 +395,141 @@ deezy encode atmos --atmos-mode bluray --bitrate 768 input.mkv
 - `--thd-warp-mode`: Warp mode for TrueHD processing (`normal`)
 - `--no-bed-conform`: Disable bed conformance
 
+### Dolby AC-4 Encoding
+
+Next-generation audio codec with advanced features and flexibility.
+
+```bash
+# Basic AC-4 encoding with smart defaults
+deezy encode ac4 input.mkv
+
+# AC-4 encoding with custom profile
+deezy encode ac4 --encoding-profile ims_music --bitrate 512 input.mkv
+
+# AC-4 with legacy presentation for backward compatibility
+deezy encode ac4 --ims-legacy-presentation --bitrate 448 input.mkv
+```
+
+**AC-4 Features:**
+
+- **🎼 Advanced Profiles**: Support for IMS and IMS Music encoding profiles
+- **🔧 Flexible DRC**: Multiple DRC settings for different playback scenarios
+- **📱 Device Optimization**: Separate DRC for portable devices, headphones, and home theater
+- **🔄 Legacy Compatibility**: Optional backward compatibility presentation
+- **🎚️ Enhanced Metering**: Full support for all loudness metering standards including 1770-4
+
+**AC-4 Input Requirements & Atmos Support:**
+
+AC-4 encoding requires specific input characteristics for optimal results:
+
+- **📋 Minimum Channels**: Input must be 6 channels (5.1) or higher
+- **🎵 Atmos Metadata Preservation**: TrueHD Atmos sources automatically retain immersive audio objects in the AC-4 output
+- **🔄 Non-Atmos Sources**: Standard multichannel audio (non-TrueHD Atmos) will be encoded without object metadata
+- **⚡ Automatic Detection**: DeeZy automatically detects TrueHD Atmos sources and preserves spatial audio information
+
+```bash
+# TrueHD Atmos input → AC-4 with immersive stereo + object metadata
+deezy encode ac4 atmos_truehd_source.mkv
+
+# Standard 5.1 input → AC-4 without object metadata
+deezy encode ac4 standard_51_source.mkv
+
+# Stereo input → Will fail (minimum 6 channels required)
+deezy encode ac4 stereo_source.mkv  # Error: insufficient channels
+```
+
+**AC-4 Basic Options:**
+
+- `--encoding-profile`: Encoding profile (`ims`, `ims_music`) - use `ims_music` for music content
+- `--ims-legacy-presentation`: Add backward compatibility presentation
+- `--bitrate`: Bitrate in Kbps (uses smart defaults if not specified)
+
+**AC-4 Advanced DRC Options:**
+
+AC-4 supports multiple independent DRC settings for different playback scenarios:
+
+- `--ddp-drc`: DDP-compatible DRC settings
+- `--flat-panel-drc`: Optimized for flat panel TV speakers
+- `--home-theatre-drc`: Home theater system optimization
+- `--portable-headphones-drc`: Portable device and headphone optimization
+- `--portable-speakers-drc`: Small speaker optimization
+
+Each DRC option accepts the full range of dynamic range settings:
+`none`, `film_standard`, `film_light`, `music_standard`, `music_light`, `speech`
+
+```bash
+# AC-4 with multiple DRC profiles for different playback scenarios
+deezy encode ac4 \
+  --ddp-drc film_light \
+  --home-theatre-drc music_standard \
+  --portable-headphones-drc speech \
+  input.mkv
+```
+
 Use `deezy encode --help` or `deezy encode [format] --help` to see all available options for each encoding format.
+
+## 🎯 Track Selection
+
+DeeZy supports flexible track selection using FFmpeg-style notation for precise control over which audio track to encode.
+
+### Track Selection Syntax
+
+| Format | Description                      | Example             | Use Case                                |
+| ------ | -------------------------------- | ------------------- | --------------------------------------- |
+| `N`    | Audio track N (default behavior) | `--track-index 1`   | Select second audio track               |
+| `a:N`  | Audio track N (explicit)         | `--track-index a:1` | Same as above, but explicit             |
+| `s:N`  | Stream index N (any track type)  | `--track-index s:3` | Select fourth stream regardless of type |
+
+### How Track Selection Works
+
+**Audio Track Index (`N` or `a:N`):**
+
+- Uses PyMediaInfo's audio track collection
+- `0` = First audio track, `1` = Second audio track, etc.
+- This is the traditional behavior that matches audio track order
+
+**Stream Index (`s:N`):**
+
+- Uses PyMediaInfo's general track collection (skips container metadata)
+- `s:0` = First stream (usually video), `s:1` = Second stream (usually first audio), etc.
+- Matches FFmpeg's `0:N` stream mapping exactly
+
+### Examples
+
+```bash
+# Traditional audio track selection (current behavior)
+deezy encode ddp --track-index 0 input.mkv    # First audio track
+deezy encode ddp --track-index 1 input.mkv    # Second audio track
+deezy encode ddp --track-index a:1 input.mkv  # Same as above, explicit
+
+# Stream-based selection (new capability)
+deezy encode ddp --track-index s:2 input.mkv  # Third stream (might be second audio)
+deezy encode ddp --track-index s:4 input.mkv  # Fifth stream
+
+# When to use stream index:
+# - Complex files with multiple video tracks
+# - When you need to match FFmpeg's stream numbering exactly
+# - Files with mixed track ordering (video/audio/subtitle interspersed)
+```
+
+### Understanding Your Media File
+
+Use the `info` command to understand your file's track structure:
+
+```bash
+deezy info input.mkv
+```
+
+The output shows:
+
+- **Track 0, Track 1, etc.** - These correspond to audio track indices (`--track-index N` or `--track-index a:N`)
+- **Stream order** - Use tools like `ffprobe` or MediaInfo to see overall stream structure for `--track-index s:N`
+
+### Compatibility Notes
+
+- **Default behavior unchanged**: `--track-index 2` still selects the third audio track as before
+- **Audio encoding only**: Stream selection (`s:N`) is validated to ensure it points to an audio stream
+- **Error handling**: Clear error messages if you select a non-audio stream for encoding
 
 ## 🔍 File Management & Analysis
 
@@ -425,7 +564,7 @@ deezy info *.mkv
 
 Use `deezy info --help` for additional options.
 
-The `Track ... : 0` corresponds to the `-t / --track-index` argument when selecting your track to encode.
+The `Track 0`, `Track 1`, etc. shown in the output correspond to audio track indices used with `--track-index`. See the [Track Selection](#-track-selection) section for detailed information about track selection options.
 
 ### Configuration Management
 
@@ -568,18 +707,19 @@ deezy encode preset --name streaming_ddp "season01/**/*.mkv"
 
 ### Bitrate Guidelines
 
-| Format     | Layout    | Default Bitrate | Accepted Range | Use Case              |
-| ---------- | --------- | --------------- | -------------- | --------------------- |
-| DD         | MONO      | 192 kbps        | 96-640 kbps    | Mono content          |
-| DD         | Stereo    | 224 kbps        | 96-640 kbps    | Stereo content        |
-| DD         | 5.1       | 448 kbps        | 224-640 kbps   | Legacy compatibility  |
-| DDP        | MONO      | 64 kbps         | 32-1024 kbps   | Mono streaming        |
-| DDP        | Stereo    | 128 kbps        | 96-1024 kbps   | Stereo streaming      |
-| DDP        | 5.1       | 192 kbps        | 192-1024 kbps  | Streaming services    |
-| DDP        | 7.1       | 384 kbps        | 384-1024 kbps  | High-quality releases |
-| DDP BluRay | 7.1       | 384 kbps        | 768-1664 kbps  | BluRay mastering      |
-| Atmos      | Streaming | 448 kbps        | 384-1024 kbps  | Streaming Atmos       |
-| Atmos      | BluRay    | 1280 kbps       | 1152-1664 kbps | BluRay Atmos          |
+| Format     | Layout           | Default Bitrate | Accepted Range | Use Case               |
+| ---------- | ---------------- | --------------- | -------------- | ---------------------- |
+| DD         | MONO             | 192 kbps        | 96-640 kbps    | Mono content           |
+| DD         | Stereo           | 224 kbps        | 96-640 kbps    | Stereo content         |
+| DD         | 5.1              | 448 kbps        | 224-640 kbps   | Legacy compatibility   |
+| DDP        | MONO             | 64 kbps         | 32-1024 kbps   | Mono streaming         |
+| DDP        | Stereo           | 128 kbps        | 96-1024 kbps   | Stereo streaming       |
+| DDP        | 5.1              | 192 kbps        | 192-1024 kbps  | Streaming services     |
+| DDP        | 7.1              | 384 kbps        | 384-1024 kbps  | High-quality releases  |
+| DDP BluRay | 7.1              | 384 kbps        | 768-1664 kbps  | BluRay mastering       |
+| Atmos      | Streaming        | 448 kbps        | 384-1024 kbps  | Streaming Atmos        |
+| Atmos      | BluRay           | 1280 kbps       | 1152-1664 kbps | BluRay Atmos           |
+| AC-4       | Immersive stereo | 256 kbps        | 64-320 kbps    | High-quality streaming |
 
 _Note: All defaults are configurable via the configuration system_
 
