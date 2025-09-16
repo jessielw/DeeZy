@@ -124,6 +124,9 @@ jobs:
         run: ls -R
 
       - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || github.event.inputs.version }}
         run: |
           set -e  # Exit on any error
 
@@ -131,42 +134,42 @@ jobs:
           ls -lh ./*/*.zip
 
           echo "=== Uploading Linux ZIP ==="
-          gh release upload ${{ github.event.release.tag_name }} \
+          gh release upload "$RELEASE_TAG" \
             ./deezy-linux-x64/deezy-linux-x64.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Linux ZIP uploaded successfully"
 
           echo "=== Uploading Linux Bundle ZIP ==="
-          gh release upload ${{ github.event.release.tag_name }} \
+          gh release upload "$RELEASE_TAG" \
             ./bundle-deezy-linux-x64/bundle-deezy-linux-x64.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Linux Bundle ZIP uploaded successfully"
 
           echo "=== Uploading macOS ZIP ==="
-          gh release upload ${{ github.event.release.tag_name }} \
+          gh release upload "$RELEASE_TAG" \
             ./deezy-macos-x64/deezy-macos-x64.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ macOS ZIP uploaded successfully"
 
           echo "=== Uploading macOS Bundle ZIP ==="
-          gh release upload ${{ github.event.release.tag_name }} \
+          gh release upload "$RELEASE_TAG" \
             ./bundle-deezy-macos-x64/bundle-deezy-macos-x64.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ macOS Bundle ZIP uploaded successfully"
 
           echo "=== Uploading Windows ZIP ==="
-          gh release upload ${{ github.event.release.tag_name }} \
+          gh release upload "$RELEASE_TAG" \
             ./deezy-windows-x64.exe/deezy-windows-x64.exe.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Windows ZIP uploaded successfully"
 
           echo "=== Uploading Windows Bundle ZIP ==="
-          gh release upload ${{ github.event.release.tag_name }} \
+          gh release upload "$RELEASE_TAG" \
             ./bundle-deezy-windows-x64.exe/bundle-deezy-windows-x64.exe.zip \
             --repo ${{ github.repository }} \
             --clobber
@@ -175,6 +178,4 @@ jobs:
           echo "🎉 All ZIP archives uploaded successfully!"
 
           echo "=== Final Release Assets ==="
-          gh release view ${{ github.event.release.tag_name }} --repo ${{ github.repository }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh release view "$RELEASE_TAG" --repo ${{ github.repository }}
