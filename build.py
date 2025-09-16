@@ -17,8 +17,8 @@ def build_app():
     # change directory so we output all of pyinstallers files in it's own folder
     os.chdir(pyinstaller_folder)
 
-    # run pyinstaller command
-    build_job = run(
+    # run pyinstaller onefile build
+    build_job_onefile = run(
         [
             "uv",
             "run",
@@ -31,22 +31,44 @@ def build_app():
         ]
     )
 
-    # get exe string based on os
-    exe_str = get_executable_extension()
+    # run pyinstaller onedir (bundle) build
+    build_job_onedir = run(
+        [
+            "uv",
+            "run",
+            "pyinstaller",
+            "-n",
+            "deezy",
+            "--distpath",
+            "dist/bundled_mode",
+            "--contents-directory",
+            "bundle",
+            f"--icon={str(icon_path)}",
+            str(deezy_script),
+        ]
+    )
 
-    # ensure output of exe
-    success = "Did not complete successfully"
-    if (
-        Path(Path("dist") / f"deezy{exe_str}").is_file()
-        and str(build_job.returncode) == "0"
-    ):
-        success = f"\nSuccess!\nPath to exe: {str(Path.cwd() / (Path(Path('dist') / f'deezy{exe_str}')))}"
+    exe_str = get_executable_extension()
+    success_msgs = []
+
+    # Check onefile build
+    onefile_path = Path("dist") / f"deezy{exe_str}"
+    if onefile_path.is_file() and str(build_job_onefile.returncode) == "0":
+        success_msgs.append(f"Onefile build success! Path: {Path.cwd() / onefile_path}")
+    else:
+        success_msgs.append("Onefile build did not complete successfully")
+
+    # Check onedir (bundle) build
+    onedir_path = Path("bundle") / f"deezy{exe_str}"
+    if onedir_path.is_file() and str(build_job_onedir.returncode) == "0":
+        success_msgs.append(f"Bundle build success! Path: {Path.cwd() / onedir_path}")
+    else:
+        success_msgs.append("Bundle build did not complete successfully")
 
     # change directory back to original directory
     os.chdir(deezy_script.parent)
 
-    # return success message
-    return success
+    return "\n".join(success_msgs)
 
 
 if __name__ == "__main__":
