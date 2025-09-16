@@ -137,6 +137,13 @@ jobs:
             --clobber
           echo "✅ Linux ZIP uploaded successfully"
 
+          echo "=== Uploading Linux Bundle ZIP ==="
+          gh release upload ${{ github.event.release.tag_name }} \
+            ./bundle-deezy-linux-x64/bundle-deezy-linux-x64.zip \
+            --repo ${{ github.repository }} \
+            --clobber
+          echo "✅ Linux Bundle ZIP uploaded successfully"
+
           echo "=== Uploading macOS ZIP ==="
           gh release upload ${{ github.event.release.tag_name }} \
             ./deezy-macos-x64/deezy-macos-x64.zip \
@@ -144,12 +151,26 @@ jobs:
             --clobber
           echo "✅ macOS ZIP uploaded successfully"
 
+          echo "=== Uploading macOS Bundle ZIP ==="
+          gh release upload ${{ github.event.release.tag_name }} \
+            ./bundle-deezy-macos-x64/bundle-deezy-macos-x64.zip \
+            --repo ${{ github.repository }} \
+            --clobber
+          echo "✅ macOS Bundle ZIP uploaded successfully"
+
           echo "=== Uploading Windows ZIP ==="
           gh release upload ${{ github.event.release.tag_name }} \
             ./deezy-windows-x64.exe/deezy-windows-x64.exe.zip \
             --repo ${{ github.repository }} \
             --clobber
           echo "✅ Windows ZIP uploaded successfully"
+
+          echo "=== Uploading Windows Bundle ZIP ==="
+          gh release upload ${{ github.event.release.tag_name }} \
+            ./bundle-deezy-windows-x64.exe/bundle-deezy-windows-x64.exe.zip \
+            --repo ${{ github.repository }} \
+            --clobber
+          echo "✅ Windows Bundle ZIP uploaded successfully"
 
           echo "🎉 All ZIP archives uploaded successfully!"
 
