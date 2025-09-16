@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 import sys
+import traceback
 
 from cli.payload_factory import PayloadBuilder
 from cli.utils import (
@@ -889,6 +890,7 @@ def execute_encode_command(
             logger.info(f"Job successful! Output file path:\n{result}")
 
     except Exception as e:
+        logger.debug(traceback.format_exc())
         exit_application(str(e), EXIT_FAIL)
 
 
