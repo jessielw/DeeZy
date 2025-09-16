@@ -81,6 +81,8 @@ jobs:
         run: |
           cd pyinstaller_build/dist/
           Compress-Archive -Path deezy.exe -DestinationPath ../../${{ matrix.artifact_name }}.zip -CompressionLevel Optimal
+          cd ../..
+          Compress-Archive -Path pyinstaller_build/bundled_mode/deezy/* -DestinationPath bundle-${{ matrix.artifact_name }}.zip -CompressionLevel Optimal
 
       - name: Create ZIP archive (Unix)
         if: matrix.platform != 'windows'
@@ -88,12 +90,22 @@ jobs:
         run: |
           cd pyinstaller_build/dist/
           zip -9 ../../${{ matrix.artifact_name }}.zip deezy
+          cd ../..
+          cd pyinstaller_build/bundled_mode/deezy/
+          zip -r ../../../bundle-${{ matrix.artifact_name }}.zip .
 
-      - name: Upload build artifact
+      - name: Upload build artifact (onefile)
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_name }}.zip
+          retention-days: 7
+
+      - name: Upload build artifact (bundle)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.artifact_name }}
+          path: bundle-${{ matrix.artifact_name }}.zip
           retention-days: 7
 
   release:
