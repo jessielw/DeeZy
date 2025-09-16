@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Progress bars will now be the same width.
 - Progress bar time elapsed has been replaced by a spinner.
+- Added a new example preset `ac4_stereo` to the default config.
 
 ### Fixed
 

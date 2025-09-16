@@ -80,7 +80,7 @@ streaming_ddp = "encode ddp --channels surround --bitrate 448"
 bluray_dd = "encode dd --channels surround --bitrate 640"
 auto_stereo_ddp = "encode ddp --channels stereo"
 streaming_atmos = "encode atmos --atmos-mode streaming"
-
+ac4_stereo = "encode ac4 --bitrate 256"
 """
 # fmt: on
 
