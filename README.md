@@ -20,6 +20,11 @@ A powerful, portable audio encoding tool built around the Dolby Encoding Engine 
 
 DeeZy is completely portable - no installation needed! Just download the binary for your platform.
 
+> As of **v1.2.5** you can choose between **bundled** or **standalone**.
+>
+> - Bundled: DeeZy will have a folder **bundle** beside the executable. This increases execution times of the executable substantially and prevents the executable from unpacking on every launch. If DeeZy is being put on a system PATH or included in another program this is the ideal choice.
+> - Standalone: This is just a **single** item, the DeeZy executable. This will unpack as needed when executed.
+
 ### Option 1: System PATH (Recommended)
 
 Add FFMPEG, DEE (Dolby Encoding Engine), and optionally TrueHDD to your system PATH, then use DeeZy anywhere.
