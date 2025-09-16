@@ -106,8 +106,8 @@ jobs:
           cd pyinstaller_build/dist/
           zip -9 ../../test-build-${{ matrix.platform }}.zip deezy
           cd ../..
-          cd pyinstaller_build/bundled_mode/
-          zip -r ../../test-bundle-${{ matrix.platform }}.zip bundled_deezy
+          cd pyinstaller_build/bundled_mode/deezy/
+          zip -r ../../../test-bundle-${{ matrix.platform }}.zip .
 
       - name: Upload test artifact (onefile)
         if: steps.should_build.outputs.should_build == 'true'
