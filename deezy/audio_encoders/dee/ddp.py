@@ -13,6 +13,7 @@ from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.mediainfo import MediainfoParser
+from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
 
 
@@ -251,7 +252,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         self,
         ffmpeg_path: Path,
         file_input: Path,
-        track_index: int,
+        track_index: TrackIndex,
         sample_rate: int | None,
         channels: DolbyDigitalPlusChannels | DolbyDigitalPlusBlurayChannels,
         ffmpeg_down_mix: bool | int,

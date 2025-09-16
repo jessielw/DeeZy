@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
 from deezy.enums.atmos import AtmosMode, WarpMode
-from deezy.payloads.shared import BaseArgsPayload
+from deezy.payloads.shared import DownmixOnlyPayload
 
 
 @dataclass(slots=True)
-class AtmosPayload(BaseArgsPayload):
+class AtmosPayload(DownmixOnlyPayload):
     atmos_mode: AtmosMode
-    thd_wrap_mode: WarpMode
+    thd_warp_mode: WarpMode
     no_bed_conform: bool

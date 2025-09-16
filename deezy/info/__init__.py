@@ -4,6 +4,8 @@ import shutil
 
 from pymediainfo import MediaInfo
 
+from deezy.track_info.mediainfo import MediainfoParser
+
 
 @dataclass(slots=True)
 class AudioStreams:
@@ -59,7 +61,8 @@ def parse_audio_streams(file_input: Path) -> AudioStreams:
 
             # audio channel(s)
             audio_channel_s = ""
-            if track.channel_s:
+            t_channels = MediainfoParser.get_channels(track)
+            if t_channels is not None:
                 channels_dict = {
                     1: "1.0",
                     2: "2.0",
@@ -69,7 +72,7 @@ def parse_audio_streams(file_input: Path) -> AudioStreams:
                     6: "5.1",
                     7: "7.1",
                 }
-                show_channels = channels_dict.get(track.channel_s, track.channel_s)
+                show_channels = channels_dict.get(t_channels, t_channels)
                 audio_channel_s = f"{calculate_space('Channels')}: {show_channels} - {track.channel_layout}\n"
 
             # audio bit-rate-mode

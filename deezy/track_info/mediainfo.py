@@ -1,16 +1,18 @@
 from pathlib import Path
-from re import search
+import re
 
 from pymediainfo import MediaInfo, Track
 
+from deezy.enums.shared import TrackType
 from deezy.exceptions import MediaInfoError
 from deezy.track_info.audio_track_info import AudioTrackInfo
+from deezy.track_info.track_index import TrackIndex
 
 
 class MediainfoParser:
     __slots__ = ("file_input", "track_index", "mi_obj", "mi_audio_obj")
 
-    def __init__(self, file_input: Path, track_index: int) -> None:
+    def __init__(self, file_input: Path, track_index: TrackIndex) -> None:
         # parse file with mediainfo
         self.file_input = file_input
         self.track_index = track_index
@@ -32,19 +34,19 @@ class MediainfoParser:
             duration=self._get_duration(),
             sample_rate=self.mi_audio_obj.sampling_rate,
             bit_depth=self.mi_audio_obj.bit_depth,
-            channels=self._get_channels(),
+            channels=self.get_channels(self.mi_audio_obj),
             thd_atmos=self._is_thd_atmos(),
         )
 
         # return object
         return audio_info
 
-    def _verify_audio_track(self, track_index: int) -> Track:
+    def _verify_audio_track(self, track_index: TrackIndex) -> Track:
         """
         Checks that the specified track index in the given MediaInfo object corresponds to an audio track.
 
         Args:
-            track_index: An integer representing the index of the track to be verified.
+            track_index: TrackIndex.
 
         Returns:
             Track: MediaInfo Track object.
@@ -53,13 +55,18 @@ class MediainfoParser:
             MediaInfoError: If the specified track index does not correspond to an audio track.
         """
         try:
-            track_info = self.mi_obj.audio_tracks[track_index].track_type
-            if track_info != "Audio":
+            if track_index.track_type is TrackType.STREAM:
+                track_info = self.get_track_by_stream_index(
+                    self.mi_obj, track_index.index
+                )
+            else:
+                track_info = self.mi_obj.audio_tracks[track_index.index]
+            if track_info.track_type != "Audio":
                 raise MediaInfoError(
                     f"Selected track #{track_index} ({track_info}) is not an audio track."
                 )
             else:
-                return self.mi_obj.audio_tracks[track_index]
+                return track_info
         except IndexError:
             raise MediaInfoError(f"Selected track #{track_index} does not exist.")
 
@@ -105,31 +112,6 @@ class MediainfoParser:
         """
         duration = self.mi_audio_obj.duration
         return float(duration) if duration else None
-
-    def _get_channels(self) -> int:
-        """
-        Get the number of audio channels for the specified track.
-
-        The added complexity for 'check_other' is to ensure we get a report
-        of the highest potential channel count.
-
-        Returns:
-            The number of audio channels as an integer.
-        """
-        base_channels = self.mi_audio_obj.channel_s
-        check_other = search(r"\d+", str(self.mi_audio_obj.other_channel_s[0]))
-        check_other_2 = str(self.mi_audio_obj.channel_s__original)
-
-        # create a list of values to find the maximum
-        values = [int(base_channels)]
-
-        if check_other:
-            values.append(int(check_other.group()))
-
-        if check_other_2.isdigit():
-            values.append(int(check_other_2))
-
-        return max(values)
 
     def _is_thd_atmos(self) -> bool:
         """Check if track is a THD Atmos file."""
@@ -228,3 +210,39 @@ class MediainfoParser:
             return other_tracks == 0
         except (IndexError, AttributeError, ValueError):
             return False
+
+    @staticmethod
+    def get_channels(mi_audio_obj: Track) -> int:
+        """
+        Get the number of audio channels for the specified track.
+
+        The added complexity for 'check_other' is to ensure we get a report
+        of the highest potential channel count.
+
+        Returns:
+            The number of audio channels as an integer.
+        """
+        if isinstance(mi_audio_obj.channel_s, int):
+            base_channels = mi_audio_obj.channel_s
+        else:
+            base_channels = max(
+                int(x) for x in re.findall(r"\d+", str(mi_audio_obj.channel_s)) if x
+            )
+        check_other = re.search(r"\d+", str(mi_audio_obj.other_channel_s[0]))
+        check_other_2 = str(mi_audio_obj.channel_s__original)
+
+        # create a list of values to find the maximum
+        values = [base_channels]
+
+        if check_other:
+            values.append(int(check_other.group()))
+
+        if check_other_2.isdigit():
+            values.append(int(check_other_2))
+
+        return max(values)
+
+    @staticmethod
+    def get_track_by_stream_index(mi: MediaInfo, idx: int) -> Track:
+        """Get track by FFMPEG style stream index (+1 to skip general track)."""
+        return mi.tracks[idx + 1]

@@ -4,6 +4,8 @@ import subprocess
 import threading
 
 from deezy.enums.atmos import WarpMode
+from deezy.enums.shared import TrackType
+from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
 from deezy.utils.progress import ProgressHandler, create_ffmpeg_parser
 
@@ -13,7 +15,7 @@ BASE_ATMOS_FILE_NAME = "atmos_meta"
 def decode_truehd_to_atmos(
     output_dir: Path,
     file_input: Path,
-    track_index: int,
+    track_index: TrackIndex,
     ffmpeg_path: Path,
     truehdd_path: Path,
     no_bed_conform: bool,
@@ -43,7 +45,9 @@ def decode_truehd_to_atmos(
         "-i",
         str(file_input),
         "-map",
-        f"0:a:{track_index}",
+        f"0:a:{track_index.index}"
+        if track_index.track_type is TrackType.AUDIO
+        else f"0:{track_index.index}",
         "-c",
         "copy",
         "-f",
