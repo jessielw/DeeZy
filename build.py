@@ -40,7 +40,7 @@ def build_app():
             "-n",
             "deezy",
             "--distpath",
-            "dist/bundled_mode",
+            "bundled_mode",
             "--contents-directory",
             "bundle",
             f"--icon={str(icon_path)}",
