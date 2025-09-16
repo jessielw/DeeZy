@@ -68,11 +68,22 @@ jobs:
         if: steps.should_build.outputs.should_build == 'true'
         run: uv run python build.py
 
-      - name: Test executable
+      - name: Test executable Onefile
         if: steps.should_build.outputs.should_build == 'true'
         shell: bash
         run: |
           cd pyinstaller_build/dist/
+          if [ "${{ matrix.platform }}" == "windows" ]; then
+            ./deezy.exe --help
+          else
+            ./deezy --help
+          fi
+
+      - name: Test executable Onedir
+        if: steps.should_build.outputs.should_build == 'true'
+        shell: bash
+        run: |
+          cd pyinstaller_build/bundled_mode/deezy/
           if [ "${{ matrix.platform }}" == "windows" ]; then
             ./deezy.exe --help
           else
