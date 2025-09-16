@@ -5,7 +5,9 @@ from deezy.enums.shared import DeeDRC, MeteringMode, StereoDownmix
 
 
 @dataclass(slots=True)
-class BaseArgsPayload:
+class CorePayload:
+    """Core fields needed by all encoding formats."""
+
     no_progress_bars: bool
     ffmpeg_path: Path
     truehdd_path: Path | None
@@ -17,16 +19,45 @@ class BaseArgsPayload:
     delay: str | None
     keep_temp: bool
     file_output: Path | None
-    stereo_mix: StereoDownmix
+
+
+@dataclass(slots=True)
+class LoudnessPayload(CorePayload):
+    """Core + loudness/metering fields."""
+
     metering_mode: MeteringMode
-    drc_line_mode: DeeDRC
-    drc_rf_mode: DeeDRC
     dialogue_intelligence: bool
     speech_threshold: int
-    custom_dialnorm: str  # str[int] (-1 - -31) but "0" disables it
+
+
+@dataclass(slots=True)
+class DolbyPayload(LoudnessPayload):
+    """Core + loudness + Dolby-specific fields (DD/DDP/Atmos)."""
+
+    drc_line_mode: DeeDRC
+    drc_rf_mode: DeeDRC
+    custom_dialnorm: str
+
+
+@dataclass(slots=True)
+class StereoMixPayload(DolbyPayload):
+    """Dolby + stereo downmix fields (DD/DDP only)."""
+
+    stereo_mix: StereoDownmix
     lfe_lowpass_filter: bool
     surround_90_degree_phase_shift: bool
     surround_3db_attenuation: bool
+    loro_center_mix_level: str
+    loro_surround_mix_level: str
+    ltrt_center_mix_level: str
+    ltrt_surround_mix_level: str
+    preferred_downmix_mode: StereoDownmix
+
+
+@dataclass(slots=True)
+class DownmixOnlyPayload(DolbyPayload):
+    """Dolby + downmix metadata only (Atmos)."""
+
     loro_center_mix_level: str
     loro_surround_mix_level: str
     ltrt_center_mix_level: str

@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import WarpMode
 from deezy.enums.shared import DeeDRC
-from deezy.payloads.shared import BaseArgsPayload
+from deezy.payloads.shared import LoudnessPayload
 
 
 @dataclass(slots=True)
-class Ac4Payload(BaseArgsPayload):
+class Ac4Payload(LoudnessPayload):
     thd_warp_mode: WarpMode
     no_bed_conform: bool
     ims_legacy_presentation: bool

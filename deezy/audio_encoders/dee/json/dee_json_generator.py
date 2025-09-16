@@ -236,8 +236,5 @@ class DeeJSONGenerator:
 
     @staticmethod
     def _create_dee_file_path(path: Path) -> str:
-        """DEE expects file paths double quoted and with backslashes."""
-        str_path = str(path)
-        # convert to windows style backslashes
-        str_path = str_path.replace("/", "\\")
-        return f'"{str_path}"'
+        """DEE expects file paths quoted."""
+        return f'"{path}"' if isinstance(path, Path) else f'"{Path(path)}"'
