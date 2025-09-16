@@ -86,7 +86,7 @@ jobs:
           cd pyinstaller_build/dist/
           Compress-Archive -Path deezy.exe -DestinationPath ../../test-build-${{ matrix.platform }}.zip -CompressionLevel Optimal
           cd ../..
-          Compress-Archive -Path pyinstaller_build/dist/bundled_mode/deezy/* -DestinationPath test-bundle-${{ matrix.platform }}.zip -CompressionLevel Optimal
+          Compress-Archive -Path pyinstaller_build/bundled_mode/deezy/* -DestinationPath test-bundle-${{ matrix.platform }}.zip -CompressionLevel Optimal
 
       - name: Create test ZIP archive (Unix)
         if: steps.should_build.outputs.should_build == 'true' && matrix.platform != 'windows'
@@ -95,7 +95,7 @@ jobs:
           cd pyinstaller_build/dist/
           zip -9 ../../test-build-${{ matrix.platform }}.zip deezy
           cd ../..
-          cd pyinstaller_build/bundle/
+          cd pyinstaller_build/bundled_mode/
           zip -r ../../test-bundle-${{ matrix.platform }}.zip bundled_deezy
 
       - name: Upload test artifact (onefile)
