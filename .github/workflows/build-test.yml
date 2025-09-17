@@ -56,7 +56,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.should_build.outputs.should_build == 'true'
-        run: uv sync --group dev --group build
+        run: uv sync --group dev
 
       - name: Run tests
         if: steps.should_build.outputs.should_build == 'true'
