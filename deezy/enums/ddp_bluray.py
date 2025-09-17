@@ -17,7 +17,7 @@ class DolbyDigitalPlusBlurayChannels(Enum):
 
     def get_bitrate_obj(self) -> ChannelBitrates:
         return ChannelBitrates(
-            default=384,
+            default=1280,
             choices=(768, 1024, 1280, 1536, 1664),
         )
 
