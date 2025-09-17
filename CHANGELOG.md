@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- 
+- Arg `--no-bed-conform` is changed to `--bed-conform` as it now defaults to **Off**.
 
 ### Fixed
 

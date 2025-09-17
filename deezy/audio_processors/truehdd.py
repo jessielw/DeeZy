@@ -18,7 +18,7 @@ def decode_truehd_to_atmos(
     track_index: TrackIndex,
     ffmpeg_path: Path,
     truehdd_path: Path,
-    no_bed_conform: bool,
+    bed_conform: bool,
     warp_mode: WarpMode,
     duration: float | None = None,
     step_info: dict | None = None,
@@ -77,7 +77,7 @@ def decode_truehd_to_atmos(
         "-",
     ]
     # remove bed conform if desired
-    if no_bed_conform:
+    if not bed_conform:
         truehdd_cmd.remove("--bed-conform")
 
     ffmpeg_proc = subprocess.Popen(

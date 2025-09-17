@@ -8,4 +8,4 @@ from deezy.payloads.shared import DownmixOnlyPayload
 class AtmosPayload(DownmixOnlyPayload):
     atmos_mode: AtmosMode
     thd_warp_mode: WarpMode
-    no_bed_conform: bool
+    bed_conform: bool

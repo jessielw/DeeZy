@@ -174,7 +174,7 @@ class PayloadBuilder:
             {
                 "atmos_mode": cls.safe_get(args, "atmos_mode", AtmosMode.STREAMING),
                 "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", WarpMode.NORMAL),
-                "no_bed_conform": cls.safe_get(args, "no_bed_conform", True),
+                "bed_conform": cls.safe_get(args, "bed_conform", False),
             }
         )
 
@@ -202,7 +202,7 @@ class PayloadBuilder:
         payload_data.update(
             {
                 "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", WarpMode.NORMAL),
-                "no_bed_conform": cls.safe_get(args, "no_bed_conform", True),
+                "bed_conform": cls.safe_get(args, "bed_conform", False),
                 "ims_legacy_presentation": cls.safe_get(
                     args, "ims_legacy_presentation", False
                 ),

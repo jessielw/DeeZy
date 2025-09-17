@@ -330,9 +330,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Specify warp mode when not present in metadata (truehdd).",
     )
     truehdd_options_group.add_argument(
-        "--no-bed-conform",
-        action="store_false",
-        help="Disables bed conformance for Atmos content (truehd).",
+        "--bed-conform",
+        action="store_true",
+        help="Enables bed conformance for Atmos content (truehd).",
     )
 
     # AC4 basic options

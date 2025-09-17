@@ -123,7 +123,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 track_index=self.payload.track_index,
                 ffmpeg_path=self.payload.ffmpeg_path,
                 truehdd_path=self.payload.truehdd_path,
-                no_bed_conform=self.payload.no_bed_conform,
+                bed_conform=self.payload.bed_conform,
                 warp_mode=self.payload.thd_warp_mode,
                 duration=audio_track_info.duration,
                 step_info={"current": 1, "total": 3, "name": "truehdd"},
