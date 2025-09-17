@@ -7,10 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.6] - 2025-09-17
 
-### Added
-
-- 
-
 ### Changed
 
 - Arg `--no-bed-conform` is changed to `--bed-conform` as it now defaults to **Off**.

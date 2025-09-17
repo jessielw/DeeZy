@@ -102,7 +102,7 @@ toml = [
 
 [[package]]
 name = "deezy"
-version = "1.2.5"
+version = "1.2.6"
 source = { editable = "." }
 dependencies = [
     { name = "oslex2" },
@@ -113,12 +113,9 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-build = [
-    { name = "pyinstaller" },
-    { name = "pyinstaller-hooks-contrib" },
-]
 dev = [
     { name = "pyinstaller" },
+    { name = "pyinstaller-hooks-contrib" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -134,12 +131,9 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-build = [
-    { name = "pyinstaller", specifier = ">=6.9.0" },
-    { name = "pyinstaller-hooks-contrib", specifier = ">=2025.1" },
-]
 dev = [
     { name = "pyinstaller", specifier = ">=6.13.0" },
+    { name = "pyinstaller-hooks-contrib", specifier = ">=2025.1" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
