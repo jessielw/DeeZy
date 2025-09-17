@@ -2,6 +2,8 @@
 
 A powerful, portable audio encoding tool built around the Dolby Encoding Engine (DEE) with support for Dolby Digital (DD), Dolby Digital Plus (DDP), DDP BluRay, Dolby Atmos, and Dolby AC-4 encoding.
 
+[![Build and Release](https://github.com/jessielw/DeeZy/actions/workflows/release.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/release.yml) [![Tests](https://github.com/jessielw/DeeZy/actions/workflows/test.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/test.yml)
+
 ## ✨ Key Features
 
 - **🎵 Multiple Audio Formats**: Support for Dolby Digital (DD), Dolby Digital Plus (DDP), DDP BluRay, Dolby Atmos, and Dolby AC-4
@@ -40,7 +42,7 @@ deezy.exe (or deezy on Linux)
     │   └── ffmpeg.exe
     ├── dee/
     │   └── dee.exe
-    └── truehdd/         # Only needed for Atmos encoding
+    └── truehdd/         # Only needed for Atmos/AC-4 encoding
         └── truehdd.exe
 ```
 
@@ -124,6 +126,7 @@ bluray = 448      # Dolby Atmos Bluray mode
 streaming_ddp = "encode ddp --channels surround --bitrate 448"
 bluray_atmos = "encode atmos --atmos-mode bluray --bitrate 768"
 quick_stereo = "encode ddp --channels stereo --bitrate 192"
+ac4_stereo = "encode ac4 --bitrate 256"
 ```
 
 ### Configuration Location
@@ -398,7 +401,7 @@ deezy encode atmos --atmos-mode bluray --bitrate 768 input.mkv
 
 - `--atmos-mode`: `streaming` or `bluray`
 - `--thd-warp-mode`: Warp mode for TrueHD processing (`normal`)
-- `--no-bed-conform`: Disable bed conformance
+- `--bed-conform`: Enable bed conformance
 
 ### Dolby AC-4 Encoding
 
