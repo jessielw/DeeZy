@@ -118,6 +118,7 @@ build = [
     { name = "pyinstaller-hooks-contrib" },
 ]
 dev = [
+    { name = "pyinstaller" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -138,6 +139,7 @@ build = [
     { name = "pyinstaller-hooks-contrib", specifier = ">=2025.1" },
 ]
 dev = [
+    { name = "pyinstaller", specifier = ">=6.13.0" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },

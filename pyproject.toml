@@ -32,5 +32,10 @@ include = ["deezy*", "cli*"]
 testpaths = ["tests"]
 
 [dependency-groups]
-dev = ["ruff", "pytest", "pytest-cov"]
-build = ["pyinstaller-hooks-contrib>=2025.1", "pyinstaller>=6.9.0"]
+dev = [
+    "ruff",
+    "pytest",
+    "pytest-cov",
+    "pyinstaller>=6.13.0",
+    "pyinstaller-hooks-contrib>=2025.1",
+]
