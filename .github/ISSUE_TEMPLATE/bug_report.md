@@ -36,7 +36,7 @@ Add any other context about the problem here.
 `deezy --log-to-file --log-level debug ...`
 
 ```text
-   REPLACE WITH YOUR LOGS HERE
+   ONLY EDIT LOGS SECTION BY REPLACING THIS LINE OF TEXT HERE WITH YOUR LOGS
 ```
 
 </details>
