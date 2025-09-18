@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
 import re
 import shutil
 import tempfile
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
+from deezy.config.manager import get_config_manager
+from deezy.enums.codec_format import CodecFormat
 from deezy.enums.shared import DeeDelay, DeeFPS, TrackType
 from deezy.exceptions import PathTooLongError
 from deezy.payloads.shared import ChannelBitrates
@@ -37,6 +40,91 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         if delay.is_delay():
             logger.debug(f"Generated delay {delay.MODE}:{delay.DELAY}.")
         return delay
+
+    def get_config_based_bitrate(
+        self,
+        format_command: CodecFormat,
+        payload_bitrate: int | None,
+        payload_channels: Any,
+        audio_track_info: AudioTrackInfo,
+        bitrate_obj: ChannelBitrates,
+        auto_enum_value: Any,
+        channel_resolver: Callable[[int], Any],
+    ) -> int:
+        """
+        Helper method to get bitrate with intelligent config-based defaults.
+
+        Args:
+            format_command: CodecFormat enum for config lookup (e.g., CodecFormat.DD, CodecFormat.DDP)
+            payload_bitrate: User-provided bitrate (None if not provided)
+            payload_channels: Channel enum from payload
+            audio_track_info: Audio track information with source channel count
+            bitrate_obj: ChannelBitrates object for validation
+            auto_enum_value: The AUTO enum value for this codec
+            channel_resolver: Function that takes (source_channels) and returns resolved channel enum
+
+        Returns:
+            Validated bitrate to use
+        """
+        if payload_bitrate:
+            # user/preset provided a bitrate - validate it
+            if not bitrate_obj.is_valid_bitrate(payload_bitrate):
+                fixed_bitrate = bitrate_obj.get_closest_bitrate(payload_bitrate)
+                logger.warning(
+                    f"Bitrate {payload_bitrate} is invalid for this configuration. "
+                    f"Using the next closest allowed bitrate: {fixed_bitrate}."
+                )
+                return fixed_bitrate
+            else:
+                logger.debug(f"Using provided bitrate: {payload_bitrate}.")
+                return payload_bitrate
+        else:
+            # no bitrate provided - try config defaults first, then enum defaults
+            config_bitrate = None
+            target_channels = None
+
+            # try to get config-based default for the detected channels
+            try:
+                config_manager = get_config_manager()
+                if config_manager:
+                    # determine the actual target channels after AUTO resolution
+                    target_channels = payload_channels
+                    if (
+                        auto_enum_value is not None
+                        and payload_channels == auto_enum_value
+                    ):
+                        # resolve AUTO to actual channel layout based on source
+                        target_channels = channel_resolver(audio_track_info.channels)
+
+                    # get config default for the resolved channels
+                    config_bitrate = config_manager.get_default_bitrate(
+                        format_command, target_channels
+                    )
+            except Exception:
+                # if config lookup fails, continue to enum default
+                pass
+
+            # validate config bitrate if found
+            if config_bitrate is not None:
+                if bitrate_obj.is_valid_bitrate(config_bitrate):
+                    logger.debug(
+                        f"No supplied bitrate, using config default {config_bitrate} for {target_channels}."
+                    )
+                    return config_bitrate
+                else:
+                    # config bitrate is invalid, fix it
+                    fixed_config_bitrate = bitrate_obj.get_closest_bitrate(
+                        config_bitrate
+                    )
+                    logger.warning(
+                        f"Config bitrate {config_bitrate} is invalid for this configuration. "
+                        f"Using the next closest allowed bitrate: {fixed_config_bitrate}."
+                    )
+                    return fixed_config_bitrate
+
+            # fallback to enum default if config lookup failed
+            logger.debug(f"No supplied bitrate, defaulting to {bitrate_obj.default}.")
+            return bitrate_obj.default
 
     @staticmethod
     @abstractmethod
