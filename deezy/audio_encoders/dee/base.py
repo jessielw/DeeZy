@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
-import re
 import shutil
 import tempfile
 from typing import Any, Generic, TypeVar
@@ -16,6 +15,7 @@ from deezy.exceptions import PathTooLongError
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
+from deezy.track_info.utils import parse_delay_from_file
 from deezy.utils.logger import logger
 
 DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
@@ -26,12 +26,15 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         self,
         audio_track_info: AudioTrackInfo,
         payload_delay: str | None,
+        payload_parse_elementary_delay: bool,
         file_input: Path,
     ) -> DeeDelay:
         delay_str = "0ms"
         # if audio is raw we'll parse delay from file if it exists
-        if audio_track_info.is_raw_audio:
-            delay_str = self._parse_delay_from_file(file_input)
+        if audio_track_info.is_elementary and payload_parse_elementary_delay:
+            parse_delay = parse_delay_from_file(file_input)
+            if parse_delay:
+                delay_str = parse_delay
         # if delay is provided via payload (CLI) we'll override the above
         if payload_delay:
             delay_str = payload_delay
@@ -318,11 +321,3 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         """
         if not keep_temp:
             shutil.rmtree(temp_dir)
-
-    @staticmethod
-    def _parse_delay_from_file(media_path: Path) -> str:
-        """Parse delay from filename, if None found return 0ms."""
-        match = re.search(r"delay\s*(-?\d+(?:ms|s))", media_path.name, flags=re.I)
-        if match:
-            return match.group(1)
-        return "0ms"
