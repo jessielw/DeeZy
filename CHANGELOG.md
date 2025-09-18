@@ -11,12 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Config:
   - Default bitrates setting for AC4.
+- CLI:
+  - `--parse-elementary-delay` - When input is an elementary (demuxed) stream, parse any delay in the filename and reset it to zero.
 
 ### Changed
 
 - Config **Breaking Change**:
   - `[default_bitrates.ddp_bluray]` needs to be renamed to `[default_bitrates.ddp-bluray]` to match the codec properly. This will be automatic if you generate a new config, otherwise you should make this change manually if using the config.
   - Updated some of the default bitrates in the generated config.
+- Parsing delay from filename:
+  - When a file is in it's **elementary** format _(demuxed by itself)_ and there is a delay string we will parse it and zero it out if `--parse-elementary-delay` is used. This will effectively set the audio to 0ms delay during encoding as well as strip it from the filename.
+    - If the user explicitly defines an output file name no logic will be ran on the output file (as to not change the users desired output name).
+  - If `--parse-elementary-delay` is **not** used, delays will be handled like they was previously in containers and no logic will be ran against **elementary** files.
+- Improved language detection for **elementary** formats.
 
 ### Fixed
 
@@ -25,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 -
-
 
 ## [1.2.6] - 2025-09-17
 
