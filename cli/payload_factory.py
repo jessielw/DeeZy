@@ -41,6 +41,9 @@ class PayloadBuilder:
             "bitrate": cls.safe_get(args, "bitrate"),
             "temp_dir": Path(args.temp_dir) if cls.safe_get(args, "temp_dir") else None,
             "delay": cls.safe_get(args, "delay"),
+            "parse_elementary_delay": cls.safe_get(
+                args, "parse_elementary_delay", False
+            ),
             "keep_temp": cls.safe_get(args, "keep_temp", False),
             "file_output": Path(args.output) if cls.safe_get(args, "output") else None,
         }

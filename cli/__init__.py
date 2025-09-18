@@ -105,6 +105,14 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).",
     )
     encode_group.add_argument(
+        "--parse-elementary-delay",
+        action="store_true",
+        help=(
+            "When input is an elementary (demuxed) stream, parse any delay in the "
+            "filename and reset it to zero."
+        ),
+    )
+    encode_group.add_argument(
         "--keep-temp",
         action="store_true",
         help="Keeps the temp files after finishing.",

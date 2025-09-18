@@ -18,6 +18,7 @@ class CorePayload:
     bitrate: int | None
     temp_dir: Path | None
     delay: str | None
+    parse_elementary_delay: bool
     keep_temp: bool
     file_output: Path | None
 
