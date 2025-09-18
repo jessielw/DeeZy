@@ -6,6 +6,7 @@ from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
+from deezy.enums.codec_format import CodecFormat
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.shared import DDEncodingMode, StereoDownmix
 from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
@@ -42,23 +43,17 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         bitrate_obj = self._get_channel_bitrate_object(
             self.payload.channels, audio_track_info.channels
         )
-        # check to see if the users bitrate is allowed
-        runtime_bitrate = self.payload.bitrate
-        if runtime_bitrate:
-            # user/preset provided a bitrate - validate it
-            if not bitrate_obj.is_valid_bitrate(runtime_bitrate):
-                fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
-                logger.warning(
-                    f"Bitrate {runtime_bitrate} is invalid for this configuration. "
-                    f"Using the next closest allowed bitrate: {fixed_bitrate}."
-                )
-                runtime_bitrate = fixed_bitrate
-            else:
-                logger.debug(f"Using provided bitrate: {runtime_bitrate}.")
-        else:
-            # no bitrate provided - use default
-            runtime_bitrate = bitrate_obj.default
-            logger.debug(f"No supplied bitrate, defaulting to {runtime_bitrate}.")
+        
+        # check to see if the users bitrate is allowed        
+        runtime_bitrate = self.get_config_based_bitrate(
+            format_command=CodecFormat.DD,
+            payload_bitrate=self.payload.bitrate,
+            payload_channels=self.payload.channels,
+            audio_track_info=audio_track_info,
+            bitrate_obj=bitrate_obj,
+            auto_enum_value=DolbyDigitalChannels.AUTO,
+            channel_resolver=self.dd_channel_resolver,
+        )
 
         # check for up-mixing if user has defined their own channel
         if self.payload.channels is not DolbyDigitalChannels.AUTO:
@@ -316,3 +311,13 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         )
 
         return ffmpeg_cmd
+
+    @staticmethod
+    def dd_channel_resolver(source_channels: int) -> DolbyDigitalChannels:
+        """Resolve AUTO channels based on source channel count for DD."""
+        if source_channels == 1:
+            return DolbyDigitalChannels.MONO
+        elif source_channels > 1 and source_channels < 6:
+            return DolbyDigitalChannels.STEREO
+        else:
+            return DolbyDigitalChannels.SURROUND

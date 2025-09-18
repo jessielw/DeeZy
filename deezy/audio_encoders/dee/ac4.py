@@ -8,6 +8,7 @@ from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
 from deezy.enums.ac4 import Ac4Channels
+from deezy.enums.codec_format import CodecFormat
 from deezy.exceptions import (
     ChannelMixError,
     DependencyNotFoundError,
@@ -54,23 +55,17 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         # bitrate
         # get object based off of desired channels and source audio track channels
         bitrate_obj = Ac4Channels.IMMERSIVE_STEREO.get_bitrate_obj()
+
         # check to see if the users bitrate is allowed
-        runtime_bitrate = self.payload.bitrate
-        if runtime_bitrate:
-            # user/preset provided a bitrate - validate it
-            if not bitrate_obj.is_valid_bitrate(runtime_bitrate):
-                fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
-                logger.warning(
-                    f"Bitrate {runtime_bitrate} is invalid for this configuration. "
-                    f"Using the next closest allowed bitrate: {fixed_bitrate}."
-                )
-                runtime_bitrate = fixed_bitrate
-            else:
-                logger.debug(f"Using provided bitrate: {runtime_bitrate}.")
-        else:
-            # no bitrate provided - use default
-            runtime_bitrate = bitrate_obj.default
-            logger.debug(f"No supplied bitrate, defaulting to {runtime_bitrate}.")
+        runtime_bitrate = self.get_config_based_bitrate(
+            format_command=CodecFormat.AC4,
+            payload_bitrate=self.payload.bitrate,
+            payload_channels=Ac4Channels.IMMERSIVE_STEREO,
+            audio_track_info=audio_track_info,
+            bitrate_obj=bitrate_obj,
+            auto_enum_value=None,  # AC4 doesn't have AUTO
+            channel_resolver=self.ac4_channel_resolver,
+        )
 
         # delay
         delay = self.get_delay(audio_track_info, self.payload.delay, file_input)
@@ -272,3 +267,8 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
     def _get_down_mix_config() -> str:
         """Not used in Ac4Encoder."""
         raise NotImplementedError("_get_down_mix_config is not used in Ac4Encoder")
+
+    @staticmethod
+    def ac4_channel_resolver(_source_channels: int) -> Ac4Channels:
+        """AC4 doesn't have AUTO channel resolution - return fixed channel."""
+        return Ac4Channels.IMMERSIVE_STEREO
