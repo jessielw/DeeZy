@@ -66,13 +66,17 @@ surround = 192   # DDP 5.1
 surroundex = 384 # DDP 7.1
 
 # Default bitrates for Dolby Digital Plus Bluray
-[default_bitrates.ddp_bluray]
-surroundex = 384 # DDP Bluray 7.1
+[default_bitrates.ddp-bluray]
+surroundex = 1280 # DDP Bluray 7.1
 
 # Default bitrates for Dolby Atmos
 [default_bitrates.atmos]
 streaming = 448 # Atmos Streaming
-bluray = 448    # Atmos Bluray
+bluray = 1280    # Atmos Bluray
+
+# Default bitrates for AC4
+[default_bitrates.ac4]
+immersive_stereo = 256 # AC4 Immersive Stereo
 
 [presets]
 # Example presets - customize as needed

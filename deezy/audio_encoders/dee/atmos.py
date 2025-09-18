@@ -7,6 +7,7 @@ from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
 from deezy.enums.atmos import AtmosMode
+from deezy.enums.codec_format import CodecFormat
 from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
 from deezy.exceptions import DependencyNotFoundError
 from deezy.payloads.atmos import AtmosPayload
@@ -41,23 +42,17 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         bitrate_obj = self._get_channel_bitrate_object(
             self.payload.atmos_mode, audio_track_info.channels
         )
+
         # check to see if the users bitrate is allowed
-        runtime_bitrate = self.payload.bitrate
-        if runtime_bitrate:
-            # user/preset provided a bitrate - validate it
-            if not bitrate_obj.is_valid_bitrate(runtime_bitrate):
-                fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
-                logger.warning(
-                    f"Bitrate {runtime_bitrate} is invalid for this configuration. "
-                    f"Using the next closest allowed bitrate: {fixed_bitrate}."
-                )
-                runtime_bitrate = fixed_bitrate
-            else:
-                logger.debug(f"Using provided bitrate: {runtime_bitrate}.")
-        else:
-            # no bitrate provided - use default
-            runtime_bitrate = bitrate_obj.default
-            logger.debug(f"No supplied bitrate, defaulting to {runtime_bitrate}.")
+        runtime_bitrate = self.get_config_based_bitrate(
+            format_command=CodecFormat.ATMOS,
+            payload_bitrate=self.payload.bitrate,
+            payload_channels=self.payload.atmos_mode,
+            audio_track_info=audio_track_info,
+            bitrate_obj=bitrate_obj,
+            auto_enum_value=None,  # Atmos doesn't have AUTO
+            channel_resolver=self.atmos_mode_resolver,
+        )
 
         # check for up-mixing
         self._check_for_up_mixing(
@@ -167,6 +162,10 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
             return move_file
         else:
             raise OutputFileNotFoundError(f"{move_file.name} output not found")
+
+    def atmos_mode_resolver(self, _source_channels: int) -> AtmosMode:
+        """For Atmos, mode doesn't change based on channels - return the payload mode."""
+        return self.payload.atmos_mode
 
     def _generate_ffmpeg_cmd(self) -> list[str]:
         """Not used in AtmosEncoder."""

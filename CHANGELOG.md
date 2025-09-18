@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Config:
+  - Default bitrates setting for AC4.
+
+### Changed
+
+- Config **Breaking Change**:
+  - `[default_bitrates.ddp_bluray]` needs to be renamed to `[default_bitrates.ddp-bluray]` to match the codec properly. This will be automatic if you generate a new config, otherwise you should make this change manually if using the config.
+  - Updated some of the default bitrates in the generated config.
+
+### Fixed
+
+- Codec channel/bitrate defaults from config was not being set.
+
+### Removed
+
+-
+
+
 ## [1.2.6] - 2025-09-17
 
 ### Changed

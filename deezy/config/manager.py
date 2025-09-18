@@ -6,6 +6,7 @@ import oslex2
 import tomlkit
 
 from deezy.config.defaults import CONF_DEFAULT, get_default_config_path
+from deezy.enums.codec_format import CodecFormat
 from deezy.utils.exit import EXIT_FAIL, exit_application
 from deezy.utils.logger import logger
 
@@ -120,17 +121,24 @@ class ConfigManager:
         return list(self.config.get("presets", {}).keys())
 
     def get_default_bitrate(
-        self, format_command: str, channels_or_mode: Any = None
+        self, format_command: str | CodecFormat, channels_or_mode: Any = None
     ) -> int | None:
         """Get default bitrate for a format and channel/mode configuration."""
+        # convert enum to string if needed
+        format_str = (
+            format_command.value
+            if isinstance(format_command, CodecFormat)
+            else format_command
+        )
+
         bitrates_config = self.config.get("default_bitrates", {})
-        format_bitrates = bitrates_config.get(format_command, {})
+        format_bitrates = bitrates_config.get(format_str, {})
 
         if not format_bitrates:
             return None
 
         # for Atmos, use the mode (streaming/bluray)
-        if format_command == "atmos" and channels_or_mode:
+        if format_str == "atmos" and channels_or_mode:
             return format_bitrates.get(channels_or_mode)
 
         # for DD/DDP, use channel configuration
