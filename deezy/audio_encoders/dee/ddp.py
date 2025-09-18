@@ -35,9 +35,8 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         self._check_input_file(file_input)
 
         # get audio track information
-        audio_track_info = MediainfoParser(
-            file_input, self.payload.track_index
-        ).get_audio_track_info()
+        mi_parser = MediainfoParser(file_input, self.payload.track_index)
+        audio_track_info = mi_parser.get_audio_track_info()
 
         # bitrate
         # get object based off of desired channels and source audio track channels
@@ -80,7 +79,12 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             logger.info(f"No supplied channels, defaulting to {self.payload.channels}.")
 
         # delay
-        delay = self.get_delay(audio_track_info, self.payload.delay, file_input)
+        delay = self.get_delay(
+            audio_track_info,
+            self.payload.delay,
+            self.payload.parse_elementary_delay,
+            file_input,
+        )
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
@@ -130,7 +134,19 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                     "DDP output must must end with the suffix '.eac3' or '.ec3'."
                 )
         else:
-            output = Path(audio_track_info.auto_name).with_suffix(".ec3")
+            ignore_delay = (
+                True
+                if not (
+                    self.payload.parse_elementary_delay
+                    or not audio_track_info.is_elementary
+                    or not delay.is_delay()
+                )
+                else False
+            )
+            output = mi_parser.generate_output_filename(ignore_delay).with_suffix(
+                ".ec3"
+            )
+        logger.debug(f"Output path {output}.")
 
         # define .wav and .ac3/.ec3 file names (not full path)
         wav_file_name = temp_filename + ".wav"

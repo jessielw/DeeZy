@@ -34,17 +34,16 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         self._check_input_file(file_input)
 
         # get audio track information
-        audio_track_info = MediainfoParser(
-            file_input, self.payload.track_index
-        ).get_audio_track_info()
+        mi_parser = MediainfoParser(file_input, self.payload.track_index)
+        audio_track_info = mi_parser.get_audio_track_info()
 
         # bitrate
         # get object based off of desired channels and source audio track channels
         bitrate_obj = self._get_channel_bitrate_object(
             self.payload.channels, audio_track_info.channels
         )
-        
-        # check to see if the users bitrate is allowed        
+
+        # check to see if the users bitrate is allowed
         runtime_bitrate = self.get_config_based_bitrate(
             format_command=CodecFormat.DD,
             payload_bitrate=self.payload.bitrate,
@@ -73,7 +72,12 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             logger.info(f"No supplied channels, defaulting to {self.payload.channels}.")
 
         # delay
-        delay = self.get_delay(audio_track_info, self.payload.delay, file_input)
+        delay = self.get_delay(
+            audio_track_info,
+            self.payload.delay,
+            self.payload.parse_elementary_delay,
+            file_input,
+        )
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
@@ -123,7 +127,18 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
                     "DD output must must end with the suffix '.ac3'."
                 )
         else:
-            output = Path(audio_track_info.auto_name).with_suffix(".ac3")
+            ignore_delay = (
+                True
+                if not (
+                    self.payload.parse_elementary_delay
+                    or not audio_track_info.is_elementary
+                    or not delay.is_delay()
+                )
+                else False
+            )
+            output = mi_parser.generate_output_filename(ignore_delay).with_suffix(
+                ".ac3"
+            )
         logger.debug(f"Output path {output}.")
 
         # define .wav and .ac3/.ec3 file names (not full path)

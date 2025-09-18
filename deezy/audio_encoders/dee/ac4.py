@@ -39,9 +39,8 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         self._check_input_file(file_input)
 
         # get audio track information
-        audio_track_info = MediainfoParser(
-            file_input, self.payload.track_index
-        ).get_audio_track_info()
+        mi_parser = MediainfoParser(file_input, self.payload.track_index)
+        audio_track_info = mi_parser.get_audio_track_info()
 
         # ensure we have truehd atmos OR => 6 channel audio
         if audio_track_info.thd_atmos:
@@ -68,7 +67,12 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         )
 
         # delay
-        delay = self.get_delay(audio_track_info, self.payload.delay, file_input)
+        delay = self.get_delay(
+            audio_track_info,
+            self.payload.delay,
+            self.payload.parse_elementary_delay,
+            file_input,
+        )
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
@@ -97,7 +101,18 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     "Ac4 output must must end with the suffix '.ac4'."
                 )
         else:
-            output = Path(audio_track_info.auto_name).with_suffix(".ac4")
+            ignore_delay = (
+                True
+                if not (
+                    self.payload.parse_elementary_delay
+                    or not audio_track_info.is_elementary
+                    or not delay.is_delay()
+                )
+                else False
+            )
+            output = mi_parser.generate_output_filename(ignore_delay).with_suffix(
+                ".ac4"
+            )
         logger.debug(f"Output path {output}.")
 
         # define .wav and .ac4 file names (not full path)
