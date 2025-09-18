@@ -2,12 +2,12 @@ name: Tests
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - "deezy/**"
       - "cli/**"
   pull_request:
-    branches: [master]
+    branches: [main]
     paths:
       - "deezy/**"
       - "cli/**"
