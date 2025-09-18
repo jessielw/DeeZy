@@ -1,16 +1,23 @@
 from pathlib import Path
 import re
+from typing import Any
 
+from babelfish import Language
+from guessit import guessit
 from pymediainfo import MediaInfo, Track
 
 from deezy.enums.shared import TrackType
 from deezy.exceptions import MediaInfoError
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
+from deezy.track_info.utils import (
+    parse_delay_from_file,
+    strip_delay_from_file_string_and_cleanse,
+)
 
 
 class MediainfoParser:
-    __slots__ = ("file_input", "track_index", "mi_obj", "mi_audio_obj")
+    __slots__ = ("file_input", "track_index", "mi_obj", "mi_audio_obj", "guess")
 
     def __init__(self, file_input: Path, track_index: TrackIndex) -> None:
         # parse file with mediainfo
@@ -18,6 +25,7 @@ class MediainfoParser:
         self.track_index = track_index
         self.mi_obj = MediaInfo.parse(file_input, legacy_stream_display=True)
         self.mi_audio_obj = self._verify_audio_track(track_index)
+        self.guess = guessit(self.file_input.name)
 
     def get_audio_track_info(self) -> AudioTrackInfo:
         """
@@ -26,8 +34,7 @@ class MediainfoParser:
         # initiate AudioTrackInfo class
         audio_info = AudioTrackInfo(
             mi_track=self.mi_audio_obj,
-            auto_name=self._generate_output_filename(),
-            is_raw_audio=self.is_raw_audio(),
+            is_elementary=self.is_elementary_audio(),
             fps=self._get_fps(),
             audio_only=False,
             recommended_free_space=self._recommended_free_space(),
@@ -119,7 +126,7 @@ class MediainfoParser:
             return True
         return False
 
-    def _generate_output_filename(self) -> Path:
+    def generate_output_filename(self, ignore_delay: bool) -> Path:
         """Automatically generate an output file name
 
         Returns:
@@ -129,43 +136,49 @@ class MediainfoParser:
         extension = ".tmp"
 
         # base directory/name
-        base_dir = Path(self.file_input).parent
-        base_name = Path(Path(self.file_input).name).with_suffix("")
+        base_dir = self.file_input.parent
 
-        # if track index is 0 we can assume this audio is in a raw format
-        if self.track_index == 0:
-            file_name = f"{base_name}{extension}"
-            return Path(base_dir / Path(file_name))
+        # get attributes from guessit
+        # if we can't get title from guessit we'll fall back to the base title stripping
+        # delay values and cleaning it up
+        title = (
+            self.guess.get("title")
+            if self.guess.get("title")
+            else strip_delay_from_file_string_and_cleanse(self.file_input).stem
+        )
+        year = self.guess.get("year")
+        lang = self._get_lang_alpha3(self.guess.get("language"))
 
-        # if track index is anything other than 0, we can assume it's likely in a container of some
-        # sort, so we'll go ahead and attempt to detect delay/language to inject into the title.
-        else:
-            delay = self._delay_detection()
-            language = self._language_detection()
-            file_name = f"{base_name}_{language}_{delay}{extension}"
-            return Path(base_dir / Path(file_name))
+        # get attributes from mediainfo
+        delay = self._delay_detection() if not ignore_delay else None
+        mi_lang = self._language_detection()
 
-    def _delay_detection(self):
-        """Detect delay relative to video to inject into filename
+        # parse delay from file if not detected in mediainfo
+        if not ignore_delay and not delay:
+            delay_from_file = parse_delay_from_file(self.file_input)
+            delay = f"[DELAY {delay_from_file}]" if delay_from_file else None
+
+        # construct new clean path
+        new_name_parts = (title, year, mi_lang or lang, delay)
+        new_base_name = " ".join([str(x) for x in new_name_parts if x])
+        return Path(base_dir / re.sub(r"\s{2,}", " ", new_base_name)).with_suffix(
+            extension
+        )
+
+    def _delay_detection(self) -> str | None:
+        """Detect delay relative to video to inject into filename.
 
         Returns:
             str: Returns a formatted delay string
         """
         if self.file_input.suffix == ".mp4":
             if self.mi_audio_obj.source_delay:
-                delay_string = f"[delay {str(self.mi_audio_obj.source_delay)}ms]"
-            else:
-                delay_string = str("[delay 0ms]")
+                return f"[DELAY {str(self.mi_audio_obj.source_delay)}ms]"
         else:
             if self.mi_audio_obj.delay_relative_to_video:
-                delay_string = (
-                    f"[delay {str(self.mi_audio_obj.delay_relative_to_video)}ms]"
-                )
-            else:
-                delay_string = str("[delay 0ms]")
-        return delay_string
+                return f"[DELAY {str(self.mi_audio_obj.delay_relative_to_video)}ms]"
 
-    def _language_detection(self):
+    def _language_detection(self) -> str | None:
         """
         Detect language of input track, returning language in the format of
         "eng" instead of "en" or "english."
@@ -178,16 +191,13 @@ class MediainfoParser:
             l_index = next(
                 (i for i, length in enumerate(l_lengths) if length == 3), None
             )
-            language_string = (
+            return (
                 f"[{self.mi_audio_obj.other_language[l_index]}]"
                 if l_index is not None
-                else "[und]"
+                else None
             )
-        else:
-            language_string = "[und]"
-        return language_string
 
-    def is_raw_audio(self) -> bool:
+    def is_elementary_audio(self) -> bool:
         """
         Helper method to determine if the input is just raw audio.
 
@@ -210,6 +220,22 @@ class MediainfoParser:
             return other_tracks == 0
         except (IndexError, AttributeError, ValueError):
             return False
+
+    @staticmethod
+    def _get_lang_alpha3(lang: Any) -> str | None:
+        """
+        Language from guessit can be a list of Language objects or a single Language object.
+        We're determining which and getting the alpha3 code if it exists.
+        """
+        language = None
+        lang_type = type(lang)
+        if lang_type is list:
+            get_lang = lang[0]
+            if isinstance(get_lang, Language):
+                language = get_lang
+        elif lang_type is Language:
+            language = lang
+        return language.alpha3 if language else None
 
     @staticmethod
     def get_channels(mi_audio_obj: Track) -> int:
