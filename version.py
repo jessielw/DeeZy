@@ -50,16 +50,7 @@ def validate_version_consistency():
 
 def update_version(new_version):
     """Update version in pyproject.toml."""
-    pyproject_path = Path("pyproject.toml")
-    content = pyproject_path.read_text(encoding="utf-8")
-
-    # update version
-    updated_content = re.sub(
-        r'version = "[^"]+"', f'version = "{new_version}"', content
-    )
-
-    pyproject_path.write_text(updated_content, encoding="utf-8")
-    print(f"Updated version to {new_version} in pyproject.toml")
+    subprocess.run(("uv", "version", new_version))
 
 
 def create_git_tag(version, push=False):
