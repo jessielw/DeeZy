@@ -5,6 +5,11 @@ on:
     types:
       - created
   workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to build and publish (useful for manual RC builds). If omitted, defaults to main. For release events the tag will be used."
+        required: false
+        default: "main"
 
 jobs:
   publish_to_pypi:
@@ -20,6 +25,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # If triggered by a release use the release tag, otherwise use the
+          # supplied workflow_dispatch `branch` input (or default to 'main').
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.branch || 'main' }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
