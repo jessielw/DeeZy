@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from deezy.utils.utils import WORKING_DIRECTORY
+from platformdirs import user_config_dir
 
 # fmt: off
 CONF_DEFAULT = """\
@@ -182,5 +182,31 @@ ac4_stereo = "encode ac4 --bitrate 256"
 
 
 def get_default_config_path() -> Path:
-    """Get the default configuration file path."""
-    return WORKING_DIRECTORY / "deezy-conf.toml"
+    """Get the default configuration file path.
+
+            Search order used by ConfigManager.load_config when no explicit path is
+            provided:
+                    1. Current working directory: allows per-project configs (existing behavior)
+                    2. User config directory: platform-specific stable location
+                       (e.g., %APPDATA%\\deezy\\deezy-conf.toml on Windows)
+                    3. Working directory beside executable (for bundled/exe usage)
+
+    This function returns the user config path which is the recommended
+    location for persisted user-wide configuration. ConfigManager.load_config
+    will still check the current working directory first.
+    """
+
+    # Prefer a single `deezy` folder on Windows (e.g. %LOCALAPPDATA%\deezy\deezy-conf.toml)
+    # while preserving the platform default on other OSes.
+    base = Path(user_config_dir("deezy"))
+    try:
+        import sys
+
+        if sys.platform.startswith("win"):
+            cfg_dir = base.parent
+        else:
+            cfg_dir = base
+    except Exception:
+        cfg_dir = base
+
+    return cfg_dir / "deezy-conf.toml"

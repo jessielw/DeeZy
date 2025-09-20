@@ -9,6 +9,7 @@ from deezy.config.defaults import CONF_DEFAULT, get_default_config_path
 from deezy.enums.codec_format import CodecFormat
 from deezy.utils.exit import EXIT_FAIL, exit_application
 from deezy.utils.logger import logger
+from deezy.utils.utils import WORKING_DIRECTORY
 
 
 class ConfigManager:
@@ -31,8 +32,27 @@ class ConfigManager:
 
     def load_config(self, config_path: str | Path | None = None) -> None:
         """Load configuration from TOML file."""
+        # determine search order for config file when none is provided:
+        # 1) current working directory (project/local config)
+        # 2) user config directory (platformdirs recommended path)
+        # 3) working directory beside the executable (bundled exe)
         if config_path is None:
-            config_path = get_default_config_path()
+            # first check cwd
+            cwd_path = Path.cwd() / "deezy-conf.toml"
+            user_path = Path(get_default_config_path())
+            exe_path = Path(WORKING_DIRECTORY) / "deezy-conf.toml"
+
+            candidates = [cwd_path, user_path, exe_path]
+            found = None
+            for p in candidates:
+                try:
+                    if p and p.exists():
+                        found = p
+                        break
+                except Exception:
+                    continue
+
+            config_path = found
         else:
             config_path = Path(config_path)
 
