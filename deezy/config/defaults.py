@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from deezy.utils.utils import get_working_dir
+from deezy.utils.utils import WORKING_DIRECTORY
 
 # fmt: off
 CONF_DEFAULT = """\
@@ -31,25 +31,53 @@ CONF_DEFAULT = """\
 # Preset arguments can be overridden by additional CLI flags.
 
 [dependencies]
-ffmpeg = ""  # Path to FFmpeg executable (leave empty for auto-detection)
-dee = ""     # Path to Dolby Encoding Engine (DEE) executable
-truehdd = "" # Path to TrueHD executable  
+# Path to FFmpeg executable (leave empty for auto-detection)
+ffmpeg = ""  
+# Path to Dolby Encoding Engine (DEE) executable
+dee = ""     
+# Path to TrueHD executable
+truehdd = "" 
 
 [global_defaults]
-keep_temp = false            # Keep temporary files after processing
-temp_dir = ""                # Custom temporary directory (leave empty for system default)
-track_index = 0              # Default audio track index to process
-drc_line_mode = "film_light" # Dynamic range compression for line mode
-drc_rf_mode = "film_light"   # Dynamic range compression for RF mode  
-custom_dialnorm = 0          # Custom dialnorm value (0 = auto-detect)
+# Keep temporary files after processing
+keep_temp = false
+# Custom temporary directory (leave empty for system default)      
+temp_dir = ""
+# Default audio track index to process
+track_index = 0
+# Directory for DeeZy working files (logs, batch-results). Empty = default beside executable
+working_dir = ""
+# Enable batch JSON summary output by default
+batch_summary_output = false
+# When set, encoded outputs will be placed into this directory
+batch_output_dir = ""
+# Default maximum parallel jobs for batch processing
+max_parallel = 1
+# Maximum number of log files to keep in working logs/ (oldest removed)       
+max_logs = 50
+# Maximum number of batch-results JSON files to keep (oldest removed)    
+max_batch_results = 50
+# Dynamic range compression for line mode
+drc_line_mode = "film_light"
+# Dynamic range compression for RF mode
+drc_rf_mode = "film_light"
+# Custom dialnorm value (0 = auto-detect) 
+custom_dialnorm = 0
 # metering_mode: handled per-format (DD/DDP=1770_3, Atmos=1770_4)
-dialogue_intelligence = true # Enable dialogue intelligence
-speech_threshold = 20        # Speech detection threshold percentage
-stereo_down_mix = "loro"     # Stereo downmix method
-lt_rt_center = "-3"          # Lt/Rt center channel downmix level
-lt_rt_surround = "-3"        # Lt/Rt surround channels downmix level
-lo_ro_center = "-3"          # Lo/Ro center channel downmix level
-lo_ro_surround = "-3"        # Lo/Ro surround channels downmix level
+# Enable dialogue intelligence
+dialogue_intelligence = true
+# Speech detection threshold percentage
+speech_threshold = 20
+# Stereo downmix method
+stereo_down_mix = "loro"     
+ # Lt/Rt center channel downmix level
+lt_rt_center = "-3"        
+# Lt/Rt surround channels downmix level 
+lt_rt_surround = "-3"   
+# Lo/Ro center channel downmix level     
+lo_ro_center = "-3"      
+# Lo/Ro surround channels downmix level    
+lo_ro_surround = "-3"        
 
 [default_bitrates]
 # Default bitrates for Dolby Digital (AC-3)
@@ -91,4 +119,4 @@ ac4_stereo = "encode ac4 --bitrate 256"
 
 def get_default_config_path() -> Path:
     """Get the default configuration file path."""
-    return get_working_dir() / "deezy-conf.toml"
+    return WORKING_DIRECTORY / "deezy-conf.toml"
