@@ -181,13 +181,19 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         logger.debug(f"{ffmpeg_cmd=}.")
 
         # process ffmpeg command
-        _ffmpeg_job = process_ffmpeg_job(
-            cmd=ffmpeg_cmd,
-            steps=True,
-            duration=audio_track_info.duration,
-            step_info={"current": 1, "total": 3, "name": "FFMPEG"},
-            no_progress_bars=self.payload.no_progress_bars,
-        )
+        # optionally stagger/jitter and limit concurrent ffmpeg jobs
+        self._maybe_jitter()
+        self._acquire_ffmpeg()
+        try:
+            _ffmpeg_job = process_ffmpeg_job(
+                cmd=ffmpeg_cmd,
+                steps=True,
+                duration=audio_track_info.duration,
+                step_info={"current": 1, "total": 3, "name": "FFMPEG"},
+                no_progress_bars=self.payload.no_progress_bars,
+            )
+        finally:
+            self._release_ffmpeg()
         logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
 
         # generate JSON
@@ -213,12 +219,18 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         logger.debug(f"{dee_cmd=}.")
 
         # process dee command
-        step_info = {"current": 2, "total": 3, "name": "DEE measure"}
-        _dee_job = process_dee_job(
-            cmd=dee_cmd,
-            step_info=step_info,
-            no_progress_bars=self.payload.no_progress_bars,
-        )
+        # optionally jitter and limit concurrent DEE jobs
+        self._maybe_jitter()
+        self._acquire_dee()
+        try:
+            step_info = {"current": 2, "total": 3, "name": "DEE measure"}
+            _dee_job = process_dee_job(
+                cmd=dee_cmd,
+                step_info=step_info,
+                no_progress_bars=self.payload.no_progress_bars,
+            )
+        finally:
+            self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
 
         # move file to output path using centralized atomic move helper

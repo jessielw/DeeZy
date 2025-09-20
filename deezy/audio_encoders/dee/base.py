@@ -2,8 +2,11 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
+import random
 import shutil
 import tempfile
+import threading
+import time
 from typing import Any, Generic, TypeVar
 
 from deezy.audio_encoders.base import BaseAudioEncoder
@@ -370,3 +373,103 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 except FileNotFoundError:
                     pass
             return Path(shutil.move(str(src), str(dest)))
+
+    # --- Phase semaphores and jitter for staggered processing ---
+    # class-level semaphores so all encoder instances share the same limits.
+    _ffmpeg_sem: threading.Semaphore | None = None
+    _dee_sem: threading.Semaphore | None = None
+    _truehdd_sem: threading.Semaphore | None = None
+    _jitter_ms: int = 0
+
+    @classmethod
+    def init_phase_limits(
+        cls,
+        max_parallel: int,
+        jitter_ms: int | None = None,
+        ffmpeg_limit: int | None = None,
+        dee_limit: int | None = None,
+        truehdd_limit: int | None = None,
+    ) -> None:
+        """
+        Initialize semaphores for FFmpeg and DEE phases.
+
+        Args:
+            max_parallel: maximum worker count from dispatcher; used to size semaphores.
+            jitter_ms: maximum jitter in milliseconds to apply before heavy phases.
+        """
+
+        # determine per-phase limits (apply sensible defaults if not provided)
+        ff_limit = ffmpeg_limit if (ffmpeg_limit is not None) else max(1, max_parallel)
+        de_limit = dee_limit if (dee_limit is not None) else max(1, max_parallel)
+        th_limit = truehdd_limit if (truehdd_limit is not None) else max(1, max_parallel)
+
+        # cap limits to max_parallel to avoid confusing configurations
+        capped_ff = min(max(1, ff_limit), max_parallel)
+        capped_de = min(max(1, de_limit), max_parallel)
+        capped_th = min(max(1, th_limit), max_parallel)
+
+        # warn if user provided limits were capped
+        if ffmpeg_limit is not None and capped_ff != ff_limit:
+            logger.warning(
+                f"--limit-ffmpeg {ffmpeg_limit} capped to {capped_ff} (max_parallel={max_parallel})"
+            )
+        if dee_limit is not None and capped_de != de_limit:
+            logger.warning(
+                f"--limit-dee {dee_limit} capped to {capped_de} (max_parallel={max_parallel})"
+            )
+        if truehdd_limit is not None and capped_th != th_limit:
+            logger.warning(
+                f"--limit-truehdd {truehdd_limit} capped to {capped_th} (max_parallel={max_parallel})"
+            )
+
+        ff_limit = capped_ff
+        de_limit = capped_de
+        th_limit = capped_th
+
+        # (re)create semaphores sized to the computed limits
+        cls._ffmpeg_sem = threading.Semaphore(ff_limit)
+        cls._dee_sem = threading.Semaphore(de_limit)
+        cls._truehdd_sem = threading.Semaphore(th_limit)
+
+        if jitter_ms is not None:
+            cls._jitter_ms = int(jitter_ms)
+
+    def _maybe_jitter(self) -> None:
+        """Apply a small random jitter sleep before heavy phases when configured."""
+        jitter = getattr(self, "_jitter_ms", 0) or 0
+        if jitter > 0:
+            time.sleep(random.uniform(0, jitter) / 1000.0)
+
+    def _acquire_ffmpeg(self) -> None:
+        if self._ffmpeg_sem:
+            self._ffmpeg_sem.acquire()
+
+    def _release_ffmpeg(self) -> None:
+        if self._ffmpeg_sem:
+            try:
+                self._ffmpeg_sem.release()
+            except ValueError:
+                # ignore release errors
+                pass
+
+    def _acquire_dee(self) -> None:
+        if self._dee_sem:
+            self._dee_sem.acquire()
+
+    def _release_dee(self) -> None:
+        if self._dee_sem:
+            try:
+                self._dee_sem.release()
+            except ValueError:
+                pass
+
+    def _acquire_truehdd(self) -> None:
+        if self._truehdd_sem:
+            self._truehdd_sem.acquire()
+
+    def _release_truehdd(self) -> None:
+        if self._truehdd_sem:
+            try:
+                self._truehdd_sem.release()
+            except ValueError:
+                pass

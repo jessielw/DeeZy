@@ -138,18 +138,25 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 raise DependencyNotFoundError(
                     "Failed to locate truehdd, this is required for atmos work flows"
                 )
-            input_file_path = decode_truehd_to_atmos(
-                output_dir=temp_dir,
-                file_input=self.payload.file_input,
-                track_index=self.payload.track_index,
-                ffmpeg_path=self.payload.ffmpeg_path,
-                truehdd_path=self.payload.truehdd_path,
-                bed_conform=self.payload.bed_conform,
-                warp_mode=self.payload.thd_warp_mode,
-                duration=audio_track_info.duration,
-                step_info={"current": 1, "total": 3, "name": "truehdd"},
-                no_progress_bars=self.payload.no_progress_bars,
-            )
+                
+            # optionally stagger/jitter and limit concurrent TrueHD jobs
+            self._maybe_jitter()
+            self._acquire_truehdd()
+            try:
+                input_file_path = decode_truehd_to_atmos(
+                    output_dir=temp_dir,
+                    file_input=self.payload.file_input,
+                    track_index=self.payload.track_index,
+                    ffmpeg_path=self.payload.ffmpeg_path,
+                    truehdd_path=self.payload.truehdd_path,
+                    bed_conform=self.payload.bed_conform,
+                    warp_mode=self.payload.thd_warp_mode,
+                    duration=audio_track_info.duration,
+                    step_info={"current": 1, "total": 3, "name": "truehdd"},
+                    no_progress_bars=self.payload.no_progress_bars,
+                )
+            finally:
+                self._release_truehdd()
         # if not truehd we know it's valid channel based audio since we checked above
         else:
             # generate ffmpeg cmd
@@ -165,13 +172,19 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             logger.debug(f"{ffmpeg_cmd=}.")
 
             # process ffmpeg command
-            _ffmpeg_job = process_ffmpeg_job(
-                cmd=ffmpeg_cmd,
-                steps=True,
-                duration=audio_track_info.duration,
-                step_info={"current": 1, "total": 3, "name": "FFMPEG"},
-                no_progress_bars=self.payload.no_progress_bars,
-            )
+            # optionally stagger/jitter and limit concurrent ffmpeg jobs
+            self._maybe_jitter()
+            self._acquire_ffmpeg()
+            try:
+                _ffmpeg_job = process_ffmpeg_job(
+                    cmd=ffmpeg_cmd,
+                    steps=True,
+                    duration=audio_track_info.duration,
+                    step_info={"current": 1, "total": 3, "name": "FFMPEG"},
+                    no_progress_bars=self.payload.no_progress_bars,
+                )
+            finally:
+                self._release_ffmpeg()
             logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
             input_file_path = Path(temp_dir / wav_file_name)
 
@@ -197,11 +210,17 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         logger.debug(f"{dee_cmd=}.")
 
         # process dee command
-        _dee_job = process_dee_job(
-            cmd=dee_cmd,
-            step_info={"current": 2, "total": 3, "name": "DEE measure"},
-            no_progress_bars=self.payload.no_progress_bars,
-        )
+        # optionally jitter and limit concurrent DEE jobs
+        self._maybe_jitter()
+        self._acquire_dee()
+        try:
+            _dee_job = process_dee_job(
+                cmd=dee_cmd,
+                step_info={"current": 2, "total": 3, "name": "DEE measure"},
+                no_progress_bars=self.payload.no_progress_bars,
+            )
+        finally:
+            self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
 
         # move file to output path using centralized atomic move helper
