@@ -11,8 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Config:
   - Default bitrates setting for AC4.
+
 - CLI:
   - `--parse-elementary-delay` - When input is an elementary (demuxed) stream, parse any delay in the filename and reset it to zero.
+  - `--working-dir` - Set a centralized working directory for job files, logs, and batch-results. Overrides config default when provided.
+  - `--batch-summary-output` - Path to write a JSON summary for a batch run. When provided, a single JSON file with per-file metadata (status, durations, log file, output path) is emitted.
+  - `--batch-output-dir` - When supplied, encoders will place generated outputs into this directory unless the user explicitly supplied `--output` for a job. Useful for centralized batch storage.
+  - `--overwrite` - Global flag to allow overwriting existing output files. When not set, the CLI will fast-fail/skips jobs whose target outputs already exist.
+  - `--max-parallel` - Integer (default 1). Controls how many files are processed concurrently in batch mode.
+  - `--max-logs` - Integer to retain a maximum number of log files in the working logs directory; older logs are trimmed automatically.
+  - `--max-batch-results` - Integer to retain a maximum number of batch result JSON files in the working batch-results directory; older results are trimmed.
+
+- Encoders / Internal:
+  - Centralized atomic move helper in the DEE encoder base class to perform safe, fast output file placement. Uses an atomic replace when possible and falls back to a cross-filesystem-safe move when needed.
+  - DRY refactor: replaced per-encoder unlink+move logic with the centralized helper across DD, DDP, Atmos and AC4 encoders. This unifies overwrite semantics and reduces duplicated code.
+  - Automatic filename generation has been greatly improved:
+    - Will check for common attributes via the mediainfo/input name and append that to the automatically generated file name. 
+    - Detects name, year, season, episode and adds them to the name when generating a new name.
 
 ### Changed
 

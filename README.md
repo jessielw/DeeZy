@@ -265,6 +265,108 @@ deezy temp info
 deezy temp clean
 ```
 
+## CLI additions and batch features
+
+Recent CLI additions expand batch processing and working-directory control. These flags are available on the `encode` command and are useful for automated workflows, CI, and headless environments.
+
+- `--parse-elementary-delay`
+
+  - When input is an elementary (demuxed) stream, parse any delay string in the filename and reset it to zero during encoding. If an explicit `--output` filename is supplied the output name will not be altered.
+
+- `--working-dir PATH`
+
+  - Use this directory to store DeeZy working files (logs, batch-results). If not set, DeeZy uses a default workspace beside the executable or the value from your config file (`[global_defaults].working_dir`).
+
+- `--batch-summary-output`
+
+  - When enabled, DeeZy will collect per-file results into a JSON summary saved in a `batch-results` folder inside the working directory.
+
+- `--batch-output-dir PATH`
+
+  - When used with `--batch-summary-output`, instructs DeeZy to place encoded output files into the given directory instead of beside the inputs. DeeZy will validate that this directory exists and is writable before starting work.
+
+- `--overwrite`
+
+  - Globally allow overwriting of existing output files. When not provided and a target file already exists, the job will be skipped and recorded as `skipped` in the batch summary.
+
+- `--max-parallel N`
+
+  - Process up to N files in parallel. Default is 1 (sequential). Use this to speed up batch runs when machine resources allow.
+
+- `--max-logs N` and `--max-batch-results N`
+  - Per-run overrides for retention trimming. These flags override the config defaults for the current run and control how many log files and batch-result JSON files are kept in the working directory. Set to `0` to keep none.
+
+These options respect the priority system: CLI arguments override config defaults.
+
+Example: parsing elementary delay from filename
+
+```bash
+# Given an elementary input file whose name contains a delay tag:
+# Migration.2023.BluRay..._track3_[jpn]_DELAY 36ms.aac
+
+# Without parsing, the output filename will retain the delay metadata
+# (unless you explicitly pass --output):
+deezy encode dd Migration.2023..._DELAY\ 36ms.aac
+
+# With parsing enabled (and no explicit --output), DeeZy will strip the
+# delay tag from the generated output filename and treat the audio as 0ms delay:
+deezy encode dd --parse-elementary-delay Migration.2023..._DELAY\ 36ms.aac
+# Result: generated output file will not contain the `[DELAY 36ms]` suffix
+```
+
+## What's new (high level)
+
+From recent changes (see `CHANGELOG.md` for full details):
+
+- AC-4 support: `encode ac4` with profiles and DRC presets.
+- Improved preset handling: `deezy encode preset --name YOUR_PRESET` and the ability to override preset values from the CLI.
+- Better error handling and logging in debug mode, and smarter temp-folder management for batch runs.
+- Batch processing improvements: centralized logs and batch-results directories, per-file JSON summary output, and retention trimming to avoid unbounded log accumulation.
+
+### Example: batch run
+
+```bash
+# Encode all MKV files in a folder, place outputs in a central directory,
+# write batch summary JSON and keep logs/batch-results under a working dir.
+deezy --log-to-file encode ddp \
+  --working-dir "C:/ci/deezy_work" \
+  --batch-summary-output \
+  --batch-output-dir "C:/ci/deezy_outputs" \
+  --max-parallel 4 \
+  *.mkv
+```
+
+## Batch summary JSON schema
+
+When `--batch-summary-output` is enabled, DeeZy writes a JSON summary per batch into the `batch-results` folder inside the working directory. The JSON contains `batch_info` and a `results` array with one entry per input file.
+
+Top-level structure:
+
+- `batch_info` (object)
+
+  - `timestamp` (ISO8601) - when the batch run started
+  - `command` (string) - reconstructed command line used to run DeeZy
+  - `total_files` (int) - number of files requested
+  - `successful` (int) - number of successful encodes
+  - `failed` (int) - number of failures
+  - `skipped` (int) - number of skipped files (existing output and no `--overwrite`)
+  - `processing` (int) - number still in progress when the summary was generated
+  - `total_duration_seconds` (float|null) - total elapsed time for batch (if completed)
+  - `max_parallel` (int) - maximum parallelism used for the batch
+
+- `results` (array of objects) - each object has per-file metadata:
+  - `input_file` (string) - original input path
+  - `output_file` (string|null) - resolved output path if produced
+  - `log_file` (string|null) - path to the per-file log (if `--log-to-file` used)
+  - `status` (string) - one of `processing`, `success`, `failed`, `skipped`
+  - `file_id` (string) - internal identifier used for unique naming
+  - `start_time` (ISO8601) - start time for the file
+  - `end_time` (ISO8601|null) - end time if completed
+  - `duration_seconds` (float|null) - elapsed seconds for the file
+  - `error` (string|null) - error message when `failed` or `skipped`
+
+A small example file is included in the repository at `example_json_flows/sample_batch_results.json`.
+
 ## 📋 Usage
 
 ### Basic Commands
