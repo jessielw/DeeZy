@@ -12,6 +12,7 @@ from deezy.config.manager import get_config_manager
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.shared import DeeDelay, DeeFPS, TrackType
 from deezy.exceptions import PathTooLongError
+from deezy.exceptions import OutputExistsError
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
@@ -321,3 +322,51 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         """
         if not keep_temp:
             shutil.rmtree(temp_dir)
+
+    def _early_output_exists_check(self, output: Path, overwrite: bool) -> None:
+        """Early check for output existence to fail fast.
+
+        Args:
+            output: final computed output Path
+            overwrite: whether the job intends to overwrite existing output
+
+        Raises:
+            OutputExistsError: if output exists and overwrite is False
+        """
+        if output.exists():
+            if overwrite:
+                logger.debug(f"Output already exists and will be overwritten: {output}")
+            else:
+                raise OutputExistsError(f"Output already exists: {output}")
+
+    def _atomic_move(self, src: Path, dest: Path, overwrite: bool) -> Path:
+        """
+        Atomically move `src` to `dest` when possible.
+
+        Tries Path.replace (atomic on the same filesystem). If that fails (for
+        example cross-filesystem moves), falls back to shutil.move. If
+        overwrite is False and the destination exists, raises
+        OutputExistsError to avoid accidental overwrites.
+
+        Returns:
+            Path: path to the moved file at the destination.
+        """
+        # protect against races: ensure we don't overwrite unless requested
+        if dest.exists():
+            if not overwrite:
+                raise OutputExistsError(f"Output already exists: {dest}")
+
+        try:
+            # prefer atomic replace (works on same filesystem)
+            moved = src.replace(dest)
+            return Path(moved)
+        except OSError:
+            # fallback to shutil.move for cross-filesystem moves. If overwrite
+            # was requested, ensure destination is removed first so move can
+            # succeed in replacing it.
+            if overwrite and dest.exists():
+                try:
+                    dest.unlink()
+                except FileNotFoundError:
+                    pass
+            return Path(shutil.move(str(src), str(dest)))

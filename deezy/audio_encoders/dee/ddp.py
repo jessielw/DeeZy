@@ -1,5 +1,4 @@
 from pathlib import Path
-import shutil
 import tempfile
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
@@ -143,10 +142,22 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 )
                 else False
             )
-            output = mi_parser.generate_output_filename(ignore_delay).with_suffix(
-                ".ec3"
+            output = mi_parser.generate_output_filename(
+                ignore_delay,
+                suffix=".ec3",
+                worker_id=self.payload.worker_id,
             )
+
+        # If a centralized batch output directory was provided and the user did not
+        # explicitly supply an output path, place final output there. This ensures
+        # an explicit --output wins over config-provided batch_output_dir.
+        if self.payload.file_output is None and self.payload.batch_output_dir:
+            output = Path(self.payload.batch_output_dir) / output.name
         logger.debug(f"Output path {output}.")
+
+        # early existence check: fail fast to avoid expensive work if the
+        # destination already exists and the user didn't request overwrite.
+        self._early_output_exists_check(output, self.payload.overwrite)
 
         # define .wav and .ac3/.ec3 file names (not full path)
         wav_file_name = temp_filename + ".wav"
@@ -210,9 +221,9 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         )
         logger.debug(f"Dee job: {_dee_job}.")
 
-        # move file to output path
+        # move file to output path using centralized atomic move helper
         logger.debug(f"Moving {output_file_path.name} to {output}.")
-        move_file = Path(shutil.move(output_file_path, output))
+        move_file = self._atomic_move(output_file_path, output, self.payload.overwrite)
         logger.debug("Done.")
 
         # delete temp folder and all files if enabled
