@@ -35,7 +35,7 @@ CONF_DEFAULT = """\
 ffmpeg = ""  
 # Path to Dolby Encoding Engine (DEE) executable
 dee = ""     
-# Path to TrueHD executable
+# Path to truehdd executable
 truehdd = "" 
 
 [global_defaults]
@@ -57,6 +57,21 @@ max_parallel = 1
 max_logs = 50
 # Maximum number of batch-results JSON files to keep (oldest removed)    
 max_batch_results = 50
+# Overwrite existing outputs when encoding. When false, existing outputs will cause jobs to be skipped.
+overwrite = false
+# Maximum random jitter (ms) applied before heavy phases (FFmpeg/DEE/TrueHDD). 0 = disabled.
+jitter_ms = 0
+# Per-phase concurrency limits. Set to 0 to inherit the value of `max_parallel`.
+# These allow fine-grained tuning when some phases are more/less intensive.
+limit_ffmpeg = 0
+limit_dee = 0
+limit_truehdd = 0
+# When input is an elementary stream, parse delay from filename and strip it when True
+parse_elementary_delay = false
+# Write logs to file by default for each job
+log_to_file = false
+# Disable progress bars by default
+no_progress_bars = false
 # Dynamic range compression for line mode
 drc_line_mode = "film_light"
 # Dynamic range compression for RF mode
