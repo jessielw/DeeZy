@@ -9,14 +9,24 @@ import traceback
 from cli.payload_factory import PayloadBuilder
 from cli.utils import (
     CustomHelpFormatter,
+    apply_config_defaults_to_args,
+    apply_default_bitrate,
     clean_deezy_temp_folders,
     dialnorm_options,
+    execute_find_command,
+    execute_info_command,
     get_deezy_temp_info,
+    handle_configuration,
+    handle_dependencies,
+    handle_file_inputs,
+    handle_preset_injection,
     int_0_100,
+    setup_logging,
     validate_track_index,
 )
 from deezy.audio_encoders.dee.ac4 import Ac4Encoder
 from deezy.audio_encoders.dee.atmos import AtmosEncoder
+from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.dd import DDEncoderDEE
 from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
 from deezy.config.defaults import get_default_config_path
@@ -30,13 +40,10 @@ from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
 from deezy.enums.shared import TrackType
 from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix
 from deezy.exceptions import OutputExistsError
-from deezy.info import parse_audio_streams
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils._version import __version__, program_name
 from deezy.utils.batch_results import BatchResultsManager
-from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
-from deezy.utils.file_parser import parse_input_s
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY
 
@@ -146,6 +153,15 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Maximum number of files to process in parallel (default: 1).",
     )
     encode_group.add_argument(
+        "--jitter-ms",
+        type=int,
+        default=0,
+        help=(
+            "Maximum random jitter in milliseconds to apply before heavy phases (FFmpeg/DEE/truehdd). "
+            "Helps avoid synchronization spikes when running parallel jobs. Default 0 (disabled)."
+        ),
+    )
+    encode_group.add_argument(
         "--max-logs",
         type=int,
         default=None,
@@ -194,7 +210,35 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_true",
         help=("Overwrite existing output files instead of failing."),
     )
-    # Note: batch output dir is now centralized under the DeeZy working folder
+
+    # per-phase concurrency limits
+    encode_group.add_argument(
+        "--limit-ffmpeg",
+        type=int,
+        default=None,
+        help=(
+            "Optional limit for concurrent FFmpeg processing. Defaults to --max-parallel if not set. "
+            "If set higher than --max-parallel the value will be capped to --max-parallel and a warning will be emitted."
+        ),
+    )
+    encode_group.add_argument(
+        "--limit-dee",
+        type=int,
+        default=None,
+        help=(
+            "Optional limit for concurrent DEE processing. Defaults to --max-parallel if not set. "
+            "If set higher than --max-parallel the value will be capped to --max-parallel and a warning will be emitted."
+        ),
+    )
+    encode_group.add_argument(
+        "--limit-truehdd",
+        type=int,
+        default=None,
+        help=(
+            "Optional limit for concurrent truehdd processing. Defaults to --max-parallel if not set. "
+            "If set higher than --max-parallel the value will be capped to --max-parallel and a warning will be emitted."
+        ),
+    )
 
     # bitrate group
     bitrate_group = argparse.ArgumentParser(add_help=False)
@@ -726,61 +770,6 @@ def create_other_parsers(
     temp_subparsers.add_parser("info", help="Show temp folder information")
 
 
-def apply_default_bitrate(
-    args: argparse.Namespace, config_manager: ConfigManager | None
-) -> None:
-    """Apply default bitrate based on format and channels/mode if none specified."""
-    if not hasattr(args, "bitrate") or args.bitrate is None:
-        # determine the channel/mode key based on format
-        channels_or_mode = None
-        if args.format_command == "atmos":
-            # for Atmos, use the mode (streaming/bluray)
-            if hasattr(args, "atmos_mode") and args.atmos_mode:
-                channels_or_mode = (
-                    args.atmos_mode.value
-                    if hasattr(args.atmos_mode, "value")
-                    else str(args.atmos_mode)
-                )
-        else:
-            # for DD/DDP, use channels
-            if hasattr(args, "channels") and args.channels:
-                channels_or_mode = args.channels
-
-        # get default bitrate from config
-        if config_manager is not None:
-            default_bitrate = config_manager.get_default_bitrate(
-                args.format_command, channels_or_mode
-            )
-
-            if default_bitrate:
-                args.bitrate = default_bitrate
-                logger.debug(
-                    f"No bitrate specified, using default {default_bitrate}k for {args.format_command}"
-                )
-
-
-def handle_preset_injection() -> None:
-    """Handle preset injection into sys.argv before argparse runs."""
-
-    # check if this is a preset command
-    if len(sys.argv) >= 4 and "preset" in sys.argv and "--name" in sys.argv:
-        try:
-            name_idx = sys.argv.index("--name")
-
-            # get preset name (should be right after --name)
-            if name_idx + 1 < len(sys.argv):
-                preset_name = sys.argv[name_idx + 1]
-
-                # load config and get preset
-                config_manager = get_config_manager()
-                config_manager.load_config()
-                config_manager.inject_preset_args(preset_name)
-
-        except (ValueError, IndexError):
-            # preset parsing failed, let argparse handle the error
-            pass
-
-
 def cli_parser() -> None:
     """Main CLI parser entry point."""
     # handle presets by injecting args before parsing
@@ -817,75 +806,7 @@ def cli_parser() -> None:
     execute_command(args, file_inputs, dependencies, config_manager)
 
 
-def setup_logging(args: argparse.Namespace) -> None:
-    """Initialize logging based on arguments."""
-    logger_manager.set_level(args.log_level.to_logging_level())
-
-
-def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
-    """Load configuration manager."""
-    config_manager = None
-    if args.sub_command != "config":
-        config_manager = get_config_manager()
-    return config_manager
-
-
-def handle_dependencies(
-    args: argparse.Namespace, config_manager: ConfigManager | None
-) -> dict[str, Path | None] | None:
-    """
-    Handle tool dependencies detection.
-    CLI > Config.
-    """
-    if args.sub_command in ("config", "temp"):
-        return None
-
-    deps = {}
-    config_deps = (
-        config_manager.config.get("dependencies", {}) if config_manager else {}
-    )
-
-    for key in ("ffmpeg", "truehdd", "dee"):
-        cli_value = getattr(args, key, None)
-        config_value = config_deps.get(key)
-        deps[key] = cli_value or config_value
-
-    atmos_required = getattr(args, "format_command", None) in ("atmos", "ac4")
-
-    try:
-        tools = FindDependencies().get_dependencies(
-            WORKING_DIRECTORY,
-            deps["ffmpeg"],
-            deps["truehdd"],
-            deps["dee"],
-            require_truehdd=atmos_required,
-        )
-    except DependencyNotFoundError as e:
-        exit_application(str(e), EXIT_FAIL)
-
-    return {
-        "ffmpeg_path": Path(tools.ffmpeg),
-        "truehdd_path": Path(tools.truehdd) if tools.truehdd else None,
-        "dee_path": Path(tools.dee),
-    }
-
-
-def handle_file_inputs(args: argparse.Namespace) -> list[Path]:
-    """Parse and validate file inputs."""
-    if not hasattr(args, "input") or not args.input:
-        if args.sub_command not in {"config", "temp"}:
-            exit_application("", EXIT_FAIL)
-        return []
-
-    if args.sub_command not in ("find", "info", "encode"):
-        return []
-
-    # parse all possible file inputs
-    file_inputs = parse_input_s(args.input)
-    if not file_inputs and args.sub_command in ("find", "info", "encode"):
-        exit_application("No input files were found.", EXIT_FAIL)
-
-    return file_inputs
+# config->args helper moved to cli.utils.apply_config_defaults_to_args
 
 
 def execute_command(
@@ -1109,6 +1030,11 @@ def execute_encode_command(
     # store computed work_dir on args so encode_single_file can find it
     setattr(args, "_working_dir", str(work_dir))
 
+    # Apply config defaults into args and resolve per-phase limits once so both
+    # sequential and parallel paths behave identically. Returns resolved
+    # per-phase limits (None means inherit max_parallel).
+    ff_limit, de_limit, th_limit = apply_config_defaults_to_args(args, config_manager)
+
     # determine if we should use worker prefixes
     # use prefixes only if there are multiple files AND max_parallel > 1
     use_worker_prefixes = len(file_inputs) > 1 and max_parallel > 1
@@ -1232,6 +1158,16 @@ def execute_encode_command(
         # parallel processing
         else:
             with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+                # Initialize phase semaphores and jitter in the encoder base so
+                # all encoder instances share phase limits.
+                BaseDeeAudioEncoder.init_phase_limits(
+                    max_parallel,
+                    args.jitter_ms,
+                    ffmpeg_limit=ff_limit,
+                    dee_limit=de_limit,
+                    truehdd_limit=th_limit,
+                )
+
                 # submit all jobs and create batch results
                 future_to_file = {}
                 future_to_batch_result = {}
@@ -1369,33 +1305,6 @@ def execute_encode_command(
         # only catch unexpected errors here
         logger.debug(traceback.format_exc())
         exit_application(f"Unexpected error: {e}", EXIT_FAIL)
-
-
-def execute_find_command(args: argparse.Namespace, file_inputs: list[Path]) -> None:
-    """Execute find command."""
-    file_names = []
-    for input_file in file_inputs:
-        # if name only is used, print only the name of the file.
-        if args.name:
-            input_file = input_file.name
-        file_names.append(str(input_file))
-
-    exit_application("\n".join(file_names), EXIT_SUCCESS)
-
-
-def execute_info_command(_args: argparse.Namespace, file_inputs: list[Path]) -> None:
-    """Execute info command."""
-    track_s_info = ""
-    for input_file in file_inputs:
-        info = parse_audio_streams(input_file)
-        if info.media_info:
-            track_s_info = (
-                track_s_info
-                + f"File: {input_file.name}\nAudio tracks: {info.track_list}\n"
-                + info.media_info
-                + "\n\n"
-            )
-    exit_application(track_s_info, EXIT_SUCCESS)
 
 
 def execute_config_command(

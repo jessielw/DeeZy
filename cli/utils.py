@@ -2,11 +2,20 @@ import argparse
 import os
 from pathlib import Path
 import shutil
+import sys
 import tempfile
 import time
 from typing import Any
 
+from deezy.config.manager import ConfigManager, get_config_manager
+from deezy.info import parse_audio_streams
 from deezy.track_info.track_index import TrackIndex
+from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
+from deezy.utils.exit import EXIT_FAIL, exit_application
+from deezy.utils.exit import EXIT_SUCCESS
+from deezy.utils.file_parser import parse_input_s
+from deezy.utils.logger import logger, logger_manager
+from deezy.utils.utils import WORKING_DIRECTORY
 
 
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
@@ -168,3 +177,220 @@ def clean_deezy_temp_folders(
             continue
 
     return removed_count, total_size / 1024 / 1024
+
+
+def apply_config_defaults_to_args(
+    args: argparse.Namespace, config_manager: Any
+) -> tuple[int | None, int | None, int | None]:
+    """Apply config defaults into argparse Namespace and resolve per-phase limits.
+
+    Returns a 3-tuple of (ffmpeg_limit, dee_limit, truehd_limit) where None
+    indicates "inherit max_parallel".
+    """
+
+    def _cfg_get(key: str):
+        try:
+            return config_manager.get_config_default(key) if config_manager else None
+        except Exception:
+            return None
+
+    limits_map = {
+        "limit_ffmpeg": "limit_ffmpeg",
+        "limit_dee": "limit_dee",
+        "limit_truehdd": "limit_truehdd",
+    }
+
+    resolved_limits: dict[str, int | None] = {}
+    for attr, cfg_key in limits_map.items():
+        val = getattr(args, attr, None)
+        if val is None:
+            cfg_val = _cfg_get(cfg_key)
+            if cfg_val is not None:
+                try:
+                    cfg_int = int(cfg_val)
+                    resolved_limits[attr] = None if cfg_int == 0 else cfg_int
+                except Exception:
+                    resolved_limits[attr] = None
+            else:
+                resolved_limits[attr] = None
+        else:
+            resolved_limits[attr] = val
+
+    try:
+        if getattr(args, "jitter_ms", 0) == 0:
+            cfg_j = _cfg_get("jitter_ms")
+            if cfg_j is not None:
+                args.jitter_ms = int(cfg_j)
+    except Exception:
+        pass
+
+    bool_keys = (
+        "overwrite",
+        "parse_elementary_delay",
+        "log_to_file",
+        "no_progress_bars",
+    )
+    for b in bool_keys:
+        try:
+            if not getattr(args, b, False):
+                cfg_b = _cfg_get(b)
+                if cfg_b is not None:
+                    setattr(args, b, bool(cfg_b))
+        except Exception:
+            pass
+
+    return (
+        resolved_limits.get("limit_ffmpeg"),
+        resolved_limits.get("limit_dee"),
+        resolved_limits.get("limit_truehdd"),
+    )
+
+
+def apply_default_bitrate(
+    args: argparse.Namespace, config_manager: ConfigManager | None
+) -> None:
+    """Apply default bitrate based on format and channels/mode if none specified.
+
+    This was moved from cli.__init__ so tests can exercise it directly and to
+    keep CLI module focused on parsing and dispatch.
+    """
+    if not hasattr(args, "bitrate") or args.bitrate is None:
+        channels_or_mode = None
+        if args.format_command == "atmos":
+            if hasattr(args, "atmos_mode") and args.atmos_mode:
+                channels_or_mode = (
+                    args.atmos_mode.value
+                    if hasattr(args.atmos_mode, "value")
+                    else str(args.atmos_mode)
+                )
+        else:
+            if hasattr(args, "channels") and args.channels:
+                channels_or_mode = args.channels
+
+        if config_manager is not None:
+            try:
+                default_bitrate = config_manager.get_default_bitrate(
+                    args.format_command, channels_or_mode
+                )
+            except Exception:
+                default_bitrate = None
+
+            if default_bitrate:
+                args.bitrate = default_bitrate
+                logger.debug(
+                    f"No bitrate specified, using default {default_bitrate}k for {args.format_command}"
+                )
+
+
+def handle_preset_injection() -> None:
+    """Handle preset injection into sys.argv before argparse runs.
+
+    Moved from cli.__init__ to keep the CLI entrypoint concise.
+    """
+    if len(sys.argv) >= 4 and "preset" in sys.argv and "--name" in sys.argv:
+        try:
+            name_idx = sys.argv.index("--name")
+            if name_idx + 1 < len(sys.argv):
+                preset_name = sys.argv[name_idx + 1]
+                config_manager = get_config_manager()
+                config_manager.load_config()
+                config_manager.inject_preset_args(preset_name)
+        except (ValueError, IndexError):
+            pass
+
+
+def setup_logging(args: argparse.Namespace) -> None:
+    """Initialize logging based on arguments."""
+    logger_manager.set_level(args.log_level.to_logging_level())
+
+
+def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
+    """Load configuration manager."""
+    config_manager = None
+    if args.sub_command != "config":
+        config_manager = get_config_manager()
+    return config_manager
+
+
+def handle_dependencies(
+    args: argparse.Namespace, config_manager: ConfigManager | None
+) -> dict[str, Path | None] | None:
+    """
+    Handle tool dependencies detection.
+    CLI > Config.
+    """
+    if args.sub_command in ("config", "temp"):
+        return None
+
+    deps = {}
+    config_deps = (
+        config_manager.config.get("dependencies", {}) if config_manager else {}
+    )
+
+    for key in ("ffmpeg", "truehdd", "dee"):
+        cli_value = getattr(args, key, None)
+        config_value = config_deps.get(key)
+        deps[key] = cli_value or config_value
+
+    atmos_required = getattr(args, "format_command", None) in ("atmos", "ac4")
+
+    try:
+        tools = FindDependencies().get_dependencies(
+            WORKING_DIRECTORY,
+            deps["ffmpeg"],
+            deps["truehdd"],
+            deps["dee"],
+            require_truehdd=atmos_required,
+        )
+    except DependencyNotFoundError as e:
+        exit_application(str(e), EXIT_FAIL)
+
+    return {
+        "ffmpeg_path": Path(tools.ffmpeg),
+        "truehdd_path": Path(tools.truehdd) if tools.truehdd else None,
+        "dee_path": Path(tools.dee),
+    }
+
+
+def handle_file_inputs(args: argparse.Namespace) -> list[Path]:
+    """Parse and validate file inputs."""
+    if not hasattr(args, "input") or not args.input:
+        if args.sub_command not in {"config", "temp"}:
+            exit_application("", EXIT_FAIL)
+        return []
+
+    if args.sub_command not in ("find", "info", "encode"):
+        return []
+
+    file_inputs = parse_input_s(args.input)
+    if not file_inputs and args.sub_command in ("find", "info", "encode"):
+        exit_application("No input files were found.", EXIT_FAIL)
+
+    return file_inputs
+
+
+def execute_find_command(args: argparse.Namespace, file_inputs: list[Path]) -> None:
+    """Execute find command."""
+    file_names = []
+    for input_file in file_inputs:
+        # if name only is used, print only the name of the file.
+        if getattr(args, "name", False):
+            input_file = input_file.name
+        file_names.append(str(input_file))
+
+    exit_application("\n".join(file_names), EXIT_SUCCESS)
+
+
+def execute_info_command(_args: argparse.Namespace, file_inputs: list[Path]) -> None:
+    """Execute info command."""
+    track_s_info = ""
+    for input_file in file_inputs:
+        info = parse_audio_streams(input_file)
+        if info.media_info:
+            track_s_info = (
+                track_s_info
+                + f"File: {input_file.name}\nAudio tracks: {info.track_list}\n"
+                + info.media_info
+                + "\n\n"
+            )
+    exit_application(track_s_info, EXIT_SUCCESS)
