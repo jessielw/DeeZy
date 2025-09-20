@@ -17,3 +17,4 @@ test.py
 custom-pyinstaller/
 deezy.egg-info
 deezy-conf.toml
+.pypirc
