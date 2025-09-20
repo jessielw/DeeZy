@@ -76,7 +76,7 @@ deezy config generate --overwrite
 
 The configuration file (`deezy-conf.toml`) supports:
 
-- **Tool dependency paths** (FFmpeg, DEE, TrueHD)
+- **Tool dependency paths** (FFmpeg, DEE, truehdd)
 - **Global encoding defaults** applied to all formats
 - **Default bitrates** per codec and channel layout
 - **Format-specific settings** that override global defaults
@@ -293,6 +293,18 @@ Recent CLI additions expand batch processing and working-directory control. Thes
 
   - Process up to N files in parallel. Default is 1 (sequential). Use this to speed up batch runs when machine resources allow.
 
+Per-phase limits and jitter
+
+-- `--limit-ffmpeg`, `--limit-dee`, `--limit-truehdd`
+
+  - Fine-tune concurrency for the heavy processing phases: the FFmpeg stage, the DEE (Dolby Encoding Engine) stage, and truehdd decoding stage respectively.
+  - If any of these flags are omitted they will default to the value supplied to `--max-parallel`. This keeps phase limits consistent with the overall worker count.
+  - If a per-phase value is set greater than `--max-parallel` the CLI will cap the phase limit to `--max-parallel` and emit a warning at startup.
+
+- `--jitter-ms`
+
+  - When set (>0), introduces a small random delay (up to the given milliseconds) before entering heavy phases (FFmpeg, DEE, truehdd). This reduces load spikes when many jobs start simultaneously and helps avoid thrashing on constrained systems.
+
 - `--max-logs N` and `--max-batch-results N`
   - Per-run overrides for retention trimming. These flags override the config defaults for the current run and control how many log files and batch-result JSON files are kept in the working directory. Set to `0` to keep none.
 
@@ -502,7 +514,7 @@ deezy encode atmos --atmos-mode bluray --bitrate 768 input.mkv
 **Atmos Options:**
 
 - `--atmos-mode`: `streaming` or `bluray`
-- `--thd-warp-mode`: Warp mode for TrueHD processing (`normal`)
+- `--thd-warp-mode`: Warp mode for truehdd processing (`normal`)
 - `--bed-conform`: Enable bed conformance
 
 ### Dolby AC-4 Encoding
@@ -923,9 +935,9 @@ deezy encode ddp --temp-dir "C:\debug\" input.mkv
 
 ### Common Issues
 
-**"TrueHD decoder not found"**
+**"truehdd decoder not found"**
 
-- Ensure TrueHD decoder is installed and in PATH
+- Ensure truehdd decoder is installed and in PATH
 - Only required for Atmos encoding from TrueHD sources
 
 **"Invalid bitrate for channel layout"**

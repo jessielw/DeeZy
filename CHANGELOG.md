@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Config:
+
   - Default bitrates setting for AC4.
 
 - CLI:
+
   - `--parse-elementary-delay` - When input is an elementary (demuxed) stream, parse any delay in the filename and reset it to zero.
   - `--working-dir` - Set a centralized working directory for job files, logs, and batch-results. Overrides config default when provided.
   - `--batch-summary-output` - Path to write a JSON summary for a batch run. When provided, a single JSON file with per-file metadata (status, durations, log file, output path) is emitted.
@@ -23,11 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--max-batch-results` - Integer to retain a maximum number of batch result JSON files in the working batch-results directory; older results are trimmed.
 
 - Encoders / Internal:
+
   - Centralized atomic move helper in the DEE encoder base class to perform safe, fast output file placement. Uses an atomic replace when possible and falls back to a cross-filesystem-safe move when needed.
   - DRY refactor: replaced per-encoder unlink+move logic with the centralized helper across DD, DDP, Atmos and AC4 encoders. This unifies overwrite semantics and reduces duplicated code.
   - Automatic filename generation has been greatly improved:
-    - Will check for common attributes via the mediainfo/input name and append that to the automatically generated file name. 
+    - Will check for common attributes via the mediainfo/input name and append that to the automatically generated file name.
     - Detects name, year, season, episode and adds them to the name when generating a new name.
+  - Concurrency & phase limits:
+  - New CLI flags: `--limit-ffmpeg`, `--limit-dee`, `--limit-truehdd` allow fine-tuning concurrency for each heavy phase.
+    - If per-phase flags are not provided, each phase defaults to the value of `--max-parallel`.
+    - Exception: the DEE phase defaults to a conservative fraction of `--max-parallel` (roughly half) to avoid saturating CPU/IO on slower machines; users can override with `--limit-dee`.
+    - Values greater than `--max-parallel` are capped to `--max-parallel` and a warning is emitted at startup.
+    - `--jitter-ms` flag: introduces a small randomized delay before heavy phases to reduce thundering-herd spikes in high-parallel runs.
 
 ### Changed
 
@@ -39,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - If the user explicitly defines an output file name no logic will be ran on the output file (as to not change the users desired output name).
   - If `--parse-elementary-delay` is **not** used, delays will be handled like they was previously in containers and no logic will be ran against **elementary** files.
 - Improved language detection for **elementary** formats.
+- Updated default config.
 
 ### Fixed
 
