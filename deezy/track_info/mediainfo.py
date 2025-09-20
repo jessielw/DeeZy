@@ -126,15 +126,20 @@ class MediainfoParser:
             return True
         return False
 
-    def generate_output_filename(self, ignore_delay: bool) -> Path:
-        """Automatically generate an output file name
+    def generate_output_filename(
+        self, ignore_delay: bool, suffix: str, worker_id: str | None
+    ) -> Path:
+        """
+        Automatically generate an output file name keeping some attributes.
+
+        Args:
+            ignore_delay: Whether to ignore delay information
+            suffix: File extension/suffix (".ac3", ".ec3", ".ac4")
+            worker_id: Optional worker ID for parallel processing (e.g., "f1", "f2")
 
         Returns:
             Path: Path of a automatically generated filename
         """
-        # placeholder extension
-        extension = ".tmp"
-
         # base directory/name
         base_dir = self.file_input.parent
 
@@ -149,6 +154,13 @@ class MediainfoParser:
         year = self.guess.get("year")
         lang = self._get_lang_alpha3(self.guess.get("language"))
 
+        # context extraction
+        season = self.guess.get("season")
+        episode = self.guess.get("episode")
+        source = self._extract_source_info()
+        format_info = self._extract_format_info()
+        channels = self._get_channel_info()
+
         # get attributes from mediainfo
         delay = self._delay_detection() if not ignore_delay else None
         mi_lang = self._language_detection()
@@ -158,12 +170,42 @@ class MediainfoParser:
             delay_from_file = parse_delay_from_file(self.file_input)
             delay = f"[DELAY {delay_from_file}]" if delay_from_file else None
 
-        # construct new clean path
-        new_name_parts = (title, year, mi_lang or lang, delay)
-        new_base_name = " ".join([str(x) for x in new_name_parts if x])
-        return Path(base_dir / re.sub(r"\s{2,}", " ", new_base_name)).with_suffix(
-            extension
-        )
+        # construct new clean path with enhanced context
+        name_parts = [title]
+
+        # add season/episode info for TV shows
+        if season is not None and episode is not None:
+            name_parts.append(f"S{season:02d}E{episode:02d}")
+        elif season is not None:
+            name_parts.append(f"S{season:02d}")
+
+        # add year if available
+        if year:
+            name_parts.append(str(year))
+
+        # add source and format context in brackets
+        context_parts = []
+        if source:
+            context_parts.append(source)
+        if format_info:
+            context_parts.append(format_info)
+        lang_str = mi_lang or lang
+        if lang_str:
+            context_parts.append(lang_str)
+        if channels:
+            context_parts.append(channels)
+        if worker_id:
+            context_parts.append(worker_id)
+
+        if context_parts:
+            name_parts.append(f"[{'_'.join(context_parts)}]")
+
+        # add delay if present
+        if delay:
+            name_parts.append(delay)
+
+        new_base_name = " ".join(name_parts)
+        return base_dir / Path(str(re.sub(r"\s{2,}", " ", new_base_name)) + suffix)
 
     def _delay_detection(self) -> str | None:
         """Detect delay relative to video to inject into filename.
@@ -192,7 +234,7 @@ class MediainfoParser:
                 (i for i, length in enumerate(l_lengths) if length == 3), None
             )
             return (
-                f"[{self.mi_audio_obj.other_language[l_index]}]"
+                f"{self.mi_audio_obj.other_language[l_index]}"
                 if l_index is not None
                 else None
             )
@@ -220,6 +262,68 @@ class MediainfoParser:
             return other_tracks == 0
         except (IndexError, AttributeError, ValueError):
             return False
+
+    def _extract_source_info(self) -> str | None:
+        """Extract source information from filename or MediaInfo."""
+        filename_lower = self.file_input.name.lower()
+
+        # check for common source indicators
+        if "remux" in filename_lower:
+            return "Remux"
+        elif "bluray" in filename_lower or "blu-ray" in filename_lower:
+            return "BluRay"
+        elif "web-dl" in filename_lower or "webdl" in filename_lower:
+            return "WEB-DL"
+        elif "webrip" in filename_lower:
+            return "WEBRip"
+        elif "hdtv" in filename_lower:
+            return "HDTV"
+        elif "dvd" in filename_lower:
+            return "DVD"
+
+    def _extract_format_info(self) -> str | None:
+        """Extract audio format information from filename or MediaInfo."""
+        filename_lower = self.file_input.name.lower()
+
+        # Check MediaInfo first for accurate format detection
+        if self.mi_audio_obj.format:
+            mi_format = str(self.mi_audio_obj.format).upper()
+            if "TRUEHD" in mi_format or "MLP FBA" in mi_format:
+                if self._is_thd_atmos():
+                    return "TrueHD.Atmos"
+                return "TrueHD"
+            elif "DTS" in mi_format:
+                return "DTS"
+            elif "AC-3" in mi_format or "E-AC-3" in mi_format:
+                if "atmos" in filename_lower:
+                    return "DDP.Atmos"
+                return "DDP"
+            elif "FLAC" in mi_format:
+                return "FLAC"
+            elif "PCM" in mi_format:
+                return "PCM"
+
+        # fallback to filename parsing
+        if "truehd" in filename_lower:
+            if "atmos" in filename_lower:
+                return "TrueHD.Atmos"
+            return "TrueHD"
+        elif "dts" in filename_lower:
+            return "DTS"
+        elif "ddp" in filename_lower or "dd+" in filename_lower:
+            if "atmos" in filename_lower:
+                return "DDP.Atmos"
+            return "DDP"
+        elif "flac" in filename_lower:
+            return "FLAC"
+
+    def _get_channel_info(self) -> str | None:
+        """Get channel layout information."""
+        channels = self.get_channels(self.mi_audio_obj)
+
+        # map channel counts to common layouts
+        channel_map = {1: "1.0", 2: "2.0", 6: "5.1", 8: "7.1"}
+        return channel_map.get(channels, f"{channels}ch")
 
     @staticmethod
     def _get_lang_alpha3(lang: Any) -> str | None:
