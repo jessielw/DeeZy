@@ -46,6 +46,30 @@ deezy.exe (or deezy on Linux)
         └── truehdd.exe
 ```
 
+### Install via pipx / PyPI
+
+If you'd like to install the CLI and get the `deezy` command on your PATH, the recommended approach is to use pipx:
+
+```powershell
+pipx install deezy
+```
+
+You can also install from a local copy (for development):
+
+```powershell
+pipx install --editable .
+# or
+pipx install --spec .
+```
+
+After installing with pipx, the `deezy` shim will be available on your PATH (if pipx setup added its shim directory to PATH). Run `deezy --help` to confirm.
+
+## 📤 Publishing
+
+This repository includes a GitHub Actions workflow (`.github/workflows/publish-pypi.yml`) that will build and publish the package to PyPI when a Git tag prefixed with `v` is pushed (for example `v1.3.0rc5`).
+
+To use the workflow, add a `PYPI_API_TOKEN` secret to your repository (created from https://pypi.org/manage/project/<your-project>/). The workflow expects the token to be stored in `secrets.PYPI_API_TOKEN`.
+
 ### Dependencies
 
 - **FFMPEG** - Required for all operations
