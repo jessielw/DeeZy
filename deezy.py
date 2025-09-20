@@ -1,7 +1,6 @@
 import sys
 
 from cli import cli_parser
-from deezy.utils.utils import get_working_dir
 
 
 if __name__ == "__main__":
@@ -10,5 +9,4 @@ if __name__ == "__main__":
     sys.stdout = open(sys.stdout.fileno(), "w", 1, encoding="utf-8")
     sys.stderr = open(sys.stderr.fileno(), "w", 1, encoding="utf-8")
 
-    base_wd = get_working_dir()
-    cli_parser(base_wd)
+    cli_parser()
