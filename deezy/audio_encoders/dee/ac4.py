@@ -61,6 +61,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             payload_channels=Ac4Channels.IMMERSIVE_STEREO,
             audio_track_info=audio_track_info,
             bitrate_obj=bitrate_obj,
+            source_audio_channels=audio_track_info.channels,
             auto_enum_value=None,  # AC4 doesn't have AUTO
             channel_resolver=self.ac4_channel_resolver,
         )
@@ -138,7 +139,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 raise DependencyNotFoundError(
                     "Failed to locate truehdd, this is required for atmos work flows"
                 )
-                
+
             # optionally stagger/jitter and limit concurrent TrueHD jobs
             self._maybe_jitter()
             self._acquire_truehdd()

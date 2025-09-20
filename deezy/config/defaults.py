@@ -101,12 +101,52 @@ mono = 192     # DD 1.0
 stereo = 224   # DD 2.0
 surround = 448 # DD 5.1
 
+# Optional per-source defaults for Dolby Digital (AC-3)
+# Uncomment to opt-in to per-source defaults keyed by source channel count.
+# Values below are examples derived from the encoder enums (MONO/STEREO/SURROUND)
+# and are commented out so they're not active by default.
+#[default_source_bitrates.dd]
+# ch_1 = 192
+# ch_2 = 224 
+# ch_3 = 224  
+# ch_4 = 224
+# ch_5 = 224
+# ch_6 = 448  
+# ch_7 = 448 
+# ch_8 = 448
+
+# NOTES:
+# The optional [default_source_bitrates.<codec>] sections let you opt-in to per-source
+# default bitrates keyed by source channel count. Keys should be named ch_1..ch_8 (lowercase
+# preferred). The encoder will look under this section when no bitrate is supplied on the
+# CLI/preset and will use the value for the detected source channel count. If the value
+# found in the config is not an allowed bitrate for the chosen encoding settings, the
+# encoder will pick the closest allowed bitrate from its internal choices.
+#
+# Supported codecs:
+#  - dd, ddp: support ch_1..ch_8
+#  - ac4: meaningful only for channels 6..8 (use ch_6..ch_8)
+#
+
 # Default bitrates for Dolby Digital Plus (E-AC-3)
 [default_bitrates.ddp]
 mono = 64        # DDP 1.0
 stereo = 128     # DDP 2.0
 surround = 192   # DDP 5.1
 surroundex = 384 # DDP 7.1
+
+# Optional per-source defaults for Dolby Digital Plus (E-AC-3)
+# Uncomment to opt-in. Example values derived from the DDP enum defaults:
+# mono=64, stereo=128, surround=192, surroundex=384
+#[default_source_bitrates.ddp]
+# ch_1 = 64 
+# ch_2 = 128
+# ch_3 = 128 
+# ch_4 = 128
+# ch_5 = 128
+# ch_6 = 192   
+# ch_7 = 192 
+# ch_8 = 384
 
 # Default bitrates for Dolby Digital Plus Bluray
 [default_bitrates.ddp-bluray]
@@ -120,6 +160,15 @@ bluray = 1280    # Atmos Bluray
 # Default bitrates for AC4
 [default_bitrates.ac4]
 immersive_stereo = 256 # AC4 Immersive Stereo
+
+# Optional per-source defaults for AC4
+# AC4 encoding choices include 256 as a common default. AC4 is only meaningful
+# for immersive multi-channel sources (6..8) in many workflows; these are examples.
+# Uncomment to opt-in.
+#[default_source_bitrates.ac4]
+# ch_6 = 256
+# ch_7 = 256
+# ch_8 = 256
 
 [presets]
 # Example presets - customize as needed

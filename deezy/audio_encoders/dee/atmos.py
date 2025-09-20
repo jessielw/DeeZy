@@ -48,6 +48,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
             payload_channels=self.payload.atmos_mode,
             audio_track_info=audio_track_info,
             bitrate_obj=bitrate_obj,
+            source_audio_channels=audio_track_info.channels,
             auto_enum_value=None,  # Atmos doesn't have AUTO
             channel_resolver=self.atmos_mode_resolver,
         )
@@ -128,7 +129,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
             raise DependencyNotFoundError(
                 "Failed to locate truehdd, this is required for atmos work flows"
             )
-            
+
         # optionally stagger/jitter and limit concurrent TrueHD jobs
         self._maybe_jitter()
         self._acquire_truehdd()

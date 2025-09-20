@@ -49,6 +49,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             payload_channels=self.payload.channels,
             audio_track_info=audio_track_info,
             bitrate_obj=bitrate_obj,
+            source_audio_channels=audio_track_info.channels,
             auto_enum_value=DolbyDigitalChannels.AUTO,
             channel_resolver=self.dd_channel_resolver,
         )

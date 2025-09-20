@@ -11,7 +11,8 @@ from typing import Any, Generic, TypeVar
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
-from deezy.config.manager import get_config_manager
+from deezy.config.manager import ConfigManager, get_config_manager
+from deezy.enums.channel_count import ChannelCount
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.shared import DeeDelay, DeeFPS, TrackType
 from deezy.exceptions import PathTooLongError
@@ -55,6 +56,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         payload_channels: Any,
         audio_track_info: AudioTrackInfo,
         bitrate_obj: ChannelBitrates,
+        source_audio_channels: int,
         auto_enum_value: Any,
         channel_resolver: Callable[[int], Any],
     ) -> int:
@@ -67,6 +69,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             payload_channels: Channel enum from payload
             audio_track_info: Audio track information with source channel count
             bitrate_obj: ChannelBitrates object for validation
+            source_audio_channels: Source audio channels.
             auto_enum_value: The AUTO enum value for this codec
             channel_resolver: Function that takes (source_channels) and returns resolved channel enum
 
@@ -86,7 +89,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 logger.debug(f"Using provided bitrate: {payload_bitrate}.")
                 return payload_bitrate
         else:
-            # no bitrate provided - try config defaults first, then enum defaults
+            # no bitrate provided - try config defaults first: (source channel > target channel), then enum defaults
             config_bitrate = None
             target_channels = None
 
@@ -94,6 +97,16 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             try:
                 config_manager = get_config_manager()
                 if config_manager:
+                    # try source channel from config if the user has it enabled
+                    get_src_conf_bitrate = self._source_bitrate_from_config(
+                        config_manager, format_command.value, source_audio_channels
+                    )
+                    if get_src_conf_bitrate:
+                        logger.debug(
+                            f"Got source channel bitrate from config ({get_src_conf_bitrate})"
+                        )
+                        config_bitrate = get_src_conf_bitrate
+
                     # determine the actual target channels after AUTO resolution
                     target_channels = payload_channels
                     if (
@@ -103,10 +116,11 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                         # resolve AUTO to actual channel layout based on source
                         target_channels = channel_resolver(audio_track_info.channels)
 
-                    # get config default for the resolved channels
-                    config_bitrate = config_manager.get_default_bitrate(
-                        format_command, target_channels
-                    )
+                    # get config default for the resolved channels if not already determined from source config
+                    if not config_bitrate:
+                        config_bitrate = config_manager.get_default_bitrate(
+                            format_command, target_channels
+                        )
             except Exception:
                 # if config lookup fails, continue to enum default
                 pass
@@ -132,6 +146,28 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             # fallback to enum default if config lookup failed
             logger.debug(f"No supplied bitrate, defaulting to {bitrate_obj.default}.")
             return bitrate_obj.default
+
+    @staticmethod
+    def _source_bitrate_from_config(
+        conf_manager: ConfigManager, fmt: str, source_channels: int
+    ) -> int | None:
+        """Safely collects config from config manager if available."""
+        try:
+            channel_obj = ChannelCount(int(source_channels))
+            # check in config
+            section = conf_manager.config.get("default_source_bitrates")
+            if not section:
+                return None
+            fmt_conf = section.get(fmt)
+            if not fmt_conf:
+                return None
+            bitrate = fmt_conf.get(channel_obj.to_config())
+            if bitrate is None or bitrate <= 0:
+                return None
+            return bitrate
+        except Exception as e:
+            logger.warning(f"Failed to get source bitrate from config: {e}")
+            return None
 
     @staticmethod
     @abstractmethod
@@ -401,7 +437,9 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         # determine per-phase limits (apply sensible defaults if not provided)
         ff_limit = ffmpeg_limit if (ffmpeg_limit is not None) else max(1, max_parallel)
         de_limit = dee_limit if (dee_limit is not None) else max(1, max_parallel)
-        th_limit = truehdd_limit if (truehdd_limit is not None) else max(1, max_parallel)
+        th_limit = (
+            truehdd_limit if (truehdd_limit is not None) else max(1, max_parallel)
+        )
 
         # cap limits to max_parallel to avoid confusing configurations
         capped_ff = min(max(1, ff_limit), max_parallel)
