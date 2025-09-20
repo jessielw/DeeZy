@@ -46,8 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Config **Breaking Change**:
+
   - `[default_bitrates.ddp_bluray]` needs to be renamed to `[default_bitrates.ddp-bluray]` to match the codec properly. This will be automatic if you generate a new config, otherwise you should make this change manually if using the config.
   - Updated some of the default bitrates in the generated config.
+
+- Config: Use platform-aware user config location and unified Windows folder
+  - `ConfigManager` now prefers a stable user config location when no explicit
+    config path is provided. The search order is: current working directory
+    (per-project) → user config directory (platform default) → working dir
+    beside the executable (for bundled/exe usage).
+  - On Windows the user config file will be placed in a single `deezy` folder
+    under your local app data (for example: `%LOCALAPPDATA%\deezy\deezy-conf.toml`).
+  - `deezy config generate` now writes to the user config dir by default when
+    no path is supplied. This makes config placement deterministic across
+    installations while preserving portable per-executable configs.
 - Parsing delay from filename:
   - When a file is in it's **elementary** format _(demuxed by itself)_ and there is a delay string we will parse it and zero it out if `--parse-elementary-delay` is used. This will effectively set the audio to 0ms delay during encoding as well as strip it from the filename.
     - If the user explicitly defines an output file name no logic will be ran on the output file (as to not change the users desired output name).

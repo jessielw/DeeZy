@@ -157,6 +157,18 @@ ac4_stereo = "encode ac4 --bitrate 256"
 
 DeeZy looks for `deezy-conf.toml` beside the executable for portable usage. You can also specify a custom config file with `--config path/to/config.toml`.
 
+## Note on user config location
+
+When DeeZy generates a user-wide configuration it will place it in a platform-appropriate
+user config folder. On Windows this resolves to a single folder under your local app data,
+for example:
+
+C:\Users\<you>\AppData\Local\deezy\deezy-conf.toml
+
+On other platforms the standard platformdirs user config location is used (for example
+`~/.config/deezy/deezy-conf.toml` on many Linux distributions). DeeZy will still check
+the current working directory first, allowing per-project configs to take precedence.
+
 ### Priority System
 
 Configuration values are applied in order of priority:
@@ -210,7 +222,6 @@ Example (in the generated `deezy-conf.toml`, these are commented out by default;
 ```
 
 This opt-in approach keeps the default configuration conservative while allowing site- or workflow-specific defaults when desired.
-
 
 - **DD/DDP**: 1770-3 (standard for traditional surround formats)
 - **Atmos**: 1770-4 (supports advanced Atmos loudness requirements)
@@ -345,9 +356,9 @@ Per-phase limits and jitter
 
 -- `--limit-ffmpeg`, `--limit-dee`, `--limit-truehdd`
 
-  - Fine-tune concurrency for the heavy processing phases: the FFmpeg stage, the DEE (Dolby Encoding Engine) stage, and truehdd decoding stage respectively.
-  - If any of these flags are omitted they will default to the value supplied to `--max-parallel`. This keeps phase limits consistent with the overall worker count.
-  - If a per-phase value is set greater than `--max-parallel` the CLI will cap the phase limit to `--max-parallel` and emit a warning at startup.
+- Fine-tune concurrency for the heavy processing phases: the FFmpeg stage, the DEE (Dolby Encoding Engine) stage, and truehdd decoding stage respectively.
+- If any of these flags are omitted they will default to the value supplied to `--max-parallel`. This keeps phase limits consistent with the overall worker count.
+- If a per-phase value is set greater than `--max-parallel` the CLI will cap the phase limit to `--max-parallel` and emit a warning at startup.
 
 - `--jitter-ms`
 
