@@ -1,6 +1,9 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import copy
 from pathlib import Path
 import sys
+import tempfile
 import traceback
 
 from cli.payload_factory import PayloadBuilder
@@ -26,13 +29,16 @@ from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
 from deezy.enums.shared import TrackType
 from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix
+from deezy.exceptions import OutputExistsError
 from deezy.info import parse_audio_streams
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils._version import __version__, program_name
+from deezy.utils.batch_results import BatchResultsManager
 from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.file_parser import parse_input_s
 from deezy.utils.logger import logger, logger_manager
+from deezy.utils.utils import WORKING_DIRECTORY
 
 
 def create_main_parser() -> argparse.ArgumentParser:
@@ -133,6 +139,62 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             "Delay/Language string to output file name."
         ),
     )
+    encode_group.add_argument(
+        "--max-parallel",
+        type=int,
+        default=1,
+        help="Maximum number of files to process in parallel (default: 1).",
+    )
+    encode_group.add_argument(
+        "--max-logs",
+        type=int,
+        default=None,
+        help=(
+            "Maximum number of log files to keep in the working logs directory for this run. "
+            "Overrides config value if provided. Use 0 to keep none."
+        ),
+        metavar="N",
+    )
+    encode_group.add_argument(
+        "--max-batch-results",
+        type=int,
+        default=None,
+        help=(
+            "Maximum number of batch-results JSON files to keep in the working batch-results directory for this run. "
+            "Overrides config value if provided. Use 0 to keep none."
+        ),
+        metavar="N",
+    )
+    encode_group.add_argument(
+        "--working-dir",
+        type=str,
+        help=(
+            "Directory to use for DeeZy working files (logs and batch-results). "
+            "Overrides config/default. If not set, uses the workspace beside the executable."
+        ),
+    )
+    encode_group.add_argument(
+        "--batch-summary-output",
+        action="store_true",
+        help=(
+            "Enable batch processing results summary (JSON format). "
+            "Results will be saved to a 'batch-results' folder next to the executable by default."
+        ),
+    )
+    encode_group.add_argument(
+        "--batch-output-dir",
+        type=str,
+        help=(
+            "When used with --batch-summary-output, place all encoded outputs into this directory "
+            "instead of writing them next to the input files."
+        ),
+    )
+    encode_group.add_argument(
+        "--overwrite",
+        action="store_true",
+        help=("Overwrite existing output files instead of failing."),
+    )
+    # Note: batch output dir is now centralized under the DeeZy working folder
 
     # bitrate group
     bitrate_group = argparse.ArgumentParser(add_help=False)
@@ -719,7 +781,7 @@ def handle_preset_injection() -> None:
             pass
 
 
-def cli_parser(base_wd: Path) -> None:
+def cli_parser() -> None:
     """Main CLI parser entry point."""
     # handle presets by injecting args before parsing
     handle_preset_injection()
@@ -748,7 +810,7 @@ def cli_parser(base_wd: Path) -> None:
     # apply default bitrates for encoding commands
     if args.sub_command == "encode" and hasattr(args, "format_command"):
         apply_default_bitrate(args, config_manager)
-    dependencies = handle_dependencies(args, base_wd, config_manager)
+    dependencies = handle_dependencies(args, config_manager)
     file_inputs = handle_file_inputs(args)
 
     # execute the appropriate command
@@ -769,7 +831,7 @@ def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
 
 
 def handle_dependencies(
-    args: argparse.Namespace, base_wd: Path, config_manager: ConfigManager | None
+    args: argparse.Namespace, config_manager: ConfigManager | None
 ) -> dict[str, Path | None] | None:
     """
     Handle tool dependencies detection.
@@ -792,7 +854,7 @@ def handle_dependencies(
 
     try:
         tools = FindDependencies().get_dependencies(
-            base_wd,
+            WORKING_DIRECTORY,
             deps["ffmpeg"],
             deps["truehdd"],
             deps["dee"],
@@ -836,7 +898,7 @@ def execute_command(
     if args.sub_command == "encode":
         if dependencies is None:
             exit_application("Dependencies not found for encoding.", EXIT_FAIL)
-        execute_encode_command(args, file_inputs, dependencies)
+        execute_encode_command(args, file_inputs, dependencies, config_manager)
     elif args.sub_command == "find":
         execute_find_command(args, file_inputs)
     elif args.sub_command == "info":
@@ -847,12 +909,28 @@ def execute_command(
         execute_temp_command(args)
 
 
-def execute_encode_command(
+def encode_single_file(
     args: argparse.Namespace,
-    file_inputs: list[Path],
+    input_file: Path,
     dependencies: dict[str, Path | None],
-) -> None:
-    """Execute encoding commands."""
+    worker_num: int | None = None,
+    short_filename: str | None = None,
+    file_id: str | None = None,
+) -> tuple[Path, Path]:
+    """
+    Encode a single file and return the input file and result path.
+
+    Args:
+        args: Command line arguments
+        input_file: Path to the input file
+        dependencies: Dictionary of tool dependencies
+        worker_num: Worker number for parallel processing (None for single processing)
+        short_filename: Short filename for worker prefix display
+        file_id: Unique file identifier for output naming (prevents overwrites)
+
+    Returns:
+        Tuple of (input_file, result_path)
+    """
     ffmpeg_path = dependencies["ffmpeg_path"]
     truehdd_path = dependencies["truehdd_path"]
     dee_path = dependencies["dee_path"]
@@ -861,47 +939,436 @@ def execute_encode_command(
     assert ffmpeg_path is not None, "ffmpeg_path is required for encoding"
     assert dee_path is not None, "dee_path is required for encoding"
 
+    # set worker prefix for logger system
+    if worker_num is not None and short_filename is not None:
+        worker_prefix = f"Worker {worker_num} ({short_filename})"
+        logger.info(f"Worker {worker_num} started processing: {input_file.name}")
+    elif worker_num is not None:
+        worker_prefix = f"Worker {worker_num}"
+        logger.info(f"Worker {worker_num} started processing: {input_file.name}")
+    else:
+        worker_prefix = None
+    logger_manager.set_worker_prefix(worker_prefix)
+
+    # Force no progress bars for parallel processing to avoid Rich conflicts.
+    # Rich progress bars don't work well with multiple concurrent instances.
+    if worker_num is not None:
+        # create a copy of args to avoid modifying the shared args object
+        args = copy.deepcopy(args)
+        args.no_progress_bars = True
+        # set file_id for unique output filename generation (prevents overwrites)
+        args.worker_id = file_id if file_id else f"w{worker_num}"
+    else:
+        # for sequential runs, if a file_id is supplied set it on args so payloads will pick it up
+        if file_id:
+            # it's fine to set on the shared args for sequential processing
+            args.worker_id = file_id
+
+    # update logger to write to file if needed
+    if args.log_to_file:
+        # place logs in centralized logs directory
+        log_name = f"{input_file.stem}"
+        if worker_num is not None:
+            log_name = f"{log_name}.worker{worker_num}"
+        # prefer computed working dir stored on args (set by execute_encode_command)
+        work_dir_for_logs = Path(
+            getattr(args, "_working_dir", WORKING_DIRECTORY / "deezy_work")
+        )
+        log_file = work_dir_for_logs / "logs" / f"{log_name}.log"
+        logger_manager.set_file(log_file)
+
+    # build payload and run encoder
+    if args.format_command == "dd":
+        payload = PayloadBuilder.build_dd_payload(
+            args, input_file, ffmpeg_path, truehdd_path, dee_path
+        )
+        result = DDEncoderDEE(payload).encode()
+    elif args.format_command in ("ddp", "ddp-bluray"):
+        payload = PayloadBuilder.build_ddp_payload(
+            args, input_file, ffmpeg_path, truehdd_path, dee_path
+        )
+        result = DDPEncoderDEE(payload).encode()
+    elif args.format_command == "atmos":
+        payload = PayloadBuilder.build_atmos_payload(
+            args, input_file, ffmpeg_path, truehdd_path, dee_path
+        )
+        result = AtmosEncoder(payload).encode()
+    elif args.format_command == "ac4":
+        payload = PayloadBuilder.build_ac4_payload(
+            args, input_file, ffmpeg_path, truehdd_path, dee_path
+        )
+        result = Ac4Encoder(payload).encode()
+    elif args.format_command == "preset":
+        # this should not happen since config manager converts "preset" to actual format
+        raise ValueError(
+            "Preset format conversion failed. This is a bug in the configuration system."
+        )
+    else:
+        raise ValueError(f"Unknown format: {args.format_command}")
+
+    # log completion message for parallel processing
+    if worker_num is not None:
+        logger.info(f"Worker {worker_num} completed: {input_file.name} → {result.name}")
+
+    return input_file, result
+
+
+def execute_encode_command(
+    args: argparse.Namespace,
+    file_inputs: list[Path],
+    dependencies: dict[str, Path | None],
+    config_manager: ConfigManager | None,
+) -> None:
+    """Execute encoding commands."""
+    max_parallel = getattr(args, "max_parallel", 1)
+    batch_output_enabled = getattr(args, "batch_summary_output", False)
+    # centralized work directories: precedence CLI arg > config default > WORKING_DIRECTORY/deezy_work
+    working_dir_arg = getattr(args, "working_dir", None)
+    config_working_dir = None
+    if config_manager is not None:
+        config_working_dir = config_manager.get_config_default("working_dir")
+
+    if working_dir_arg:
+        work_dir = Path(working_dir_arg)
+    elif config_working_dir:
+        work_dir = Path(config_working_dir)
+    else:
+        work_dir = WORKING_DIRECTORY / "deezy_work"
+
+    logs_dir = work_dir / "logs"
+    batch_results_dir = work_dir / "batch-results"
+    # ensure dirs exist when needed
+    if not work_dir.exists():
+        work_dir.mkdir(parents=True, exist_ok=True)
+    if not logs_dir.exists():
+        logs_dir.mkdir(parents=True, exist_ok=True)
+    if not batch_results_dir.exists():
+        batch_results_dir.mkdir(parents=True, exist_ok=True)
+
+    # Trim old logs and batch-results based on config limits (config-only)
+    # Determine trimming limits with precedence: CLI args > config defaults > None
     try:
-        for input_file in file_inputs:
-            # update logger to write to file if needed
-            if getattr(args, "log_to_file", False):
-                logger_manager.set_file(input_file.with_suffix(".log"))
+        cli_max_logs = getattr(args, "max_logs", None)
+        if cli_max_logs is not None:
+            if int(cli_max_logs) < 0:
+                exit_application("--max-logs must be >= 0", EXIT_FAIL)
+            max_logs = int(cli_max_logs)
+        else:
+            max_logs = (
+                int(config_manager.get_config_default("max_logs"))
+                if config_manager
+                else None
+            )
+    except Exception:
+        max_logs = None
 
-            # build payload based on format
-            if args.format_command == "dd":
-                payload = PayloadBuilder.build_dd_payload(
-                    args, input_file, ffmpeg_path, truehdd_path, dee_path
-                )
-                result = DDEncoderDEE(payload).encode()
-            elif args.format_command in ("ddp", "ddp-bluray"):
-                payload = PayloadBuilder.build_ddp_payload(
-                    args, input_file, ffmpeg_path, truehdd_path, dee_path
-                )
-                result = DDPEncoderDEE(payload).encode()
-            elif args.format_command == "atmos":
-                payload = PayloadBuilder.build_atmos_payload(
-                    args, input_file, ffmpeg_path, truehdd_path, dee_path
-                )
-                result = AtmosEncoder(payload).encode()
-            elif args.format_command == "ac4":
-                payload = PayloadBuilder.build_ac4_payload(
-                    args, input_file, ffmpeg_path, truehdd_path, dee_path
-                )
-                result = Ac4Encoder(payload).encode()
-            elif args.format_command == "preset":
-                # this should not happen since config manager converts "preset" to actual format
-                exit_application(
-                    "Preset format conversion failed. This is a bug in the configuration system.",
-                    EXIT_FAIL,
-                )
-            else:
-                exit_application(f"Unknown format: {args.format_command}", EXIT_FAIL)
+    try:
+        cli_max_batch_results = getattr(args, "max_batch_results", None)
+        if cli_max_batch_results is not None:
+            if int(cli_max_batch_results) < 0:
+                exit_application("--max-batch-results must be >= 0", EXIT_FAIL)
+            max_batch_results = int(cli_max_batch_results)
+        else:
+            max_batch_results = (
+                int(config_manager.get_config_default("max_batch_results"))
+                if config_manager
+                else None
+            )
+    except Exception:
+        max_batch_results = None
 
-            logger.info(f"Job successful! Output file path:\n{result}")
+    def _trim_dir(
+        dir_path: Path, max_items: int | None, glob_pattern: str = "*"
+    ) -> None:
+        if max_items is None:
+            return
+        try:
+            items = sorted(
+                list(dir_path.glob(glob_pattern)), key=lambda p: p.stat().st_mtime
+            )
+            # if there are more files than max_items, delete the oldest
+            while len(items) > max_items:
+                oldest = items.pop(0)
+                try:
+                    if oldest.is_file():
+                        oldest.unlink()
+                    elif oldest.is_dir():
+                        import shutil
 
+                        shutil.rmtree(oldest)
+                except Exception:
+                    # ignore deletion errors; we don't want to abort processing for cleanup failures
+                    pass
+        except Exception:
+            # ignore trimming errors
+            pass
+
+    _trim_dir(logs_dir, max_logs, glob_pattern="*.log")
+    _trim_dir(batch_results_dir, max_batch_results, glob_pattern="*.json")
+
+    # store computed work_dir on args so encode_single_file can find it
+    setattr(args, "_working_dir", str(work_dir))
+
+    # determine if we should use worker prefixes
+    # use prefixes only if there are multiple files AND max_parallel > 1
+    use_worker_prefixes = len(file_inputs) > 1 and max_parallel > 1
+
+    # track processing results
+    successful_files = []
+    failed_files = []
+
+    # initialize batch results manager if batch output is enabled
+    batch_manager = None
+    if batch_output_enabled:
+        # get original command line args (excluding script name)
+        command_args = sys.argv[1:]
+
+        # use centralized batch-results dir
+        batch_manager = BatchResultsManager(
+            command_args=command_args,
+            total_files=len(file_inputs),
+            max_parallel=max_parallel,
+            output_dir=batch_results_dir,
+        )
+
+    # if the user provided a batch-output-dir, prepare it early (fail fast / create dir)
+    batch_out_arg = getattr(args, "batch_output_dir", None)
+    batch_out_dir: Path | None = None
+    # If the user didn't provide a CLI batch_output_dir but the config has one,
+    # use the config value so encoders and payloads see the same default.
+    if batch_output_enabled and not batch_out_arg and config_manager is not None:
+        try:
+            cfg_bod = config_manager.get_config_default("batch_output_dir")
+            if cfg_bod:
+                batch_out_arg = cfg_bod
+                # propagate back onto args so PayloadBuilder will include it
+                setattr(args, "batch_output_dir", cfg_bod)
+        except Exception:
+            # ignore config lookup errors and proceed without batch output dir
+            batch_out_arg = None
+
+    if batch_output_enabled and batch_out_arg:
+        # Fail fast: if the user asked for a batch output directory, ensure it exists
+        # and is writable. If we cannot prepare it, stop immediately instead of
+        # continuing and surprising the user later.
+        batch_out_dir = Path(batch_out_arg)
+        try:
+            batch_out_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Could not prepare batch output dir '{batch_out_arg}': {e}")
+            exit_application(
+                f"Could not prepare batch output dir '{batch_out_arg}': {e}", EXIT_FAIL
+            )
+
+        # verify the path is a directory
+        if not batch_out_dir.exists() or not batch_out_dir.is_dir():
+            logger.error(f"Batch output path '{batch_out_dir}' is not a directory.")
+            exit_application(
+                f"Batch output path '{batch_out_dir}' is not a directory.", EXIT_FAIL
+            )
+
+        # quick writability test: create and remove a small temp file in the dir
+        try:
+            tf = tempfile.NamedTemporaryFile(
+                prefix=".deezy_write_test_", dir=str(batch_out_dir), delete=False
+            )
+            try:
+                tf.write(b"deezetest")
+                tf.flush()
+            finally:
+                tf.close()
+            Path(tf.name).unlink()
+        except Exception as e:
+            logger.error(f"Batch output dir '{batch_out_dir}' is not writable: {e}")
+            exit_application(
+                f"Batch output dir '{batch_out_dir}' is not writable: {e}", EXIT_FAIL
+            )
+
+    try:
+        if max_parallel == 1 or len(file_inputs) == 1:
+            # sequential processing
+            for i, input_file in enumerate(file_inputs):
+                # create batch result if tracking is enabled
+                batch_result = None
+                if batch_manager:
+                    file_id = f"f{i + 1}" if len(file_inputs) > 1 else "f1"
+                    # compute centralized log file path used for this input
+                    log_name = f"{input_file.stem}"
+                    log_file = work_dir / "logs" / f"{log_name}.log"
+                    batch_result = batch_manager.create_result(
+                        input_file, file_id, log_file=log_file
+                    )
+
+                try:
+                    # pass a file-specific id so encode_single_file can include it in output names
+                    file_id = f"f{i + 1}" if len(file_inputs) > 1 else "f1"
+
+                    # prepare per-job args copy; encoders are authoritative for filename
+                    args_for_job = copy.deepcopy(args)
+
+                    input_file, result = encode_single_file(
+                        args_for_job, input_file, dependencies, None, None, file_id
+                    )
+                    logger.info(f"Job successful! Output file path:\n{result}")
+                    successful_files.append((input_file, result))
+
+                    if batch_result:
+                        batch_result.mark_success(result)
+                except Exception as e:
+                    # handle output-exists as a skipped file
+                    if isinstance(e, OutputExistsError):
+                        logger.info(f"Skipping {input_file.name}: {e}")
+                        if batch_result:
+                            batch_result.mark_skipped(str(e))
+                    else:
+                        logger.error(f"Failed to process {input_file}: {e}")
+                        logger.debug(traceback.format_exc())
+                        failed_files.append((input_file, str(e)))
+
+                        if batch_result:
+                            batch_result.mark_failure(str(e))
+                    # continue with next file instead of exiting
+
+        # parallel processing
+        else:
+            with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+                # submit all jobs and create batch results
+                future_to_file = {}
+                future_to_batch_result = {}
+
+                for i, input_file in enumerate(file_inputs):
+                    worker_num = (i % max_parallel) + 1 if use_worker_prefixes else None
+                    # use file index for unique output naming
+                    file_id = f"f{i + 1}" if use_worker_prefixes else f"f{i + 1}"
+                    # use stem (filename without extension) for cleaner display
+                    short_filename = input_file.stem if use_worker_prefixes else None
+
+                    # create batch result if tracking is enabled
+                    batch_result = None
+                    if batch_manager:
+                        actual_file_id = file_id or f"f{i + 1}"
+                        # compute centralized log file path used for this input
+                        log_name = f"{input_file.stem}"
+                        if worker_num is not None:
+                            log_name = f"{log_name}.worker{worker_num}"
+                        log_file = work_dir / "logs" / f"{log_name}.log"
+                        batch_result = batch_manager.create_result(
+                            input_file, actual_file_id, log_file=log_file
+                        )
+
+                    # prepare per-job args copy; encoders handle final filename and
+                    # overwrite decisions to ensure accuracy with mediainfo parsing.
+                    args_for_job = copy.deepcopy(args)
+                    future = executor.submit(
+                        encode_single_file,
+                        args_for_job,
+                        input_file,
+                        dependencies,
+                        worker_num,
+                        short_filename,
+                        file_id,
+                    )
+
+                    future_to_file[future] = input_file
+                    if batch_result:
+                        future_to_batch_result[future] = batch_result
+
+                # process completed jobs
+                for future in as_completed(future_to_file):
+                    input_file = future_to_file[future]
+                    batch_result = (
+                        future_to_batch_result.get(future) if batch_manager else None
+                    )
+
+                    try:
+                        _original_file, result = future.result()
+                        logger.info(f"Job successful! Output file path:\n{result}")
+                        successful_files.append((input_file, result))
+
+                        if batch_result:
+                            batch_result.mark_success(result)
+                    except Exception as e:
+                        if isinstance(e, OutputExistsError):
+                            logger.info(f"Skipping {input_file.name}: {e}")
+                            if batch_result:
+                                batch_result.mark_skipped(str(e))
+                        else:
+                            logger.error(f"Failed to process {input_file}: {e}")
+                            logger.debug(traceback.format_exc())
+                            failed_files.append((input_file, str(e)))
+
+                            if batch_result:
+                                batch_result.mark_failure(str(e))
+                        # continue processing other files instead of raising
+
+        # summary of results
+        total_files = len(file_inputs)
+        if total_files > 1:
+            logger.info("\n=== Processing Complete ===")
+            logger.info(f"Total files: {total_files}")
+            logger.info(f"Successful: {len(successful_files)}")
+            logger.info(f"Failed: {len(failed_files)}")
+
+            if failed_files:
+                logger.info("\nFailed files:")
+                for failed_file, error in failed_files:
+                    logger.info(f"  • {failed_file.name}: {error}")
+
+            if successful_files:
+                logger.info("\nSuccessful files:")
+                for successful_file, result in successful_files:
+                    logger.info(f"  • {successful_file.name} → {result.name}")
+
+        # save batch results if enabled
+        if batch_manager:
+            try:
+                batch_file = batch_manager.save_results()
+                logger.info(f"\nBatch results saved to: {batch_file}")
+            except Exception as e:
+                logger.warning(f"Failed to save batch results: {e}")
+
+        # exit with appropriate code
+        if failed_files and not successful_files:
+            # all files failed
+            exit_application("All files failed to process.", EXIT_FAIL)
+        elif failed_files:
+            # some files failed
+            exit_application(
+                f"Processing completed with {len(failed_files)} failures.", EXIT_FAIL
+            )
+        # else: all successful, continue to normal exit
+
+    except KeyboardInterrupt:
+        # mark any in-progress batch results as failed
+        if batch_manager:
+            for result in batch_manager.results:
+                if result.status == "processing":
+                    result.mark_failure("Interrupted by user")
+            try:
+                batch_file = batch_manager.save_results()
+                logger.info(f"\nBatch results saved to: {batch_file}")
+            except Exception:
+                # don't fail on batch save during interrupt
+                pass
+
+        logger.info("\nProcessing interrupted by user.")
+        exit_application("Processing was interrupted.", EXIT_FAIL)
     except Exception as e:
+        # mark any in-progress batch results as failed
+        if batch_manager:
+            for result in batch_manager.results:
+                if result.status == "processing":
+                    result.mark_failure(f"Unexpected error: {e}")
+            try:
+                batch_file = batch_manager.save_results()
+                logger.info(f"\nBatch results saved to: {batch_file}")
+            except Exception:
+                # don't fail on batch save during error
+                pass
+
+        # only catch unexpected errors here
         logger.debug(traceback.format_exc())
-        exit_application(str(e), EXIT_FAIL)
+        exit_application(f"Unexpected error: {e}", EXIT_FAIL)
 
 
 def execute_find_command(args: argparse.Namespace, file_inputs: list[Path]) -> None:

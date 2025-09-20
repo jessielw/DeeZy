@@ -46,6 +46,11 @@ class PayloadBuilder:
             ),
             "keep_temp": cls.safe_get(args, "keep_temp", False),
             "file_output": Path(args.output) if cls.safe_get(args, "output") else None,
+            "worker_id": cls.safe_get(args, "worker_id"),
+            "batch_output_dir": Path(cls.safe_get(args, "batch_output_dir"))
+            if cls.safe_get(args, "batch_output_dir")
+            else None,
+            "overwrite": cls.safe_get(args, "overwrite", False),
         }
 
     @classmethod

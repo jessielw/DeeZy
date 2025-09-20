@@ -21,6 +21,9 @@ class CorePayload:
     parse_elementary_delay: bool
     keep_temp: bool
     file_output: Path | None
+    batch_output_dir: Path | None
+    worker_id: str | None
+    overwrite: bool
 
 
 @dataclass(slots=True)

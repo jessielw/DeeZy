@@ -16,7 +16,7 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
-from deezy.utils.logger import logger
+from deezy.utils.logger import logger, logger_manager
 
 
 @dataclass(slots=True)
@@ -74,12 +74,23 @@ class ProgressHandler:
         self, base_name: str, default_current: int = 1, default_total: int = 3
     ) -> str:
         """Generate step label from step_info or defaults"""
+        # Only include worker prefix in labels for rich progress bars
+        # For plain text, the logger manager handles the prefix automatically
+        worker_prefix = (
+            logger_manager.get_worker_prefix() if self.should_use_bars else None
+        )
+
         if self.step_info:
             name = self.step_info.get("name", base_name)
             current = self.step_info.get("current", default_current)
             total = self.step_info.get("total", default_total)
-            return f"{name} ({current} of {total})".ljust(20)
-        return f"{base_name} ({default_current} of {default_total})".ljust(20)
+            base_label = f"{name} ({current} of {total})"
+        else:
+            base_label = f"{base_name} ({default_current} of {default_total})"
+
+        if worker_prefix:
+            return f"{worker_prefix}: {base_label}".ljust(30)
+        return base_label.ljust(20)
 
     @contextmanager
     def progress_context(
@@ -180,12 +191,24 @@ class DEEProgressHandler(ProgressHandler):
         self.measure_task_desc = self.get_step_label(
             "DEE measure", default_current=2, default_total=3
         )
+
+        # Only include worker prefix in encode task desc for rich progress bars
+        # For plain text, the logger manager handles the prefix
+        worker_prefix = (
+            logger_manager.get_worker_prefix() if self.should_use_bars else None
+        )
+
         if step_info:
             current = step_info.get("current", 2) + 1
             total = step_info.get("total", 3)
-            self.encode_task_desc = f"DEE encode ({current} of {total})"
+            base_desc = f"DEE encode ({current} of {total})"
         else:
-            self.encode_task_desc = "DEE encode (3 of 3)"
+            base_desc = "DEE encode (3 of 3)"
+
+        if worker_prefix:
+            self.encode_task_desc = f"{worker_prefix}: {base_desc}"
+        else:
+            self.encode_task_desc = base_desc
 
     def parse_dee_line(self, line: str) -> tuple[ProgressData | None, bool]:
         """Parse DEE line and return (progress_data, is_encode)"""
