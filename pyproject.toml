@@ -3,7 +3,7 @@ name = "deezy"
 version = "1.3.0-rc.5"
 description = "Dolby Encoding Engine Wrapper"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9,<3.14"
 dependencies = [
     "pymediainfo",
     "tomlkit",
@@ -12,13 +12,35 @@ dependencies = [
     "oslex2>=0.1.5",
     "guessit>=3.8.0",
 ]
+authors = [{ name = "jessielw" }]
+license = { file = "LICENSE" }
+keywords = ["audio", "dolby", "encoding", "dee", "ddp", "atmos", "ac4"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+urls = { "Source" = "https://github.com/jessielw/deezy", "Tracker" = "https://github.com/jessielw/DeeZy/issues" }
+
+[project.scripts]
+deezy = "deezy.__main__:main"
+
+[tool.setuptools.package-data]
+"deezy" = ["config/*.py", "config/*.toml", "icon/*", "example_json_flows/*"]
+
 
 [tool.ruff]
 line-length = 88
 
 [tool.basedpyright]
 include = ["cli", "deezy"]
-# ignore = [""]
 typeCheckingMode = "standard"
 
 [build-system]
