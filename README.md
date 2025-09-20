@@ -164,6 +164,30 @@ DeeZy automatically applies intelligent defaults based on the encoding format wh
 
 **Smart Metering Mode Defaults** (when `--metering-mode` not specified):
 
+### Per-source default bitrates (opt-in)
+
+If you'd like DeeZy to pick default bitrates based on the source audio's channel count, you can opt-in to the optional "per-source" sections in the configuration file.
+
+- Location: `[default_source_bitrates.<codec>]` (for example `[default_source_bitrates.ddp]`)
+- Keys: name them `ch_1` .. `ch_8` (lowercase preferred). Each key is the source channel count and the value is the default bitrate in kbps.
+- Supported codecs: `dd`, `ddp` (support channels 1..8); `ac4` is meaningful for immersive sources (6..8).
+- How it works: When no `--bitrate` is provided on the CLI/preset, encoders will look for a matching `ch_N` value for the detected source channel count and use that bitrate. If the config value isn't an allowed bitrate for the encoder's current channel/format settings, the encoder will choose the nearest allowed bitrate defined in its internal choices.
+- Precedence: CLI bitrate > per-source config (`default_source_bitrates`) > format-level config (`default_bitrates`) > built-in defaults.
+
+Example (in the generated `deezy-conf.toml`, these are commented out by default; uncomment to enable):
+
+```toml
+#[default_source_bitrates.ddp]
+# ch_1 = 64
+# ch_2 = 128
+# ch_6 = 192
+# ch_7 = 384
+# ch_8 = 384
+```
+
+This opt-in approach keeps the default configuration conservative while allowing site- or workflow-specific defaults when desired.
+
+
 - **DD/DDP**: 1770-3 (standard for traditional surround formats)
 - **Atmos**: 1770-4 (supports advanced Atmos loudness requirements)
 

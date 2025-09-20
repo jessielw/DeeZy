@@ -32,11 +32,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Will check for common attributes via the mediainfo/input name and append that to the automatically generated file name.
     - Detects name, year, season, episode and adds them to the name when generating a new name.
   - Concurrency & phase limits:
-  - New CLI flags: `--limit-ffmpeg`, `--limit-dee`, `--limit-truehdd` allow fine-tuning concurrency for each heavy phase.
+    - New CLI flags: `--limit-ffmpeg`, `--limit-dee`, `--limit-truehdd` allow fine-tuning concurrency for each heavy phase.
     - If per-phase flags are not provided, each phase defaults to the value of `--max-parallel`.
     - Exception: the DEE phase defaults to a conservative fraction of `--max-parallel` (roughly half) to avoid saturating CPU/IO on slower machines; users can override with `--limit-dee`.
     - Values greater than `--max-parallel` are capped to `--max-parallel` and a warning is emitted at startup.
     - `--jitter-ms` flag: introduces a small randomized delay before heavy phases to reduce thundering-herd spikes in high-parallel runs.
+
+- Per-source default bitrates (opt-in):
+
+  - Added support for optional per-source default bitrate sections in the configuration file under `[default_source_bitrates.<codec>]` (for example `[default_source_bitrates.ddp]`).
+  - Keys are `ch_1..ch_8` and are opt-in (the generated `deezy-conf.toml` contains commented example blocks). Encoders will use these values when no CLI/preset bitrate is provided. Encoders validate config values and will select the closest allowed bitrate if a configured value is not permitted. Precedence is: CLI > per-source config > format-level config > built-in defaults.
 
 ### Changed
 
