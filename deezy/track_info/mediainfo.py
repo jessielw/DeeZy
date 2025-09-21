@@ -127,13 +127,18 @@ class MediainfoParser:
         return False
 
     def generate_output_filename(
-        self, ignore_delay: bool, suffix: str, worker_id: str | None
+        self,
+        ignore_delay: bool,
+        delay_was_stripped: bool,
+        suffix: str,
+        worker_id: str | None,
     ) -> Path:
         """
         Automatically generate an output file name keeping some attributes.
 
         Args:
             ignore_delay: Whether to ignore delay information
+            delay_was_stripped: Whether or not delay was stripped
             suffix: File extension/suffix (".ac3", ".ec3", ".ac4")
             worker_id: Optional worker ID for parallel processing (e.g., "f1", "f2")
 
@@ -168,6 +173,9 @@ class MediainfoParser:
         if not ignore_delay and not delay:
             delay_from_file = parse_delay_from_file(self.file_input)
             delay = f"[DELAY {delay_from_file}]" if delay_from_file else None
+        # if delay is set to be ignored and it was stripped we will append 0ms
+        elif ignore_delay and delay_was_stripped:
+            delay = "[DELAY 0ms]"
 
         # construct new clean path with enhanced context
         name_parts = [title]

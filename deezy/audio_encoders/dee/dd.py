@@ -101,6 +101,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             )
             output = mi_parser.generate_output_filename(
                 ignore_delay,
+                delay.is_delay(),
                 suffix=".ac3",
                 worker_id=self.payload.worker_id,
             )

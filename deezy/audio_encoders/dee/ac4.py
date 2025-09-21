@@ -96,6 +96,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             )
             output = mi_parser.generate_output_filename(
                 ignore_delay,
+                delay.is_delay(),
                 suffix=".ac4",
                 worker_id=self.payload.worker_id,
             )
