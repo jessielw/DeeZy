@@ -31,6 +31,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic filename generation has been greatly improved:
     - Will check for common attributes via the mediainfo/input name and append that to the automatically generated file name.
     - Detects name, year, season, episode and adds them to the name when generating a new name.
+
+- Temp / Output / Reuse (New):
+
+  - CLI:
+
+    - `--temp-dir` - When supplied, encoders now create a predictable per-input subfolder under the provided base directory: `<temp-dir>/<input_stem>_deezy`. This centralizes temporary artifacts while keeping them isolated per-source for safe reuse and selective cleanup.
+    - `--reuse-temp-files` - Opt-in flag that enables reusing extractor outputs (FFmpeg / TrueHDD) when the extractor command signature matches a previously saved extraction. When `--reuse-temp-files` is used the encoder registers metadata about the extraction so subsequent runs can reuse it. This flag implies `--keep-temp` (temp files are preserved when reuse is requested).
+
+  - Encoders / Internal:
+
+    - Temporary artifact filenames are now codec-scoped (for example: `{output_stem}.DD.wav` or `{output_stem}.DDP_BLURAY.wav`) to avoid cross-variant collisions when a shared temp folder is used.
+    - Per-encoder metadata is stored in a single metadata file inside the temp folder and now uses an `"encoders"` map to keep signatures and produced filenames isolated per encoder/format.
+    - Metadata writes use atomic same-directory replace semantics (write a tmp file then os.replace) to avoid partially written files.
+
   - Concurrency & phase limits:
     - New CLI flags: `--limit-ffmpeg`, `--limit-dee`, `--limit-truehdd` allow fine-tuning concurrency for each heavy phase.
     - If per-phase flags are not provided, each phase defaults to the value of `--max-parallel`.
@@ -66,10 +80,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - If `--parse-elementary-delay` is **not** used, delays will be handled like they was previously in containers and no logic will be ran against **elementary** files.
 - Improved language detection for **elementary** formats.
 - Updated default config.
+- Temp directories by default now get built beside the input file (but can go to a parent folder if specified by the user).
+- DEE json output files are now suffixed with `input_file_name.encoder.json`.
 
 ### Fixed
 
 - Codec channel/bitrate defaults from config was not being set.
+- Encoder **DD** doesn't support DPLII, so FFMPEG is used when DPLII is requested. This has been fixed.
 
 ### Removed
 

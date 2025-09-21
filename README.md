@@ -407,6 +407,35 @@ deezy --log-to-file encode ddp \
   *.mkv
 ```
 
+## Temp directory and reuse behavior
+
+DeeZy provides flexible temp-file handling to support batch workflows, predictable cleanup, and safe reuse of expensive extractor outputs.
+
+- `--temp-dir <PATH>`
+
+  - When supplied, encoders will create a predictable per-input subfolder under the provided base directory: `<temp-dir>/<input_stem>_deezy`.
+  - This centralizes temporary artifacts (logs, extracted WAVs, DEE job JSON) while keeping each input isolated in its own folder so runs are safe to reuse and easy to clean.
+  - Example: `--temp-dir C:/work/deezy_tmp` and input `Movie.TrueHD.mkv` -> temporary files live in `C:/work/deezy_tmp/Movie.TrueHD_mkv_deezy`.
+
+- `--reuse-temp-files`
+
+  - Opt-in flag to enable reusing extractor outputs (FFmpeg and TrueHDD). When enabled, DeeZy records a canonical signature of the extractor command and produced file in a metadata file inside the temp folder. Future runs that match the signature will reuse the extracted artifact instead of re-running the extractor.
+  - This only applies to FFmpeg and TrueHDD extractor stages and only when the command signature exactly matches. This prevents accidental reuse across different extraction parameters.
+  - Note: `--reuse-temp-files` implies `--keep-temp` because the extracted artifacts must be preserved for reuse.
+
+- How temporary filenames and metadata are organized
+
+  - Temporary artifact filenames are codec-scoped so variants don't collide. For example: `{output_stem}.DD.wav`, `{output_stem}.DDP_BLURAY.wav`, or `{output_stem}.AC4.wav`.
+  - Each temp folder contains a single metadata file that maps encoder/format IDs to recorded extraction signatures and produced filenames. The metadata layout uses an `"encoders"` map (for example: `{"encoders": {"DDP": {...}, "AC4": {...}}}`) so entries are isolated per format.
+  - Metadata writes are atomic (written to a same-directory temporary file then renamed) to avoid partial files.
+
+- Cleanup semantics
+
+  - When `--temp-dir` is supplied, DeeZy removes only the per-input subfolder it created (for example `C:/work/deezy_tmp/Movie..._deezy`) when `--keep-temp` is not set. It will not delete the entire base temp directory.
+  - DEE job JSON files include a `misc.temp_dir.clean_temp` flag which now mirrors the CLI payload's `keep_temp` setting; when `keep_temp` is True the DEE job will not clean the temp folder.
+
+These changes make batch processing predictable and safe while allowing optional reuse of expensive extraction steps. If you'd like an example workflow or a short script that finds reusable temp artifacts across runs, tell me and I can add an example to this README.
+
 ## Batch summary JSON schema
 
 When `--batch-summary-output` is enabled, DeeZy writes a JSON summary per batch into the `batch-results` folder inside the working directory. The JSON contains `batch_info` and a `results` array with one entry per input file.
