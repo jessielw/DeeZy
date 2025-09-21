@@ -1,5 +1,4 @@
 from pathlib import Path
-import tempfile
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
@@ -90,8 +89,45 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         fps = self._get_fps(audio_track_info.fps)
         logger.debug(f"Detected FPS {fps.to_dee_cmd()}.")
 
-        # output dir
-        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
+        # file output (if an output is a defined check users extension and use their output)
+        if self.payload.file_output:
+            output = Path(self.payload.file_output)
+            if output.suffix not in (".ec3", ".eac3"):
+                raise InvalidExtensionError(
+                    "DDP output must must end with the suffix '.eac3' or '.ec3'."
+                )
+        else:
+            ignore_delay = (
+                True
+                if not (
+                    self.payload.parse_elementary_delay
+                    or not audio_track_info.is_elementary
+                    or not delay.is_delay()
+                )
+                else False
+            )
+            output = mi_parser.generate_output_filename(
+                ignore_delay,
+                suffix=".ec3",
+                worker_id=self.payload.worker_id,
+            )
+
+        # If a centralized batch output directory was provided and the user did not
+        # explicitly supply an output path, place final output there. This ensures
+        # an explicit --output wins over config-provided batch_output_dir.
+        if self.payload.file_output is None and self.payload.batch_output_dir:
+            output = Path(self.payload.batch_output_dir) / output.name
+        logger.debug(f"Output path {output}.")
+
+        # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
+        # so users can collect all temp files in one place. If not provided, use
+        # the adjacent per-input cache folder (<parent>/<stem>_deezy).
+        user_temp_base = getattr(self.payload, "temp_dir", None)
+        if user_temp_base:
+            temp_dir = Path(user_temp_base) / f"{file_input.stem}_deezy"
+            temp_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            temp_dir = self._adjacent_temp_dir(file_input)
         logger.debug(f"Temp directory {temp_dir}.")
 
         # check disk space
@@ -101,9 +137,10 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             recommended_free_space=audio_track_info.recommended_free_space,
         )
 
-        # temp filename
-        temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
-        logger.debug(f"Temp filename {temp_filename}.")
+        # deterministic temp filenames based on the final output stem and codec
+        # include codec id so ddp and ddp-bluray use separate temp artifacts
+        wav_file_name = f"{output.stem}.{format_command}.wav"
+        logger.debug(f"File paths: {wav_file_name=}, {output=}.")
 
         # check to see if input channels are accepted by dee
         dee_allowed_input = self._dee_allowed_input(audio_track_info.channels)
@@ -160,14 +197,6 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         # destination already exists and the user didn't request overwrite.
         self._early_output_exists_check(output, self.payload.overwrite)
 
-        # define .wav and .ac3/.ec3 file names (not full path)
-        wav_file_name = temp_filename + ".wav"
-        output_file_name = temp_filename + output.suffix
-        output_file_path = temp_dir / output_file_name
-        logger.debug(
-            f"File paths: {wav_file_name=}, {output_file_name=}, {output_file_path=}."
-        )
-
         # generate ffmpeg cmd
         ffmpeg_cmd = self._generate_ffmpeg_cmd(
             ffmpeg_path=self.payload.ffmpeg_path,
@@ -185,26 +214,60 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         # optionally stagger/jitter and limit concurrent ffmpeg jobs
         self._maybe_jitter()
         self._acquire_ffmpeg()
+        reuse_used = False
+        # DDP uses temp_dir in system/user temp; metadata naming still uses output stem
+        metadata_path = self._metadata_path_for_output(temp_dir, output)
         try:
-            _ffmpeg_job = process_ffmpeg_job(
-                cmd=ffmpeg_cmd,
-                steps=True,
-                duration=audio_track_info.duration,
-                step_info={"current": 1, "total": 3, "name": "FFMPEG"},
-                no_progress_bars=self.payload.no_progress_bars,
-            )
-        finally:
-            self._release_ffmpeg()
-        logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
+            if getattr(self.payload, "reuse_temp_files", False):
+                meta = self._read_reuse_metadata(metadata_path) or {}
+                encs = meta.get("encoders") or {}
+                enc_entry = encs.get(str(format_command))
+                sig = " ".join(map(str, ffmpeg_cmd))
+                if enc_entry and enc_entry.get("signature") == sig:
+                    recorded_file = enc_entry.get("produced_file")
+                    if recorded_file and (temp_dir / recorded_file).exists():
+                        logger.info(
+                            "Reusing extracted wav from temp folder (codec-scoped)."
+                        )
+                        reuse_used = True
+
+            if not reuse_used:
+                try:
+                    _ffmpeg_job = process_ffmpeg_job(
+                        cmd=ffmpeg_cmd,
+                        steps=True,
+                        duration=audio_track_info.duration,
+                        step_info={"current": 1, "total": 3, "name": "FFMPEG"},
+                        no_progress_bars=self.payload.no_progress_bars,
+                    )
+                finally:
+                    self._release_ffmpeg()
+                logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
+
+                if getattr(self.payload, "reuse_temp_files", False):
+                    self._write_signature_metadata(
+                        metadata_path,
+                        str(format_command),
+                        " ".join(map(str, ffmpeg_cmd)),
+                        wav_file_name,
+                        file_input,
+                    )
+        except Exception:
+            try:
+                self._release_ffmpeg()
+            except Exception:
+                pass
 
         # generate JSON
         json_generator = DeeJSONGenerator(
             input_file_path=temp_dir / wav_file_name,
-            output_file_path=output_file_path,
+            output_file_path=output,
             output_dir=temp_dir,
+            codec_format=format_command,
         )
         json_path = json_generator.dd_json(
             payload=self.payload,
+            ffmpeg_dplii_used=False,
             bitrate=runtime_bitrate,
             fps=fps,
             delay=delay,
@@ -234,11 +297,6 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
 
-        # move file to output path using centralized atomic move helper
-        logger.debug(f"Moving {output_file_path.name} to {output}.")
-        move_file = self._atomic_move(output_file_path, output, self.payload.overwrite)
-        logger.debug("Done.")
-
         # delete temp folder and all files if enabled
         if not self.payload.keep_temp:
             logger.debug(f"Cleaning temp directory ({temp_dir}).")
@@ -246,10 +304,10 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             logger.debug("Temp directory cleaned.")
 
         # return path
-        if move_file.is_file():
-            return move_file
+        if output.is_file():
+            return output
         else:
-            raise OutputFileNotFoundError(f"{move_file.name} output not found")
+            raise OutputFileNotFoundError(f"{output.name} output not found")
 
     @staticmethod
     def _get_channel_bitrate_object(

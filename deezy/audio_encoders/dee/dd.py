@@ -1,5 +1,4 @@
 from pathlib import Path
-import tempfile
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
@@ -83,42 +82,6 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         fps = self._get_fps(audio_track_info.fps)
         logger.debug(f"Detected FPS {fps.to_dee_cmd()}.")
 
-        # temp dir
-        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
-        logger.debug(f"Temp directory {temp_dir}.")
-
-        # check disk space
-        self._check_disk_space(
-            input_file_path=file_input,
-            drive_path=temp_dir,
-            recommended_free_space=audio_track_info.recommended_free_space,
-        )
-
-        # temp filename
-        temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
-        logger.debug(f"Temp filename {temp_filename}.")
-
-        # check to see if input channels are accepted by dee
-        dee_allowed_input = self._dee_allowed_input(audio_track_info.channels)
-
-        # downmix config
-        down_mix_config = self._get_down_mix_config(
-            self.payload.channels,
-            audio_track_info.channels,
-            self.payload.stereo_mix,
-            dee_allowed_input,
-        )
-        logger.debug(f"Downmix config {down_mix_config}.")
-
-        # determine if FFMPEG downmix is needed
-        ffmpeg_down_mix = False
-        if (down_mix_config == "off" and not dee_allowed_input) or (
-            self.payload.channels is DolbyDigitalChannels.STEREO
-            and self.payload.stereo_mix is StereoDownmix.DPLII
-        ):
-            ffmpeg_down_mix = self.payload.channels.value
-            logger.debug(f"FFMPEG downmix needed {ffmpeg_down_mix}.")
-
         # file output (if an output is a defined check users extension and use their output)
         if self.payload.file_output:
             output = Path(self.payload.file_output)
@@ -149,17 +112,52 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             output = Path(self.payload.batch_output_dir) / output.name
         logger.debug(f"Output path {output}.")
 
+        # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
+        # so users can collect all temp files in one place. If not provided, use
+        # the adjacent per-input cache folder (<parent>/<stem>_deezy).
+        user_temp_base = getattr(self.payload, "temp_dir", None)
+        if user_temp_base:
+            temp_dir = Path(user_temp_base) / f"{file_input.stem}_deezy"
+            temp_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            temp_dir = self._adjacent_temp_dir(file_input)
+        logger.debug(f"Temp directory {temp_dir}.")
+
+        # check disk space
+        self._check_disk_space(
+            input_file_path=file_input,
+            drive_path=temp_dir,
+            recommended_free_space=audio_track_info.recommended_free_space,
+        )
+
+        # check to see if input channels are accepted by dee
+        dee_allowed_input = self._dee_allowed_input(audio_track_info.channels)
+
+        # downmix config
+        down_mix_config = self._get_down_mix_config(
+            self.payload.channels,
+            audio_track_info.channels,
+            self.payload.stereo_mix,
+            dee_allowed_input,
+        )
+        logger.debug(f"Downmix config {down_mix_config}.")
+
+        # determine if FFMPEG downmix is needed
+        ffmpeg_down_mix = False
+        if (down_mix_config == "off" and not dee_allowed_input) or (
+            self.payload.channels is DolbyDigitalChannels.STEREO
+            and self.payload.stereo_mix is StereoDownmix.DPLII
+        ):
+            ffmpeg_down_mix = self.payload.channels.value
+            logger.debug(f"FFMPEG downmix needed {ffmpeg_down_mix}.")
+
         # early existence check: fail fast to avoid expensive work if the
         # destination already exists and the user didn't request overwrite.
         self._early_output_exists_check(output, self.payload.overwrite)
 
-        # define .wav and .ac3/.ec3 file names (not full path)
-        wav_file_name = temp_filename + ".wav"
-        output_file_name = temp_filename + ".ac3"
-        output_file_path = temp_dir / output_file_name
-        logger.debug(
-            f"File paths: {wav_file_name=}, {output_file_name=}, {output_file_path=}."
-        )
+        # temp filename deterministic per input file so adjacent temp folder is reusable
+        wav_file_name = f"{output.stem}.{CodecFormat.DD}.wav"
+        logger.debug(f"File paths: {wav_file_name=}, {output=}.")
 
         # generate ffmpeg cmd
         ffmpeg_cmd = self._generate_ffmpeg_cmd(
@@ -179,26 +177,70 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         # optionally stagger/jitter and limit concurrent ffmpeg jobs
         self._maybe_jitter()
         self._acquire_ffmpeg()
+        # reuse-temp-files support: check metadata.json in adjacent temp dir
+        reuse_used = False
+        metadata_path = self._metadata_path_for_output(temp_dir, output)
+        # canonical signature for FFmpeg extraction is the exact command string
+        signature = " ".join(map(str, ffmpeg_cmd))
         try:
-            _ffmpeg_job = process_ffmpeg_job(
-                cmd=ffmpeg_cmd,
-                steps=True,
-                duration=audio_track_info.duration,
-                step_info={"current": 1, "total": 3, "name": "FFMPEG"},
-                no_progress_bars=self.payload.no_progress_bars,
-            )
-        finally:
-            self._release_ffmpeg()
-        logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
+            if getattr(self.payload, "reuse_temp_files", False):
+                if self._check_reuse_signature(
+                    metadata_path,
+                    str(CodecFormat.DD),
+                    signature,
+                    wav_file_name,
+                    temp_dir,
+                ):
+                    logger.info("Reusing extracted wav from adjacent temp folder.")
+                    reuse_used = True
+
+            if not reuse_used:
+                try:
+                    _ffmpeg_job = process_ffmpeg_job(
+                        cmd=ffmpeg_cmd,
+                        steps=True,
+                        duration=audio_track_info.duration,
+                        step_info={"current": 1, "total": 3, "name": "FFMPEG"},
+                        no_progress_bars=self.payload.no_progress_bars,
+                    )
+                finally:
+                    self._release_ffmpeg()
+                logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
+
+                # on success register metadata for reuse
+                if getattr(self.payload, "reuse_temp_files", False):
+                    self._write_signature_metadata(
+                        metadata_path,
+                        str(CodecFormat.DD),
+                        signature,
+                        wav_file_name,
+                        file_input,
+                    )
+            else:
+                # we acquired the ffmpeg semaphore but didn't run ffmpeg; release it
+                try:
+                    self._release_ffmpeg()
+                except Exception:
+                    pass
+        except Exception:
+            # ensure ffmpeg lock is released on unexpected errors
+            try:
+                self._release_ffmpeg()
+            except Exception:
+                pass
 
         # generate JSON
         json_generator = DeeJSONGenerator(
             input_file_path=temp_dir / wav_file_name,
-            output_file_path=output_file_path,
+            output_file_path=output,
             output_dir=temp_dir,
+            codec_format=CodecFormat.DD,
         )
         json_path = json_generator.dd_json(
             payload=self.payload,
+            ffmpeg_dplii_used=(
+                ffmpeg_down_mix == 2 and self.payload.stereo_mix == StereoDownmix.DPLII
+            ),
             bitrate=runtime_bitrate,
             fps=fps,
             delay=delay,
@@ -228,11 +270,6 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
 
-        # move file to output path using centralized atomic move helper
-        logger.debug(f"Moving {output_file_path.name} to {output}.")
-        move_file = self._atomic_move(output_file_path, output, self.payload.overwrite)
-        logger.debug("Done.")
-
         # delete temp folder and all files if enabled
         if not self.payload.keep_temp:
             logger.debug(f"Cleaning temp directory ({temp_dir}).")
@@ -240,10 +277,10 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             logger.debug("Temp directory cleaned.")
 
         # return path
-        if move_file.is_file():
-            return move_file
+        if output.is_file():
+            return output
         else:
-            raise OutputFileNotFoundError(f"{move_file.name} output not found")
+            raise OutputFileNotFoundError(f"{output.name} output not found")
 
     @staticmethod
     def _get_channel_bitrate_object(

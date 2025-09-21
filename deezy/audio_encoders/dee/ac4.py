@@ -1,5 +1,4 @@
 from pathlib import Path
-import tempfile
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
@@ -78,21 +77,6 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         fps = self._get_fps(audio_track_info.fps)
         logger.debug(f"Detected FPS {fps.to_dee_cmd()}.")
 
-        # temp dir
-        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
-        logger.debug(f"Temp directory {temp_dir}.")
-
-        # check disk space
-        self._check_disk_space(
-            input_file_path=file_input,
-            drive_path=temp_dir,
-            recommended_free_space=audio_track_info.recommended_free_space,
-        )
-
-        # temp filename
-        temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
-        logger.debug(f"Temp filename {temp_filename}.")
-
         # file output (if an output is a defined check users extension and use their output)
         if self.payload.file_output:
             output = Path(self.payload.file_output)
@@ -123,15 +107,31 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             output = Path(self.payload.batch_output_dir) / output.name
         logger.debug(f"Output path {output}.")
 
+        # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
+        # so users can collect all temp files in one place. If not provided, use
+        # the adjacent per-input cache folder (<parent>/<stem>_deezy).
+        user_temp_base = getattr(self.payload, "temp_dir", None)
+        if user_temp_base:
+            temp_dir = Path(user_temp_base) / f"{file_input.stem}_deezy"
+            temp_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            temp_dir = self._adjacent_temp_dir(file_input)
+        logger.debug(f"Temp directory {temp_dir}.")
+
+        # check disk space
+        self._check_disk_space(
+            input_file_path=file_input,
+            drive_path=temp_dir,
+            recommended_free_space=audio_track_info.recommended_free_space,
+        )
+
+        # deterministic temp filenames based on final output stem
+        wav_file_name = f"{output.stem}.{CodecFormat.AC4}.wav"
+        logger.debug(f"File paths: {wav_file_name=}, {output=}.")
+
         # early existence check: fail fast to avoid expensive work if the
         # destination already exists and the user didn't request overwrite.
         self._early_output_exists_check(output, self.payload.overwrite)
-
-        # define .wav and .ac4 file names (not full path)
-        wav_file_name = temp_filename + ".wav"
-        output_file_name = temp_filename + ".ac4"
-        output_file_path = temp_dir / output_file_name
-        logger.debug(f"File paths: {output_file_name=}, {output_file_path=}.")
 
         # decode TrueHD to atmos mezz
         if audio_track_info.thd_atmos:
@@ -139,25 +139,52 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 raise DependencyNotFoundError(
                     "Failed to locate truehdd, this is required for atmos work flows"
                 )
-
             # optionally stagger/jitter and limit concurrent TrueHD jobs
             self._maybe_jitter()
             self._acquire_truehdd()
             try:
-                input_file_path = decode_truehd_to_atmos(
-                    output_dir=temp_dir,
-                    file_input=self.payload.file_input,
-                    track_index=self.payload.track_index,
-                    ffmpeg_path=self.payload.ffmpeg_path,
-                    truehdd_path=self.payload.truehdd_path,
-                    bed_conform=self.payload.bed_conform,
-                    warp_mode=self.payload.thd_warp_mode,
-                    duration=audio_track_info.duration,
-                    step_info={"current": 1, "total": 3, "name": "truehdd"},
-                    no_progress_bars=self.payload.no_progress_bars,
+                # for TrueHD we can reuse if the signature matches the truehdd command
+                truehdd_signature = (
+                    f"truehdd:{self.payload.thd_warp_mode.to_truehdd_cmd()}"
                 )
+                metadata_path = self._metadata_path_for_output(temp_dir, output)
+                if getattr(
+                    self.payload, "reuse_temp_files", False
+                ) and self._check_reuse_signature(
+                    metadata_path,
+                    str(CodecFormat.AC4),
+                    truehdd_signature,
+                    "atmos_meta.atmos",
+                    temp_dir,
+                ):
+                    logger.info("Reusing decoded atmos from temp folder.")
+                    decoded_mezz_path = temp_dir / "atmos_meta.atmos"
+                else:
+                    decoded_mezz_path = decode_truehd_to_atmos(
+                        output_dir=temp_dir,
+                        file_input=self.payload.file_input,
+                        track_index=self.payload.track_index,
+                        ffmpeg_path=self.payload.ffmpeg_path,
+                        truehdd_path=self.payload.truehdd_path,
+                        bed_conform=self.payload.bed_conform,
+                        warp_mode=self.payload.thd_warp_mode,
+                        duration=audio_track_info.duration,
+                        step_info={"current": 1, "total": 3, "name": "truehdd"},
+                        no_progress_bars=self.payload.no_progress_bars,
+                    )
+                # register metadata on success
+                if getattr(self.payload, "reuse_temp_files", False):
+                    self._write_signature_metadata(
+                        metadata_path,
+                        str(CodecFormat.AC4),
+                        truehdd_signature,
+                        "atmos_meta.atmos",
+                        file_input,
+                    )
             finally:
                 self._release_truehdd()
+            # make input_file_path point to the decoded mezz when TrueHD path used
+            input_file_path = decoded_mezz_path
         # if not truehd we know it's valid channel based audio since we checked above
         else:
             # generate ffmpeg cmd
@@ -176,24 +203,57 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             # optionally stagger/jitter and limit concurrent ffmpeg jobs
             self._maybe_jitter()
             self._acquire_ffmpeg()
+            reuse_used = False
+            metadata_path = self._metadata_path_for_output(temp_dir, output)
+
             try:
-                _ffmpeg_job = process_ffmpeg_job(
-                    cmd=ffmpeg_cmd,
-                    steps=True,
-                    duration=audio_track_info.duration,
-                    step_info={"current": 1, "total": 3, "name": "FFMPEG"},
-                    no_progress_bars=self.payload.no_progress_bars,
-                )
-            finally:
-                self._release_ffmpeg()
-            logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
+                if getattr(
+                    self.payload, "reuse_temp_files", False
+                ) and self._check_reuse_signature(
+                    metadata_path,
+                    str(CodecFormat.AC4),
+                    " ".join(map(str, ffmpeg_cmd)),
+                    wav_file_name,
+                    temp_dir,
+                ):
+                    logger.info("Reusing extracted wav from temp folder.")
+                    reuse_used = True
+
+                if not reuse_used:
+                    try:
+                        _ffmpeg_job = process_ffmpeg_job(
+                            cmd=ffmpeg_cmd,
+                            steps=True,
+                            duration=audio_track_info.duration,
+                            step_info={"current": 1, "total": 3, "name": "FFMPEG"},
+                            no_progress_bars=self.payload.no_progress_bars,
+                        )
+                    finally:
+                        self._release_ffmpeg()
+                    logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
+
+                    # on success register metadata for reuse
+                    if getattr(self.payload, "reuse_temp_files", False):
+                        self._write_signature_metadata(
+                            metadata_path,
+                            str(CodecFormat.AC4),
+                            " ".join(map(str, ffmpeg_cmd)),
+                            wav_file_name,
+                            file_input,
+                        )
+            except Exception:
+                try:
+                    self._release_ffmpeg()
+                except Exception:
+                    pass
             input_file_path = Path(temp_dir / wav_file_name)
 
         # generate JSON
         json_generator = DeeJSONGenerator(
             input_file_path=input_file_path,
-            output_file_path=output_file_path,
+            output_file_path=output,
             output_dir=temp_dir,
+            codec_format=CodecFormat.AC4,
         )
         json_path = json_generator.ac4_json(
             payload=self.payload,
@@ -224,11 +284,6 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
 
-        # move file to output path using centralized atomic move helper
-        logger.debug(f"Moving {output_file_path.name} to {output}.")
-        move_file = self._atomic_move(output_file_path, output, self.payload.overwrite)
-        logger.debug("Done.")
-
         # delete temp folder and all files if enabled
         if not self.payload.keep_temp:
             logger.debug(f"Cleaning temp directory ({temp_dir}).")
@@ -236,10 +291,10 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             logger.debug("Temp directory cleaned.")
 
         # return path
-        if move_file.is_file():
-            return move_file
+        if output.is_file():
+            return output
         else:
-            raise OutputFileNotFoundError(f"{move_file.name} output not found")
+            raise OutputFileNotFoundError(f"{output.name} output not found")
 
     def _generate_ffmpeg_cmd(
         self,

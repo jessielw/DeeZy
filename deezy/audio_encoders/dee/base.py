@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import Enum
+import json
+import os
 from pathlib import Path
 import random
 import shutil
 import tempfile
 import threading
 import time
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
@@ -350,6 +352,123 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
 
         return temp_directory
 
+    def _adjacent_temp_dir(self, file_input: Path) -> Path:
+        """
+        Returns an adjacent per-file temp/cache directory path (e.g. <parent>/<stem>_deezy).
+        Ensures the directory exists.
+        """
+        temp_dir = file_input.parent / f"{file_input.stem}_deezy"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        return temp_dir
+
+    def _metadata_path_for_output(self, temp_dir: Path, output: Path) -> Path:
+        """Return the metadata.json path used for a given computed output."""
+        return temp_dir / f"{output.stem}_metadata.json"
+
+    def _read_reuse_metadata(self, metadata_path: Path) -> Optional[dict]:
+        """Read metadata JSON if present. Returns dict or None on failure."""
+        if not metadata_path.exists():
+            return None
+        try:
+            with open(metadata_path, "r", encoding="utf-8") as fh:
+                return json.load(fh)
+        except Exception:
+            logger.debug("Failed to read/parse metadata.json; ignoring and continuing.")
+            return None
+
+    def _check_reuse_signature(
+        self,
+        metadata_path: Path,
+        encoder_id: str,
+        signature: str,
+        produced_file: str,
+        temp_dir: Path,
+    ) -> bool:
+        """
+        Generic reuse check scoped by encoder_id. Metadata format supports multiple encoders:
+
+        {
+            "source_mtime": ..., "source_size": ...,
+            "encoders": {
+                "dd": {"signature": "...", "produced_file": "..."},
+                "ddp": {...}
+            }
+        }
+
+        This function returns True when the encoder's recorded signature matches the
+        provided signature and the produced_file exists in temp_dir. Only encoder-
+        scoped entries under the 'encoders' mapping are considered.
+        """
+        meta = self._read_reuse_metadata(metadata_path)
+        if not meta:
+            return False
+
+        # Primary: encoder-scoped metadata
+        encs = meta.get("encoders") or {}
+        enc_entry = encs.get(encoder_id)
+        if enc_entry:
+            rec_sig = enc_entry.get("signature")
+            rec_file = enc_entry.get("produced_file")
+            if rec_sig and rec_file and rec_sig == signature:
+                return (temp_dir / rec_file).exists()
+
+        # Only encoder-scoped entries are valid
+        return False
+
+    def _write_signature_metadata(
+        self,
+        metadata_path: Path,
+        encoder_id: str,
+        signature: str,
+        produced_file: str,
+        source_file: Path,
+    ) -> None:
+        """
+        Atomically write/merge encoder-scoped signature metadata for reuse. Fail silently on error.
+
+        If a metadata file already exists, merge the encoder entry into the 'encoders'
+        mapping preserving existing top-level source_mtime/source_size where possible.
+        """
+        try:
+            # read existing metadata if present
+            existing = self._read_reuse_metadata(metadata_path) or {}
+
+            # collect source info (prefer existing values)
+            src_mtime = existing.get("source_mtime") or int(source_file.stat().st_mtime)
+            src_size = existing.get("source_size") or int(source_file.stat().st_size)
+
+            encs = existing.get("encoders") or {}
+            encs[encoder_id] = {
+                "signature": signature,
+                "produced_file": produced_file,
+            }
+
+            meta = {
+                "source_mtime": int(src_mtime),
+                "source_size": int(src_size),
+                "encoders": encs,
+            }
+
+            # atomic write via temp file in same directory
+            tmp_path = None
+            try:
+                import tempfile as _tmp
+
+                with _tmp.NamedTemporaryFile(
+                    "w", delete=False, dir=str(metadata_path.parent), encoding="utf-8"
+                ) as fh:
+                    json.dump(meta, fh)
+                    tmp_path = Path(fh.name)
+                os.replace(str(tmp_path), str(metadata_path))
+            finally:
+                if tmp_path and tmp_path.exists():
+                    try:
+                        tmp_path.unlink()
+                    except Exception:
+                        pass
+        except Exception:
+            logger.debug("Failed to write metadata.json for reuse.")
+
     @staticmethod
     def _clean_temp(temp_dir: Path, keep_temp: bool):
         """
@@ -377,38 +496,6 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 logger.debug(f"Output already exists and will be overwritten: {output}")
             else:
                 raise OutputExistsError(f"Output already exists: {output}")
-
-    def _atomic_move(self, src: Path, dest: Path, overwrite: bool) -> Path:
-        """
-        Atomically move `src` to `dest` when possible.
-
-        Tries Path.replace (atomic on the same filesystem). If that fails (for
-        example cross-filesystem moves), falls back to shutil.move. If
-        overwrite is False and the destination exists, raises
-        OutputExistsError to avoid accidental overwrites.
-
-        Returns:
-            Path: path to the moved file at the destination.
-        """
-        # protect against races: ensure we don't overwrite unless requested
-        if dest.exists():
-            if not overwrite:
-                raise OutputExistsError(f"Output already exists: {dest}")
-
-        try:
-            # prefer atomic replace (works on same filesystem)
-            moved = src.replace(dest)
-            return Path(moved)
-        except OSError:
-            # fallback to shutil.move for cross-filesystem moves. If overwrite
-            # was requested, ensure destination is removed first so move can
-            # succeed in replacing it.
-            if overwrite and dest.exists():
-                try:
-                    dest.unlink()
-                except FileNotFoundError:
-                    pass
-            return Path(shutil.move(str(src), str(dest)))
 
     # --- Phase semaphores and jitter for staggered processing ---
     # class-level semaphores so all encoder instances share the same limits.
