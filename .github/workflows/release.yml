@@ -6,9 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag (e.g., v1.0.0)"
+        description: "Version tag (e.g., 1.0.0 or 1.0.0-rc.1)"
         required: true
         default: "v1.0.0"
+      branch:
+        description: "Branch to build from (e.g., main, dev)"
+        required: true
+        default: "main"
 
 permissions:
   contents: write
@@ -36,6 +40,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -112,7 +118,7 @@ jobs:
     name: Create Release Assets
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'release' && github.event.action == 'published' && !github.event.release.prerelease && !contains(github.event.release.tag_name, '-rc') && github.event.release.target_commitish == 'main') || (github.event_name == 'workflow_dispatch')
     permissions:
       contents: write
 
