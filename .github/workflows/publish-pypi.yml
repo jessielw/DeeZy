@@ -1,18 +1,24 @@
 name: PyPI
 
+# Publishing to PyPI is manual only. Automatic publishing on GitHub Release
+# creation was removed to avoid accidentally publishing RC releases. Use the
+# workflow_dispatch input `ref` to specify the branch or tag to build and
+# publish (for example `dev` or `refs/tags/v1.2.3`). If omitted, `main` is used.
 on:
   release:
-    types:
-      - created
+    types: [created]
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Branch to build and publish (useful for manual RC builds). If omitted, defaults to main. For release events the tag will be used."
+      ref:
+        description: "Branch or tag to build and publish (e.g. 'main' or 'refs/tags/1.2.3'). Defaults to 'main'."
         required: false
         default: "main"
 
 jobs:
   publish_to_pypi:
+    # Only run automatically for release events whose tag does NOT contain
+    # 'rc'. Manual runs (workflow_dispatch) are always allowed.
+    if: ${{ github.event_name != 'release' || (github.event_name == 'release' && !contains(github.event.release.tag_name, 'rc')) }}
     runs-on: ubuntu-latest
 
     environment:
@@ -26,9 +32,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # If triggered by a release use the release tag, otherwise use the
-          # supplied workflow_dispatch `branch` input (or default to 'main').
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.branch || 'main' }}
+          # Use the supplied workflow_dispatch `ref` input (branch or tag),
+          # defaulting to 'main'. This allows manual publishing from any
+          # branch or tag.
+          ref: ${{ github.event.inputs.ref || 'main' }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
