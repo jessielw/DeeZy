@@ -2,7 +2,6 @@ import pytest
 
 from deezy.payloads.shared import ChannelBitrates
 
-
 bitrates = ChannelBitrates(default=384, choices=(192, 256, 320, 384, 448, 512, 640))
 
 

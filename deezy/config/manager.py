@@ -1,13 +1,15 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
 import oslex2
 import tomlkit
 
 from deezy.config.defaults import CONF_DEFAULT, get_default_config_path
+from deezy.enums.codec_format import CodecFormat
 from deezy.utils.exit import EXIT_FAIL, exit_application
 from deezy.utils.logger import logger
+from deezy.utils.utils import WORKING_DIRECTORY
 
 
 class ConfigManager:
@@ -30,8 +32,27 @@ class ConfigManager:
 
     def load_config(self, config_path: str | Path | None = None) -> None:
         """Load configuration from TOML file."""
+        # determine search order for config file when none is provided:
+        # 1) current working directory (project/local config)
+        # 2) user config directory (platformdirs recommended path)
+        # 3) working directory beside the executable (bundled exe)
         if config_path is None:
-            config_path = get_default_config_path()
+            # first check cwd
+            cwd_path = Path.cwd() / "deezy-conf.toml"
+            user_path = Path(get_default_config_path())
+            exe_path = Path(WORKING_DIRECTORY) / "deezy-conf.toml"
+
+            candidates = [cwd_path, user_path, exe_path]
+            found = None
+            for p in candidates:
+                try:
+                    if p and p.exists():
+                        found = p
+                        break
+                except Exception:
+                    continue
+
+            config_path = found
         else:
             config_path = Path(config_path)
 
@@ -120,17 +141,24 @@ class ConfigManager:
         return list(self.config.get("presets", {}).keys())
 
     def get_default_bitrate(
-        self, format_command: str, channels_or_mode: Any = None
+        self, format_command: str | CodecFormat, channels_or_mode: Any = None
     ) -> int | None:
         """Get default bitrate for a format and channel/mode configuration."""
+        # convert enum to string if needed
+        format_str = (
+            format_command.value
+            if isinstance(format_command, CodecFormat)
+            else format_command
+        )
+
         bitrates_config = self.config.get("default_bitrates", {})
-        format_bitrates = bitrates_config.get(format_command, {})
+        format_bitrates = bitrates_config.get(format_str, {})
 
         if not format_bitrates:
             return None
 
         # for Atmos, use the mode (streaming/bluray)
-        if format_command == "atmos" and channels_or_mode:
+        if format_str == "atmos" and channels_or_mode:
             return format_bitrates.get(channels_or_mode)
 
         # for DD/DDP, use channel configuration

@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 class PrintSameLine:
@@ -22,18 +22,21 @@ class PrintSameLine:
         self.last_message = ""
 
 
-def get_working_dir() -> Path:
+def get_working_dir() -> tuple[Path, bool]:
     """
     Used to determine the correct working directory automatically.
     This way we can utilize files/relative paths easily.
 
     Returns:
-        (Path): Current working directory
+        (tuple[Path, bool]): Current working directory, True if executable False if script.
     """
     # we're in a pyinstaller bundle
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        return Path(sys.executable).parent
+        return Path(sys.executable).parent, True
 
     # we're running from a *.py file
     else:
-        return Path.cwd()
+        return Path.cwd(), False
+
+
+WORKING_DIRECTORY, IS_BUNDLED = get_working_dir()

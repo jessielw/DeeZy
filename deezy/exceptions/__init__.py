@@ -40,3 +40,7 @@ class DependencyNotFoundError(DeeZyError):
 
 class InvalidDelayError(DeeZyError):
     """Class to raise in the event of an invalid delay input"""
+
+
+class OutputExistsError(DeeZyError):
+    """Raised when the intended output file already exists and overwrite was not enabled."""

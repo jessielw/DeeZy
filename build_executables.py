@@ -1,8 +1,22 @@
 import os
 from pathlib import Path
+import re
 from subprocess import run
 
 from deezy.utils.dependencies import get_executable_extension
+
+
+def get_site_packages() -> Path:
+    output = run(
+        ("uv", "pip", "show", "babelfish"),
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    get_location = re.search(r"Location: (.+)\n", output, flags=re.M)
+    if not get_location:
+        raise FileNotFoundError("Can not detect site packages")
+    return Path(get_location.group(1))
 
 
 def build_app():
@@ -13,6 +27,11 @@ def build_app():
     # define paths before changing directory
     deezy_script = Path(Path.cwd() / "deezy.py")
     icon_path = Path(Path.cwd() / "icon" / "icon.ico")
+
+    # get guessit deps
+    site_packages = get_site_packages()
+    babel_fish = site_packages / "babelfish"
+    guessit = site_packages / "guessit"
 
     # change directory so we output all of pyinstallers files in it's own folder
     os.chdir(pyinstaller_folder)
@@ -26,6 +45,8 @@ def build_app():
             "-n",
             "deezy",
             "--onefile",
+            f"--add-data={babel_fish}:./babelfish",
+            f"--add-data={guessit}:./guessit",
             f"--icon={str(icon_path)}",
             str(deezy_script),
         ]
@@ -43,6 +64,8 @@ def build_app():
             "bundled_mode",
             "--contents-directory",
             "bundle",
+            f"--add-data={babel_fish}:./babelfish",
+            f"--add-data={guessit}:./guessit",
             f"--icon={str(icon_path)}",
             str(deezy_script),
         ]

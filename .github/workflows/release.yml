@@ -62,7 +62,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
 
       - name: Build executable
-        run: uv run python build.py
+        run: uv run python build_executables.py
 
       - name: Verify build output
         shell: bash

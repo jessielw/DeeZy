@@ -17,3 +17,6 @@ test.py
 custom-pyinstaller/
 deezy.egg-info
 deezy-conf.toml
+.pypirc
+deezy_work/
+.ruff_cache/

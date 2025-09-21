@@ -1,7 +1,7 @@
-from collections.abc import Sequence
 import os
-from pathlib import Path
 import shutil
+from collections.abc import Sequence
+from pathlib import Path
 
 from deezy.exceptions import (
     AutoChannelDetectionError,

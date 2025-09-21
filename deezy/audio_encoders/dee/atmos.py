@@ -1,14 +1,16 @@
 from pathlib import Path
-import shutil
-import tempfile
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
 from deezy.enums.atmos import AtmosMode
-from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
-from deezy.exceptions import DependencyNotFoundError
+from deezy.enums.codec_format import CodecFormat
+from deezy.exceptions import (
+    DependencyNotFoundError,
+    InvalidExtensionError,
+    OutputFileNotFoundError,
+)
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.mediainfo import MediainfoParser
@@ -32,32 +34,26 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         self._check_input_file(file_input)
 
         # get audio track information
-        audio_track_info = MediainfoParser(
-            file_input, self.payload.track_index
-        ).get_audio_track_info()
+        mi_parser = MediainfoParser(file_input, self.payload.track_index)
+        audio_track_info = mi_parser.get_audio_track_info()
 
         # bitrate
         # get object based off of desired channels and source audio track channels
         bitrate_obj = self._get_channel_bitrate_object(
             self.payload.atmos_mode, audio_track_info.channels
         )
+
         # check to see if the users bitrate is allowed
-        runtime_bitrate = self.payload.bitrate
-        if runtime_bitrate:
-            # user/preset provided a bitrate - validate it
-            if not bitrate_obj.is_valid_bitrate(runtime_bitrate):
-                fixed_bitrate = bitrate_obj.get_closest_bitrate(runtime_bitrate)
-                logger.warning(
-                    f"Bitrate {runtime_bitrate} is invalid for this configuration. "
-                    f"Using the next closest allowed bitrate: {fixed_bitrate}."
-                )
-                runtime_bitrate = fixed_bitrate
-            else:
-                logger.debug(f"Using provided bitrate: {runtime_bitrate}.")
-        else:
-            # no bitrate provided - use default
-            runtime_bitrate = bitrate_obj.default
-            logger.debug(f"No supplied bitrate, defaulting to {runtime_bitrate}.")
+        runtime_bitrate = self.get_config_based_bitrate(
+            format_command=CodecFormat.ATMOS,
+            payload_bitrate=self.payload.bitrate,
+            payload_channels=self.payload.atmos_mode,
+            audio_track_info=audio_track_info,
+            bitrate_obj=bitrate_obj,
+            source_audio_channels=audio_track_info.channels,
+            auto_enum_value=None,  # Atmos doesn't have AUTO
+            channel_resolver=self.atmos_mode_resolver,
+        )
 
         # check for up-mixing
         self._check_for_up_mixing(
@@ -65,26 +61,16 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         )
 
         # delay
-        delay = self.get_delay(audio_track_info, self.payload.delay, file_input)
+        delay = self.get_delay(
+            audio_track_info,
+            self.payload.delay,
+            self.payload.parse_elementary_delay,
+            file_input,
+        )
 
         # fps
         fps = self._get_fps(audio_track_info.fps)
         logger.debug(f"Detected FPS {fps.to_dee_cmd()}.")
-
-        # temp dir
-        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
-        logger.debug(f"Temp directory {temp_dir}.")
-
-        # check disk space
-        self._check_disk_space(
-            input_file_path=file_input,
-            drive_path=temp_dir,
-            recommended_free_space=audio_track_info.recommended_free_space,
-        )
-
-        # temp filename
-        temp_filename = Path(tempfile.NamedTemporaryFile(delete=False).name).name
-        logger.debug(f"Temp filename {temp_filename}.")
 
         # file output (if an output is a defined check users extension and use their output)
         if self.payload.file_output:
@@ -94,37 +80,137 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
                     "DDP output must must end with the suffix '.eac3' or '.ec3'."
                 )
         else:
-            output = Path(audio_track_info.auto_name).with_suffix(".ec3")
+            ignore_delay = (
+                True
+                if not (
+                    self.payload.parse_elementary_delay
+                    or not audio_track_info.is_elementary
+                    or not delay.is_delay()
+                )
+                else False
+            )
+            output = mi_parser.generate_output_filename(
+                ignore_delay,
+                delay.is_delay(),
+                suffix=".ec3",
+                worker_id=self.payload.worker_id,
+            )
+
+        # If a centralized batch output directory was provided and the user did not
+        # explicitly supply an output path, place final output there. This ensures
+        # an explicit --output wins over config-provided batch_output_dir.
+        if self.payload.file_output is None and self.payload.batch_output_dir:
+            output = Path(self.payload.batch_output_dir) / output.name
         logger.debug(f"Output path {output}.")
 
-        # define .ac3 file names (not full path) and output path
-        output_file_name = temp_filename + ".ac3"
-        output_file_path = temp_dir / output_file_name
-        logger.debug(f"File paths: {output_file_name=}, {output_file_path=}.")
+        # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
+        # so users can collect all temp files in one place. If not provided, use
+        # the adjacent per-input cache folder (<parent>/<stem>_deezy).
+        user_temp_base = getattr(self.payload, "temp_dir", None)
+        if user_temp_base:
+            temp_dir = Path(user_temp_base) / f"{file_input.stem}_deezy"
+            temp_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            temp_dir = self._adjacent_temp_dir(file_input)
+        logger.debug(f"Temp directory {temp_dir}.")
+
+        # check disk space
+        self._check_disk_space(
+            input_file_path=file_input,
+            drive_path=temp_dir,
+            recommended_free_space=audio_track_info.recommended_free_space,
+        )
+
+        logger.debug(f"File paths: {output=}.")
+
+        # file output (if an output is a defined check users extension and use their output)
+        if self.payload.file_output:
+            output = Path(self.payload.file_output)
+            if output.suffix not in (".ec3", ".eac3"):
+                raise InvalidExtensionError(
+                    "DDP output must must end with the suffix '.eac3' or '.ec3'."
+                )
+        else:
+            ignore_delay = (
+                True
+                if not (
+                    self.payload.parse_elementary_delay
+                    or not audio_track_info.is_elementary
+                    or not delay.is_delay()
+                )
+                else False
+            )
+            output = mi_parser.generate_output_filename(
+                ignore_delay,
+                delay.is_delay(),
+                suffix=".ec3",
+                worker_id=self.payload.worker_id,
+            )
+
+        # If a centralized batch output directory was provided and the user did not
+        # explicitly supply an output path, place final output there. This ensures
+        # an explicit --output wins over config-provided batch_output_dir.
+        if self.payload.file_output is None and self.payload.batch_output_dir:
+            output = Path(self.payload.batch_output_dir) / output.name
+        logger.debug(f"Output path {output}.")
+
+        # early existence check: fail fast to avoid expensive work if the
+        # destination already exists and the user didn't request overwrite.
+        self._early_output_exists_check(output, self.payload.overwrite)
 
         # decode TrueHD to atmos mezz
         if not self.payload.truehdd_path:
             raise DependencyNotFoundError(
                 "Failed to locate truehdd, this is required for atmos work flows"
             )
-        decoded_mezz_path = decode_truehd_to_atmos(
-            output_dir=temp_dir,
-            file_input=self.payload.file_input,
-            track_index=self.payload.track_index,
-            ffmpeg_path=self.payload.ffmpeg_path,
-            truehdd_path=self.payload.truehdd_path,
-            bed_conform=self.payload.bed_conform,
-            warp_mode=self.payload.thd_warp_mode,
-            duration=audio_track_info.duration,
-            step_info={"current": 1, "total": 3, "name": "truehdd"},
-            no_progress_bars=self.payload.no_progress_bars,
-        )
+
+        # optionally stagger/jitter and limit concurrent TrueHD jobs
+        self._maybe_jitter()
+        self._acquire_truehdd()
+        try:
+            truehdd_signature = f"truehdd:{self.payload.thd_warp_mode.to_truehdd_cmd()}"
+            metadata_path = self._metadata_path_for_output(temp_dir, output)
+            if getattr(
+                self.payload, "reuse_temp_files", False
+            ) and self._check_reuse_signature(
+                metadata_path,
+                str(CodecFormat.ATMOS),
+                truehdd_signature,
+                "atmos_meta.atmos",
+                temp_dir,
+            ):
+                logger.info("Reusing decoded atmos from temp folder.")
+                decoded_mezz_path = temp_dir / "atmos_meta.atmos"
+            else:
+                decoded_mezz_path = decode_truehd_to_atmos(
+                    output_dir=temp_dir,
+                    file_input=self.payload.file_input,
+                    track_index=self.payload.track_index,
+                    ffmpeg_path=self.payload.ffmpeg_path,
+                    truehdd_path=self.payload.truehdd_path,
+                    bed_conform=self.payload.bed_conform,
+                    warp_mode=self.payload.thd_warp_mode,
+                    duration=audio_track_info.duration,
+                    step_info={"current": 1, "total": 3, "name": "truehdd"},
+                    no_progress_bars=self.payload.no_progress_bars,
+                )
+                if getattr(self.payload, "reuse_temp_files", False):
+                    self._write_signature_metadata(
+                        metadata_path,
+                        str(CodecFormat.ATMOS),
+                        truehdd_signature,
+                        "atmos_meta.atmos",
+                        file_input,
+                    )
+        finally:
+            self._release_truehdd()
 
         # generate JSON
         json_generator = DeeJSONGenerator(
             input_file_path=decoded_mezz_path,
-            output_file_path=output_file_path,
+            output_file_path=output,
             output_dir=temp_dir,
+            codec_format=CodecFormat.ATMOS,
         )
         json_path = json_generator.atmos_json(
             payload=self.payload,
@@ -143,18 +229,19 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         logger.debug(f"{dee_cmd=}.")
 
         # process dee command
-        step_info = {"current": 2, "total": 3, "name": "DEE measure"}
-        _dee_job = process_dee_job(
-            cmd=dee_cmd,
-            step_info=step_info,
-            no_progress_bars=self.payload.no_progress_bars,
-        )
+        # optionally jitter and limit concurrent DEE jobs
+        self._maybe_jitter()
+        self._acquire_dee()
+        try:
+            step_info = {"current": 2, "total": 3, "name": "DEE measure"}
+            _dee_job = process_dee_job(
+                cmd=dee_cmd,
+                step_info=step_info,
+                no_progress_bars=self.payload.no_progress_bars,
+            )
+        finally:
+            self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
-
-        # move file to output path
-        logger.debug(f"Moving {output_file_path.name} to {output}.")
-        move_file = Path(shutil.move(output_file_path, output))
-        logger.debug("Done.")
 
         # delete temp folder and all files if enabled
         if not self.payload.keep_temp:
@@ -163,10 +250,14 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
             logger.debug("Temp directory cleaned.")
 
         # return path
-        if move_file.is_file():
-            return move_file
+        if output.is_file():
+            return output
         else:
-            raise OutputFileNotFoundError(f"{move_file.name} output not found")
+            raise OutputFileNotFoundError(f"{output.name} output not found")
+
+    def atmos_mode_resolver(self, _source_channels: int) -> AtmosMode:
+        """For Atmos, mode doesn't change based on channels - return the payload mode."""
+        return self.payload.atmos_mode
 
     def _generate_ffmpeg_cmd(self) -> list[str]:
         """Not used in AtmosEncoder."""

@@ -46,6 +46,30 @@ deezy.exe (or deezy on Linux)
         └── truehdd.exe
 ```
 
+### Install via pipx / PyPI
+
+If you'd like to install the CLI and get the `deezy` command on your PATH, the recommended approach is to use pipx:
+
+```powershell
+pipx install deezy
+```
+
+You can also install from a local copy (for development):
+
+```powershell
+pipx install --editable .
+# or
+pipx install --spec .
+```
+
+After installing with pipx, the `deezy` shim will be available on your PATH (if pipx setup added its shim directory to PATH). Run `deezy --help` to confirm.
+
+## 📤 Publishing
+
+This repository includes a GitHub Actions workflow (`.github/workflows/publish-pypi.yml`) that will build and publish the package to PyPI when a Git tag prefixed with `v` is pushed (for example `v1.3.0rc5`).
+
+To use the workflow, add a `PYPI_API_TOKEN` secret to your repository (created from https://pypi.org/manage/project/<your-project>/). The workflow expects the token to be stored in `secrets.PYPI_API_TOKEN`.
+
 ### Dependencies
 
 - **FFMPEG** - Required for all operations
@@ -76,7 +100,7 @@ deezy config generate --overwrite
 
 The configuration file (`deezy-conf.toml`) supports:
 
-- **Tool dependency paths** (FFmpeg, DEE, TrueHD)
+- **Tool dependency paths** (FFmpeg, DEE, truehdd)
 - **Global encoding defaults** applied to all formats
 - **Default bitrates** per codec and channel layout
 - **Format-specific settings** that override global defaults
@@ -133,6 +157,18 @@ ac4_stereo = "encode ac4 --bitrate 256"
 
 DeeZy looks for `deezy-conf.toml` beside the executable for portable usage. You can also specify a custom config file with `--config path/to/config.toml`.
 
+## Note on user config location
+
+When DeeZy generates a user-wide configuration it will place it in a platform-appropriate
+user config folder. On Windows this resolves to a single folder under your local app data,
+for example:
+
+C:\Users\<you>\AppData\Local\deezy\deezy-conf.toml
+
+On other platforms the standard platformdirs user config location is used (for example
+`~/.config/deezy/deezy-conf.toml` on many Linux distributions). DeeZy will still check
+the current working directory first, allowing per-project configs to take precedence.
+
 ### Priority System
 
 Configuration values are applied in order of priority:
@@ -163,6 +199,29 @@ DeeZy automatically applies intelligent defaults based on the encoding format wh
 - **Atmos**: No channel argument (uses source layout)
 
 **Smart Metering Mode Defaults** (when `--metering-mode` not specified):
+
+### Per-source default bitrates (opt-in)
+
+If you'd like DeeZy to pick default bitrates based on the source audio's channel count, you can opt-in to the optional "per-source" sections in the configuration file.
+
+- Location: `[default_source_bitrates.<codec>]` (for example `[default_source_bitrates.ddp]`)
+- Keys: name them `ch_1` .. `ch_8` (lowercase preferred). Each key is the source channel count and the value is the default bitrate in kbps.
+- Supported codecs: `dd`, `ddp` (support channels 1..8); `ac4` is meaningful for immersive sources (6..8).
+- How it works: When no `--bitrate` is provided on the CLI/preset, encoders will look for a matching `ch_N` value for the detected source channel count and use that bitrate. If the config value isn't an allowed bitrate for the encoder's current channel/format settings, the encoder will choose the nearest allowed bitrate defined in its internal choices.
+- Precedence: CLI bitrate > per-source config (`default_source_bitrates`) > format-level config (`default_bitrates`) > built-in defaults.
+
+Example (in the generated `deezy-conf.toml`, these are commented out by default; uncomment to enable):
+
+```toml
+#[default_source_bitrates.ddp]
+# ch_1 = 64
+# ch_2 = 128
+# ch_6 = 192
+# ch_7 = 384
+# ch_8 = 384
+```
+
+This opt-in approach keeps the default configuration conservative while allowing site- or workflow-specific defaults when desired.
 
 - **DD/DDP**: 1770-3 (standard for traditional surround formats)
 - **Atmos**: 1770-4 (supports advanced Atmos loudness requirements)
@@ -264,6 +323,149 @@ deezy temp info
 # Clean old temp files
 deezy temp clean
 ```
+
+## CLI additions and batch features
+
+Recent CLI additions expand batch processing and working-directory control. These flags are available on the `encode` command and are useful for automated workflows, CI, and headless environments.
+
+- `--parse-elementary-delay`
+
+  - When input is an elementary (demuxed) stream, parse any delay string in the filename and reset it to zero during encoding. If an explicit `--output` filename is supplied the output name will not be altered.
+
+- `--working-dir PATH`
+
+  - Use this directory to store DeeZy working files (logs, batch-results). If not set, DeeZy uses a default workspace beside the executable or the value from your config file (`[global_defaults].working_dir`).
+
+- `--batch-summary-output`
+
+  - When enabled, DeeZy will collect per-file results into a JSON summary saved in a `batch-results` folder inside the working directory.
+
+- `--batch-output-dir PATH`
+
+  - When used with `--batch-summary-output`, instructs DeeZy to place encoded output files into the given directory instead of beside the inputs. DeeZy will validate that this directory exists and is writable before starting work.
+
+- `--overwrite`
+
+  - Globally allow overwriting of existing output files. When not provided and a target file already exists, the job will be skipped and recorded as `skipped` in the batch summary.
+
+- `--max-parallel N`
+
+  - Process up to N files in parallel. Default is 1 (sequential). Use this to speed up batch runs when machine resources allow.
+
+Per-phase limits and jitter
+
+-- `--limit-ffmpeg`, `--limit-dee`, `--limit-truehdd`
+
+- Fine-tune concurrency for the heavy processing phases: the FFmpeg stage, the DEE (Dolby Encoding Engine) stage, and truehdd decoding stage respectively.
+- If any of these flags are omitted they will default to the value supplied to `--max-parallel`. This keeps phase limits consistent with the overall worker count.
+- If a per-phase value is set greater than `--max-parallel` the CLI will cap the phase limit to `--max-parallel` and emit a warning at startup.
+
+- `--jitter-ms`
+
+  - When set (>0), introduces a small random delay (up to the given milliseconds) before entering heavy phases (FFmpeg, DEE, truehdd). This reduces load spikes when many jobs start simultaneously and helps avoid thrashing on constrained systems.
+
+- `--max-logs N` and `--max-batch-results N`
+  - Per-run overrides for retention trimming. These flags override the config defaults for the current run and control how many log files and batch-result JSON files are kept in the working directory. Set to `0` to keep none.
+
+These options respect the priority system: CLI arguments override config defaults.
+
+Example: parsing elementary delay from filename
+
+```bash
+# Given an elementary input file whose name contains a delay tag:
+# Migration.2023.BluRay..._track3_[jpn]_DELAY 36ms.aac
+
+# Without parsing, the output filename will retain the delay metadata
+# (unless you explicitly pass --output):
+deezy encode dd Migration.2023..._DELAY\ 36ms.aac
+
+# With parsing enabled (and no explicit --output), DeeZy will strip the
+# delay tag from the generated output filename and treat the audio as 0ms delay:
+deezy encode dd --parse-elementary-delay Migration.2023..._DELAY\ 36ms.aac
+# Result: generated output file will not contain the `[DELAY 36ms]` suffix
+```
+
+## What's new (high level)
+
+From recent changes (see `CHANGELOG.md` for full details):
+
+- AC-4 support: `encode ac4` with profiles and DRC presets.
+- Improved preset handling: `deezy encode preset --name YOUR_PRESET` and the ability to override preset values from the CLI.
+- Better error handling and logging in debug mode, and smarter temp-folder management for batch runs.
+- Batch processing improvements: centralized logs and batch-results directories, per-file JSON summary output, and retention trimming to avoid unbounded log accumulation.
+
+### Example: batch run
+
+```bash
+# Encode all MKV files in a folder, place outputs in a central directory,
+# write batch summary JSON and keep logs/batch-results under a working dir.
+deezy --log-to-file encode ddp \
+  --working-dir "C:/ci/deezy_work" \
+  --batch-summary-output \
+  --batch-output-dir "C:/ci/deezy_outputs" \
+  --max-parallel 4 \
+  *.mkv
+```
+
+## Temp directory and reuse behavior
+
+DeeZy provides flexible temp-file handling to support batch workflows, predictable cleanup, and safe reuse of expensive extractor outputs.
+
+- `--temp-dir <PATH>`
+
+  - When supplied, encoders will create a predictable per-input subfolder under the provided base directory: `<temp-dir>/<input_stem>_deezy`.
+  - This centralizes temporary artifacts (logs, extracted WAVs, DEE job JSON) while keeping each input isolated in its own folder so runs are safe to reuse and easy to clean.
+  - Example: `--temp-dir C:/work/deezy_tmp` and input `Movie.TrueHD.mkv` -> temporary files live in `C:/work/deezy_tmp/Movie.TrueHD_mkv_deezy`.
+
+- `--reuse-temp-files`
+
+  - Opt-in flag to enable reusing extractor outputs (FFmpeg and TrueHDD). When enabled, DeeZy records a canonical signature of the extractor command and produced file in a metadata file inside the temp folder. Future runs that match the signature will reuse the extracted artifact instead of re-running the extractor.
+  - This only applies to FFmpeg and TrueHDD extractor stages and only when the command signature exactly matches. This prevents accidental reuse across different extraction parameters.
+  - Note: `--reuse-temp-files` implies `--keep-temp` because the extracted artifacts must be preserved for reuse.
+
+- How temporary filenames and metadata are organized
+
+  - Temporary artifact filenames are codec-scoped so variants don't collide. For example: `{output_stem}.DD.wav`, `{output_stem}.DDP_BLURAY.wav`, or `{output_stem}.AC4.wav`.
+  - Each temp folder contains a single metadata file that maps encoder/format IDs to recorded extraction signatures and produced filenames. The metadata layout uses an `"encoders"` map (for example: `{"encoders": {"DDP": {...}, "AC4": {...}}}`) so entries are isolated per format.
+  - Metadata writes are atomic (written to a same-directory temporary file then renamed) to avoid partial files.
+
+- Cleanup semantics
+
+  - When `--temp-dir` is supplied, DeeZy removes only the per-input subfolder it created (for example `C:/work/deezy_tmp/Movie..._deezy`) when `--keep-temp` is not set. It will not delete the entire base temp directory.
+  - DEE job JSON files include a `misc.temp_dir.clean_temp` flag which now mirrors the CLI payload's `keep_temp` setting; when `keep_temp` is True the DEE job will not clean the temp folder.
+
+These changes make batch processing predictable and safe while allowing optional reuse of expensive extraction steps. If you'd like an example workflow or a short script that finds reusable temp artifacts across runs, tell me and I can add an example to this README.
+
+## Batch summary JSON schema
+
+When `--batch-summary-output` is enabled, DeeZy writes a JSON summary per batch into the `batch-results` folder inside the working directory. The JSON contains `batch_info` and a `results` array with one entry per input file.
+
+Top-level structure:
+
+- `batch_info` (object)
+
+  - `timestamp` (ISO8601) - when the batch run started
+  - `command` (string) - reconstructed command line used to run DeeZy
+  - `total_files` (int) - number of files requested
+  - `successful` (int) - number of successful encodes
+  - `failed` (int) - number of failures
+  - `skipped` (int) - number of skipped files (existing output and no `--overwrite`)
+  - `processing` (int) - number still in progress when the summary was generated
+  - `total_duration_seconds` (float|null) - total elapsed time for batch (if completed)
+  - `max_parallel` (int) - maximum parallelism used for the batch
+
+- `results` (array of objects) - each object has per-file metadata:
+  - `input_file` (string) - original input path
+  - `output_file` (string|null) - resolved output path if produced
+  - `log_file` (string|null) - path to the per-file log (if `--log-to-file` used)
+  - `status` (string) - one of `processing`, `success`, `failed`, `skipped`
+  - `file_id` (string) - internal identifier used for unique naming
+  - `start_time` (ISO8601) - start time for the file
+  - `end_time` (ISO8601|null) - end time if completed
+  - `duration_seconds` (float|null) - elapsed seconds for the file
+  - `error` (string|null) - error message when `failed` or `skipped`
+
+A small example file is included in the repository at `example_json_flows/sample_batch_results.json`.
 
 ## 📋 Usage
 
@@ -400,7 +602,7 @@ deezy encode atmos --atmos-mode bluray --bitrate 768 input.mkv
 **Atmos Options:**
 
 - `--atmos-mode`: `streaming` or `bluray`
-- `--thd-warp-mode`: Warp mode for TrueHD processing (`normal`)
+- `--thd-warp-mode`: Warp mode for truehdd processing (`normal`)
 - `--bed-conform`: Enable bed conformance
 
 ### Dolby AC-4 Encoding
@@ -821,9 +1023,9 @@ deezy encode ddp --temp-dir "C:\debug\" input.mkv
 
 ### Common Issues
 
-**"TrueHD decoder not found"**
+**"truehdd decoder not found"**
 
-- Ensure TrueHD decoder is installed and in PATH
+- Ensure truehdd decoder is installed and in PATH
 - Only required for Atmos encoding from TrueHD sources
 
 **"Invalid bitrate for channel layout"**

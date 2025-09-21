@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from pathlib import Path
 
 from pymediainfo import Track
 
@@ -8,8 +7,7 @@ from pymediainfo import Track
 class AudioTrackInfo:
     mi_track: Track
     channels: int
-    auto_name: Path
-    is_raw_audio: bool
+    is_elementary: bool
     fps: float | None = None
     audio_only: bool = False
     recommended_free_space: int | None = None
