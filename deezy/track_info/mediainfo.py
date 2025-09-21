@@ -158,7 +158,6 @@ class MediainfoParser:
         season = self.guess.get("season")
         episode = self.guess.get("episode")
         source = self._extract_source_info()
-        format_info = self._extract_format_info()
         channels = self._get_channel_info()
 
         # get attributes from mediainfo
@@ -187,8 +186,6 @@ class MediainfoParser:
         context_parts = []
         if source:
             context_parts.append(source)
-        if format_info:
-            context_parts.append(format_info)
         lang_str = mi_lang or lang
         if lang_str:
             context_parts.append(lang_str)
@@ -280,28 +277,6 @@ class MediainfoParser:
             return "HDTV"
         elif "dvd" in filename_lower:
             return "DVD"
-
-    def _extract_format_info(self) -> str | None:
-        """Extract audio format information from filename or MediaInfo."""
-        filename_lower = self.file_input.name.lower()
-
-        # Check MediaInfo first for accurate format detection
-        if self.mi_audio_obj.format:
-            mi_format = str(self.mi_audio_obj.format).upper()
-            if "TRUEHD" in mi_format or "MLP FBA" in mi_format:
-                if self._is_thd_atmos():
-                    return "TrueHD.Atmos"
-                return "TrueHD"
-            elif "DTS" in mi_format:
-                return "DTS"
-            elif "AC-3" in mi_format or "E-AC-3" in mi_format:
-                if "atmos" in filename_lower:
-                    return "DDP.Atmos"
-                return "DDP"
-            elif "FLAC" in mi_format:
-                return "FLAC"
-            elif "PCM" in mi_format:
-                return "PCM"
 
         # fallback to filename parsing
         if "truehd" in filename_lower:
