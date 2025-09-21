@@ -9,8 +9,12 @@ on:
     types: [created]
   workflow_dispatch:
     inputs:
-      ref:
-        description: "Branch or tag to build and publish (e.g. 'main' or 'refs/tags/1.2.3'). Defaults to 'main'."
+      tag:
+        description: "Tag to build and publish (e.g. 'v1.3.0' or 'refs/tags/v1.3.0'). If provided, takes precedence over 'branch'."
+        required: false
+        default: ""
+      branch:
+        description: "Branch to build and publish (e.g. 'main' or 'dev'). Used when 'tag' is not provided. Defaults to 'main'."
         required: false
         default: "main"
 
@@ -36,7 +40,8 @@ jobs:
           # use the supplied workflow_dispatch `ref` input (branch or tag) or
           # default to 'main'. Fetch full history and tags so versioning tools
           # can derive correct metadata.
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.ref || 'main' }}
+          # Precedence: release tag (if triggered by a release) -> manual 'tag' input -> manual 'branch' input -> 'main'
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.tag || github.event.inputs.branch || 'main' }}
           fetch-depth: 0
 
       - name: Git diagnostics
