@@ -128,7 +128,8 @@ def test_ac4_and_atmos_clean_temp_and_filename(tmp_path: Path):
     )
     assert json_path_ac4.exists()
     data_ac4 = json.loads(json_path_ac4.read_text())
-    assert data_ac4["job_config"]["misc"]["temp_dir"]["clean_temp"] == "false"
+    # DEE job JSON now instructs DEE to clean temp files by default
+    assert data_ac4["job_config"]["misc"]["temp_dir"]["clean_temp"] == "true"
     assert json_path_ac4.name.endswith(f".{CodecFormat.AC4}.json")
 
     # atmos
@@ -169,5 +170,6 @@ def test_ac4_and_atmos_clean_temp_and_filename(tmp_path: Path):
     )
     assert json_path_atm.exists()
     data_atm = json.loads(json_path_atm.read_text())
-    assert data_atm["job_config"]["misc"]["temp_dir"]["clean_temp"] == "false"
+    # DEE job JSON now instructs DEE to clean temp files by default
+    assert data_atm["job_config"]["misc"]["temp_dir"]["clean_temp"] == "true"
     assert json_path_atm.name.endswith(f".{CodecFormat.ATMOS}.json")
