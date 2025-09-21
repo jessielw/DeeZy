@@ -32,10 +32,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Use the supplied workflow_dispatch `ref` input (branch or tag),
-          # defaulting to 'main'. This allows manual publishing from any
-          # branch or tag.
-          ref: ${{ github.event.inputs.ref || 'main' }}
+          # If triggered by a GitHub release, use the release tag name. Otherwise
+          # use the supplied workflow_dispatch `ref` input (branch or tag) or
+          # default to 'main'. Fetch full history and tags so versioning tools
+          # can derive correct metadata.
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.ref || 'main' }}
+          fetch-depth: 0
+
+      - name: Git diagnostics
+        run: |
+          echo "=== git info ==="
+          git --no-pager show --summary || true
+          git rev-parse --abbrev-ref HEAD || true
+          git describe --tags --long --always || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
