@@ -41,11 +41,14 @@ from deezy.enums.shared import TrackType
 from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix
 from deezy.exceptions import OutputExistsError
 from deezy.track_info.track_index import TrackIndex
-from deezy.utils._version import __version__, program_name
 from deezy.utils.batch_results import BatchResultsManager
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY
+
+
+__version__ = "1.3.0rc7"
+program_name = "DeeZy"
 
 
 def create_main_parser() -> argparse.ArgumentParser:
@@ -129,6 +132,14 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "--keep-temp",
         action="store_true",
         help="Keeps the temp files after finishing.",
+    )
+    encode_group.add_argument(
+        "--reuse-temp-files",
+        action="store_true",
+        help=(
+            "Attempt to reuse already-extracted temp files adjacent to the input file when "
+            "the extractor command is identical. This implies --keep-temp."
+        ),
     )
     encode_group.add_argument(
         "--temp-dir",
