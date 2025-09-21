@@ -18,3 +18,4 @@ custom-pyinstaller/
 deezy.egg-info
 deezy-conf.toml
 .pypirc
+deezy_work/
