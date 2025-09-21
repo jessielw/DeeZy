@@ -1,5 +1,5 @@
 import logging
-from subprocess import PIPE, Popen, STDOUT
+from subprocess import PIPE, STDOUT, Popen
 
 from deezy.utils.logger import logger
 from deezy.utils.progress import DEEProgressHandler

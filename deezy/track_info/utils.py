@@ -1,6 +1,5 @@
-from pathlib import Path
 import re
-
+from pathlib import Path
 
 DELAY_REGEX = r"delay\s*(-?\d+(?:ms|s))"
 

@@ -1,10 +1,10 @@
 import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import copy
-from pathlib import Path
 import sys
 import tempfile
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 from cli.payload_factory import PayloadBuilder
 from cli.utils import (
@@ -37,15 +37,13 @@ from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
-from deezy.enums.shared import TrackType
-from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix
+from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix, TrackType
 from deezy.exceptions import OutputExistsError
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.batch_results import BatchResultsManager
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY
-
 
 __version__ = "1.3.0rc7"
 program_name = "DeeZy"

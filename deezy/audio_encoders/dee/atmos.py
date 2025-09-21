@@ -6,8 +6,11 @@ from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.codec_format import CodecFormat
-from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
-from deezy.exceptions import DependencyNotFoundError
+from deezy.exceptions import (
+    DependencyNotFoundError,
+    InvalidExtensionError,
+    OutputFileNotFoundError,
+)
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.mediainfo import MediainfoParser

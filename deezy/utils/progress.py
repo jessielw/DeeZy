@@ -1,9 +1,9 @@
-from collections.abc import Callable, Generator
-from contextlib import contextmanager
-from dataclasses import dataclass
 import logging
 import re
 import sys
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any
 
 from rich.progress import (

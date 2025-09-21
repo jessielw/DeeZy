@@ -1,5 +1,5 @@
-from copy import deepcopy
 import json
+from copy import deepcopy
 from pathlib import Path
 
 from deezy.audio_encoders.dee.json.ac4_base import ac4_base

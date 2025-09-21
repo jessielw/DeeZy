@@ -46,9 +46,8 @@ class PayloadBuilder:
             ),
             "reuse_temp_files": cls.safe_get(args, "reuse_temp_files", False),
             # keep_temp is automatically enabled when reuse_temp_files is requested
-            "keep_temp": cls.safe_get(args, "keep_temp", False) or cls.safe_get(
-                args, "reuse_temp_files", False
-            ),
+            "keep_temp": cls.safe_get(args, "keep_temp", False)
+            or cls.safe_get(args, "reuse_temp_files", False),
             "file_output": Path(args.output) if cls.safe_get(args, "output") else None,
             "worker_id": cls.safe_get(args, "worker_id"),
             "batch_output_dir": Path(cls.safe_get(args, "batch_output_dir"))

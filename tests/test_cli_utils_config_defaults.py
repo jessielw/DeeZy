@@ -28,12 +28,14 @@ def test_limits_and_jitter_and_bool_override():
         no_progress_bars=False,
     )
 
-    cfg = DummyConfig({
-        "limit_dee": "0",  # 0 means inherit -> None
-        "limit_truehdd": "2",
-        "jitter_ms": "20",
-        "overwrite": True,
-    })
+    cfg = DummyConfig(
+        {
+            "limit_dee": "0",  # 0 means inherit -> None
+            "limit_truehdd": "2",
+            "jitter_ms": "20",
+            "overwrite": True,
+        }
+    )
 
     ff, de, th = apply_config_defaults_to_args(args, cfg)
 

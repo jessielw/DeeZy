@@ -1,8 +1,8 @@
 import argparse
 import os
-from pathlib import Path
 import tempfile
 import time
+from pathlib import Path
 
 from cli.__init__ import execute_encode_command
 

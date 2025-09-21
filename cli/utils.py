@@ -1,18 +1,17 @@
 import argparse
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
 import time
+from pathlib import Path
 from typing import Any
 
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.info import parse_audio_streams
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
-from deezy.utils.exit import EXIT_FAIL, exit_application
-from deezy.utils.exit import EXIT_SUCCESS
+from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.file_parser import parse_input_s
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY

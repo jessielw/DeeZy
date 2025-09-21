@@ -1,9 +1,10 @@
 from enum import Enum
 from typing import cast
+
 from pymediainfo import Track
 
-from deezy.config.manager import ConfigManager
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
+from deezy.config.manager import ConfigManager
 from deezy.enums.codec_format import CodecFormat
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.audio_track_info import AudioTrackInfo
@@ -12,7 +13,9 @@ from deezy.track_info.audio_track_info import AudioTrackInfo
 class DummyEncoder(BaseDeeAudioEncoder[Enum]):
     # implement required abstract methods with correct signatures
     @staticmethod
-    def _get_channel_bitrate_object(desired_channels, source_channels) -> ChannelBitrates:
+    def _get_channel_bitrate_object(
+        desired_channels, source_channels
+    ) -> ChannelBitrates:
         return ChannelBitrates(default=999, choices=(128, 256, 512))
 
     @staticmethod
@@ -37,7 +40,9 @@ def test_source_bitrate_used_for_ddp():
     setup_config(cfg)
 
     enc = DummyEncoder()
-    audio_info = AudioTrackInfo(mi_track=cast('Track', object()), channels=6, is_elementary=False)
+    audio_info = AudioTrackInfo(
+        mi_track=cast("Track", object()), channels=6, is_elementary=False
+    )
 
     res = enc.get_config_based_bitrate(
         format_command=CodecFormat.DDP,
@@ -58,7 +63,9 @@ def test_payload_overrides_source():
     setup_config(cfg)
 
     enc = DummyEncoder()
-    audio_info = AudioTrackInfo(mi_track=cast('Track', object()), channels=6, is_elementary=False)
+    audio_info = AudioTrackInfo(
+        mi_track=cast("Track", object()), channels=6, is_elementary=False
+    )
 
     # payload bitrate should override the source config when it is valid
     res = enc.get_config_based_bitrate(
@@ -82,7 +89,9 @@ def test_fallback_to_format_level_when_source_missing():
     setup_config(cfg)
 
     enc = DummyEncoder()
-    audio_info = AudioTrackInfo(mi_track=cast('Track', object()), channels=2, is_elementary=False)
+    audio_info = AudioTrackInfo(
+        mi_track=cast("Track", object()), channels=2, is_elementary=False
+    )
 
     # payload_channels provided as 'stereo' should fall back to format-level lookup
     res = enc.get_config_based_bitrate(
@@ -105,7 +114,9 @@ def test_uppercase_key_fallback():
     setup_config(cfg)
 
     enc = DummyEncoder()
-    audio_info = AudioTrackInfo(mi_track=cast('Track', object()), channels=6, is_elementary=False)
+    audio_info = AudioTrackInfo(
+        mi_track=cast("Track", object()), channels=6, is_elementary=False
+    )
 
     res = enc.get_config_based_bitrate(
         format_command=CodecFormat.DDP,
@@ -135,7 +146,9 @@ def test_channel_clamping_bounds():
     enc = DummyEncoder()
 
     # source channels 0 -> clamped to 1
-    audio_info_low = AudioTrackInfo(mi_track=cast('Track', object()), channels=0, is_elementary=False)
+    audio_info_low = AudioTrackInfo(
+        mi_track=cast("Track", object()), channels=0, is_elementary=False
+    )
     res_low = enc.get_config_based_bitrate(
         format_command=CodecFormat.DDP,
         payload_bitrate=None,
@@ -151,7 +164,9 @@ def test_channel_clamping_bounds():
     assert res_low == 999
 
     # source channels 9 -> clamped to 8
-    audio_info_high = AudioTrackInfo(mi_track=cast('Track', object()), channels=9, is_elementary=False)
+    audio_info_high = AudioTrackInfo(
+        mi_track=cast("Track", object()), channels=9, is_elementary=False
+    )
     res_high = enc.get_config_based_bitrate(
         format_command=CodecFormat.DDP,
         payload_bitrate=None,

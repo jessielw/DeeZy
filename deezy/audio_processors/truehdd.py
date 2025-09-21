@@ -1,7 +1,7 @@
 import logging
-from pathlib import Path
 import subprocess
 import threading
+from pathlib import Path
 
 from deezy.enums.atmos import WarpMode
 from deezy.enums.shared import TrackType

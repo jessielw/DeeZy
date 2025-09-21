@@ -1,14 +1,13 @@
-from collections.abc import Callable
 import logging
-from subprocess import PIPE, Popen, STDOUT
+from collections.abc import Callable
+from subprocess import PIPE, STDOUT, Popen
 
 from rich.console import Console
 from rich.live import Live
 from rich.spinner import Spinner
 
 from deezy.utils.logger import logger
-from deezy.utils.progress import ProgressHandler
-from deezy.utils.progress import ProgressData
+from deezy.utils.progress import ProgressData, ProgressHandler
 
 
 def _prepare_ffmpeg_command(cmd: list, duration: float | None) -> list:

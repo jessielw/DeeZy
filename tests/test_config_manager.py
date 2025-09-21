@@ -1,5 +1,5 @@
-from pathlib import Path
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -276,7 +276,9 @@ class TestConfigManagerPresets:
         assert info["name"] == "test_preset"
         assert info["command"] == "encode ddp --channels surround --bitrate 448"
         assert info["format"] == "ddp"
-        assert "preset command:" in info["description"]  # lowercase 'p' to match actual output
+        assert (
+            "preset command:" in info["description"]
+        )  # lowercase 'p' to match actual output
 
     def test_validate_preset_valid(self):
         """Test validating a well-formed preset."""
@@ -303,9 +305,6 @@ class TestConfigManagerPresets:
         cm.config = {"presets": {"short_preset": "encode"}}
 
         assert cm.validate_preset("short_preset") is False
-
-
-
 
 
 class TestConfigManagerUtilities:

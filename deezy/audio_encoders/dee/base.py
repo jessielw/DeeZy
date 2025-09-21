@@ -1,14 +1,14 @@
-from abc import ABC, abstractmethod
-from collections.abc import Callable
-from enum import Enum
 import json
 import os
-from pathlib import Path
 import random
 import shutil
 import tempfile
 import threading
 import time
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from enum import Enum
+from pathlib import Path
 from typing import Any, Generic, Optional, TypeVar
 
 from deezy.audio_encoders.base import BaseAudioEncoder
@@ -17,8 +17,7 @@ from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.enums.channel_count import ChannelCount
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.shared import DeeDelay, DeeFPS, TrackType
-from deezy.exceptions import PathTooLongError
-from deezy.exceptions import OutputExistsError
+from deezy.exceptions import OutputExistsError, PathTooLongError
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
