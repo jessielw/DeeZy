@@ -20,6 +20,7 @@ class CorePayload:
     delay: str | None
     parse_elementary_delay: bool
     keep_temp: bool
+    reuse_temp_files: bool
     file_output: Path | None
     batch_output_dir: Path | None
     worker_id: str | None
