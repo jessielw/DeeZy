@@ -6,7 +6,9 @@ from deezy.audio_encoders.dee.json.ac4_base import ac4_base
 from deezy.audio_encoders.dee.json.atmos_base import atmos_base
 from deezy.audio_encoders.dee.json.dd_base import dd_base
 from deezy.enums.atmos import AtmosMode
-from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS
+from deezy.enums.codec_format import CodecFormat
+from deezy.enums.dd import DolbyDigitalChannels
+from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS, StereoDownmix
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -20,6 +22,7 @@ class DeeJSONGenerator:
         "input_file_path",
         "output_file_path",
         "output_dir",
+        "codec_format",
     )
 
     def __init__(
@@ -27,20 +30,24 @@ class DeeJSONGenerator:
         input_file_path: Path,
         output_file_path: Path,
         output_dir: Path,
+        codec_format: CodecFormat,
     ) -> None:
         """
         Args:
             input_file_path (Path): Input file path.
             output_file_path (Path): Output file path.
             output_dir (Path | str): File path only.
+            codec_format (CodecFormat): Current codec format.
         """
         self.input_file_path = input_file_path
         self.output_file_path = output_file_path
         self.output_dir = output_dir
+        self.codec_format = codec_format
 
     def dd_json(
         self,
         payload: DDPayload | DDPPayload,
+        ffmpeg_dplii_used: bool,
         bitrate: int,
         fps: DeeFPS,
         delay: DeeDelay | None,
@@ -63,7 +70,11 @@ class DeeJSONGenerator:
         loudness["dialogue_intelligence"] = payload.dialogue_intelligence
         loudness["speech_threshold"] = payload.speech_threshold
         filter_section["encoder_mode"] = dd_mode.get_encoder_mode()
-        filter_section["downmix_config"] = payload.channels.to_dee_cmd()
+        if not ffmpeg_dplii_used:
+            filter_section["downmix_config"] = payload.channels.to_dee_cmd()
+        else:
+            # we'll turn downmix config to off since FFMPEG dropped it down to dplii
+            filter_section["downmix_config"] = DolbyDigitalChannels.AUTO.to_dee_cmd()
         if delay:
             filter_section[delay.MODE.value] = delay.DELAY
         filter_section["data_rate"] = bitrate
@@ -81,7 +92,12 @@ class DeeJSONGenerator:
         downmix["loro_surround_mix_level"] = payload.loro_surround_mix_level
         downmix["ltrt_center_mix_level"] = payload.ltrt_center_mix_level
         downmix["ltrt_surround_mix_level"] = payload.ltrt_surround_mix_level
-        downmix["preferred_downmix_mode"] = payload.preferred_downmix_mode.to_dee_cmd()
+        if not ffmpeg_dplii_used:
+            downmix["preferred_downmix_mode"] = (
+                payload.preferred_downmix_mode.to_dee_cmd()
+            )
+        else:
+            downmix["preferred_downmix_mode"] = StereoDownmix.NOT_INDICATED.to_dee_cmd()
         filter_section["custom_dialnorm"] = payload.custom_dialnorm
 
         #### output section ####
@@ -99,8 +115,8 @@ class DeeJSONGenerator:
 
         #### misc section ####
         misc_section = json_base["job_config"]["misc"]
-        # string bool lowered (true/false)
-        misc_section["temp_dir"]["clean_temp"] = str(not payload.keep_temp).lower()
+        # string bool lowered (true/false) - DEE expects clean_temp to be "true" when
+        misc_section["temp_dir"]["clean_temp"] = "true"
         misc_section["temp_dir"]["path"] = self._create_dee_file_path(temp_dir)
 
         return self._write_json(json_base)
@@ -159,8 +175,8 @@ class DeeJSONGenerator:
 
         #### misc section ####
         misc_section = json_base["job_config"]["misc"]
-        # string bool lowered (true/false)
-        misc_section["temp_dir"]["clean_temp"] = str(not payload.keep_temp).lower()
+        # string bool lowered (true/false) - DEE expects clean_temp to be "true" when
+        misc_section["temp_dir"]["clean_temp"] = "true"
         misc_section["temp_dir"]["path"] = self._create_dee_file_path(temp_dir)
 
         return self._write_json(json_base)
@@ -218,8 +234,8 @@ class DeeJSONGenerator:
 
         #### misc section ####
         misc_section = json_base["job_config"]["misc"]
-        # string bool lowered (true/false)
-        misc_section["temp_dir"]["clean_temp"] = str(not payload.keep_temp).lower()
+        # string bool lowered (true/false) - DEE expects clean_temp to be "true" when
+        misc_section["temp_dir"]["clean_temp"] = "true"
         misc_section["temp_dir"]["path"] = self._create_dee_file_path(temp_dir)
 
         return self._write_json(json_base)
@@ -227,8 +243,8 @@ class DeeJSONGenerator:
     def _write_json(self, json_base: dict) -> Path:
         if not json_base:
             raise ValueError("Missing or invalid json base")
-        file_out = Path(self.output_dir / self.output_file_path.name).with_suffix(
-            ".json"
+        file_out = (
+            self.output_dir / f"{self.output_file_path.stem}.{self.codec_format}.json"
         )
         with open(file_out, "w") as json_file:
             json.dump(json_base, json_file, indent=2)
