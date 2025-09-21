@@ -36,10 +36,12 @@ deezy = "deezy.__main__:main"
 [tool.setuptools.package-data]
 "deezy" = ["config/*.py", "config/*.toml", "icon/*", "example_json_flows/*"]
 
-
 [tool.ruff]
 line-length = 88
 include = ["cli/*.py", "deezy/**/*.py", "tests/*.py"]
+
+[tool.ruff.lint]
+select = ["I"]
 
 [tool.basedpyright]
 include = ["cli", "deezy"]

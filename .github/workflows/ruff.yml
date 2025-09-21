@@ -1,0 +1,32 @@
+name: ruff-format-and-imports
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Create venv and install ruff
+        run: |
+          python -m pip install --upgrade pip
+          python -m venv .venv
+          # Use the venv python explicitly for subsequent installs
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install ruff
+
+      - name: Check imports + format (via venv python, non-modifying)
+        run: |
+          # Run ruff from the created venv: let ruff read pyproject.toml for select/include
+          .venv/bin/python -m ruff check
+          .venv/bin/python -m ruff format --check
