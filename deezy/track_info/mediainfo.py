@@ -212,6 +212,85 @@ class MediainfoParser:
         new_base_name = " ".join(name_parts)
         return base_dir / Path(str(re.sub(r"\s{2,}", " ", new_base_name)) + suffix)
 
+    def render_output_template(
+        self,
+        template: str,
+        suffix: str,
+        worker_id: str | None = None,
+        ignore_delay: bool = False,
+        delay_was_stripped: bool = False,
+    ) -> Path:
+        """
+        Render an output filename from a lightweight template using available metadata.
+
+        Supported tokens: {title}, {year}, {stem}, {source}, {lang}, {channels}, {worker}, {delay}
+
+        The method is intentionally small and forgiving: missing tokens are replaced with
+        empty strings and values are sanitized for filesystem use. This does not replace the
+        existing automatic generation logic; it provides an alternate, opt-in path.
+        """
+        base_dir = self.file_input.parent
+
+        # token values with sensible fallbacks
+        stem = self.file_input.stem
+        title = self.guess.get("title") or stem
+        year = str(self.guess.get("year")) if self.guess.get("year") else ""
+        source = self._extract_source_info() or ""
+        mi_lang = self._language_detection()
+        lang = mi_lang or self._get_lang_alpha3(self.guess.get("language")) or ""
+        channels = self._get_channel_info() or ""
+        worker = worker_id or ""
+
+        # Delay handling mirrors generate_output_filename's logic so templates
+        # behave identically with respect to stripped/elementary inputs.
+        # If we're not ignoring delay, prefer mediainfo detection; fall back to
+        # parsing delay from the filename. If delay was intentionally stripped
+        # during processing, explicitly inject a "[DELAY 0ms]" marker when
+        # requested.
+        if not ignore_delay:
+            delay_val = self._delay_detection()
+        else:
+            delay_val = None
+
+        # If mediainfo didn't provide a delay, fall back to parsing the filename.
+        # For templates we don't force surrounding square brackets — the template
+        # author can include them if desired. Normalize any detected delay by
+        # stripping surrounding brackets so the `{delay}` token is just the core
+        # marker (for example: "DELAY 10ms").
+        if not ignore_delay and not delay_val:
+            delay_from_file = parse_delay_from_file(self.file_input)
+            delay_val = f"DELAY {delay_from_file}" if delay_from_file else None
+        elif ignore_delay and delay_was_stripped:
+            delay_val = "DELAY 0ms"
+
+        # If mediainfo returned a bracketed string like "[DELAY 10ms]", strip
+        # the brackets so templates remain in control of formatting.
+        if delay_val and delay_val.startswith("[") and delay_val.endswith("]"):
+            delay_val = delay_val[1:-1]
+
+        delay = delay_val or ""
+
+        mapping = {
+            "title": str(title),
+            "year": year,
+            "stem": stem,
+            "source": str(source),
+            "lang": str(lang),
+            "channels": str(channels),
+            "worker": str(worker),
+            "delay": str(delay),
+        }
+
+        rendered = template
+        for key, val in mapping.items():
+            rendered = rendered.replace(f"{{{key}}}", val)
+
+        # sanitize filename: remove problematic characters and collapse whitespace
+        rendered = re.sub(r"[<>:\"/\\|?*]", "_", rendered)
+        rendered = re.sub(r"\s{2,}", " ", rendered).strip()
+
+        return base_dir / Path(rendered + suffix)
+
     def _delay_detection(self) -> str | None:
         """Detect delay relative to video to inject into filename.
 
