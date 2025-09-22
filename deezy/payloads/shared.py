@@ -25,6 +25,8 @@ class CorePayload:
     batch_output_dir: Path | None
     worker_id: str | None
     overwrite: bool
+    output_template: str
+    output_preview: bool
 
 
 @dataclass(slots=True)
