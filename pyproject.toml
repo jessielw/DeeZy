@@ -66,3 +66,8 @@ dev = [
     "pyinstaller>=6.13.0",
     "pyinstaller-hooks-contrib>=2025.1",
 ]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.11",
+    "pymdown-extensions>=10.16.1",
+]
