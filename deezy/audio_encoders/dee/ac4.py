@@ -85,21 +85,33 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     "Ac4 output must must end with the suffix '.ac4'."
                 )
         else:
-            ignore_delay = (
-                True
-                if not (
-                    self.payload.parse_elementary_delay
-                    or not audio_track_info.is_elementary
-                    or not delay.is_delay()
+            # If an output template was provided, prefer rendering it. This is opt-in
+            # and will be ignored if not present. Keep existing generate_output_filename
+            # as the fallback to avoid changing default behavior.
+            if self.payload.output_template:
+                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
+                    audio_track_info, delay, self.payload.parse_elementary_delay
                 )
-                else False
-            )
-            output = mi_parser.generate_output_filename(
-                ignore_delay,
-                delay.is_delay(),
-                suffix=".ac4",
-                worker_id=self.payload.worker_id,
-            )
+                output = mi_parser.render_output_template(
+                    template=str(self.payload.output_template),
+                    suffix=".ac4",
+                    worker_id=self.payload.worker_id,
+                    ignore_delay=ignore_delay,
+                    delay_was_stripped=delay_was_stripped,
+                )
+                if self.payload.output_preview:
+                    logger.info(f"Output preview: {output}")
+                    return output
+            else:
+                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
+                    audio_track_info, delay, self.payload.parse_elementary_delay
+                )
+                output = mi_parser.generate_output_filename(
+                    ignore_delay,
+                    delay_was_stripped,
+                    suffix=".ac4",
+                    worker_id=self.payload.worker_id,
+                )
 
         # if a centralized batch output directory was provided and the user did not
         # explicitly supply an output path, place final output there. This ensures
