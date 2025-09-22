@@ -25,13 +25,8 @@ class CorePayload:
     batch_output_dir: Path | None
     worker_id: str | None
     overwrite: bool
-    # These fields are intentionally not part of the generated __init__ (init=False)
-    # to avoid dataclass field-ordering issues when subclasses declare non-default
-    # fields. This keeps the payload constructors backwards-compatible on
-    # Python 3.9 while still exposing `output_template`/`output_preview` as
-    # attributes that can be set by the PayloadBuilder or callers.
-    output_template: str = field(default="", init=False)
-    output_preview: bool = field(default=False, init=False)
+    output_template: str
+    output_preview: bool
 
 
 @dataclass(slots=True)

@@ -38,6 +38,9 @@ def make_core_fields(tmp_path: Path, keep_temp: bool) -> dict:
         "batch_output_dir": None,
         "worker_id": None,
         "overwrite": True,
+        # template fields
+        "output_template": "",
+        "output_preview": False,
         # Loudness fields
         "metering_mode": MeteringMode.MODE_1770_3,
         "dialogue_intelligence": True,
