@@ -1,4 +1,4 @@
-name: ruff-format-and-imports
+name: ruff
 
 on:
   push:
