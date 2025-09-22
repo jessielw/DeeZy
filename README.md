@@ -2,7 +2,7 @@
 
 A powerful, portable audio encoding tool built around the Dolby Encoding Engine (DEE) with support for Dolby Digital (DD), Dolby Digital Plus (DDP), DDP BluRay, Dolby Atmos, and Dolby AC-4 encoding.
 
-[![Build and Release](https://github.com/jessielw/DeeZy/actions/workflows/release.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/release.yml) [![Tests](https://github.com/jessielw/DeeZy/actions/workflows/test.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/test.yml)
+[![Build and Release](https://github.com/jessielw/DeeZy/actions/workflows/release.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/release.yml) [![Tests](https://github.com/jessielw/DeeZy/actions/workflows/test.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/test.yml) [![ruff](https://github.com/jessielw/DeeZy/actions/workflows/ruff.yml/badge.svg?branch=main)](https://github.com/jessielw/DeeZy/actions/workflows/ruff.yml) [![PyPI](https://github.com/jessielw/DeeZy/actions/workflows/publish-pypi.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/publish-pypi.yml)
 
 ## ✨ Key Features
 
