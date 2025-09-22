@@ -6,15 +6,3 @@ code {
 .md-content table {
   font-size: 0.95rem;
 }
-
-/* Reduce header height and remove heavy shadow */
-.md-header {
-  padding-top: 10px;
-  padding-bottom: 6px;
-  box-shadow: none;
-}
-
-/* Slightly wider navigation sidebar */
-.md-sidebar {
-  width: 280px;
-}

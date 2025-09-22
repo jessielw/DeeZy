@@ -4,39 +4,41 @@ use_directory_urls: false
 
 nav:
   - Home: index.md
-  - Installation: installation.md
-  - Configuration: configuration.md
-  - Usage: usage.md
+  - Getting Started:
+      - Installation: installation.md
+      - Configuration: configuration.md
+      - Usage: usage.md
+      - Examples & Workflows: examples.md
   - CLI Reference:
       - Overview: cli/top-level.md
-      - Commands:
-          - Encode (main): cli/encode.md
-          - Encode DD: cli/encode-dd.md
-          - Encode DDP: cli/encode-ddp.md
-          - Encode DDP BluRay: cli/encode-ddp-bluray.md
-          - Encode Atmos: cli/encode-atmos.md
-          - Encode AC-4: cli/encode-ac4.md
-          - Encode Preset: cli/encode-preset.md
-          - Find: cli/find.md
-          - Info: cli/info.md
-          - Config: cli/config.md
-          - Temp: cli/temp.md
+      - Encode:
+          - Overview: cli/encode.md
+          - Dolby Digital (DD): cli/encode-dd.md
+          - Dolby Digital Plus (DDP): cli/encode-ddp.md
+          - DDP BluRay: cli/encode-ddp-bluray.md
+          - Dolby Atmos: cli/encode-atmos.md
+          - Dolby AC-4: cli/encode-ac4.md
+          - Preset-based Encoding: cli/encode-preset.md
+      - Find: cli/find.md
+      - Info: cli/info.md
+      - Config: cli/config.md
+      - Temp: cli/temp.md
   - Formats:
       - Dolby Digital (DD): formats/dd.md
       - Dolby Digital Plus (DDP): formats/ddp.md
       - DDP BluRay: formats/ddp-bluray.md
       - Dolby Atmos: formats/atmos.md
       - Dolby AC-4: formats/ac4.md
-  - Track Selection: track-selection.md
-  - Templates: templates.md
-  - Temp Management: temp.md
-  - Batch & Retention: batch.md
-  - Presets: presets.md
-  - Bitrates: bitrate-guidelines.md
-  - DRC (Dynamic Range Compression): drc.md
-  - File Management & Analysis: file-management.md
-  - Input Patterns: input-types.md
-  - Examples: examples.md
+  - Advanced:
+      - Track Selection: track-selection.md
+      - Templates: templates.md
+      - Temp Management: temp.md
+      - Batch & Retention: batch.md
+      - Presets: presets.md
+      - Bitrates: bitrate-guidelines.md
+      - DRC: drc.md
+      - File Management & Analysis: file-management.md
+      - Input Patterns: input-types.md
   - Tips & Best Practices: tips.md
   - Reference: reference.md
   - Troubleshooting: troubleshooting.md
