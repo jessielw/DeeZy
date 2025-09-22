@@ -38,7 +38,7 @@ deezy = "deezy.__main__:main"
 
 [tool.ruff]
 line-length = 88
-include = ["cli/*.py", "deezy/**/*.py", "tests/*.py"]
+include = ["deezy.py", "version.py", "cli/*.py", "deezy/**/*.py", "tests/*.py"]
 
 [tool.ruff.lint]
 select = ["I"]
