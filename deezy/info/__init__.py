@@ -2,7 +2,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-from pymediainfo import MediaInfo
+from pymediainfo import MediaInfo, Track
 
 from deezy.track_info.mediainfo import MediainfoParser
 
@@ -56,8 +56,9 @@ def parse_audio_streams(file_input: Path) -> AudioStreams:
 
             # audio format
             audio_format = ""
+            get_audio_format = safe_get_audio_format(track)
             if track.format:
-                audio_format = f"{calculate_space('Codec')}: {track.commercial_name} - ({str(track.format).lower()})\n"
+                audio_format = f"{calculate_space('Codec')}: {get_audio_format} - ({track.commercial_name})\n"
 
             # audio channel(s)
             audio_channel_s = ""
@@ -204,3 +205,10 @@ def calculate_space(title: str, character_space: int = 20) -> str:
 
     """
     return f"{title}{' ' * (character_space - len(title))}"
+
+
+def safe_get_audio_format(a_track: Track) -> str:
+    if a_track.other_format and isinstance(a_track.other_format, list):
+        return a_track.other_format[0]
+    else:
+        return a_track.format
