@@ -1,0 +1,92 @@
+site_name: DeeZy Documentation
+site_description: Portable audio encoding built around the Dolby Encoding Engine
+use_directory_urls: false
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Configuration: configuration.md
+  - Usage: usage.md
+  - CLI Reference:
+      - Overview: cli/top-level.md
+      - Commands:
+          - Encode (main): cli/encode.md
+          - Encode DD: cli/encode-dd.md
+          - Encode DDP: cli/encode-ddp.md
+          - Encode DDP BluRay: cli/encode-ddp-bluray.md
+          - Encode Atmos: cli/encode-atmos.md
+          - Encode AC-4: cli/encode-ac4.md
+          - Encode Preset: cli/encode-preset.md
+          - Find: cli/find.md
+          - Info: cli/info.md
+          - Config: cli/config.md
+          - Temp: cli/temp.md
+  - Formats:
+      - Dolby Digital (DD): formats/dd.md
+      - Dolby Digital Plus (DDP): formats/ddp.md
+      - DDP BluRay: formats/ddp-bluray.md
+      - Dolby Atmos: formats/atmos.md
+      - Dolby AC-4: formats/ac4.md
+  - Track Selection: track-selection.md
+  - Templates: templates.md
+  - Temp Management: temp.md
+  - Batch & Retention: batch.md
+  - Presets: presets.md
+  - Bitrates: bitrate-guidelines.md
+  - DRC (Dynamic Range Compression): drc.md
+  - File Management & Analysis: file-management.md
+  - Input Patterns: input-types.md
+  - Examples: examples.md
+  - Tips & Best Practices: tips.md
+  - Reference: reference.md
+  - Troubleshooting: troubleshooting.md
+
+theme:
+  name: material
+  favicon: images/icon.ico
+  logo: images/icon.svg
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch color mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to system preference
+  font:
+    text: Montserrat
+    code: Fira Mono
+  features:
+    - content.code.copy
+    - search.highlight
+    - navigation.footer
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: !relative $config_dir
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+  - offline
+
+extra_css:
+  - stylesheets/extra.css
