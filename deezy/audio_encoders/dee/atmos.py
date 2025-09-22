@@ -160,7 +160,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
                 "atmos_meta.atmos",
                 temp_dir,
             ):
-                logger.info("Reusing decoded atmos from temp folder.")
+                logger.info("Reusing extracted wav from temp folder")
                 decoded_mezz_path = temp_dir / "atmos_meta.atmos"
             else:
                 decoded_mezz_path = decode_truehd_to_atmos(

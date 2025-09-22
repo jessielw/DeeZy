@@ -204,7 +204,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
                     wav_file_name,
                     temp_dir,
                 ):
-                    logger.info("Reusing extracted wav from adjacent temp folder.")
+                    logger.info("Reusing extracted wav from adjacent temp folder")
                     reuse_used = True
 
             if not reuse_used:

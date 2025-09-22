@@ -243,9 +243,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 if enc_entry and enc_entry.get("signature") == sig:
                     recorded_file = enc_entry.get("produced_file")
                     if recorded_file and (temp_dir / recorded_file).exists():
-                        logger.info(
-                            "Reusing extracted wav from temp folder (codec-scoped)."
-                        )
+                        logger.info("Reusing extracted wav from temp folder")
                         reuse_used = True
 
             if not reuse_used:
