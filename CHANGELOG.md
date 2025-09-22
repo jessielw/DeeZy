@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--jitter-ms` flag: introduces a small randomized delay before heavy phases to reduce thundering-herd spikes in high-parallel runs.
 
 - Added support for optional per-source default bitrate sections in the configuration file under `[default_source_bitrates.<codec>]` (for example `[default_source_bitrates.ddp]`).
-- Keys are `ch_1..ch_8` and are opt-in (the generated `deezy-conf.toml` contains commented example blocks). Encoders will use these values when no CLI/preset bitrate is provided. Encoders validate config values and will select the closest allowed bitrate if a configured value is not permitted. Precedence is: CLI > per-source config > format-level config > built-in defaults.
+  - Keys are `ch_1..ch_8` and are opt-in (the generated `deezy-conf.toml` contains commented example blocks). Encoders will use these values when no CLI/preset bitrate is provided. Encoders validate config values and will select the closest allowed bitrate if a configured value is not permitted. Precedence is: CLI > per-source config > format-level config > built-in defaults.
 
 ### Changed
 
