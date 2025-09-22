@@ -6,10 +6,12 @@ This maintains pyproject.toml as the single source of truth for version info.
 """
 
 import argparse
-from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path
+
+from cli import __version__
 
 
 def get_current_version():
@@ -32,8 +34,6 @@ def validate_version_consistency():
         # get version from pyproject.toml
         toml_version = get_current_version()
         sys.path.insert(0, str(Path.cwd()))
-        from deezy.utils._version import __version__
-
         if toml_version != __version__:
             print("⚠️  WARNING: Version mismatch!")
             print(f"   pyproject.toml: {toml_version}")
