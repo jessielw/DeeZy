@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 import re
+from pathlib import Path
 from subprocess import run
 
 from deezy.utils.dependencies import get_executable_extension
