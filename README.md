@@ -48,6 +48,8 @@ deezy.exe (or deezy on Linux)
 
 ### Install via pipx / PyPI
 
+[PyPI](https://pypi.org/project/deezy/)
+
 If you'd like to install the CLI and get the `deezy` command on your PATH, the recommended approach is to use pipx:
 
 ```powershell
