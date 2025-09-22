@@ -1,24 +1,19 @@
 # DeeZy
 
-DeeZy is a small, ergonomic CLI for encoding and batch-processing audio into common Dolby formats (DD, DDP, DDP-BluRay, Atmos, AC-4). The full user guide, examples, and a complete CLI reference have been moved to a searchable MkDocs site.
+[![Build and Release](https://github.com/jessielw/DeeZy/actions/workflows/release.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/release.yml) [![Tests](https://github.com/jessielw/DeeZy/actions/workflows/test.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/test.yml) [![ruff](https://github.com/jessielw/DeeZy/actions/workflows/ruff.yml/badge.svg?branch=main)](https://github.com/jessielw/DeeZy/actions/workflows/ruff.yml) [![PyPI](https://github.com/jessielw/DeeZy/actions/workflows/publish-pypi.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/publish-pypi.yml) ![PyPI - Downloads](https://img.shields.io/pypi/dw/deezy) [![Docs](https://github.com/jessielw/DeeZy/actions/workflows/mkdocs-deploy.yml/badge.svg)](https://github.com/jessielw/DeeZy/actions/workflows/mkdocs-deploy.yml)
+
+DeeZy is a compact CLI for encoding and batch-processing audio into Dolby formats (DD, DDP, DDP-BluRay, Atmos, AC-4).
 
 Documentation
 
 - Online: https://jessielw.github.io/DeeZy/
-- Local preview (PowerShell):
 
-```powershell
-python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install mkdocs mkdocs-material; mkdocs serve
-```
-
-Quick start
+Quick commands
 
 - Show version: `deezy --version`
-- Encode a file with smart defaults: `deezy encode ddp input.mkv`
+- Encode with smart defaults: `deezy encode ddp input.mkv`
 
-Development
+Notes
 
-- Project layout and build info are in `pyproject.toml`.
-- Docs source lives in the `docs/` folder.
-
-See the online docs for configuration, presets, and detailed CLI examples.
+- Docs source: `docs/` — the MkDocs site contains installation, configuration, presets, and a full CLI reference.
+- Project metadata and build configuration are in `pyproject.toml`.
