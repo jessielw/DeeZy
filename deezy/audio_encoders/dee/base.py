@@ -50,6 +50,32 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             logger.debug(f"Generated delay {delay.MODE}:{delay.DELAY}.")
         return delay
 
+    def compute_template_delay_flags(
+        self,
+        audio_track_info: AudioTrackInfo,
+        delay: DeeDelay,
+        payload_parse_elementary_delay: bool,
+    ) -> tuple[bool, bool]:
+        """
+        Compute the flags used by the output template renderer related to delay handling.
+
+        Returns a tuple (ignore_delay, delay_was_stripped).
+
+        The logic mirrors the previous inline checks used across encoders:
+        ignore_delay is True only when all of the following are true:
+          - the user did NOT request parsing the elementary delay from the file
+          - the audio track is elementary
+          - a delay value was detected
+
+        delay_was_stripped is True when a delay value exists (delay.is_delay()).
+        """
+        ignore_delay = not (
+            payload_parse_elementary_delay
+            or not audio_track_info.is_elementary
+            or not delay.is_delay()
+        )
+        return ignore_delay, delay.is_delay()
+
     def get_config_based_bitrate(
         self,
         format_command: CodecFormat,
