@@ -17,6 +17,8 @@ A powerful, portable audio encoding tool built around the Dolby Encoding Engine 
 - **⚡ Smart Dependencies**: Auto-detection of tools with fallback to portable structure
 - **🔍 Audio Analysis**: Built-in audio stream inspection and metadata display
 - **🎯 Preset System**: Define custom encoding workflows for different use cases
+- **🌟 Smart Automatic Name Generation**: Generates output names based on attributes of the source name.
+- **🎯 Template Name Generation**: Generates output names based on a template system.
 
 ## 📦 Installation
 
@@ -552,15 +554,6 @@ deezy encode ddp --output-template "{title} [{lang}_{channels}] {delay}" --outpu
 
 # Rendered example result: "My.Movie [eng_5.1] [DELAY 10ms].ec3"
 ```
-
-## What's new (high level)
-
-From recent changes (see `CHANGELOG.md` for full details):
-
-- AC-4 support: `encode ac4` with profiles and DRC presets.
-- Improved preset handling: `deezy encode preset --name YOUR_PRESET` and the ability to override preset values from the CLI.
-- Better error handling and logging in debug mode, and smarter temp-folder management for batch runs.
-- Batch processing improvements: centralized logs and batch-results directories, per-file JSON summary output, and retention trimming to avoid unbounded log accumulation.
 
 ### Example: batch run
 
