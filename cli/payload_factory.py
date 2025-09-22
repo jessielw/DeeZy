@@ -49,6 +49,8 @@ class PayloadBuilder:
             "keep_temp": cls.safe_get(args, "keep_temp", False)
             or cls.safe_get(args, "reuse_temp_files", False),
             "file_output": Path(args.output) if cls.safe_get(args, "output") else None,
+            "output_template": cls.safe_get(args, "output_template"),
+            "output_preview": cls.safe_get(args, "output_preview", False),
             "worker_id": cls.safe_get(args, "worker_id"),
             "batch_output_dir": Path(cls.safe_get(args, "batch_output_dir"))
             if cls.safe_get(args, "batch_output_dir")

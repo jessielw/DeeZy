@@ -37,7 +37,13 @@ from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
-from deezy.enums.shared import DeeDRC, LogLevel, MeteringMode, StereoDownmix, TrackType
+from deezy.enums.shared import (
+    DeeDRC,
+    LogLevel,
+    MeteringMode,
+    StereoDownmix,
+    TrackType,
+)
 from deezy.exceptions import OutputExistsError
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.batch_results import BatchResultsManager
@@ -153,6 +159,22 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help=(
             "The output file path. If not specified we will attempt to automatically add "
             "Delay/Language string to output file name."
+        ),
+    )
+    encode_group.add_argument(
+        "--output-template",
+        type=str,
+        help=(
+            "Optional lightweight template to control auto-generated output filenames. "
+            "Supported tokens: {title},{year},{stem},{source},{lang},{channels},{worker},{delay}."
+        ),
+    )
+    encode_group.add_argument(
+        "--output-preview",
+        action="store_true",
+        help=(
+            "When set, render and show template-based filenames but do not write outputs. "
+            "Useful to validate templates before running batch jobs."
         ),
     )
     encode_group.add_argument(
@@ -1144,7 +1166,11 @@ def execute_encode_command(
                     input_file, result = encode_single_file(
                         args_for_job, input_file, dependencies, None, None, file_id
                     )
-                    logger.info(f"Job successful! Output file path:\n{result}")
+                    # When running in output-preview mode we already emit the
+                    # previewed path from the encoder; suppress the duplicate
+                    # "Job successful" path line to avoid confusion.
+                    if not getattr(args, "output_preview", False):
+                        logger.info(f"Job successful! Output file path:\n{result}")
                     successful_files.append((input_file, result))
 
                     if batch_result:
@@ -1227,7 +1253,11 @@ def execute_encode_command(
 
                     try:
                         _original_file, result = future.result()
-                        logger.info(f"Job successful! Output file path:\n{result}")
+                        # When running in output-preview mode we already emit the
+                        # previewed path from the encoder; suppress the duplicate
+                        # "Job successful" path line to avoid confusion.
+                        if not getattr(args, "output_preview", False):
+                            logger.info(f"Job successful! Output file path:\n{result}")
                         successful_files.append((input_file, result))
 
                         if batch_result:

@@ -223,6 +223,15 @@ def apply_config_defaults_to_args(
     except Exception:
         pass
 
+    try:
+        if getattr(args, "output_template", None) is None:
+            cfg_ot = _cfg_get("output_template")
+            if cfg_ot is not None:
+                # ensure it's a string
+                args.output_template = str(cfg_ot)
+    except Exception:
+        pass
+
     bool_keys = (
         "overwrite",
         "parse_elementary_delay",
