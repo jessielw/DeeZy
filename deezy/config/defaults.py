@@ -51,6 +51,9 @@ working_dir = ""
 batch_summary_output = false
 # When set, encoded outputs will be placed into this directory
 batch_output_dir = ""
+# Default output filename template. Leave empty to use automatic naming.
+# Supported tokens: {title},{year},{stem},{source},{lang},{channels},{worker},{delay}
+output_template = ""
 # Default maximum parallel jobs for batch processing
 max_parallel = 1
 # Maximum number of log files to keep in working logs/ (oldest removed)       
