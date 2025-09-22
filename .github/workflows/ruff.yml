@@ -27,6 +27,8 @@ jobs:
 
       - name: Check imports + format (via venv python, non-modifying)
         run: |
-          # Run ruff from the created venv: let ruff read pyproject.toml for select/include
-          .venv/bin/python -m ruff check
-          .venv/bin/python -m ruff format --check
+          # Run ruff using the project's pyproject.toml include/select settings.
+          # `--select-from` will read the config and apply the include globs
+          # we set in [tool.ruff] (see pyproject.toml).
+          .venv/bin/python -m ruff check --select-from pyproject.toml
+          .venv/bin/python -m ruff format --check --select-from pyproject.toml
