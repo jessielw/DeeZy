@@ -1,6 +1,6 @@
 [project]
 name = "deezy"
-version = "1.3.0"
+version = "1.3.1"
 description = "Dolby Encoding Engine Wrapper"
 readme = "README.md"
 requires-python = ">=3.9,<3.14"
