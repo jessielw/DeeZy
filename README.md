@@ -4,7 +4,7 @@
 
 DeeZy is a compact CLI for encoding and batch-processing audio into Dolby formats (DD, DDP, DDP-BluRay, Atmos, AC-4).
 
-- [PyPI](https://pypi.org/project/deezy/)
+- PyPI: https://pypi.org/project/deezy/
 
 Documentation
 
