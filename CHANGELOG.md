@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI:
   - `--upmix-50-to-51`:
     - Valid only for **dd** and **ddp** encoders _(ignored for **ddp-bluray**)_.
-    - If you utilize this arg as well as **--channels 6** and the input is **5 channels _(5.0)_** we will utilize `pan=5.1(side)|FL=c0|FR=c1|FC=c2|LFE=0*c0|SL=c3|SR=c4` filter to make a silent **LFE** channel allowing a **5.1** channel layout.
+    - If you utilize this arg and the input is **5 channels _(5.0)_** we will utilize `pan=5.1(side)|FL=c0|FR=c1|FC=c2|LFE=0*c0|SL=c3|SR=c4` filter to make a silent **LFE** channel allowing a **5.1** channel layout.
 - All **FFMPEG** commands now use **-map_metadata -1**.
 
 ### Changed
