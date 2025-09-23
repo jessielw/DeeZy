@@ -259,11 +259,21 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             "-c",
             f"pcm_s{str(bits_per_sample)}le",
             *(audio_filter_args),
+            "-map_metadata",
+            "-1",
             "-rf64",
             "always",
             str(Path(output_dir / wav_file_name)),
         ]
         return ffmpeg_cmd
+
+    @staticmethod
+    def _use_resampler(sample_rate: int | None) -> tuple[bool, int]:
+        desired_rate = 48000
+        if not sample_rate or (sample_rate and sample_rate != desired_rate):
+            return True, desired_rate
+        else:
+            return False, desired_rate
 
     @staticmethod
     def _get_dee_cmd(dee_path: Path, xml_path: Path):
