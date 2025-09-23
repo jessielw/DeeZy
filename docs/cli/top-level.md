@@ -1,7 +1,4 @@
-````markdown
 # DeeZy CLI (Top-level)
-
-Captured top-level help (for documentation):
 
 ```
 usage: DeeZy [-h] [--version] [--config CONFIG_FILE]
@@ -27,7 +24,6 @@ options:
 ```
 
 Use the subcommand pages for per-command flags and examples.
-````
 
 ## Examples (Quick)
 
