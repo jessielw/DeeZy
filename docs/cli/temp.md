@@ -2,8 +2,6 @@
 
 DeeZy temporary folder management commands.
 
-Usage (captured):
-
 ```
 usage: DeeZy temp [-h] {clean,info} ...
 
@@ -28,11 +26,11 @@ deezy temp clean --max-age 24
 - Show temp folder information:
 
 ```powershell
-uv run python -m deezy temp info
+deezy temp info
 ```
 
 - Clean temp folders older than 48 hours:
 
 ```powershell
-uv run python -m deezy temp clean --max-age 48
+deezy temp clean --max-age 48
 ```

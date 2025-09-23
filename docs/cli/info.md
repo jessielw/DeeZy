@@ -1,7 +1,5 @@
 # info
 
-Usage (captured):
-
 ```
 usage: DeeZy info [-h] INPUT [INPUT ...]
 
@@ -24,11 +22,11 @@ deezy info *.mkv
 - Inspect a single file:
 
 ```powershell
-uv run python -m deezy info "C:\\media\\song.wav"
+deezy info "C:\\media\\song.wav"
 ```
 
 - Inspect multiple files:
 
 ```powershell
-uv run python -m deezy info "C:\\media\\album\\*"
+deezy info "C:\\media\\album\\*"
 ```

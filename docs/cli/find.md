@@ -1,7 +1,5 @@
 # find
 
-Usage (captured):
-
 ```
 usage: DeeZy find [-h] [-n] INPUT [INPUT ...]
 
@@ -25,11 +23,11 @@ deezy find -n "**/*.mkv"
 - Find audio files in a folder (full paths):
 
 ```powershell
-uv run python -m deezy find "C:\\media\\album\\"
+deezy find "C:\\media\\album\\"
 ```
 
 - Only show filenames (no full path):
 
 ```powershell
-uv run python -m deezy find -n "C:\\media\\album\\"
+deezy find -n "C:\\media\\album\\"
 ```

@@ -1,7 +1,5 @@
 # config
 
-Usage (captured):
-
 ```
 usage: DeeZy config [-h] {generate,info,validate,list-presets} ...
 
