@@ -64,6 +64,7 @@ def make_dolby_fields() -> dict:
         "ltrt_center_mix_level": "-3",
         "ltrt_surround_mix_level": "-3",
         "preferred_downmix_mode": StereoDownmix.NOT_INDICATED,
+        "upmix_50_to_51": False,
     }
 
 
@@ -85,7 +86,7 @@ def test_dd_json_creates_file_and_clean_temp_reflects_payload(tmp_path: Path):
 
     json_path = generator.dd_json(
         payload,
-        ffmpeg_dplii_used=False,
+        downmix_mode_off=False,
         bitrate=640,
         fps=DeeFPS.FPS_24,
         delay=None,
