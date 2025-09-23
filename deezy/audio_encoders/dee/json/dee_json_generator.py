@@ -47,7 +47,7 @@ class DeeJSONGenerator:
     def dd_json(
         self,
         payload: DDPayload | DDPPayload,
-        ffmpeg_dplii_used: bool,
+        downmix_mode_off: bool,
         bitrate: int,
         fps: DeeFPS,
         delay: DeeDelay | None,
@@ -70,10 +70,9 @@ class DeeJSONGenerator:
         loudness["dialogue_intelligence"] = payload.dialogue_intelligence
         loudness["speech_threshold"] = payload.speech_threshold
         filter_section["encoder_mode"] = dd_mode.get_encoder_mode()
-        if not ffmpeg_dplii_used:
+        if not downmix_mode_off:
             filter_section["downmix_config"] = payload.channels.to_dee_cmd()
         else:
-            # we'll turn downmix config to off since FFMPEG dropped it down to dplii
             filter_section["downmix_config"] = DolbyDigitalChannels.AUTO.to_dee_cmd()
         if delay:
             filter_section[delay.MODE.value] = delay.DELAY
@@ -92,7 +91,7 @@ class DeeJSONGenerator:
         downmix["loro_surround_mix_level"] = payload.loro_surround_mix_level
         downmix["ltrt_center_mix_level"] = payload.ltrt_center_mix_level
         downmix["ltrt_surround_mix_level"] = payload.ltrt_surround_mix_level
-        if not ffmpeg_dplii_used:
+        if not downmix_mode_off:
             downmix["preferred_downmix_mode"] = (
                 payload.preferred_downmix_mode.to_dee_cmd()
             )

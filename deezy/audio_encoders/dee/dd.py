@@ -53,8 +53,18 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             channel_resolver=self.dd_channel_resolver,
         )
 
+        # if source channels is 5.0 and the user wants to up-mix to 5.1
+        allow_50_to_51_upmix = (
+            self.payload.channels is DolbyDigitalChannels.SURROUND
+            and audio_track_info.channels == 5
+            and self.payload.upmix_50_to_51
+        )
+
         # check for up-mixing if user has defined their own channel
-        if self.payload.channels is not DolbyDigitalChannels.AUTO:
+        if (
+            self.payload.channels is not DolbyDigitalChannels.AUTO
+            and not allow_50_to_51_upmix
+        ):
             self._check_for_up_mixing(
                 audio_track_info.channels, self.payload.channels.value
             )
@@ -156,13 +166,25 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         logger.debug(f"Downmix config {down_mix_config}.")
 
         # determine if FFMPEG downmix is needed
-        ffmpeg_down_mix = False
-        if (down_mix_config == "off" and not dee_allowed_input) or (
-            self.payload.channels is DolbyDigitalChannels.STEREO
-            and self.payload.stereo_mix is StereoDownmix.DPLII
+        ffmpeg_down_mix = None
+        if (
+            # if downmix is off and not in dee's allowed inputs
+            (down_mix_config == "off" and not dee_allowed_input)
+            # if desired channels is 2 and the user wants DPLII (DD doesn't support this)
+            or allow_50_to_51_upmix
+            # if source channels is 5.0 and the user wants to up-mix to 5.1
+            or (
+                audio_track_info.channels == 5
+                and self.payload.channels is DolbyDigitalChannels.SURROUND
+                and self.payload.upmix_50_to_51
+            )
         ):
             ffmpeg_down_mix = self.payload.channels.value
-            logger.debug(f"FFMPEG downmix needed {ffmpeg_down_mix}.")
+            # log the mix
+            if allow_50_to_51_upmix:
+                logger.debug("FFMPEG upmix needed from 5.0 to 5.1.")
+            else:
+                logger.debug(f"FFMPEG downmix needed {ffmpeg_down_mix}.")
 
         # early existence check: fail fast to avoid expensive work if the
         # destination already exists and the user didn't request overwrite.
@@ -183,6 +205,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             stereo_down_mix=self.payload.stereo_mix,
             output_dir=temp_dir,
             wav_file_name=wav_file_name,
+            allow_50_to_51_upmix=allow_50_to_51_upmix,
         )
         logger.debug(f"{ffmpeg_cmd=}.")
 
@@ -251,8 +274,10 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         )
         json_path = json_generator.dd_json(
             payload=self.payload,
-            ffmpeg_dplii_used=(
-                ffmpeg_down_mix == 2 and self.payload.stereo_mix == StereoDownmix.DPLII
+            downmix_mode_off=(
+                ffmpeg_down_mix == 2
+                and self.payload.stereo_mix is StereoDownmix.DPLII
+                or allow_50_to_51_upmix
             ),
             bitrate=runtime_bitrate,
             fps=fps,
@@ -342,51 +367,75 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         file_input: Path,
         track_index: TrackIndex,
         sample_rate: int | None,
-        ffmpeg_down_mix: bool | int,
+        ffmpeg_down_mix: int | None,
         channels: DolbyDigitalChannels,
         stereo_down_mix: StereoDownmix,
         output_dir: Path,
         wav_file_name: str,
+        allow_50_to_51_upmix: bool,
     ) -> list[str]:
-        # work out if we need to do a complex or simple resample
         bits_per_sample = 32
-        if sample_rate and sample_rate != 48000:
-            sample_rate = 48000
-            resample = True
-        else:
-            resample = False
+        dplii_filter = "aresample=matrix_encoding=dplii"
+        pan_50_to_51 = "pan=5.1(side)|FL=c0|FR=c1|FC=c2|LFE=0*c0|SL=c3|SR=c4"
+        resample_str = "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0"
+        resample, sample_rate = self._use_resampler(sample_rate)
 
-        # resample and add dplii
         audio_filter_args = []
         if (
             channels is DolbyDigitalChannels.STEREO
             and stereo_down_mix is StereoDownmix.DPLII
         ):
             if resample:
-                audio_filter_args = [
-                    "-af",
-                    "aresample=matrix_encoding=dplii,aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
-                    "-ar",
-                    str(sample_rate),
-                ]
-            elif not resample:
-                audio_filter_args = [
-                    "-ac",
-                    "2",
-                    "-af",
-                    "aresample=matrix_encoding=dplii",
-                ]
-        elif resample:
-            audio_filter_args = [
-                "-af",
-                "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
-                "-ar",
-                str(sample_rate),
-            ]
+                audio_filter_args.extend(
+                    (
+                        "-af",
+                        f"{dplii_filter},{resample_str}",
+                        "-ar",
+                        str(sample_rate),
+                    )
+                )
+            else:
+                audio_filter_args.extend(
+                    (
+                        "-af",
+                        dplii_filter,
+                    )
+                )
+        # handle conversions from 5.0 -> 5.1 if user opts in
+        elif allow_50_to_51_upmix:
+            if resample:
+                audio_filter_args.extend(
+                    (
+                        "-af",
+                        f"{pan_50_to_51},{resample_str}",
+                        "-ar",
+                        str(sample_rate),
+                    )
+                )
+            else:
+                audio_filter_args.extend(
+                    (
+                        "-af",
+                        pan_50_to_51,
+                    )
+                )
+        else:
+            if resample:
+                audio_filter_args.extend(
+                    (
+                        "-af",
+                        resample_str,
+                        "-ar",
+                        str(sample_rate),
+                    )
+                )
 
         # utilize ffmpeg to downmix for channels that aren't supported by DEE
-        if ffmpeg_down_mix or stereo_down_mix == StereoDownmix.DPLII:
-            audio_filter_args.extend(["-ac", f"{ffmpeg_down_mix}"])
+        # allow_50_to_51_upmix doesn't need -ac arg, it's handled in the filter
+        if (
+            ffmpeg_down_mix and not allow_50_to_51_upmix
+        ) or stereo_down_mix is StereoDownmix.DPLII:
+            audio_filter_args.extend(("-ac", f"{ffmpeg_down_mix}"))
 
         # base ffmpeg command
         ffmpeg_cmd = self._get_ffmpeg_cmd(
