@@ -131,6 +131,7 @@ class MediainfoParser:
         ignore_delay: bool,
         delay_was_stripped: bool,
         suffix: str,
+        output_channels: str,
         worker_id: str | None,
     ) -> Path:
         """
@@ -140,6 +141,7 @@ class MediainfoParser:
             ignore_delay: Whether to ignore delay information
             delay_was_stripped: Whether or not delay was stripped
             suffix: File extension/suffix (".ac3", ".ec3", ".ac4")
+            output_channels: Output channel string (1.0, 2.0, etc.)
             worker_id: Optional worker ID for parallel processing (e.g., "f1", "f2")
 
         Returns:
@@ -163,7 +165,7 @@ class MediainfoParser:
         season = self.guess.get("season")
         episode = self.guess.get("episode")
         source = self._extract_source_info()
-        channels = self._get_channel_info()
+        channels = output_channels or ""
 
         # get attributes from mediainfo
         delay = self._delay_detection() if not ignore_delay else None
@@ -216,6 +218,7 @@ class MediainfoParser:
         self,
         template: str,
         suffix: str,
+        output_channels: str,
         worker_id: str | None = None,
         ignore_delay: bool = False,
         delay_was_stripped: bool = False,
@@ -238,7 +241,7 @@ class MediainfoParser:
         source = self._extract_source_info() or ""
         mi_lang = self._language_detection()
         lang = mi_lang or self._get_lang_alpha3(self.guess.get("language")) or ""
-        channels = self._get_channel_info() or ""
+        channels = output_channels or ""
         worker = worker_id or ""
 
         # Delay handling mirrors generate_output_filename's logic so templates
@@ -379,13 +382,13 @@ class MediainfoParser:
         elif "flac" in filename_lower:
             return "FLAC"
 
-    def _get_channel_info(self) -> str | None:
-        """Get channel layout information."""
-        channels = self.get_channels(self.mi_audio_obj)
+    # def _get_channel_info(self) -> str | None:
+    #     """Get channel layout information."""
+    #     channels = self.get_channels(self.mi_audio_obj)
 
-        # map channel counts to common layouts
-        channel_map = {1: "1.0", 2: "2.0", 6: "5.1", 8: "7.1"}
-        return channel_map.get(channels, f"{channels}ch")
+    #     # map channel counts to common layouts
+    #     channel_map = {1: "1.0", 2: "2.0", 6: "5.1", 8: "7.1"}
+    #     return channel_map.get(channels, f"{channels}ch")
 
     @staticmethod
     def _get_lang_alpha3(lang: Any) -> str | None:

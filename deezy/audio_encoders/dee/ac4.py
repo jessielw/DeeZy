@@ -95,6 +95,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 output = mi_parser.render_output_template(
                     template=str(self.payload.output_template),
                     suffix=".ac4",
+                    output_channels="2.0",
                     worker_id=self.payload.worker_id,
                     ignore_delay=ignore_delay,
                     delay_was_stripped=delay_was_stripped,
@@ -110,6 +111,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     ignore_delay,
                     delay_was_stripped,
                     suffix=".ac4",
+                    output_channels="2.0",
                     worker_id=self.payload.worker_id,
                 )
 

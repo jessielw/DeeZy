@@ -115,6 +115,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
                 output = mi_parser.render_output_template(
                     template=str(self.payload.output_template),
                     suffix=".ac3",
+                    output_channels=str(self.payload.channels),
                     worker_id=self.payload.worker_id,
                     ignore_delay=ignore_delay,
                     delay_was_stripped=delay_was_stripped,
@@ -130,6 +131,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
                     ignore_delay,
                     delay_was_stripped,
                     suffix=".ac3",
+                    output_channels=str(self.payload.channels),
                     worker_id=self.payload.worker_id,
                 )
 

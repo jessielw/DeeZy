@@ -39,6 +39,12 @@ class AtmosMode(CaseInsensitiveEnum):
         else:
             return 8
 
+    def get_str_channels(self) -> str:
+        if self is AtmosMode.STREAMING:
+            return "5.1"
+        else:
+            return "7.1"
+
 
 class WarpMode(CaseInsensitiveEnum):
     NORMAL = "normal"
