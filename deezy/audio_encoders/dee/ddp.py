@@ -36,10 +36,21 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         mi_parser = MediainfoParser(file_input, self.payload.track_index)
         audio_track_info = mi_parser.get_audio_track_info()
 
+        # if source channels is 5.0 and the user wants to up-mix to 5.1
+        allow_50_to_51_upmix = (
+            self.payload.upmix_50_to_51
+            and self.payload.channels is DolbyDigitalPlusChannels.SURROUND
+            and audio_track_info.channels == 5
+        )
+
         # bitrate
         # get object based off of desired channels and source audio track channels
+        usr_desired_channels = self.payload.channels
+        # if we're allowing a 5.0 -> 5.1 upmix then force the channel to surround
+        if allow_50_to_51_upmix:
+            usr_desired_channels = DolbyDigitalPlusChannels.SURROUND
         bitrate_obj = self._get_channel_bitrate_object(
-            self.payload.channels, audio_track_info.channels
+            usr_desired_channels, audio_track_info.channels
         )
 
         # check to see if the users bitrate is allowed
@@ -58,13 +69,6 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             source_audio_channels=audio_track_info.channels,
             auto_enum_value=DolbyDigitalPlusChannels.AUTO,
             channel_resolver=self.ddp_channel_resolver,
-        )
-
-        # if source channels is 5.0 and the user wants to up-mix to 5.1
-        allow_50_to_51_upmix = (
-            self.payload.channels is DolbyDigitalPlusChannels.SURROUND
-            and audio_track_info.channels == 5
-            and self.payload.upmix_50_to_51
         )
 
         # check for up-mixing if user has defined their own channel
