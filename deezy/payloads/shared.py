@@ -60,6 +60,7 @@ class StereoMixPayload(DolbyPayload):
     ltrt_center_mix_level: str
     ltrt_surround_mix_level: str
     preferred_downmix_mode: StereoDownmix
+    upmix_50_to_51: bool
 
 
 @dataclass(slots=True)

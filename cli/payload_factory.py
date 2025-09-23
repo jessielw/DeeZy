@@ -101,6 +101,7 @@ class PayloadBuilder:
             "preferred_downmix_mode": cls.safe_get(
                 args, "stereo_down_mix", StereoDownmix.LORO
             ),
+            "upmix_50_to_51": cls.safe_get(args, "upmix_50_to_51", False),
         }
 
     @classmethod

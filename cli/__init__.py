@@ -377,6 +377,11 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_false",
         help="Disables surround 90 degree phase shift.",
     )
+    dd_ddp_processing_group.add_argument(
+        "--upmix-50-to-51",
+        action="store_true",
+        help="Up-mix rare 5.0 layouts into 5.1 layouts by adding a silent LFE channel.",
+    )
 
     # stereo downmix mode
     stereo_downmix_group = argparse.ArgumentParser(add_help=False)
