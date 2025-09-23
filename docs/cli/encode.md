@@ -19,18 +19,18 @@ Run `deezy encode <format> --help` to see format-specific options.
 
 - Basic encode (auto-output path):
 
-```powershell
+```bash
 deezy encode dd "C:\\media\\song.wav"
 ```
 
 - Batch encode multiple files in a folder, limit concurrency and keep temp files for debugging:
 
-```powershell
-deezy encode ddp "C:\\media\\album\\" --max-parallel 2 --keep-temp --batch-summary-output
+```bash
+deezy encode ddp --max-parallel 2 --keep-temp --batch-summary-output "C:\\media\\album\\*.mkv"
 ```
 
 - Encode using an output template (preview without writing):
 
-```powershell
-deezy encode dd "C:\\media\\song.wav" --output-template "{title}_{delay}_{channels}.dd" --output-preview
+```bash
+deezy encode dd --output-template "{title}_{delay}_{channels}.dd" --output-preview "C:\\media\\album\\*.mkv"
 ```
