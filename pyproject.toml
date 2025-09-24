@@ -44,7 +44,7 @@ include = ["deezy.py", "version.py", "cli/*.py", "deezy/**/*.py", "tests/*.py"]
 select = ["I"]
 
 [tool.basedpyright]
-include = ["cli", "deezy"]
+include = ["deezy"]
 typeCheckingMode = "standard"
 
 [build-system]
@@ -53,7 +53,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["deezy*", "cli*"]
+include = ["deezy*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
