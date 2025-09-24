@@ -4,7 +4,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from cli.__init__ import execute_encode_command
+from deezy.cli.__init__ import execute_encode_command
 
 
 def _create_files(dirpath: Path, prefix: str, count: int) -> list[Path]:

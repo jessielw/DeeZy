@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import sys
 
-import cli
+from deezy.cli import cli_parser
 
 
 def main() -> int:
@@ -28,7 +26,7 @@ def main() -> int:
         # argparse and dispatches commands. Call it and translate any
         # SystemExit into an int return code for the module runner.
         try:
-            cli.cli_parser()
+            cli_parser()
             return 0
         except SystemExit as se:
             # Normalize SystemExit codes to an int (None -> 0)

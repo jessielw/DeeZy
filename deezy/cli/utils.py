@@ -257,11 +257,7 @@ def apply_config_defaults_to_args(
 def apply_default_bitrate(
     args: argparse.Namespace, config_manager: ConfigManager | None
 ) -> None:
-    """Apply default bitrate based on format and channels/mode if none specified.
-
-    This was moved from cli.__init__ so tests can exercise it directly and to
-    keep CLI module focused on parsing and dispatch.
-    """
+    """Apply default bitrate based on format and channels/mode if none specified."""
     if not hasattr(args, "bitrate") or args.bitrate is None:
         channels_or_mode = None
         if args.format_command == "atmos":
@@ -291,10 +287,7 @@ def apply_default_bitrate(
 
 
 def handle_preset_injection() -> None:
-    """Handle preset injection into sys.argv before argparse runs.
-
-    Moved from cli.__init__ to keep the CLI entrypoint concise.
-    """
+    """Handle preset injection into sys.argv before argparse runs."""
     if len(sys.argv) >= 4 and "preset" in sys.argv and "--name" in sys.argv:
         try:
             name_idx = sys.argv.index("--name")

@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from cli import __version__
+from deezy.cli import __version__
 
 
 def get_current_version():

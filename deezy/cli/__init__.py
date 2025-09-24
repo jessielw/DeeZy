@@ -6,8 +6,13 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from cli.payload_factory import PayloadBuilder
-from cli.utils import (
+from deezy.audio_encoders.dee.ac4 import Ac4Encoder
+from deezy.audio_encoders.dee.atmos import AtmosEncoder
+from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
+from deezy.audio_encoders.dee.dd import DDEncoderDEE
+from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
+from deezy.cli.payload_factory import PayloadBuilder
+from deezy.cli.utils import (
     CustomHelpFormatter,
     apply_config_defaults_to_args,
     apply_default_bitrate,
@@ -24,11 +29,6 @@ from cli.utils import (
     setup_logging,
     validate_track_index,
 )
-from deezy.audio_encoders.dee.ac4 import Ac4Encoder
-from deezy.audio_encoders.dee.atmos import AtmosEncoder
-from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deezy.audio_encoders.dee.dd import DDEncoderDEE
-from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
 from deezy.config.defaults import get_default_config_path
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.enums import case_insensitive_enum, enum_choices

@@ -1,6 +1,6 @@
 import argparse
 
-from cli.utils import apply_config_defaults_to_args
+from deezy.cli.utils import apply_config_defaults_to_args
 
 
 class DummyConfig:

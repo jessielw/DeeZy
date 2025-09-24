@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import pytest
 
-import cli.utils as utils
+import deezy.cli.utils as utils
 
 
 class DummyConfigManager:
