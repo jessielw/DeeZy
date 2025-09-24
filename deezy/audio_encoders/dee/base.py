@@ -276,31 +276,6 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             return False, desired_rate
 
     @staticmethod
-    def _get_dee_cmd(dee_path: Path, xml_path: Path):
-        """
-        Generate the command for running DEE using the specified DEE and XML paths.
-
-        Args:
-            dee_path (Path): The path to the DEE executable.
-            xml_path (Path): The path to the input XML file.
-
-        Returns:
-            List[str]: The DEE command with the specified paths.
-        """
-        dee_cmd = [
-            str(dee_path),
-            "--progress-interval",
-            "500",
-            "--diagnostics-interval",
-            "90000",
-            "--verbose",
-            "-x",
-            str(xml_path),
-            "--disable-xml-validation",
-        ]
-        return dee_cmd
-
-    @staticmethod
     def get_dee_json_cmd(dee_path: Path, json_path: Path):
         """
         Generate the command for running DEE using the specified DEE and JSON paths.
