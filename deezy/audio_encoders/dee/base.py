@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
@@ -375,7 +375,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         """Return the metadata.json path used for a given computed output."""
         return temp_dir / f"{output.stem}_metadata.json"
 
-    def _read_reuse_metadata(self, metadata_path: Path) -> Optional[dict]:
+    def _read_reuse_metadata(self, metadata_path: Path) -> dict | None:
         """Read metadata JSON if present. Returns dict or None on failure."""
         if not metadata_path.exists():
             return None
