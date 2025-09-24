@@ -1,0 +1,8 @@
+/* Minimal tweaks for MkDocs Material */
+code {
+  font-family: "Fira Mono", monospace;
+}
+
+.md-content table {
+  font-size: 0.95rem;
+}
