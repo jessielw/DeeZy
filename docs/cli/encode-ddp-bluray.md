@@ -26,7 +26,6 @@ usage: DeeZy encode ddp-bluray [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                                [--metering-mode {1770_1,1770_2,1770_3,leqa}]
                                [--no-low-pass-filter] [--no-surround-3db]
                                [--no-surround-90-deg-phase-shift]
-                               [--upmix-50-to-51]
                                [--stereo-down-mix {auto,loro,ltrt,dpl2}]
                                [--lt-rt-center {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}]
                                [--lt-rt-surround {-1.5,-3,-4.5,-6,-inf}]
@@ -108,8 +107,6 @@ options:
        Disables surround 3db attenuation.
   --no-surround-90-deg-phase-shift
        Disables surround 90 degree phase shift.
-  --upmix-50-to-51
-       Up-mix rare 5.0 layouts into 5.1 layouts by adding a silent LFE channel.
   --stereo-down-mix, {auto,loro,ltrt,dpl2}
        Down mix method for stereo.
   --lt-rt-center, {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}

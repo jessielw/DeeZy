@@ -383,6 +383,26 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Up-mix rare 5.0 layouts into 5.1 layouts by adding a silent LFE channel.",
     )
 
+    # DDP BluRay processing group: same as DD/DDP processing but without the
+    # --upmix-50-to-51 option because up-mixing to 5.1 is only meaningful for
+    # standard DD/DDP workflows.
+    ddp_bluray_processing_group = argparse.ArgumentParser(add_help=False)
+    ddp_bluray_processing_group.add_argument(
+        "--no-low-pass-filter",
+        action="store_false",
+        help="Disables low pass filter.",
+    )
+    ddp_bluray_processing_group.add_argument(
+        "--no-surround-3db",
+        action="store_false",
+        help="Disables surround 3db attenuation.",
+    )
+    ddp_bluray_processing_group.add_argument(
+        "--no-surround-90-deg-phase-shift",
+        action="store_false",
+        help="Disables surround 90 degree phase shift.",
+    )
+
     # stereo downmix mode
     stereo_downmix_group = argparse.ArgumentParser(add_help=False)
     stereo_downmix_group.add_argument(
@@ -551,6 +571,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "atmos_ac4_metering_group": atmos_ac4_metering_group,
         "preset_metering_group": preset_metering_group,
         "dd_ddp_processing_group": dd_ddp_processing_group,
+        "ddp_bluray_processing_group": ddp_bluray_processing_group,
         "stereo_downmix_group": stereo_downmix_group,
         "downmix_metadata_group": downmix_metadata_group,
         "dd_channels_group": dd_channels_group,
@@ -629,7 +650,7 @@ def create_encode_parsers(
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["dd_ddp_metering_group"],
-            argument_groups["dd_ddp_processing_group"],
+            argument_groups["ddp_bluray_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["ddp_bluray_channels_group"],
