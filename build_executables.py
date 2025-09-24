@@ -48,6 +48,7 @@ def build_app():
             f"--add-data={babel_fish}:./babelfish",
             f"--add-data={guessit}:./guessit",
             f"--icon={str(icon_path)}",
+            "-y",
             str(deezy_script),
         ]
     )
@@ -67,6 +68,7 @@ def build_app():
             f"--add-data={babel_fish}:./babelfish",
             f"--add-data={guessit}:./guessit",
             f"--icon={str(icon_path)}",
+            "-y",
             str(deezy_script),
         ]
     )
