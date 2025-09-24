@@ -170,8 +170,11 @@ immersive_stereo = 256 # AC4 Immersive Stereo
 # Uncomment to opt-in.
 #[default_source_bitrates.ac4]
 # ch_6 = 256
+# ch_6_atmos = 320
 # ch_7 = 256
+# ch_7_atmos = 320
 # ch_8 = 256
+# ch_8_atmos = 320
 
 [presets]
 # Example presets - customize as needed

@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Config:
+
+  - **AC4** now supports default bitrate by source channel with an optional **atmos** suffix.
+
+    Example:
+
+    ```
+    #[default_source_bitrates.ac4]
+    # ch_6 = 256
+    # ch_6_atmos = 320  < -- NEW
+    ```
+
+### Changed
+
+-
+
+### Fixed
+
+- Relative path bug with DEE.
+
 ## [1.3.2] - 2025-09-22
 
 ### Added

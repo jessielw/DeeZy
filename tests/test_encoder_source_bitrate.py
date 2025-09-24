@@ -179,3 +179,35 @@ def test_channel_clamping_bounds():
     )
     # Lookup will fail for out-of-range channel counts; expect encoder default.
     assert res_high == 999
+
+
+def test_ac4_prefers_atmos_key():
+    # AC4 should prefer the atmosphere-specific per-source key (ch_n_atmos)
+    cfg = {
+        "default_source_bitrates": {"ac4": {"ch_6_atmos": 320, "ch_6": 256}},
+        "default_bitrates": {},
+    }
+    setup_config(cfg)
+
+    enc = DummyEncoder()
+    audio_info = AudioTrackInfo(
+        mi_track=cast("Track", object()),
+        channels=6,
+        is_elementary=False,
+        thd_atmos=True,
+    )
+
+    # Use AC4's typical choices so the config value 320 is accepted as valid
+    res = enc.get_config_based_bitrate(
+        format_command=CodecFormat.AC4,
+        payload_bitrate=None,
+        payload_channels=None,
+        audio_track_info=audio_info,
+        source_audio_channels=audio_info.channels,
+        bitrate_obj=ChannelBitrates(default=256, choices=(64, 72, 112, 144, 256, 320)),
+        auto_enum_value=None,
+        channel_resolver=lambda x: None,
+    )
+
+    # Should pick the atmosphere-specific value (320) rather than the plain ch_6 (256)
+    assert res == 320

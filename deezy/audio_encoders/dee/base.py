@@ -126,7 +126,10 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 if config_manager:
                     # try source channel from config if the user has it enabled
                     get_src_conf_bitrate = self._source_bitrate_from_config(
-                        config_manager, format_command.value, source_audio_channels
+                        config_manager,
+                        format_command.value,
+                        source_audio_channels,
+                        audio_track_info.thd_atmos,
                     )
                     if get_src_conf_bitrate:
                         logger.debug(
@@ -176,7 +179,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
 
     @staticmethod
     def _source_bitrate_from_config(
-        conf_manager: ConfigManager, fmt: str, source_channels: int
+        conf_manager: ConfigManager, fmt: str, source_channels: int, thd_atmos: bool
     ) -> int | None:
         """Safely collects config from config manager if available."""
         try:
@@ -184,17 +187,28 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             # check in config
             section = conf_manager.config.get("default_source_bitrates")
             if not section:
-                return None
+                return
             fmt_conf = section.get(fmt)
             if not fmt_conf:
-                return None
-            bitrate = fmt_conf.get(channel_obj.to_config())
+                return
+            # support AC4 atmos specific per-source defaults using keys
+            # like 'ch_6_atmos'. Prefer atmosphere-specific key when present
+            # for AC4 and fall back to the plain 'ch_n' key.
+            key_base = channel_obj.to_config()
+            bitrate = None
+            if thd_atmos and fmt == "ac4":
+                # prefer the atmos override for AC4 when present
+                bitrate = fmt_conf.get(f"{key_base}_atmos")
+
+            if bitrate is None:
+                bitrate = fmt_conf.get(key_base)
+
             if bitrate is None or bitrate <= 0:
-                return None
+                return
             return bitrate
         except Exception as e:
             logger.warning(f"Failed to get source bitrate from config: {e}")
-            return None
+            return
 
     @staticmethod
     @abstractmethod
