@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added support for ADM BWF for **AC4** and **Atmos** profiles.
+
+### Changed
+
+- Logger for failure to get source bitrate from config is now a `debug` instead of a `warning`.
+
+### Fixed
+
+-
+
 ## [1.3.3] - 2025-09-24
 
 ### Added
