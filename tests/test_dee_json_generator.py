@@ -128,7 +128,7 @@ def test_ac4_and_atmos_clean_temp_and_filename(tmp_path: Path):
     )
 
     json_path_ac4 = generator_ac4.ac4_json(
-        ac4_payload, bitrate=320, fps=DeeFPS.FPS_24, delay=None, temp_dir=tmp_path
+        ac4_payload, bitrate=320, fps=DeeFPS.FPS_24, delay=None, temp_dir=tmp_path, atmos_enabled=True,
     )
     assert json_path_ac4.exists()
     data_ac4 = json.loads(json_path_ac4.read_text())
