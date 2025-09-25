@@ -207,7 +207,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 return
             return bitrate
         except Exception as e:
-            logger.warning(f"Failed to get source bitrate from config: {e}")
+            logger.debug(f"Failed to get source bitrate from config: {e}")
             return
 
     @staticmethod
