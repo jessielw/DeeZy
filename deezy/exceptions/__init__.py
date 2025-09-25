@@ -44,3 +44,7 @@ class InvalidDelayError(DeeZyError):
 
 class OutputExistsError(DeeZyError):
     """Raised when the intended output file already exists and overwrite was not enabled."""
+
+
+class InvalidAtmosInputError(DeeZyError):
+    """Raised when input file is an incompatible Atmos input."""
