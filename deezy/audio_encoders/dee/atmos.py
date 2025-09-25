@@ -8,6 +8,7 @@ from deezy.enums.atmos import AtmosMode
 from deezy.enums.codec_format import CodecFormat
 from deezy.exceptions import (
     DependencyNotFoundError,
+    InvalidAtmosInputError,
     InvalidExtensionError,
     OutputFileNotFoundError,
 )
@@ -141,56 +142,72 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         # destination already exists and the user didn't request overwrite.
         self._early_output_exists_check(output, self.payload.overwrite)
 
-        # decode TrueHD to atmos mezz
-        if not self.payload.truehdd_path:
-            raise DependencyNotFoundError(
-                "Failed to locate truehdd, this is required for atmos work flows"
-            )
+        # dee input path variable
+        dee_input_path: Path | None = None
 
-        # optionally stagger/jitter and limit concurrent TrueHD jobs
-        self._maybe_jitter()
-        self._acquire_truehdd()
-        try:
-            truehdd_signature = f"truehdd:{self.payload.thd_warp_mode.to_truehdd_cmd()}"
-            metadata_path = self._metadata_path_for_output(temp_dir, output)
-            if getattr(
-                self.payload, "reuse_temp_files", False
-            ) and self._check_reuse_signature(
-                metadata_path,
-                str(CodecFormat.ATMOS),
-                truehdd_signature,
-                "atmos_meta.atmos",
-                temp_dir,
-            ):
-                logger.info("Reusing extracted wav from temp folder")
-                decoded_mezz_path = temp_dir / "atmos_meta.atmos"
-            else:
-                decoded_mezz_path = decode_truehd_to_atmos(
-                    output_dir=temp_dir,
-                    file_input=self.payload.file_input,
-                    track_index=self.payload.track_index,
-                    ffmpeg_path=self.payload.ffmpeg_path,
-                    truehdd_path=self.payload.truehdd_path,
-                    bed_conform=self.payload.bed_conform,
-                    warp_mode=self.payload.thd_warp_mode,
-                    duration=audio_track_info.duration,
-                    step_info={"current": 1, "total": 3, "name": "truehdd"},
-                    no_progress_bars=self.payload.no_progress_bars,
+        # check if we're processing truehd atmos
+        if self.payload.truehdd_path and audio_track_info.thd_atmos:
+            # optionally stagger/jitter and limit concurrent TrueHD jobs
+            self._maybe_jitter()
+            self._acquire_truehdd()
+            try:
+                truehdd_signature = (
+                    f"truehdd:{self.payload.thd_warp_mode.to_truehdd_cmd()}"
                 )
-                if getattr(self.payload, "reuse_temp_files", False):
-                    self._write_signature_metadata(
-                        metadata_path,
-                        str(CodecFormat.ATMOS),
-                        truehdd_signature,
-                        "atmos_meta.atmos",
-                        file_input,
+                metadata_path = self._metadata_path_for_output(temp_dir, output)
+                if getattr(
+                    self.payload, "reuse_temp_files", False
+                ) and self._check_reuse_signature(
+                    metadata_path,
+                    str(CodecFormat.ATMOS),
+                    truehdd_signature,
+                    "atmos_meta.atmos",
+                    temp_dir,
+                ):
+                    dee_input_path = temp_dir / "atmos_meta.atmos"
+                    logger.info("Reusing extracted wav from temp folder")
+                else:
+                    if self.payload.truehdd_path:
+                        raise DependencyNotFoundError(
+                            "Failed to locate truehdd, this is required for TrueHD Atmos work flows"
+                        )
+                    dee_input_path = decode_truehd_to_atmos(
+                        output_dir=temp_dir,
+                        file_input=self.payload.file_input,
+                        track_index=self.payload.track_index,
+                        ffmpeg_path=self.payload.ffmpeg_path,
+                        truehdd_path=self.payload.truehdd_path,
+                        bed_conform=self.payload.bed_conform,
+                        warp_mode=self.payload.thd_warp_mode,
+                        duration=audio_track_info.duration,
+                        step_info={"current": 1, "total": 3, "name": "truehdd"},
+                        no_progress_bars=self.payload.no_progress_bars,
                     )
-        finally:
-            self._release_truehdd()
+                    if getattr(self.payload, "reuse_temp_files", False):
+                        self._write_signature_metadata(
+                            metadata_path,
+                            str(CodecFormat.ATMOS),
+                            truehdd_signature,
+                            "atmos_meta.atmos",
+                            file_input,
+                        )
+            finally:
+                self._release_truehdd()
+
+        # check if we're processing adm atmos wav file
+        elif audio_track_info.adm_atmos_wav:
+            dee_input_path = file_input
+            logger.info("Using ADM BWF input")
+
+        # if it's anything raise an error
+        else:
+            raise InvalidAtmosInputError(
+                "Cannot process input, not a valid Atmos format"
+            )
 
         # generate JSON
         json_generator = DeeJSONGenerator(
-            input_file_path=decoded_mezz_path,
+            input_file_path=dee_input_path,
             output_file_path=output,
             output_dir=temp_dir,
             codec_format=CodecFormat.ATMOS,

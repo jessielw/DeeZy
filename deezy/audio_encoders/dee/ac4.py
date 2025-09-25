@@ -149,11 +149,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         self._early_output_exists_check(output, self.payload.overwrite)
 
         # decode TrueHD to atmos mezz
-        if audio_track_info.thd_atmos:
-            if not self.payload.truehdd_path:
-                raise DependencyNotFoundError(
-                    "Failed to locate truehdd, this is required for atmos work flows"
-                )
+        if self.payload.truehdd_path and audio_track_info.thd_atmos:
             # optionally stagger/jitter and limit concurrent TrueHD jobs
             self._maybe_jitter()
             self._acquire_truehdd()
@@ -175,6 +171,10 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     logger.info("Reusing decoded atmos from temp folder")
                     decoded_mezz_path = temp_dir / "atmos_meta.atmos"
                 else:
+                    if not self.payload.truehdd_path:
+                        raise DependencyNotFoundError(
+                            "Failed to locate truehdd, this is required for atmos work flows"
+                        )
                     decoded_mezz_path = decode_truehd_to_atmos(
                         output_dir=temp_dir,
                         file_input=self.payload.file_input,
@@ -200,7 +200,13 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 self._release_truehdd()
             # make input_file_path point to the decoded mezz when TrueHD path used
             input_file_path = decoded_mezz_path
-        # if not truehd we know it's valid channel based audio since we checked above
+
+        # check if we're processing adm atmos wav file
+        elif audio_track_info.adm_atmos_wav:
+            input_file_path = file_input
+            logger.info("Using ADM BWF input")
+
+        # if not truehd/adm we know it's valid channel based audio since we checked above
         else:
             # generate ffmpeg cmd
             ffmpeg_cmd = self._generate_ffmpeg_cmd(
@@ -276,6 +282,9 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             fps=fps,
             delay=delay,
             temp_dir=temp_dir,
+            atmos_enabled=bool(
+                audio_track_info.adm_atmos_wav or audio_track_info.thd_atmos
+            ),
         )
         logger.debug(f"{json_path=}.")
 
