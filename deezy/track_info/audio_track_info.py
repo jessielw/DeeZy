@@ -15,3 +15,4 @@ class AudioTrackInfo:
     sample_rate: int | None = None
     bit_depth: int | None = None
     thd_atmos: bool = False
+    adm_atmos_wav: bool = False

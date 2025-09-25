@@ -43,6 +43,7 @@ class MediainfoParser:
             bit_depth=self.mi_audio_obj.bit_depth,
             channels=self.get_channels(self.mi_audio_obj),
             thd_atmos=self._is_thd_atmos(),
+            adm_atmos_wav=self._is_adm_atmos_wav(),
         )
 
         # return object
@@ -123,6 +124,15 @@ class MediainfoParser:
     def _is_thd_atmos(self) -> bool:
         """Check if track is a THD Atmos file."""
         if self.mi_audio_obj.commercial_name == "Dolby TrueHD with Dolby Atmos":
+            return True
+        return False
+
+    def _is_adm_atmos_wav(self) -> bool:
+        """Check if track is a ADM BWF file."""
+        if self.file_input.suffix.lower() != ".wav":
+            return False
+        adm = getattr(self.mi_audio_obj, "admprofile_format", None)
+        if adm and "Atmos" in str(adm):
             return True
         return False
 
