@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
--
+- DDP resetting detected delay for the output file name only (was properly stripped still).
+- Output names being generated automatically could potentially output the wrong delay in the filename.
 
 ## [1.3.3] - 2025-09-24
 

@@ -202,38 +202,6 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             else:
                 logger.debug(f"FFMPEG downmix needed {ffmpeg_down_mix}.")
 
-        # file output (if an output is a defined check users extension and use their output)
-        if self.payload.file_output:
-            output = Path(self.payload.file_output)
-            if output.suffix not in (".ec3", ".eac3"):
-                raise InvalidExtensionError(
-                    "DDP output must must end with the suffix '.eac3' or '.ec3'."
-                )
-        else:
-            ignore_delay = (
-                True
-                if not (
-                    self.payload.parse_elementary_delay
-                    or not audio_track_info.is_elementary
-                    or not delay.is_delay()
-                )
-                else False
-            )
-            output = mi_parser.generate_output_filename(
-                ignore_delay,
-                delay.is_delay(),
-                suffix=".ec3",
-                output_channels=str(self.payload.channels),
-                worker_id=self.payload.worker_id,
-            )
-
-        # If a centralized batch output directory was provided and the user did not
-        # explicitly supply an output path, place final output there. This ensures
-        # an explicit --output wins over config-provided batch_output_dir.
-        if self.payload.file_output is None and self.payload.batch_output_dir:
-            output = Path(self.payload.batch_output_dir) / output.name
-        logger.debug(f"Output path {output}.")
-
         # early existence check: fail fast to avoid expensive work if the
         # destination already exists and the user didn't request overwrite.
         self._early_output_exists_check(output, self.payload.overwrite)

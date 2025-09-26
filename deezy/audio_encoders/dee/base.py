@@ -70,7 +70,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         delay_was_stripped is True when a delay value exists (delay.is_delay()).
         """
         ignore_delay = not (
-            payload_parse_elementary_delay
+            not payload_parse_elementary_delay
             or not audio_track_info.is_elementary
             or not delay.is_delay()
         )
