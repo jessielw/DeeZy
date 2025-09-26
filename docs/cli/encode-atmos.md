@@ -1,8 +1,6 @@
 # deezy encode atmos
 
-Captured help (abbreviated):
-
-```
+```text {.scrollable-code-block}
 usage: DeeZy encode atmos [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                           [--dee DEE] [--track-index TRACK_INDEX]
                           [--delay DELAY] [--parse-elementary-delay]

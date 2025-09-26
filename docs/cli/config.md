@@ -1,6 +1,6 @@
 # config
 
-```
+```text {.scrollable-code-block}
 usage: DeeZy config [-h] {generate,info,validate,list-presets} ...
 
 positional arguments:

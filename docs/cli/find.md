@@ -1,6 +1,6 @@
 # find
 
-```
+```text {.scrollable-code-block}
 usage: DeeZy find [-h] [-n] INPUT [INPUT ...]
 
 positional arguments:

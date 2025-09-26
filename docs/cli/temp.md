@@ -2,7 +2,7 @@
 
 DeeZy temporary folder management commands.
 
-```
+```text {.scrollable-code-block}
 usage: DeeZy temp [-h] {clean,info} ...
 
 positional arguments:

@@ -1,6 +1,6 @@
 # info
 
-```
+```text {.scrollable-code-block}
 usage: DeeZy info [-h] INPUT [INPUT ...]
 
 positional arguments:

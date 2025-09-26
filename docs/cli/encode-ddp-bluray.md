@@ -1,6 +1,6 @@
 # deezy encode ddp-bluray
 
-```
+```text {.scrollable-code-block}
 usage: DeeZy encode ddp-bluray [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                                [--dee DEE] [--track-index TRACK_INDEX]
                                [--delay DELAY] [--parse-elementary-delay]
