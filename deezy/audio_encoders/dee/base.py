@@ -1,6 +1,8 @@
+import hashlib
 import json
 import os
 import random
+import re
 import shutil
 import tempfile
 import threading
@@ -10,6 +12,8 @@ from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
 from typing import Any, Generic, TypeVar
+
+import platformdirs
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
@@ -343,8 +347,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         except (ValueError, TypeError):
             return DeeFPS.FPS_NOT_INDICATED
 
-    @staticmethod
-    def _get_temp_dir(file_input: Path, temp_dir: Path | None) -> Path:
+    def _get_temp_dir(self, file_input: Path, temp_dir: Path | None) -> Path:
         """
         Creates a temporary directory and returns its path. If `temp_dir` is provided,
         creates a directory with that name instead of a randomly generated one.
@@ -360,20 +363,25 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         """
         if temp_dir:
             # create job folder in user-specified temp directory
-            temp_directory = Path(tempfile.mkdtemp(dir=temp_dir))
-            if len(file_input.name) + len(str(temp_directory)) > 259:
+            temp_directory = temp_dir / self._short_unique_name(file_input)
+            file_len = len(str(temp_directory))
+            if file_len > 259:
                 raise PathTooLongError(
                     "Path provided with input file exceeds path length for DEE."
                 )
         else:
-            # create deezy parent folder in system temp if it doesn't exist
-            system_temp = Path(tempfile.gettempdir())
-            deezy_temp_base = system_temp / "deezy"
-            deezy_temp_base.mkdir(exist_ok=True)
+            # create automatic base directory
+            auto_base = Path(platformdirs.user_data_dir())
+            auto_base.mkdir(parents=True, exist_ok=True)
 
-            # create job-specific folder without deezy_ prefix
-            temp_directory = Path(tempfile.mkdtemp(dir=deezy_temp_base))
+            # create deezy base
+            deezy_base = auto_base / "deezy"
+            deezy_base.mkdir(exist_ok=True)
 
+            # generate unique short sub-directory
+            temp_directory = deezy_base / self._short_unique_name(file_input)
+
+        temp_directory.mkdir(exist_ok=True)
         return temp_directory
 
     def _adjacent_temp_dir(self, file_input: Path) -> Path:
@@ -476,9 +484,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             # atomic write via temp file in same directory
             tmp_path = None
             try:
-                import tempfile as _tmp
-
-                with _tmp.NamedTemporaryFile(
+                with tempfile.NamedTemporaryFile(
                     "w", delete=False, dir=str(metadata_path.parent), encoding="utf-8"
                 ) as fh:
                     json.dump(meta, fh)
@@ -622,3 +628,10 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 self._truehdd_sem.release()
             except ValueError:
                 pass
+
+    @staticmethod
+    def _short_unique_name(file_input: Path) -> str:
+        """Helper method to create a short and unique name with no extension."""
+        sanitized = re.sub(r"[^A-Za-z0-9_-]", "_", file_input.stem)[:20]
+        hash_prefix = hashlib.sha1(str(file_input).encode("utf-8")).hexdigest()[:8]
+        return f"{sanitized}_{hash_prefix}"

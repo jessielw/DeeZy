@@ -152,14 +152,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         logger.debug(f"Output path {output}.")
 
         # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
-        # so users can collect all temp files in one place. If not provided, use
-        # the adjacent per-input cache folder (<parent>/<stem>_deezy).
-        user_temp_base = getattr(self.payload, "temp_dir", None)
-        if user_temp_base:
-            temp_dir = Path(user_temp_base) / f"{file_input.stem}_deezy"
-            temp_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            temp_dir = self._adjacent_temp_dir(file_input)
+        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
         logger.debug(f"Temp directory {temp_dir}.")
 
         # check disk space
