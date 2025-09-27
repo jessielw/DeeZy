@@ -1,6 +1,8 @@
 # temp
 
-DeeZy temporary folder management commands.
+DeeZy temporary folder management commands. By default DeeZy creates per-input
+job folders under the platform-specific application data directory. Use `--temp-dir`
+to override the base location for per-input sub-folders.
 
 ```text {.scrollable-code-block}
 usage: DeeZy temp [-h] {clean,info} ...
