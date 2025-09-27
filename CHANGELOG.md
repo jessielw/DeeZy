@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Logger for failure to get source bitrate from config is now a `debug` instead of a `warning`.
+- Default temporary path behavior changed to use short, platform-specific per-input job folders (reduces Windows long-path issues).
 
 ### Fixed
 
