@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Logger for failure to get source bitrate from config is now a `debug` instead of a `warning`.
 - Default temporary path behavior changed to use short, platform-specific per-input job folders (reduces Windows long-path issues).
+- `--parse-elementary-delay` is now deprecated and will be removed on **1.4.0**. This is all now handled automatically and internally.
+  - If the arg is passed you will get a warning and it'll be ignored.
 
 ### Fixed
 
