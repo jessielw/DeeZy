@@ -41,7 +41,7 @@ def test_source_bitrate_used_for_ddp():
 
     enc = DummyEncoder()
     audio_info = AudioTrackInfo(
-        mi_track=cast("Track", object()), channels=6, is_elementary=False
+        mi_track=cast("Track", object()), channels=6, delay_relative_to_video=0
     )
 
     res = enc.get_config_based_bitrate(
@@ -64,7 +64,7 @@ def test_payload_overrides_source():
 
     enc = DummyEncoder()
     audio_info = AudioTrackInfo(
-        mi_track=cast("Track", object()), channels=6, is_elementary=False
+        mi_track=cast("Track", object()), channels=6, delay_relative_to_video=0
     )
 
     # payload bitrate should override the source config when it is valid
@@ -90,7 +90,7 @@ def test_fallback_to_format_level_when_source_missing():
 
     enc = DummyEncoder()
     audio_info = AudioTrackInfo(
-        mi_track=cast("Track", object()), channels=2, is_elementary=False
+        mi_track=cast("Track", object()), channels=2, delay_relative_to_video=0
     )
 
     # payload_channels provided as 'stereo' should fall back to format-level lookup
@@ -115,7 +115,7 @@ def test_uppercase_key_fallback():
 
     enc = DummyEncoder()
     audio_info = AudioTrackInfo(
-        mi_track=cast("Track", object()), channels=6, is_elementary=False
+        mi_track=cast("Track", object()), channels=6, delay_relative_to_video=0
     )
 
     res = enc.get_config_based_bitrate(
@@ -147,7 +147,7 @@ def test_channel_clamping_bounds():
 
     # source channels 0 -> clamped to 1
     audio_info_low = AudioTrackInfo(
-        mi_track=cast("Track", object()), channels=0, is_elementary=False
+        mi_track=cast("Track", object()), channels=0, delay_relative_to_video=0
     )
     res_low = enc.get_config_based_bitrate(
         format_command=CodecFormat.DDP,
@@ -165,7 +165,7 @@ def test_channel_clamping_bounds():
 
     # source channels 9 -> clamped to 8
     audio_info_high = AudioTrackInfo(
-        mi_track=cast("Track", object()), channels=9, is_elementary=False
+        mi_track=cast("Track", object()), channels=9, delay_relative_to_video=0
     )
     res_high = enc.get_config_based_bitrate(
         format_command=CodecFormat.DDP,
@@ -193,7 +193,7 @@ def test_ac4_prefers_atmos_key():
     audio_info = AudioTrackInfo(
         mi_track=cast("Track", object()),
         channels=6,
-        is_elementary=False,
+        delay_relative_to_video=0,
         thd_atmos=True,
     )
 

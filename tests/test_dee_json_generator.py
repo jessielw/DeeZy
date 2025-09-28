@@ -31,7 +31,6 @@ def make_core_fields(tmp_path: Path, keep_temp: bool) -> dict:
         "bitrate": 640,
         "temp_dir": None,
         "delay": None,
-        "parse_elementary_delay": False,
         "keep_temp": keep_temp,
         "reuse_temp_files": False,
         "file_output": None,
@@ -128,7 +127,12 @@ def test_ac4_and_atmos_clean_temp_and_filename(tmp_path: Path):
     )
 
     json_path_ac4 = generator_ac4.ac4_json(
-        ac4_payload, bitrate=320, fps=DeeFPS.FPS_24, delay=None, temp_dir=tmp_path, atmos_enabled=True,
+        ac4_payload,
+        bitrate=320,
+        fps=DeeFPS.FPS_24,
+        delay=None,
+        temp_dir=tmp_path,
+        atmos_enabled=True,
     )
     assert json_path_ac4.exists()
     data_ac4 = json.loads(json_path_ac4.read_text())
