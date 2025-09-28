@@ -30,6 +30,7 @@ nav:
       - Dolby Atmos: formats/atmos.md
       - Dolby AC-4: formats/ac4.md
   - Advanced:
+      - Delay: delay.md
       - Track Selection: track-selection.md
       - Templates: templates.md
       - Temp Management: temp.md
