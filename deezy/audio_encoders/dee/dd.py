@@ -87,9 +87,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
 
         # delay
         delay = self.get_delay(
-            audio_track_info,
             self.payload.delay,
-            self.payload.parse_elementary_delay,
             file_input,
         )
 
@@ -109,27 +107,21 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             # and will be ignored if not present. Keep existing generate_output_filename
             # as the fallback to avoid changing default behavior.
             if self.payload.output_template:
-                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
-                    audio_track_info, delay, self.payload.parse_elementary_delay
-                )
                 output = mi_parser.render_output_template(
                     template=str(self.payload.output_template),
                     suffix=".ac3",
                     output_channels=str(self.payload.channels),
+                    delay_was_stripped=delay.is_delay(),
+                    delay_relative_to_video=audio_track_info.delay_relative_to_video,
                     worker_id=self.payload.worker_id,
-                    ignore_delay=ignore_delay,
-                    delay_was_stripped=delay_was_stripped,
                 )
                 if self.payload.output_preview:
                     logger.info(f"Output preview: {output}")
                     return output
             else:
-                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
-                    audio_track_info, delay, self.payload.parse_elementary_delay
-                )
                 output = mi_parser.generate_output_filename(
-                    ignore_delay,
-                    delay_was_stripped,
+                    delay_was_stripped=delay.is_delay(),
+                    delay_relative_to_video=audio_track_info.delay_relative_to_video,
                     suffix=".ac3",
                     output_channels=str(self.payload.channels),
                     worker_id=self.payload.worker_id,
@@ -143,14 +135,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         logger.debug(f"Output path {output}.")
 
         # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
-        # so users can collect all temp files in one place. If not provided, use
-        # the adjacent per-input cache folder (<parent>/<stem>_deezy).
-        user_temp_base = getattr(self.payload, "temp_dir", None)
-        if user_temp_base:
-            temp_dir = Path(user_temp_base) / f"{file_input.stem}_deezy"
-            temp_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            temp_dir = self._adjacent_temp_dir(file_input)
+        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
         logger.debug(f"Temp directory {temp_dir}.")
 
         # check disk space

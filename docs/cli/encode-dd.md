@@ -1,15 +1,14 @@
 # deezy encode dd
 
-```
+```text {.scrollable-code-block}
 usage: DeeZy encode dd [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                        [--track-index TRACK_INDEX] [--delay DELAY]
-                       [--parse-elementary-delay] [--keep-temp]
-                       [--reuse-temp-files] [--temp-dir TEMP_DIR]
-                       [--output OUTPUT] [--output-template OUTPUT_TEMPLATE]
-                       [--output-preview] [--max-parallel MAX_PARALLEL]
-                       [--jitter-ms JITTER_MS] [--max-logs N]
-                       [--max-batch-results N] [--working-dir WORKING_DIR]
-                       [--batch-summary-output]
+                       [--keep-temp] [--reuse-temp-files]
+                       [--temp-dir TEMP_DIR] [--output OUTPUT]
+                       [--output-template OUTPUT_TEMPLATE] [--output-preview]
+                       [--max-parallel MAX_PARALLEL] [--jitter-ms JITTER_MS]
+                       [--max-logs N] [--max-batch-results N]
+                       [--working-dir WORKING_DIR] [--batch-summary-output]
                        [--batch-output-dir BATCH_OUTPUT_DIR] [--overwrite]
                        [--limit-ffmpeg LIMIT_FFMPEG] [--limit-dee LIMIT_DEE]
                        [--limit-truehdd LIMIT_TRUEHDD] [--bitrate BITRATE]
@@ -46,8 +45,6 @@ options:
        Track to use for encoding. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).
   --delay, DELAY
        The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).
-  --parse-elementary-delay
-       When input is an elementary (demuxed) stream, parse any delay in the filename and reset it to zero.
   --keep-temp
        Keeps the temp files after finishing.
   --reuse-temp-files

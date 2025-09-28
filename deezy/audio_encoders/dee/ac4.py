@@ -67,9 +67,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
 
         # delay
         delay = self.get_delay(
-            audio_track_info,
             self.payload.delay,
-            self.payload.parse_elementary_delay,
             file_input,
         )
 
@@ -89,27 +87,21 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             # and will be ignored if not present. Keep existing generate_output_filename
             # as the fallback to avoid changing default behavior.
             if self.payload.output_template:
-                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
-                    audio_track_info, delay, self.payload.parse_elementary_delay
-                )
                 output = mi_parser.render_output_template(
                     template=str(self.payload.output_template),
                     suffix=".ac4",
                     output_channels="2.0",
+                    delay_was_stripped=delay.is_delay(),
+                    delay_relative_to_video=audio_track_info.delay_relative_to_video,
                     worker_id=self.payload.worker_id,
-                    ignore_delay=ignore_delay,
-                    delay_was_stripped=delay_was_stripped,
                 )
                 if self.payload.output_preview:
                     logger.info(f"Output preview: {output}")
                     return output
             else:
-                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
-                    audio_track_info, delay, self.payload.parse_elementary_delay
-                )
                 output = mi_parser.generate_output_filename(
-                    ignore_delay,
-                    delay_was_stripped,
+                    delay_was_stripped=delay.is_delay(),
+                    delay_relative_to_video=audio_track_info.delay_relative_to_video,
                     suffix=".ac4",
                     output_channels="2.0",
                     worker_id=self.payload.worker_id,
@@ -123,14 +115,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         logger.debug(f"Output path {output}.")
 
         # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
-        # so users can collect all temp files in one place. If not provided, use
-        # the adjacent per-input cache folder (<parent>/<stem>_deezy).
-        user_temp_base = getattr(self.payload, "temp_dir", None)
-        if user_temp_base:
-            temp_dir = Path(user_temp_base) / f"{file_input.stem}_deezy"
-            temp_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            temp_dir = self._adjacent_temp_dir(file_input)
+        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
         logger.debug(f"Temp directory {temp_dir}.")
 
         # check disk space
@@ -149,11 +134,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         self._early_output_exists_check(output, self.payload.overwrite)
 
         # decode TrueHD to atmos mezz
-        if audio_track_info.thd_atmos:
-            if not self.payload.truehdd_path:
-                raise DependencyNotFoundError(
-                    "Failed to locate truehdd, this is required for atmos work flows"
-                )
+        if self.payload.truehdd_path and audio_track_info.thd_atmos:
             # optionally stagger/jitter and limit concurrent TrueHD jobs
             self._maybe_jitter()
             self._acquire_truehdd()
@@ -175,6 +156,10 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     logger.info("Reusing decoded atmos from temp folder")
                     decoded_mezz_path = temp_dir / "atmos_meta.atmos"
                 else:
+                    if not self.payload.truehdd_path:
+                        raise DependencyNotFoundError(
+                            "Failed to locate truehdd, this is required for atmos work flows"
+                        )
                     decoded_mezz_path = decode_truehd_to_atmos(
                         output_dir=temp_dir,
                         file_input=self.payload.file_input,
@@ -200,7 +185,13 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 self._release_truehdd()
             # make input_file_path point to the decoded mezz when TrueHD path used
             input_file_path = decoded_mezz_path
-        # if not truehd we know it's valid channel based audio since we checked above
+
+        # check if we're processing adm atmos wav file
+        elif audio_track_info.adm_atmos_wav:
+            input_file_path = file_input
+            logger.info("Using ADM BWF input")
+
+        # if not truehd/adm we know it's valid channel based audio since we checked above
         else:
             # generate ffmpeg cmd
             ffmpeg_cmd = self._generate_ffmpeg_cmd(
@@ -276,6 +267,9 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             fps=fps,
             delay=delay,
             temp_dir=temp_dir,
+            atmos_enabled=bool(
+                audio_track_info.adm_atmos_wav or audio_track_info.thd_atmos
+            ),
         )
         logger.debug(f"{json_path=}.")
 

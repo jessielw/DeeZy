@@ -187,13 +187,14 @@ class DeeJSONGenerator:
         fps: DeeFPS,
         delay: DeeDelay | None,
         temp_dir: Path,
+        atmos_enabled: bool,
     ) -> Path:
-        """Set up Atmos encoding."""
+        """Set up AC4 encoding."""
         # init base
         json_base = deepcopy(ac4_base)
 
         #### input section ####
-        if self.input_file_path.suffix == ".atmos":
+        if atmos_enabled:
             input_section = json_base["job_config"]["input"]["audio"]["atmos_mezz"]
             del json_base["job_config"]["input"]["audio"]["wav"]
         else:

@@ -1,6 +1,6 @@
 # DeeZy CLI (Top-level)
 
-```
+```text {.scrollable-code-block}
 usage: DeeZy [-h] [--version] [--config CONFIG_FILE]
              [--log-level {critical,error,warning,info,debug}] [--log-to-file] [--no-progress-bars]
              {encode,find,info,config,temp} ...

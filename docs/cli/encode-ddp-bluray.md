@@ -1,11 +1,11 @@
 # deezy encode ddp-bluray
 
-```
+```text {.scrollable-code-block}
 usage: DeeZy encode ddp-bluray [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                                [--dee DEE] [--track-index TRACK_INDEX]
-                               [--delay DELAY] [--parse-elementary-delay]
-                               [--keep-temp] [--reuse-temp-files]
-                               [--temp-dir TEMP_DIR] [--output OUTPUT]
+                               [--delay DELAY] [--keep-temp]
+                               [--reuse-temp-files] [--temp-dir TEMP_DIR]
+                               [--output OUTPUT]
                                [--output-template OUTPUT_TEMPLATE]
                                [--output-preview]
                                [--max-parallel MAX_PARALLEL]
@@ -51,8 +51,6 @@ options:
        Track to use for encoding. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).
   --delay, DELAY
        The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).
-  --parse-elementary-delay
-       When input is an elementary (demuxed) stream, parse any delay in the filename and reset it to zero.
   --keep-temp
        Keeps the temp files after finishing.
   --reuse-temp-files

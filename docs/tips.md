@@ -8,8 +8,6 @@ Short, practical guidance to get the most out of DeeZy.
 
 - Enable `--batch-summary-output` during testing to produce JSON results you can ingest into automation or QA pipelines.
 
-- If you see sync/delay issues, prefer `--delay` with explicit units (e.g. `--delay 150ms` or `--delay 1s`). Use `--parse-elementary-delay` when working with demuxed streams.
-
 - To debug encoding failures, run with `--keep-temp` to inspect intermediate files and re-run with `--reuse-temp-files` where possible.
 
 - For CI environments, use `--output-preview` to verify templates and paths without writing outputs.

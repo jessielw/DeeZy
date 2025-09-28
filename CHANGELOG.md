@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added support for ADM BWF for **AC4** and **Atmos** profiles.
+
+### Changed
+
+- Logger for failure to get source bitrate from config is now a `debug` instead of a `warning`.
+- Default temporary path behavior changed to use short, platform-specific per-input job folders (reduces Windows long-path issues).
+- `--parse-elementary-delay` is now deprecated and will be removed on **1.4.0**. This is all now handled automatically and internally.
+  - If the arg is passed you will get a warning and it'll be ignored.
+
+### Fixed
+
+- DDP resetting detected delay for the output file name only (was properly stripped still).
+- Output names being generated automatically could potentially output the wrong delay in the filename.
+
 ## [1.3.3] - 2025-09-24
 
 ### Added

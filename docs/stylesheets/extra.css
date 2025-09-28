@@ -1,8 +1,18 @@
-/* Minimal tweaks for MkDocs Material */
 code {
   font-family: "Fira Mono", monospace;
 }
 
 .md-content table {
   font-size: 0.95rem;
+}
+
+.scrollable-code-block {
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+pre code {
+  white-space: pre-wrap;
+  word-break: break-word;
 }

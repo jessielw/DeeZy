@@ -37,7 +37,12 @@ def test_token_substitution_and_sanitization(tmp_path: Path):
 
     tpl = "{title}-{year}-{stem}-{source}-{lang}-{channels}-{worker}-{delay}"
     out = p.render_output_template(
-        tpl, suffix=".ec3", output_channels="2.0", worker_id="w1", ignore_delay=False
+        tpl,
+        suffix=".ec3",
+        output_channels="2.0",
+        delay_was_stripped=False,
+        delay_relative_to_video=123,
+        worker_id="w1",
     )
     # sanitize should replace forbidden chars like :, / with _
     assert "Bad_Title_Name" in out.name
@@ -65,8 +70,9 @@ def test_delay_from_filename_when_mediainfo_missing(tmp_path: Path):
         "{title} {delay}",
         suffix=".ec3",
         output_channels="2.0",
+        delay_was_stripped=False,
+        delay_relative_to_video=0,
         worker_id=None,
-        ignore_delay=False,
     )
     assert "DELAY 10ms" in out.name
 
@@ -86,9 +92,9 @@ def test_ignore_delay_and_stripped_injected(tmp_path: Path):
         "{title} {delay}",
         suffix=".ec3",
         output_channels="2.0",
-        worker_id=None,
-        ignore_delay=True,
         delay_was_stripped=True,
+        delay_relative_to_video=0,
+        worker_id=None,
     )
     assert "DELAY 0ms" in out.name
 
@@ -106,7 +112,12 @@ def test_missing_tokens_and_empty_fields(tmp_path: Path):
     p = make_parser(tmp_path, "OnlyTitle.mkv", mi_attrs, guess)
 
     out = p.render_output_template(
-        "{title}-{year}-{unknown}", suffix=".ec3", output_channels="2.0", worker_id=None
+        "{title}-{year}-{unknown}",
+        suffix=".ec3",
+        output_channels="2.0",
+        delay_was_stripped=False,
+        delay_relative_to_video=0,
+        worker_id=None,
     )
     # year missing -> hyphen followed by empty; unknown token remains as literal
     assert "OnlyTitle-" in out.name
@@ -125,7 +136,12 @@ def test_whitespace_and_forbidden_chars_collapsed(tmp_path: Path):
 
     tpl = '{title}    {title}<>:"/\\|?*'
     out = p.render_output_template(
-        tpl, suffix=".ec3", output_channels="2.0", worker_id=None
+        tpl,
+        suffix=".ec3",
+        output_channels="2.0",
+        delay_was_stripped=False,
+        delay_relative_to_video=0,
+        worker_id=None,
     )
     # forbidden chars replaced with underscore and multiple spaces collapsed
     assert "A B_C_ D" in out.name or "A_B_C__D" in out.name
@@ -143,7 +159,12 @@ def test_channel_mapping_and_lang_detection(tmp_path: Path):
     p = make_parser(tmp_path, "movie.mkv", mi_attrs, guess)
 
     out = p.render_output_template(
-        "{channels}-{lang}", suffix=".ec3", output_channels="7.1", worker_id=None
+        "{channels}-{lang}",
+        suffix=".ec3",
+        output_channels="7.1",
+        delay_was_stripped=False,
+        delay_relative_to_video=0,
+        worker_id=None,
     )
     # 8 channels maps to 7.1 and lang from other_language should be 'eng'
     assert "7.1" in out.name
@@ -163,7 +184,12 @@ def test_multiple_delay_in_filename_uses_first_match(tmp_path: Path):
     p = make_parser(tmp_path, "Video delay 10ms delay 20ms.mkv", mi_attrs, guess)
 
     out = p.render_output_template(
-        "{delay}", suffix=".ec3", output_channels="2.0", worker_id=None
+        "{delay}",
+        suffix=".ec3",
+        output_channels="2.0",
+        delay_was_stripped=False,
+        delay_relative_to_video=0,
+        worker_id=None,
     )
     assert "DELAY 10ms" in out.name
 
@@ -180,7 +206,12 @@ def test_empty_template_results_in_suffix_only(tmp_path: Path):
     p = make_parser(tmp_path, "T.mkv", mi_attrs, guess)
 
     out = p.render_output_template(
-        "", suffix=".ec3", output_channels="2.0", worker_id=None
+        "",
+        suffix=".ec3",
+        output_channels="2.0",
+        delay_was_stripped=False,
+        delay_relative_to_video=0,
+        worker_id=None,
     )
     # name should end with the suffix
     assert out.name.endswith(".ec3")
@@ -200,8 +231,8 @@ def test_generate_output_filename_tv_show_and_filename_delay(tmp_path: Path):
     p = make_parser(tmp_path, "Show delay 5ms.mkv", mi_attrs, guess)
 
     out = p.generate_output_filename(
-        ignore_delay=False,
         delay_was_stripped=False,
+        delay_relative_to_video=5,
         suffix=".ec3",
         output_channels="2.0",
         worker_id="wrk1",
@@ -209,7 +240,8 @@ def test_generate_output_filename_tv_show_and_filename_delay(tmp_path: Path):
     # season/episode and year should appear and delay from filename should be used
     assert "S01E02" in out.name
     assert "2019" in out.name
-    assert "[DELAY 5ms]" in out.name
+    # delay is appended without surrounding brackets in current generation
+    assert "DELAY 5ms" in out.name
     assert "wrk1" in out.name
 
 
@@ -225,10 +257,10 @@ def test_generate_output_filename_ignore_delay_injects_zero(tmp_path: Path):
     p = make_parser(tmp_path, "MyMovie.mkv", mi_attrs, guess)
 
     out = p.generate_output_filename(
-        ignore_delay=True,
         delay_was_stripped=True,
+        delay_relative_to_video=0,
         suffix=".ec3",
         output_channels="2.0",
         worker_id=None,
     )
-    assert "[DELAY 0ms]" in out.name
+    assert "DELAY 0ms" in out.name

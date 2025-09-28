@@ -7,7 +7,7 @@ from pymediainfo import Track
 class AudioTrackInfo:
     mi_track: Track
     channels: int
-    is_elementary: bool
+    delay_relative_to_video: int
     fps: float | None = None
     audio_only: bool = False
     recommended_free_space: int | None = None
@@ -15,3 +15,4 @@ class AudioTrackInfo:
     sample_rate: int | None = None
     bit_depth: int | None = None
     thd_atmos: bool = False
+    adm_atmos_wav: bool = False

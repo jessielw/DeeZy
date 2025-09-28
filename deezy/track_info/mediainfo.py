@@ -34,15 +34,16 @@ class MediainfoParser:
         # initiate AudioTrackInfo class
         audio_info = AudioTrackInfo(
             mi_track=self.mi_audio_obj,
-            is_elementary=self.is_elementary_audio(),
+            channels=self.get_channels(self.mi_audio_obj),
+            delay_relative_to_video=self._detect_relative_delay(self.mi_audio_obj),
             fps=self._get_fps(),
             audio_only=False,
             recommended_free_space=self._recommended_free_space(),
             duration=self._get_duration(),
             sample_rate=self.mi_audio_obj.sampling_rate,
             bit_depth=self.mi_audio_obj.bit_depth,
-            channels=self.get_channels(self.mi_audio_obj),
             thd_atmos=self._is_thd_atmos(),
+            adm_atmos_wav=self._is_adm_atmos_wav(),
         )
 
         # return object
@@ -126,10 +127,19 @@ class MediainfoParser:
             return True
         return False
 
+    def _is_adm_atmos_wav(self) -> bool:
+        """Check if track is a ADM BWF file."""
+        if self.file_input.suffix.lower() != ".wav":
+            return False
+        adm = getattr(self.mi_audio_obj, "admprofile_format", None)
+        if adm and "Atmos" in str(adm):
+            return True
+        return False
+
     def generate_output_filename(
         self,
-        ignore_delay: bool,
         delay_was_stripped: bool,
+        delay_relative_to_video: int,
         suffix: str,
         output_channels: str,
         worker_id: str | None,
@@ -138,8 +148,8 @@ class MediainfoParser:
         Automatically generate an output file name keeping some attributes.
 
         Args:
-            ignore_delay: Whether to ignore delay information
             delay_was_stripped: Whether or not delay was stripped
+            delay_relative_to_video: Delay relative to video in container
             suffix: File extension/suffix (".ac3", ".ec3", ".ac4")
             output_channels: Output channel string (1.0, 2.0, etc.)
             worker_id: Optional worker ID for parallel processing (e.g., "f1", "f2")
@@ -168,16 +178,10 @@ class MediainfoParser:
         channels = output_channels or ""
 
         # get attributes from mediainfo
-        delay = self._delay_detection() if not ignore_delay else None
         mi_lang = self._language_detection()
 
-        # parse delay from file if not detected in mediainfo
-        if not ignore_delay and not delay:
-            delay_from_file = parse_delay_from_file(self.file_input)
-            delay = f"[DELAY {delay_from_file}]" if delay_from_file else None
-        # if delay is set to be ignored and it was stripped we will append 0ms
-        elif ignore_delay and delay_was_stripped:
-            delay = "[DELAY 0ms]"
+        # delay
+        delay = self._delay_detection(delay_was_stripped, delay_relative_to_video)
 
         # construct new clean path with enhanced context
         name_parts = [title]
@@ -219,9 +223,9 @@ class MediainfoParser:
         template: str,
         suffix: str,
         output_channels: str,
+        delay_was_stripped: bool,
+        delay_relative_to_video: int,
         worker_id: str | None = None,
-        ignore_delay: bool = False,
-        delay_was_stripped: bool = False,
     ) -> Path:
         """
         Render an output filename from a lightweight template using available metadata.
@@ -244,34 +248,8 @@ class MediainfoParser:
         channels = output_channels or ""
         worker = worker_id or ""
 
-        # Delay handling mirrors generate_output_filename's logic so templates
-        # behave identically with respect to stripped/elementary inputs.
-        # If we're not ignoring delay, prefer mediainfo detection; fall back to
-        # parsing delay from the filename. If delay was intentionally stripped
-        # during processing, explicitly inject a "[DELAY 0ms]" marker when
-        # requested.
-        if not ignore_delay:
-            delay_val = self._delay_detection()
-        else:
-            delay_val = None
-
-        # If mediainfo didn't provide a delay, fall back to parsing the filename.
-        # For templates we don't force surrounding square brackets — the template
-        # author can include them if desired. Normalize any detected delay by
-        # stripping surrounding brackets so the `{delay}` token is just the core
-        # marker (for example: "DELAY 10ms").
-        if not ignore_delay and not delay_val:
-            delay_from_file = parse_delay_from_file(self.file_input)
-            delay_val = f"DELAY {delay_from_file}" if delay_from_file else None
-        elif ignore_delay and delay_was_stripped:
-            delay_val = "DELAY 0ms"
-
-        # If mediainfo returned a bracketed string like "[DELAY 10ms]", strip
-        # the brackets so templates remain in control of formatting.
-        if delay_val and delay_val.startswith("[") and delay_val.endswith("]"):
-            delay_val = delay_val[1:-1]
-
-        delay = delay_val or ""
+        # delay
+        delay = self._delay_detection(delay_was_stripped, delay_relative_to_video)
 
         mapping = {
             "title": str(title),
@@ -281,7 +259,7 @@ class MediainfoParser:
             "lang": str(lang),
             "channels": str(channels),
             "worker": str(worker),
-            "delay": str(delay),
+            "delay": str(delay) if delay else "",
         }
 
         rendered = template
@@ -294,18 +272,30 @@ class MediainfoParser:
 
         return base_dir / Path(rendered + suffix)
 
-    def _delay_detection(self) -> str | None:
-        """Detect delay relative to video to inject into filename.
+    def _delay_detection(
+        self,
+        delay_was_stripped: bool,
+        delay_relative_to_video: int,
+    ) -> str | None:
+        """
+        Compute delay string.
 
         Returns:
             str: Returns a formatted delay string
         """
-        if self.file_input.suffix == ".mp4":
-            if self.mi_audio_obj.source_delay:
-                return f"[DELAY {str(self.mi_audio_obj.source_delay)}ms]"
+        # if delay was stripped we don't need to run any logic on delay detection.
+        # stripped delay means the encoder will effectively set the delay relative
+        # to video to 0.
+        if delay_was_stripped:
+            return "DELAY 0ms"
         else:
-            if self.mi_audio_obj.delay_relative_to_video:
-                return f"[DELAY {str(self.mi_audio_obj.delay_relative_to_video)}ms]"
+            # if we have 0 delay from the container we'll try to parse it from the filename
+            if delay_relative_to_video == 0:
+                delay_from_file = parse_delay_from_file(self.file_input)
+                return f"DELAY {delay_from_file}" if delay_from_file else None
+            # use delay from the container
+            else:
+                return f"DELAY {delay_relative_to_video}ms"
 
     def _language_detection(self) -> str | None:
         """
@@ -325,30 +315,6 @@ class MediainfoParser:
                 if l_index is not None
                 else None
             )
-
-    def is_elementary_audio(self) -> bool:
-        """
-        Helper method to determine if the input is just raw audio.
-
-        Checks if count of audio streams is greater than 1 and ensures
-        there are any other tracks.
-        """
-        try:
-            general = self.mi_obj.general_tracks[0]
-            audio_streams = int(getattr(general, "count_of_audio_streams", 0) or 0)
-            if audio_streams != 1:
-                return False
-            other_tracks = sum(
-                int(getattr(general, key, 0) or 0)
-                for key in (
-                    "count_of_video_streams",
-                    "count_of_text_streams",
-                    "count_of_menu_streams",
-                )
-            )
-            return other_tracks == 0
-        except (IndexError, AttributeError, ValueError):
-            return False
 
     def _extract_source_info(self) -> str | None:
         """Extract source information from filename or MediaInfo."""
@@ -381,14 +347,6 @@ class MediainfoParser:
             return "DDP"
         elif "flac" in filename_lower:
             return "FLAC"
-
-    # def _get_channel_info(self) -> str | None:
-    #     """Get channel layout information."""
-    #     channels = self.get_channels(self.mi_audio_obj)
-
-    #     # map channel counts to common layouts
-    #     channel_map = {1: "1.0", 2: "2.0", 6: "5.1", 8: "7.1"}
-    #     return channel_map.get(channels, f"{channels}ch")
 
     @staticmethod
     def _get_lang_alpha3(lang: Any) -> str | None:
@@ -436,6 +394,23 @@ class MediainfoParser:
             values.append(int(check_other_2))
 
         return max(values)
+
+    @staticmethod
+    def _detect_relative_delay(mi_audio_obj: Track) -> int:
+        """
+        Pretty much all containers store delay in 'delay_relative_to_video' but
+        for some reason mp4 stores it in 'source_delay'. We'll attempt to get it from
+        both.
+        """
+        for field in ("delay_relative_to_video", "source_delay"):
+            val = getattr(mi_audio_obj, field, None)
+            if val is None:
+                continue
+            try:
+                return int(val)
+            except (TypeError, ValueError):
+                continue
+        return 0
 
     @staticmethod
     def get_track_by_stream_index(mi: MediaInfo, idx: int) -> Track:

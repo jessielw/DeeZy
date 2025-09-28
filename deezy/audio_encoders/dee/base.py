@@ -1,6 +1,8 @@
+import hashlib
 import json
 import os
 import random
+import re
 import shutil
 import tempfile
 import threading
@@ -10,6 +12,8 @@ from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
 from typing import Any, Generic, TypeVar
+
+import platformdirs
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
@@ -30,51 +34,26 @@ DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
 class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
     def get_delay(
         self,
-        audio_track_info: AudioTrackInfo,
         payload_delay: str | None,
-        payload_parse_elementary_delay: bool,
         file_input: Path,
     ) -> DeeDelay:
         delay_str = "0ms"
-        # if audio is raw we'll parse delay from file if it exists
-        if audio_track_info.is_elementary and payload_parse_elementary_delay:
-            parse_delay = parse_delay_from_file(file_input)
-            if parse_delay:
-                delay_str = parse_delay
+
+        # get it from the filename if one is not provided via the payload
+        if not payload_delay:
+            from_filename = parse_delay_from_file(file_input)
+            if from_filename:
+                delay_str = from_filename
+
         # if delay is provided via payload (CLI) we'll override the above
-        if payload_delay:
+        else:
             delay_str = payload_delay
+
         # generate dee delay
         delay = get_dee_delay(delay_str)
         if delay.is_delay():
             logger.debug(f"Generated delay {delay.MODE}:{delay.DELAY}.")
         return delay
-
-    def compute_template_delay_flags(
-        self,
-        audio_track_info: AudioTrackInfo,
-        delay: DeeDelay,
-        payload_parse_elementary_delay: bool,
-    ) -> tuple[bool, bool]:
-        """
-        Compute the flags used by the output template renderer related to delay handling.
-
-        Returns a tuple (ignore_delay, delay_was_stripped).
-
-        The logic mirrors the previous inline checks used across encoders:
-        ignore_delay is True only when all of the following are true:
-          - the user did NOT request parsing the elementary delay from the file
-          - the audio track is elementary
-          - a delay value was detected
-
-        delay_was_stripped is True when a delay value exists (delay.is_delay()).
-        """
-        ignore_delay = not (
-            payload_parse_elementary_delay
-            or not audio_track_info.is_elementary
-            or not delay.is_delay()
-        )
-        return ignore_delay, delay.is_delay()
 
     def get_config_based_bitrate(
         self,
@@ -207,7 +186,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 return
             return bitrate
         except Exception as e:
-            logger.warning(f"Failed to get source bitrate from config: {e}")
+            logger.debug(f"Failed to get source bitrate from config: {e}")
             return
 
     @staticmethod
@@ -343,8 +322,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         except (ValueError, TypeError):
             return DeeFPS.FPS_NOT_INDICATED
 
-    @staticmethod
-    def _get_temp_dir(file_input: Path, temp_dir: Path | None) -> Path:
+    def _get_temp_dir(self, file_input: Path, temp_dir: Path | None) -> Path:
         """
         Creates a temporary directory and returns its path. If `temp_dir` is provided,
         creates a directory with that name instead of a randomly generated one.
@@ -360,20 +338,25 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         """
         if temp_dir:
             # create job folder in user-specified temp directory
-            temp_directory = Path(tempfile.mkdtemp(dir=temp_dir))
-            if len(file_input.name) + len(str(temp_directory)) > 259:
+            temp_directory = temp_dir / self._short_unique_name(file_input)
+            file_len = len(str(temp_directory))
+            if file_len > 259:
                 raise PathTooLongError(
                     "Path provided with input file exceeds path length for DEE."
                 )
         else:
-            # create deezy parent folder in system temp if it doesn't exist
-            system_temp = Path(tempfile.gettempdir())
-            deezy_temp_base = system_temp / "deezy"
-            deezy_temp_base.mkdir(exist_ok=True)
+            # create automatic base directory
+            auto_base = Path(platformdirs.user_data_dir())
+            auto_base.mkdir(parents=True, exist_ok=True)
 
-            # create job-specific folder without deezy_ prefix
-            temp_directory = Path(tempfile.mkdtemp(dir=deezy_temp_base))
+            # create deezy base
+            deezy_base = auto_base / "deezy"
+            deezy_base.mkdir(exist_ok=True)
 
+            # generate unique short sub-directory
+            temp_directory = deezy_base / self._short_unique_name(file_input)
+
+        temp_directory.mkdir(exist_ok=True)
         return temp_directory
 
     def _adjacent_temp_dir(self, file_input: Path) -> Path:
@@ -476,9 +459,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             # atomic write via temp file in same directory
             tmp_path = None
             try:
-                import tempfile as _tmp
-
-                with _tmp.NamedTemporaryFile(
+                with tempfile.NamedTemporaryFile(
                     "w", delete=False, dir=str(metadata_path.parent), encoding="utf-8"
                 ) as fh:
                     json.dump(meta, fh)
@@ -622,3 +603,10 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 self._truehdd_sem.release()
             except ValueError:
                 pass
+
+    @staticmethod
+    def _short_unique_name(file_input: Path) -> str:
+        """Helper method to create a short and unique name with no extension."""
+        sanitized = re.sub(r"[^A-Za-z0-9_-]", "_", file_input.stem)[:20]
+        hash_prefix = hashlib.sha1(str(file_input).encode("utf-8")).hexdigest()[:8]
+        return f"{sanitized}_{hash_prefix}"

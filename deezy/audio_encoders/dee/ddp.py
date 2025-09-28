@@ -93,9 +93,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
 
         # delay
         delay = self.get_delay(
-            audio_track_info,
             self.payload.delay,
-            self.payload.parse_elementary_delay,
             file_input,
         )
 
@@ -115,16 +113,13 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             # and will be ignored if not present. Keep existing generate_output_filename
             # as the fallback to avoid changing default behavior.
             if self.payload.output_template:
-                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
-                    audio_track_info, delay, self.payload.parse_elementary_delay
-                )
                 output = mi_parser.render_output_template(
                     template=str(self.payload.output_template),
                     suffix=".ec3",
                     output_channels=str(self.payload.channels),
+                    delay_was_stripped=delay.is_delay(),
+                    delay_relative_to_video=audio_track_info.delay_relative_to_video,
                     worker_id=self.payload.worker_id,
-                    ignore_delay=ignore_delay,
-                    delay_was_stripped=delay_was_stripped,
                 )
                 # If preview-only mode is enabled, log and return the rendered
                 # path immediately so callers can display it without performing
@@ -133,12 +128,9 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                     logger.info(f"Output preview: {output}")
                     return output
             else:
-                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
-                    audio_track_info, delay, self.payload.parse_elementary_delay
-                )
                 output = mi_parser.generate_output_filename(
-                    ignore_delay,
-                    delay_was_stripped,
+                    delay_was_stripped=delay.is_delay(),
+                    delay_relative_to_video=audio_track_info.delay_relative_to_video,
                     suffix=".ec3",
                     output_channels=str(self.payload.channels),
                     worker_id=self.payload.worker_id,
@@ -152,14 +144,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         logger.debug(f"Output path {output}.")
 
         # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
-        # so users can collect all temp files in one place. If not provided, use
-        # the adjacent per-input cache folder (<parent>/<stem>_deezy).
-        user_temp_base = getattr(self.payload, "temp_dir", None)
-        if user_temp_base:
-            temp_dir = Path(user_temp_base) / f"{file_input.stem}_deezy"
-            temp_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            temp_dir = self._adjacent_temp_dir(file_input)
+        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
         logger.debug(f"Temp directory {temp_dir}.")
 
         # check disk space
@@ -201,38 +186,6 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 logger.debug("FFMPEG upmix needed from 5.0 to 5.1.")
             else:
                 logger.debug(f"FFMPEG downmix needed {ffmpeg_down_mix}.")
-
-        # file output (if an output is a defined check users extension and use their output)
-        if self.payload.file_output:
-            output = Path(self.payload.file_output)
-            if output.suffix not in (".ec3", ".eac3"):
-                raise InvalidExtensionError(
-                    "DDP output must must end with the suffix '.eac3' or '.ec3'."
-                )
-        else:
-            ignore_delay = (
-                True
-                if not (
-                    self.payload.parse_elementary_delay
-                    or not audio_track_info.is_elementary
-                    or not delay.is_delay()
-                )
-                else False
-            )
-            output = mi_parser.generate_output_filename(
-                ignore_delay,
-                delay.is_delay(),
-                suffix=".ec3",
-                output_channels=str(self.payload.channels),
-                worker_id=self.payload.worker_id,
-            )
-
-        # If a centralized batch output directory was provided and the user did not
-        # explicitly supply an output path, place final output there. This ensures
-        # an explicit --output wins over config-provided batch_output_dir.
-        if self.payload.file_output is None and self.payload.batch_output_dir:
-            output = Path(self.payload.batch_output_dir) / output.name
-        logger.debug(f"Output path {output}.")
 
         # early existence check: fail fast to avoid expensive work if the
         # destination already exists and the user didn't request overwrite.
