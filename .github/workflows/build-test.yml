@@ -18,8 +18,14 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             executable: deezy
+          - os: ubuntu-22.04-arm
+            platform: linux-arm64
+            executable: deezy
           - os: macos-latest
             platform: macos
+            executable: deezy
+          - os: macos-14
+            platform: macos-arm64
             executable: deezy
           - os: windows-latest
             platform: windows
