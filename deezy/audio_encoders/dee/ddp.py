@@ -93,9 +93,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
 
         # delay
         delay = self.get_delay(
-            audio_track_info,
             self.payload.delay,
-            self.payload.parse_elementary_delay,
             file_input,
         )
 
@@ -115,16 +113,13 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             # and will be ignored if not present. Keep existing generate_output_filename
             # as the fallback to avoid changing default behavior.
             if self.payload.output_template:
-                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
-                    audio_track_info, delay, self.payload.parse_elementary_delay
-                )
                 output = mi_parser.render_output_template(
                     template=str(self.payload.output_template),
                     suffix=".ec3",
                     output_channels=str(self.payload.channels),
+                    delay_was_stripped=delay.is_delay(),
+                    delay_relative_to_video=audio_track_info.delay_relative_to_video,
                     worker_id=self.payload.worker_id,
-                    ignore_delay=ignore_delay,
-                    delay_was_stripped=delay_was_stripped,
                 )
                 # If preview-only mode is enabled, log and return the rendered
                 # path immediately so callers can display it without performing
@@ -133,12 +128,9 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                     logger.info(f"Output preview: {output}")
                     return output
             else:
-                ignore_delay, delay_was_stripped = self.compute_template_delay_flags(
-                    audio_track_info, delay, self.payload.parse_elementary_delay
-                )
                 output = mi_parser.generate_output_filename(
-                    ignore_delay,
-                    delay_was_stripped,
+                    delay_was_stripped=delay.is_delay(),
+                    delay_relative_to_video=audio_track_info.delay_relative_to_video,
                     suffix=".ec3",
                     output_channels=str(self.payload.channels),
                     worker_id=self.payload.worker_id,

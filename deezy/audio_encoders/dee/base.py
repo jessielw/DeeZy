@@ -34,51 +34,26 @@ DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
 class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
     def get_delay(
         self,
-        audio_track_info: AudioTrackInfo,
         payload_delay: str | None,
-        payload_parse_elementary_delay: bool,
         file_input: Path,
     ) -> DeeDelay:
         delay_str = "0ms"
-        # if audio is raw we'll parse delay from file if it exists
-        if audio_track_info.is_elementary and payload_parse_elementary_delay:
-            parse_delay = parse_delay_from_file(file_input)
-            if parse_delay:
-                delay_str = parse_delay
+
+        # get it from the filename if one is not provided via the payload
+        if not payload_delay:
+            from_filename = parse_delay_from_file(file_input)
+            if from_filename:
+                delay_str = from_filename
+
         # if delay is provided via payload (CLI) we'll override the above
-        if payload_delay:
+        else:
             delay_str = payload_delay
+
         # generate dee delay
         delay = get_dee_delay(delay_str)
         if delay.is_delay():
             logger.debug(f"Generated delay {delay.MODE}:{delay.DELAY}.")
         return delay
-
-    def compute_template_delay_flags(
-        self,
-        audio_track_info: AudioTrackInfo,
-        delay: DeeDelay,
-        payload_parse_elementary_delay: bool,
-    ) -> tuple[bool, bool]:
-        """
-        Compute the flags used by the output template renderer related to delay handling.
-
-        Returns a tuple (ignore_delay, delay_was_stripped).
-
-        The logic mirrors the previous inline checks used across encoders:
-        ignore_delay is True only when all of the following are true:
-          - the user did NOT request parsing the elementary delay from the file
-          - the audio track is elementary
-          - a delay value was detected
-
-        delay_was_stripped is True when a delay value exists (delay.is_delay()).
-        """
-        ignore_delay = not (
-            not payload_parse_elementary_delay
-            or not audio_track_info.is_elementary
-            or not delay.is_delay()
-        )
-        return ignore_delay, delay.is_delay()
 
     def get_config_based_bitrate(
         self,
