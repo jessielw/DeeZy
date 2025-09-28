@@ -152,7 +152,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
                     dee_input_path = temp_dir / "atmos_meta.atmos"
                     logger.info("Reusing extracted wav from temp folder")
                 else:
-                    if self.payload.truehdd_path:
+                    if not self.payload.truehdd_path:
                         raise DependencyNotFoundError(
                             "Failed to locate truehdd, this is required for TrueHD Atmos work flows"
                         )
