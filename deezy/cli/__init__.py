@@ -124,13 +124,11 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         type=str,
         help="The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).",
     )
+    # NOTE: DEPRECATED: REMOVE <= 1.4.0
     encode_group.add_argument(
         "--parse-elementary-delay",
         action="store_true",
-        help=(
-            "When input is an elementary (demuxed) stream, parse any delay in the "
-            "filename and reset it to zero."
-        ),
+        help=argparse.SUPPRESS,
     )
     encode_group.add_argument(
         "--keep-temp",
@@ -856,6 +854,13 @@ def cli_parser() -> None:
     # apply default bitrates for encoding commands
     if args.sub_command == "encode" and hasattr(args, "format_command"):
         apply_default_bitrate(args, config_manager)
+        # check for deprecated commands
+        # NOTE: DEPRECATED: REMOVE <= 1.4.0
+        if args.parse_elementary_delay:
+            logger.warning(
+                f"Argument '--parse-elementary-delay' is deprecated and will be removed in 1.4.0. "
+                "This is no longer needed and everything is handled automatically."
+            )
     dependencies = handle_dependencies(args, config_manager)
     file_inputs = handle_file_inputs(args)
 
