@@ -168,6 +168,13 @@ jobs:
             --clobber || echo "Warning: linux x64 bundle not found or upload failed"
           echo "✅ Linux x64 Bundle ZIP uploaded"
 
+          echo "=== Uploading Linux arm64 Bundle ZIP ==="
+          gh release upload "$RELEASE_TAG" \
+            ./bundle-deezy-linux-arm64/bundle-deezy-linux-arm64.zip \
+            --repo ${{ github.repository }} \
+            --clobber || echo "Warning: linux arm64 bundle not found or upload failed"
+          echo "✅ Linux arm64 Bundle ZIP uploaded"
+
           echo "=== Uploading macOS x64 ZIP ==="
           gh release upload "$RELEASE_TAG" \
             ./deezy-macos-x64/deezy-macos-x64.zip \
