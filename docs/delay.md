@@ -17,6 +17,6 @@ If DeeZy strips the delay it will output **DELAY 0ms** to the output file name _
 
 !!!notes
 
-- Filename modifications will only happen for **automatically** generated names via the template or by the user providing no output or template at all. Filename modifications will **not** happen if a user explicitly sets the filename.
+- Filename modifications will only happen for **automatically** generated names via the template or by the user providing no output. Filename modifications will **not** happen if a user explicitly sets the filename.
 - Delay detection is always ran.
 - Priority is **CLI** > **container** > **filename**.
