@@ -144,7 +144,13 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         logger.debug(f"Output path {output}.")
 
         # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
-        temp_dir = self._get_temp_dir(file_input, self.payload.temp_dir)
+        track_label = f"t{self.payload.track_index.index}"
+        temp_dir = self._get_temp_dir(
+            file_input,
+            self.payload.temp_dir,
+            track_label=track_label,
+            keep_temp=self.payload.keep_temp,
+        )
         logger.debug(f"Temp directory {temp_dir}.")
 
         # check disk space

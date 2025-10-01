@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Temp directories are now unique for each run as long as `--keep-temp/--reuse-temp-files` are not used. This allows multiple DeeZy processes to work on a single file and even single track channels without colliding and attempting to clean up the working folders of other jobs.
+  - If `--keep-temp/--reuse-temp-files` is used the behavior is the same as before to maintain reuse/cache abilities.
+
 ## [1.3.5] - 2025-09-28
 
 ### Fixed

@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import threading
 import time
+import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import Enum
@@ -322,7 +323,13 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         except (ValueError, TypeError):
             return DeeFPS.FPS_NOT_INDICATED
 
-    def _get_temp_dir(self, file_input: Path, temp_dir: Path | None) -> Path:
+    def _get_temp_dir(
+        self,
+        file_input: Path,
+        temp_dir: Path | None,
+        track_label: str | None = None,
+        keep_temp: bool = False,
+    ) -> Path:
         """
         Creates a temporary directory and returns its path. If `temp_dir` is provided,
         creates a directory with that name instead of a randomly generated one.
@@ -336,9 +343,36 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         Returns:
             Path: Path object representing the path to the temporary directory.
         """
+        # build a short, deterministic per-file base name
+        base_name = self._short_unique_name(file_input)
+
+        # sanitize track label for path safety (short to avoid long paths)
+        safe_label = None
+        if track_label:
+            try:
+                safe_label = re.sub(r"[^A-Za-z0-9_-]", "_", str(track_label))[:8]
+            except Exception:
+                safe_label = None
+
+        # choose name: if keep_temp is requested, include the track label so the
+        # directory is stable per-track and can be reused/cleaned easily. If
+        # keep_temp is False, append a short random suffix to make the dir unique
+        # per run (so cleanup can remove it safely).
+        if safe_label:
+            if keep_temp:
+                dir_name = f"{base_name}_{safe_label}"
+            else:
+                dir_name = f"{base_name}_{safe_label}_{uuid.uuid4().hex[:4]}"
+        else:
+            if keep_temp:
+                dir_name = base_name
+            else:
+                dir_name = f"{base_name}_{uuid.uuid4().hex[:4]}"
+
         if temp_dir:
-            # create job folder in user-specified temp directory
-            temp_directory = temp_dir / self._short_unique_name(file_input)
+            # ensure the user-provided base exists, then create job folder
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            temp_directory = temp_dir / dir_name
             file_len = len(str(temp_directory))
             if file_len > 259:
                 raise PathTooLongError(
@@ -354,7 +388,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             deezy_base.mkdir(exist_ok=True)
 
             # generate unique short sub-directory
-            temp_directory = deezy_base / self._short_unique_name(file_input)
+            temp_directory = deezy_base / dir_name
 
         temp_directory.mkdir(exist_ok=True)
         return temp_directory
