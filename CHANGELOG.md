@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add support for output token `{opt-delay}`:
+  - If used and delay is 0 **no** delay related output will be returned.
+
 ### Changed
 
 - Temp directories are now unique for each run as long as `--keep-temp/--reuse-temp-files` are not used. This allows multiple DeeZy processes to work on a single file and even single track channels without colliding and attempting to clean up the working folders of other jobs.
