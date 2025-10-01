@@ -51,7 +51,7 @@ from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.3.5"
+__version__ = "1.3.6"
 program_name = "DeeZy"
 
 

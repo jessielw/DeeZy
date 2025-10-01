@@ -223,7 +223,7 @@ toml = [
 
 [[package]]
 name = "deezy"
-version = "1.3.5"
+version = "1.3.6"
 source = { editable = "." }
 dependencies = [
     { name = "guessit" },
