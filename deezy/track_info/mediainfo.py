@@ -260,7 +260,18 @@ class MediainfoParser:
             "channels": str(channels),
             "worker": str(worker),
             "delay": str(delay) if delay else "",
+            "opt-delay": "",
         }
+
+        # only include when delay is present and non-zero
+        try:
+            d_val = mapping.get("delay", "")
+            if d_val and not re.match(r"DELAY\s*0", d_val):
+                mapping["opt-delay"] = d_val
+            else:
+                mapping["opt-delay"] = ""
+        except Exception:
+            mapping["opt-delay"] = ""
 
         rendered = template
         for key, val in mapping.items():

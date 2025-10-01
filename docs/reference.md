@@ -9,6 +9,6 @@ Batch summary JSON (top-level keys)
 
 Output template tokens
 
-- `{title}`, `{year}`, `{stem}`, `{source}`, `{lang}`, `{channels}`, `{worker}`, `{delay}`
+- `{title}`, `{year}`, `{stem}`, `{source}`, `{lang}`, `{channels}`, `{worker}`, `{delay}`, `{opt-delay}`
 
 For a full CLI reference, run `deezy encode --help` or `deezy --help` locally to see up-to-date options.

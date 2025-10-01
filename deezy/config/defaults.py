@@ -52,7 +52,7 @@ batch_summary_output = false
 # When set, encoded outputs will be placed into this directory
 batch_output_dir = ""
 # Default output filename template. Leave empty to use automatic naming.
-# Supported tokens: {title},{year},{stem},{source},{lang},{channels},{worker},{delay}
+# Supported tokens: {title},{year},{stem},{source},{lang},{channels},{worker},{delay},{opt-delay}
 output_template = ""
 # Default maximum parallel jobs for batch processing
 max_parallel = 1
