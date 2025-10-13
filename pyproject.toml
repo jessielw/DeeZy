@@ -12,6 +12,7 @@ dependencies = [
     "rich>=14.1.0",
     "oslex2>=0.1.5",
     "guessit>=3.8.0",
+    "unidecode>=1.4.0",
 ]
 authors = [{ name = "jessielw" }]
 license = { file = "LICENSE" }
