@@ -13,6 +13,7 @@ from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
+from deezy.utils.utils import clean_string
 
 
 class DeeJSONGenerator:
@@ -244,7 +245,8 @@ class DeeJSONGenerator:
         if not json_base:
             raise ValueError("Missing or invalid json base")
         file_out = (
-            self.output_dir / f"{self.output_file_path.stem}.{self.codec_format}.json"
+            self.output_dir
+            / f"{clean_string(self.output_file_path.stem)}.{self.codec_format}.json"
         )
         with open(file_out, "w") as json_file:
             json.dump(json_base, json_file, indent=2)
