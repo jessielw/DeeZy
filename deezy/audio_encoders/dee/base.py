@@ -23,7 +23,7 @@ from deezy.enums.channel_count import ChannelCount
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.shared import DeeDelay, DeeFPS, TrackType
 from deezy.exceptions import OutputExistsError, PathTooLongError
-from deezy.payloads.shared import ChannelBitrates
+from deezy.payloads.shared import ChannelBitrates, CorePayload
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
 from deezy.track_info.utils import parse_delay_from_file
@@ -33,6 +33,47 @@ DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
 
 
 class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
+    __slots__ = ("payload", "temp_dir")
+
+    def __init__(self, payload: CorePayload) -> None:
+        super().__init__()
+        self.payload = payload
+        self.temp_dir: Path | None = None
+
+    def encode(self) -> Path:
+        """
+        Generic encode wrapper that calls the concrete `_encode()` implementation
+        and ensures best-effort cleanup of any registered temp directory.
+
+        Cleanup will be skipped when the payload requests `keep_temp` or when
+        `reuse_temp_files` is enabled. Any exception raised during cleanup is
+        logged and swallowed so it does not hide the original error.
+        """
+        try:
+            return self._encode()
+        finally:
+            if not getattr(self.payload, "keep_temp", False) and (
+                self.temp_dir and self.temp_dir.exists()
+            ):
+                try:
+                    logger.debug(f"Cleaning temp directory ({self.temp_dir}).")
+                    self._clean_temp(self.temp_dir, keep_temp=False)
+                    logger.debug("Temp directory cleaned.")
+                except Exception as cleanup_exc:
+                    logger.warning(
+                        f"Cleaning temp dir failed ({self.temp_dir}): {cleanup_exc}"
+                    )
+
+    def _encode(self) -> Path:
+        """Default fallback for `_encode` used by tests and legacy code.
+
+        Concrete encoders should override this method. The default implementation
+        raises NotImplementedError to indicate the method must be provided for
+        real encoders, but keeps the class instantiable for lightweight tests
+        that don't exercise encoding.
+        """
+        raise NotImplementedError("_encode must be implemented by concrete encoder")
+
     def get_delay(
         self,
         payload_delay: str | None,
