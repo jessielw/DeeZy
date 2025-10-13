@@ -1,5 +1,8 @@
+import re
 import sys
 from pathlib import Path
+
+from unidecode import unidecode
 
 
 class PrintSameLine:
@@ -20,6 +23,12 @@ class PrintSameLine:
         """Clear the current progress line"""
         print(" " * len(self.last_message), end="\r", flush=True)
         self.last_message = ""
+
+
+def clean_string(s: str) -> str:
+    """Clean strings to remove any special characters/non word characters and return it."""
+    s = unidecode(s)
+    return re.sub(r"[^A-Za-z0-9]", "", s)
 
 
 def get_working_dir() -> tuple[Path, bool]:
