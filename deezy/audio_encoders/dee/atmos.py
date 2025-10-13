@@ -20,7 +20,7 @@ from deezy.utils.logger import logger
 
 class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
     """Atmos Encoder."""
-    
+
     __slots__ = ()
 
     def __init__(self, payload: AtmosPayload):
