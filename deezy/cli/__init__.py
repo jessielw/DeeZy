@@ -1005,6 +1005,27 @@ def execute_encode_command(
     """Execute encoding commands."""
     max_parallel = getattr(args, "max_parallel", 1)
     batch_output_enabled = getattr(args, "batch_summary_output", False)
+
+    # get temp_dir from config if exists (CLI arg > config default > automatic)
+    temp_dir_arg = getattr(args, "temp_dir", None)
+    config_temp_dir = None
+    if config_manager is not None:
+        config_temp_dir = config_manager.get_config_default("temp_dir")
+
+    temp_dir = None
+    if temp_dir_arg:
+        temp_dir = Path(temp_dir_arg)
+    elif config_temp_dir:
+        temp_dir = Path(config_temp_dir)
+    if temp_dir:
+        try:
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            setattr(args, "temp_dir", str(temp_dir))
+        except Exception as temp_dir_e:
+            logger.warning(
+                f"Failed to create temp directory at {temp_dir} ({temp_dir_e})."
+            )
+
     # centralized work directories: precedence CLI arg > config default > WORKING_DIRECTORY/deezy_work
     working_dir_arg = getattr(args, "working_dir", None)
     config_working_dir = None

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Temp files are now deleted on broken jobs _(as long as `--keep-temp` or `--reuse-temp-files` are not used)_.
 - Remove non word characters and unicode characters for temp paths to prevent processing errors with DEE.
+- `temp_dir` not being pulled from config.
 
 ### Removed
 
