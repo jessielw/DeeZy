@@ -18,14 +18,14 @@ from deezy.utils.logger import logger
 class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
     """Dolby Digital Encoder."""
 
-    __slots__ = ("payload",)
+    __slots__ = ()
 
     def __init__(self, payload: DDPayload):
-        super().__init__()
-        self.payload = payload
+        super().__init__(payload)
+        self.payload: DDPayload
         logger.debug("Starting DDEncoder.")
 
-    def encode(self):
+    def _encode(self) -> Path:
         """Handles converting everything needed for DEE."""
         # file input
         file_input = Path(self.payload.file_input)
@@ -138,18 +138,18 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         # prefer per-track stable temp dir when keep_temp is requested; otherwise
         # create a unique per-run temp dir (short random suffix)
         track_label = f"t{self.payload.track_index.index}"
-        temp_dir = self._get_temp_dir(
+        self._temp_dir = self._get_temp_dir(
             file_input,
             self.payload.temp_dir,
             track_label=track_label,
             keep_temp=self.payload.keep_temp,
         )
-        logger.debug(f"Temp directory {temp_dir}.")
+        logger.debug(f"Temp directory {self._temp_dir}.")
 
         # check disk space
         self._check_disk_space(
             input_file_path=file_input,
-            drive_path=temp_dir,
+            drive_path=self._temp_dir,
             recommended_free_space=audio_track_info.recommended_free_space,
         )
 
@@ -203,7 +203,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             ffmpeg_down_mix=ffmpeg_down_mix,
             channels=self.payload.channels,
             stereo_down_mix=self.payload.stereo_mix,
-            output_dir=temp_dir,
+            output_dir=self._temp_dir,
             wav_file_name=wav_file_name,
             allow_50_to_51_upmix=allow_50_to_51_upmix,
         )
@@ -215,7 +215,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         self._acquire_ffmpeg()
         # reuse-temp-files support: check metadata.json in adjacent temp dir
         reuse_used = False
-        metadata_path = self._metadata_path_for_output(temp_dir, output)
+        metadata_path = self._metadata_path_for_output(self._temp_dir, output)
         # canonical signature for FFmpeg extraction is the exact command string
         signature = " ".join(map(str, ffmpeg_cmd))
         try:
@@ -225,7 +225,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
                     str(CodecFormat.DD),
                     signature,
                     wav_file_name,
-                    temp_dir,
+                    self._temp_dir,
                 ):
                     logger.info("Reusing extracted wav from adjacent temp folder")
                     reuse_used = True
@@ -267,9 +267,9 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
 
         # generate JSON
         json_generator = DeeJSONGenerator(
-            input_file_path=temp_dir / wav_file_name,
+            input_file_path=self._temp_dir / wav_file_name,
             output_file_path=output,
-            output_dir=temp_dir,
+            output_dir=self._temp_dir,
             codec_format=CodecFormat.DD,
         )
         json_path = json_generator.dd_json(
@@ -282,7 +282,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             bitrate=runtime_bitrate,
             fps=fps,
             delay=delay,
-            temp_dir=temp_dir,
+            temp_dir=self._temp_dir,
             dd_mode=DDEncodingMode.DD,
         )
         logger.debug(f"{json_path=}.")
@@ -307,12 +307,6 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         finally:
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
-
-        # delete temp folder and all files if enabled
-        if not self.payload.keep_temp:
-            logger.debug(f"Cleaning temp directory ({temp_dir}).")
-            self._clean_temp(temp_dir, self.payload.keep_temp)
-            logger.debug("Temp directory cleaned.")
 
         # return path
         if output.is_file():

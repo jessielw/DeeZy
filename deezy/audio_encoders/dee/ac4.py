@@ -23,14 +23,14 @@ from deezy.utils.logger import logger
 class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
     """AC4 Encoder."""
 
-    __slots__ = ("payload",)
+    __slots__ = ()
 
     def __init__(self, payload: Ac4Payload):
-        super().__init__()
-        self.payload = payload
+        super().__init__(payload)
+        self.payload: Ac4Payload
         logger.debug("Starting Ac4 Encoder.")
 
-    def encode(self):
+    def _encode(self) -> Path:
         """Handles converting everything needed for DEE."""
         # file input
         file_input = Path(self.payload.file_input)
@@ -116,18 +116,18 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
 
         # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
         track_label = f"t{self.payload.track_index.index}"
-        temp_dir = self._get_temp_dir(
+        self._temp_dir = self._get_temp_dir(
             file_input,
             self.payload.temp_dir,
             track_label=track_label,
             keep_temp=self.payload.keep_temp,
         )
-        logger.debug(f"Temp directory {temp_dir}.")
+        logger.debug(f"Temp directory {self._temp_dir}.")
 
         # check disk space
         self._check_disk_space(
             input_file_path=file_input,
-            drive_path=temp_dir,
+            drive_path=self._temp_dir,
             recommended_free_space=audio_track_info.recommended_free_space,
         )
 
@@ -149,7 +149,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 truehdd_signature = (
                     f"truehdd:{self.payload.thd_warp_mode.to_truehdd_cmd()}"
                 )
-                metadata_path = self._metadata_path_for_output(temp_dir, output)
+                metadata_path = self._metadata_path_for_output(self._temp_dir, output)
                 if getattr(
                     self.payload, "reuse_temp_files", False
                 ) and self._check_reuse_signature(
@@ -157,17 +157,17 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     str(CodecFormat.AC4),
                     truehdd_signature,
                     "atmos_meta.atmos",
-                    temp_dir,
+                    self._temp_dir,
                 ):
                     logger.info("Reusing decoded atmos from temp folder")
-                    decoded_mezz_path = temp_dir / "atmos_meta.atmos"
+                    decoded_mezz_path = self._temp_dir / "atmos_meta.atmos"
                 else:
                     if not self.payload.truehdd_path:
                         raise DependencyNotFoundError(
                             "Failed to locate truehdd, this is required for atmos work flows"
                         )
                     decoded_mezz_path = decode_truehd_to_atmos(
-                        output_dir=temp_dir,
+                        output_dir=self._temp_dir,
                         file_input=self.payload.file_input,
                         track_index=self.payload.track_index,
                         ffmpeg_path=self.payload.ffmpeg_path,
@@ -205,7 +205,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 file_input=file_input,
                 track_index=self.payload.track_index,
                 sample_rate=audio_track_info.sample_rate,
-                output_dir=temp_dir,
+                output_dir=self._temp_dir,
                 wav_file_name=wav_file_name,
                 audio_channels=audio_track_info.channels,
             )
@@ -216,7 +216,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             self._maybe_jitter()
             self._acquire_ffmpeg()
             reuse_used = False
-            metadata_path = self._metadata_path_for_output(temp_dir, output)
+            metadata_path = self._metadata_path_for_output(self._temp_dir, output)
 
             try:
                 if getattr(
@@ -226,7 +226,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     str(CodecFormat.AC4),
                     " ".join(map(str, ffmpeg_cmd)),
                     wav_file_name,
-                    temp_dir,
+                    self._temp_dir,
                 ):
                     logger.info("Reusing extracted wav from temp folder")
                     reuse_used = True
@@ -258,13 +258,13 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     self._release_ffmpeg()
                 except Exception:
                     pass
-            input_file_path = Path(temp_dir / wav_file_name)
+            input_file_path = Path(self._temp_dir / wav_file_name)
 
         # generate JSON
         json_generator = DeeJSONGenerator(
             input_file_path=input_file_path,
             output_file_path=output,
-            output_dir=temp_dir,
+            output_dir=self._temp_dir,
             codec_format=CodecFormat.AC4,
         )
         json_path = json_generator.ac4_json(
@@ -272,7 +272,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             bitrate=runtime_bitrate,
             fps=fps,
             delay=delay,
-            temp_dir=temp_dir,
+            temp_dir=self._temp_dir,
             atmos_enabled=bool(
                 audio_track_info.adm_atmos_wav or audio_track_info.thd_atmos
             ),
@@ -298,12 +298,6 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         finally:
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
-
-        # delete temp folder and all files if enabled
-        if not self.payload.keep_temp:
-            logger.debug(f"Cleaning temp directory ({temp_dir}).")
-            self._clean_temp(temp_dir, self.payload.keep_temp)
-            logger.debug("Temp directory cleaned.")
 
         # return path
         if output.is_file():

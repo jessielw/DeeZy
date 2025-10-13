@@ -20,15 +20,15 @@ from deezy.utils.logger import logger
 
 class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
     """Atmos Encoder."""
-
-    __slots__ = ("payload",)
+    
+    __slots__ = ()
 
     def __init__(self, payload: AtmosPayload):
-        super().__init__()
-        self.payload = payload
+        super().__init__(payload)
+        self.payload: AtmosPayload
         logger.debug("Starting Atmos Encoder.")
 
-    def encode(self):
+    def _encode(self) -> Path:
         """Handles converting everything needed for DEE."""
         # file input
         file_input = Path(self.payload.file_input)
@@ -112,18 +112,18 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
 
         # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
         track_label = f"t{self.payload.track_index.index}"
-        temp_dir = self._get_temp_dir(
+        self._temp_dir = self._get_temp_dir(
             file_input,
             self.payload.temp_dir,
             track_label=track_label,
             keep_temp=self.payload.keep_temp,
         )
-        logger.debug(f"Temp directory {temp_dir}.")
+        logger.debug(f"Temp directory {self._temp_dir}.")
 
         # check disk space
         self._check_disk_space(
             input_file_path=file_input,
-            drive_path=temp_dir,
+            drive_path=self._temp_dir,
             recommended_free_space=audio_track_info.recommended_free_space,
         )
 
@@ -145,7 +145,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
                 truehdd_signature = (
                     f"truehdd:{self.payload.thd_warp_mode.to_truehdd_cmd()}"
                 )
-                metadata_path = self._metadata_path_for_output(temp_dir, output)
+                metadata_path = self._metadata_path_for_output(self._temp_dir, output)
                 if getattr(
                     self.payload, "reuse_temp_files", False
                 ) and self._check_reuse_signature(
@@ -153,9 +153,9 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
                     str(CodecFormat.ATMOS),
                     truehdd_signature,
                     "atmos_meta.atmos",
-                    temp_dir,
+                    self._temp_dir,
                 ):
-                    dee_input_path = temp_dir / "atmos_meta.atmos"
+                    dee_input_path = self._temp_dir / "atmos_meta.atmos"
                     logger.info("Reusing extracted wav from temp folder")
                 else:
                     if not self.payload.truehdd_path:
@@ -163,7 +163,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
                             "Failed to locate truehdd, this is required for TrueHD Atmos work flows"
                         )
                     dee_input_path = decode_truehd_to_atmos(
-                        output_dir=temp_dir,
+                        output_dir=self._temp_dir,
                         file_input=self.payload.file_input,
                         track_index=self.payload.track_index,
                         ffmpeg_path=self.payload.ffmpeg_path,
@@ -200,7 +200,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         json_generator = DeeJSONGenerator(
             input_file_path=dee_input_path,
             output_file_path=output,
-            output_dir=temp_dir,
+            output_dir=self._temp_dir,
             codec_format=CodecFormat.ATMOS,
         )
         json_path = json_generator.atmos_json(
@@ -208,7 +208,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
             bitrate=runtime_bitrate,
             fps=fps,
             delay=delay,
-            temp_dir=temp_dir,
+            temp_dir=self._temp_dir,
             atmos_mode=self.payload.atmos_mode,
         )
         logger.debug(f"{json_path=}.")
@@ -233,12 +233,6 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         finally:
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
-
-        # delete temp folder and all files if enabled
-        if not self.payload.keep_temp:
-            logger.debug(f"Cleaning temp directory ({temp_dir}).")
-            self._clean_temp(temp_dir, self.payload.keep_temp)
-            logger.debug("Temp directory cleaned.")
 
         # return path
         if output.is_file():
