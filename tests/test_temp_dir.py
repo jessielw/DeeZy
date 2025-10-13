@@ -2,6 +2,7 @@ from pathlib import Path
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.payloads.shared import ChannelBitrates
+from tests.utils.payload_helpers import generate_dummy_core_payload
 
 
 class DummyEncoder(BaseDeeAudioEncoder):
@@ -19,7 +20,7 @@ class DummyEncoder(BaseDeeAudioEncoder):
 
 
 def test_per_track_dir_stable(tmp_path: Path):
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
     file_input = tmp_path / "movie.mkv"
     file_input.write_text("x")
     base = tmp_path / "base"
@@ -32,7 +33,7 @@ def test_per_track_dir_stable(tmp_path: Path):
 
 
 def test_per_run_dir_unique(tmp_path: Path):
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
     file_input = tmp_path / "movie.mkv"
     file_input.write_text("x")
     base = tmp_path / "base"
@@ -45,7 +46,7 @@ def test_per_run_dir_unique(tmp_path: Path):
 
 
 def test_cleanup_respects_keep_flag(tmp_path: Path):
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
     file_input = tmp_path / "movie.mkv"
     file_input.write_text("x")
     base = tmp_path / "base"

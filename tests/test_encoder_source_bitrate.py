@@ -8,6 +8,7 @@ from deezy.config.manager import ConfigManager
 from deezy.enums.codec_format import CodecFormat
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.audio_track_info import AudioTrackInfo
+from tests.utils.payload_helpers import generate_dummy_core_payload
 
 
 class DummyEncoder(BaseDeeAudioEncoder[Enum]):
@@ -39,7 +40,7 @@ def test_source_bitrate_used_for_ddp():
     }
     setup_config(cfg)
 
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
     audio_info = AudioTrackInfo(
         mi_track=cast("Track", object()), channels=6, delay_relative_to_video=0
     )
@@ -62,7 +63,7 @@ def test_payload_overrides_source():
     cfg = {"default_source_bitrates": {"ddp": {"ch_6": 1536}}, "default_bitrates": {}}
     setup_config(cfg)
 
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
     audio_info = AudioTrackInfo(
         mi_track=cast("Track", object()), channels=6, delay_relative_to_video=0
     )
@@ -88,7 +89,7 @@ def test_fallback_to_format_level_when_source_missing():
     }
     setup_config(cfg)
 
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
     audio_info = AudioTrackInfo(
         mi_track=cast("Track", object()), channels=2, delay_relative_to_video=0
     )
@@ -113,7 +114,7 @@ def test_uppercase_key_fallback():
     cfg = {"default_source_bitrates": {"ddp": {"CH_6": 1536}}, "default_bitrates": {}}
     setup_config(cfg)
 
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
     audio_info = AudioTrackInfo(
         mi_track=cast("Track", object()), channels=6, delay_relative_to_video=0
     )
@@ -143,7 +144,7 @@ def test_channel_clamping_bounds():
     }
     setup_config(cfg)
 
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
 
     # source channels 0 -> clamped to 1
     audio_info_low = AudioTrackInfo(
@@ -189,7 +190,7 @@ def test_ac4_prefers_atmos_key():
     }
     setup_config(cfg)
 
-    enc = DummyEncoder()
+    enc = DummyEncoder(generate_dummy_core_payload())
     audio_info = AudioTrackInfo(
         mi_track=cast("Track", object()),
         channels=6,

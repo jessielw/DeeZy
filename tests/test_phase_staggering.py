@@ -3,6 +3,7 @@ import time
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.payloads.shared import ChannelBitrates
+from tests.utils.payload_helpers import generate_dummy_core_payload
 
 
 class DummyEncoder(BaseDeeAudioEncoder):
@@ -51,8 +52,8 @@ def test_phase_semaphores_limits():
         t = threading.Thread(
             target=_run_acquire_release,
             args=(
-                DummyEncoder()._acquire_ffmpeg,
-                DummyEncoder()._release_ffmpeg,
+                DummyEncoder(generate_dummy_core_payload())._acquire_ffmpeg,
+                DummyEncoder(generate_dummy_core_payload())._release_ffmpeg,
                 0.05,
                 seen_counter,
                 seen_max,
@@ -76,8 +77,8 @@ def test_phase_semaphores_limits():
         t = threading.Thread(
             target=_run_acquire_release,
             args=(
-                DummyEncoder()._acquire_dee,
-                DummyEncoder()._release_dee,
+                DummyEncoder(generate_dummy_core_payload())._acquire_dee,
+                DummyEncoder(generate_dummy_core_payload())._release_dee,
                 0.05,
                 seen_counter,
                 seen_max,
