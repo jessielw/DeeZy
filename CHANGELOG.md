@@ -5,11 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
--
+## [1.3.7] - 2025-10-13
 
 ### Changed
 
@@ -20,10 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Temp files are now deleted on broken jobs _(as long as `--keep-temp` or `--reuse-temp-files` are not used)_.
 - Remove non word characters and unicode characters for temp paths to prevent processing errors with DEE.
 - `temp_dir` not being pulled from config.
-
-### Removed
-
--
 
 ## [1.3.6] - 2025-10-01
 
