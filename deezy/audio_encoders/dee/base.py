@@ -52,13 +52,6 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         try:
             return self._encode()
         finally:
-            print(" DEBUG ")
-            print("in the finally")
-            print(getattr(self.payload, "keep_temp", False))
-            print(self.temp_dir)
-            if self.temp_dir:
-                print(self.temp_dir.exists())
-            print(" DEBUG ")
             if not getattr(self.payload, "keep_temp", False) and (
                 self.temp_dir and self.temp_dir.exists()
             ):
