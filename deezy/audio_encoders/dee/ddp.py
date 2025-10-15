@@ -145,18 +145,18 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
 
         # temp dir: prefer a user-provided centralized temp base (per-input subfolder)
         track_label = f"t{self.payload.track_index.index}"
-        self._temp_dir = self._get_temp_dir(
+        self.temp_dir = self._get_temp_dir(
             file_input,
             self.payload.temp_dir,
             track_label=track_label,
             keep_temp=self.payload.keep_temp,
         )
-        logger.debug(f"Temp directory {self._temp_dir}.")
+        logger.debug(f"Temp directory {self.temp_dir}.")
 
         # check disk space
         self._check_disk_space(
             input_file_path=file_input,
-            drive_path=self._temp_dir,
+            drive_path=self.temp_dir,
             recommended_free_space=audio_track_info.recommended_free_space,
         )
 
@@ -205,7 +205,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             sample_rate=audio_track_info.sample_rate,
             ffmpeg_down_mix=ffmpeg_down_mix,
             channels=self.payload.channels,
-            output_dir=self._temp_dir,
+            output_dir=self.temp_dir,
             wav_file_name=wav_file_name,
             allow_50_to_51_upmix=allow_50_to_51_upmix,
         )
@@ -217,7 +217,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         self._acquire_ffmpeg()
         reuse_used = False
         # DDP uses temp_dir in system/user temp; metadata naming still uses output stem
-        metadata_path = self._metadata_path_for_output(self._temp_dir, output)
+        metadata_path = self._metadata_path_for_output(self.temp_dir, output)
         try:
             if getattr(self.payload, "reuse_temp_files", False):
                 meta = self._read_reuse_metadata(metadata_path) or {}
@@ -226,7 +226,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 sig = " ".join(map(str, ffmpeg_cmd))
                 if enc_entry and enc_entry.get("signature") == sig:
                     recorded_file = enc_entry.get("produced_file")
-                    if recorded_file and (self._temp_dir / recorded_file).exists():
+                    if recorded_file and (self.temp_dir / recorded_file).exists():
                         logger.info("Reusing extracted wav from temp folder")
                         reuse_used = True
 
@@ -259,9 +259,9 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
 
         # generate JSON
         json_generator = DeeJSONGenerator(
-            input_file_path=self._temp_dir / wav_file_name,
+            input_file_path=self.temp_dir / wav_file_name,
             output_file_path=output,
-            output_dir=self._temp_dir,
+            output_dir=self.temp_dir,
             codec_format=format_command,
         )
         json_path = json_generator.dd_json(
@@ -270,7 +270,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             bitrate=runtime_bitrate,
             fps=fps,
             delay=delay,
-            temp_dir=self._temp_dir,
+            temp_dir=self.temp_dir,
             dd_mode=self._determine_output_mode(),
         )
         logger.debug(f"{json_path=}.")
