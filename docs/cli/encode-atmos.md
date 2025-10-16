@@ -56,7 +56,7 @@ options:
   --output, OUTPUT
        The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
   --output-template, OUTPUT_TEMPLATE
-     Optional lightweight template to control auto-generated output filenames. Supported tokens: {title},{year},{stem},{source},{lang},{channels},{worker},{delay},{opt-delay}.
+     Optional lightweight template to control auto-generated output filenames. Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay}.
   --output-preview
        When set, render and show template-based filenames but do not write outputs. Useful to validate templates before running batch jobs.
   --max-parallel, MAX_PARALLEL
