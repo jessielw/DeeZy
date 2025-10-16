@@ -11,6 +11,7 @@ from deezy.exceptions import MediaInfoError
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
 from deezy.track_info.utils import (
+    clean_title,
     parse_delay_from_file,
     strip_delay_from_file_string_and_cleanse,
 )
@@ -230,7 +231,8 @@ class MediainfoParser:
         """
         Render an output filename from a lightweight template using available metadata.
 
-        Supported tokens: {title}, {year}, {stem}, {source}, {lang}, {channels}, {worker}, {delay}
+        Supported tokens: {title}, {year}, {stem}, {stem-cleaned}, {source}, {lang}, {channels}, {worker},
+        {delay}, and {opt-delay}.
 
         The method is intentionally small and forgiving: missing tokens are replaced with
         empty strings and values are sanitized for filesystem use. This does not replace the
@@ -240,6 +242,9 @@ class MediainfoParser:
 
         # token values with sensible fallbacks
         stem = self.file_input.stem
+        stem_cleaned = (
+            clean_title(self.file_input.stem) if ("{stem-cleaned}" in template) else ""
+        )
         title = self.guess.get("title") or stem
         year = str(self.guess.get("year")) if self.guess.get("year") else ""
         source = self._extract_source_info() or ""
@@ -255,6 +260,7 @@ class MediainfoParser:
             "title": str(title),
             "year": year,
             "stem": stem,
+            "stem_cleaned": stem_cleaned,
             "source": str(source),
             "lang": str(lang),
             "channels": str(channels),
@@ -275,7 +281,11 @@ class MediainfoParser:
 
         rendered = template
         for key, val in mapping.items():
-            rendered = rendered.replace(f"{{{key}}}", val)
+            # ignore stem if stem cleaned is used
+            if key == "stem" and mapping["stem_cleaned"]:
+                rendered.replace(f"{{{key}}}", "")
+            else:
+                rendered = rendered.replace(f"{{{key}}}", val)
 
         # sanitize filename: remove problematic characters and collapse whitespace
         rendered = re.sub(r"[<>:\"/\\|?*]", "_", rendered)
