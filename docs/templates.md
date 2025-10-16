@@ -28,7 +28,6 @@ The `{stem-cleaned}` token is a cleaned version of the input file stem and is us
 Notes:
 
 - `{stem}` is ignored if `{stem-cleaned}` is used in the same template.
-- Words that are often actual titles such as `surround` or `multichannel` are preserved by default. If you want them removed as metadata, edit your configuration or supply a custom cleaner.
 - Leading numeric track numbers are preserved; this keeps filenames like `01` or `03 - Something` meaningful when the numeric portion is the only useful label.
 
 Examples (input stem -> `{stem-cleaned}`):
