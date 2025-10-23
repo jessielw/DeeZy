@@ -14,6 +14,19 @@ _`opt-delay` will return nothing if delay is equal to 0._
 
 Use `--output-preview` to render a template without running the job.
 
+## `{stem}` token
+
+Automatically removes any type of **DELAY Nms/s** from the filename when used.
+
+**Example Input:**
+`Migration Some Random Stuff DELAY 1006ms.flac`
+
+**Example Command:**
+`deezy encode dd --output-template "{stem} {opt-delay}"`
+
+**Example Output:**
+`Migration Some Random Stuff.flac`
+
 ## `{stem-cleaned}` token
 
 The `{stem-cleaned}` token is a cleaned version of the input file stem and is useful when you want a tidy, human-readable piece of the original filename without common metadata. The cleaner performs the following steps (in roughly this order):

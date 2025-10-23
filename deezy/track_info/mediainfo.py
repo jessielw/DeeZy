@@ -241,7 +241,7 @@ class MediainfoParser:
         base_dir = self.file_input.parent
 
         # token values with sensible fallbacks
-        stem = self.file_input.stem
+        stem = strip_delay_from_file_string_and_cleanse(self.file_input).stem
         stem_cleaned = (
             clean_title(self.file_input.stem) if ("{stem-cleaned}" in template) else ""
         )
