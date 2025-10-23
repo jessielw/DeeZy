@@ -25,7 +25,7 @@ Automatically removes any type of **DELAY Nms/s** from the filename when used.
 `deezy encode dd --output-template "{stem} {opt-delay}"`
 
 **Example Output:**
-`Migration Some Random Stuff.flac`
+`Migration Some Random Stuff.ac3`
 
 ## `{stem-cleaned}` token
 
