@@ -191,7 +191,7 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             if allow_50_to_51_upmix:
                 logger.debug("FFMPEG upmix needed from 5.0 to 5.1.")
             else:
-                logger.debug(f"FFMPEG downmix needed {ffmpeg_down_mix}.")
+                logger.debug(f"FFMPEG downmix needed mix={ffmpeg_down_mix}.")
 
         # early existence check: fail fast to avoid expensive work if the
         # destination already exists and the user didn't request overwrite.
