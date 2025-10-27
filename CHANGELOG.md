@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **DPLII** for encoder **DD** job was failing.
+- Output token `{stem}` was removing additional characters besides DELAY.
 
 ## [1.3.10] - 2025-10-23
 
