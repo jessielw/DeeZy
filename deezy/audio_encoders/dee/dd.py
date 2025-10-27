@@ -170,11 +170,17 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         if (
             # if downmix is off and not in dee's allowed inputs
             (down_mix_config == "off" and not dee_allowed_input)
-            # if desired channels is 2 and the user wants DPLII (DD doesn't support this)
-            or allow_50_to_51_upmix
+            or
+            # if downmix is off and desired channels is 2 and the user wants DPLII (DD doesn't support this)
+            (
+                down_mix_config == "off"
+                and self.payload.channels is DolbyDigitalChannels.STEREO
+                and self.payload.stereo_mix is StereoDownmix.DPLII
+            )
             # if source channels is 5.0 and the user wants to up-mix to 5.1
             or (
-                audio_track_info.channels == 5
+                allow_50_to_51_upmix
+                and audio_track_info.channels == 5
                 and self.payload.channels is DolbyDigitalChannels.SURROUND
                 and self.payload.upmix_50_to_51
             )
@@ -184,7 +190,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             if allow_50_to_51_upmix:
                 logger.debug("FFMPEG upmix needed from 5.0 to 5.1.")
             else:
-                logger.debug(f"FFMPEG downmix needed {ffmpeg_down_mix}.")
+                logger.debug(f"FFMPEG downmix needed mix={ffmpeg_down_mix}.")
 
         # early existence check: fail fast to avoid expensive work if the
         # destination already exists and the user didn't request overwrite.
