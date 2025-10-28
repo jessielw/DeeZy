@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- When using progress bars dialnorm is now displayed:
+- When using progress bars dialnorm is now displayed (dd, ddp, and atmos):
   - If the user does not provide a `--custom-dialnorm` then the **measured** dialnorm is displayed on DEE step 2 measure at the end of the **measure** progress bar.
   - If the user does provide `--custom-dialnorm` then the custom dialnorm is appended to the end of the **encode** progress bar.
 
