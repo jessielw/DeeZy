@@ -85,6 +85,10 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
             progress_state["encode_task_id"] = progress_state["progress"].add_task(
                 handler.encode_task_desc, total=100
             )
+            # attach custom dialnorm to encode task if provided
+            handler.attach_custom_dialnorm_to_encode(
+                progress_state["progress"], progress_state["encode_task_id"]
+            )
 
         if progress_state["progress"] and progress_state["encode_task_id"] is not None:
             progress_state["progress"].update(
@@ -117,7 +121,10 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
 
 
 def process_dee_job(
-    cmd: list, step_info: dict | None = None, no_progress_bars: bool = False
+    cmd: list,
+    step_info: dict | None = None,
+    no_progress_bars: bool = False,
+    custom_dialnorm: int = 0,
 ) -> bool:
     """Processes file with DEE while generating progress and enhanced error reporting.
 
@@ -125,6 +132,7 @@ def process_dee_job(
         cmd (list): Base DEE cmd list.
         step_info (dict | None): Optional step context with 'current', 'total', 'name' keys.
         no_progress_bars (bool): Disable progress bars.
+        custom_dialnorm (int): If user supplies custom dialnorm (0 is off).
     """
     # inject verbosity level into cmd list depending on logging level
     logger_level = logger.getEffectiveLevel()
@@ -135,7 +143,9 @@ def process_dee_job(
         cmd.insert(inject, "info")
 
     # setup DEE progress handler
-    handler = DEEProgressHandler(logger_level, no_progress_bars, step_info)
+    handler = DEEProgressHandler(
+        logger_level, no_progress_bars, step_info, custom_dialnorm
+    )
 
     # collect all output for error parsing
     output_lines = []
@@ -163,6 +173,18 @@ def process_dee_job(
 
                     # process progress information
                     _process_dee_progress_line(line_stripped, handler, progress_state)
+                    # ensure the measured dialnorm (if parsed) is appended to the progress
+                    # task fields so the trailing DialnormColumn can render it. This call is idempotent.
+                    try:
+                        handler.append_measured_dialnorm(
+                            progress_state.get("progress"),
+                            progress_state.get("measure_task_id"),
+                        )
+                    except Exception:
+                        # don't allow UI update failures to break DEE processing
+                        logger.debug(
+                            "Failed to append measured dialnorm to progress UI"
+                        )
 
             # ensure completion for both phases
             if progress_state["progress"]:
@@ -176,6 +198,10 @@ def process_dee_job(
                     ].add_task(handler.encode_task_desc, total=100)
                     progress_state["progress"].update(
                         progress_state["encode_task_id"], completed=100
+                    )
+                    # attach custom dialnorm to encode task if provided
+                    handler.attach_custom_dialnorm_to_encode(
+                        progress_state["progress"], progress_state["encode_task_id"]
                     )
                     progress_state["progress"].refresh()
                 elif (

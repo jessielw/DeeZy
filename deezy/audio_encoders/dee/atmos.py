@@ -229,6 +229,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
                 cmd=dee_cmd,
                 step_info=step_info,
                 no_progress_bars=self.payload.no_progress_bars,
+                custom_dialnorm=self.payload.custom_dialnorm,
             )
         finally:
             self._release_dee()

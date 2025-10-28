@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added new **token** for **output_template** `{stem-cleaned}`.
   - Returns a cleaned version of the input file stem and is useful when you want a tidy, human-readable piece of the original filename without common metadata (see documentation for more details).
+- When using progress bars dialnorm is now displayed:
+  - If the user does not provide a `--custom-dialnorm` then the **measured** dialnorm is displayed on DEE step 2 measure at the end of the **measure** progress bar.
+  - If the user does provide `--custom-dialnorm` then the custom dialnorm is appended to the end of the **encode** progress bar.
 
 ## [1.3.8] - 2025-10-15
 
