@@ -76,7 +76,7 @@ class PayloadBuilder:
         return {
             "drc_line_mode": cls.safe_get(args, "drc_line_mode", DeeDRC.FILM_LIGHT),
             "drc_rf_mode": cls.safe_get(args, "drc_rf_mode", DeeDRC.FILM_LIGHT),
-            "custom_dialnorm": str(cls.safe_get(args, "custom_dialnorm", 0)),
+            "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
         }
 
     @classmethod

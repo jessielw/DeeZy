@@ -43,7 +43,7 @@ class DolbyPayload(LoudnessPayload):
 
     drc_line_mode: DeeDRC
     drc_rf_mode: DeeDRC
-    custom_dialnorm: str
+    custom_dialnorm: int
 
 
 @dataclass(slots=True)
