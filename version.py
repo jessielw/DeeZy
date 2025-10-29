@@ -37,7 +37,7 @@ def validate_version_consistency():
         if toml_version != __version__:
             print("⚠️  WARNING: Version mismatch!")
             print(f"   pyproject.toml: {toml_version}")
-            print(f"   _version.py:    {__version__}")
+            print(f"   cli/__init__.py:    {__version__}")
             return False
         else:
             print(f"✅ Version consistency verified: {toml_version}")
