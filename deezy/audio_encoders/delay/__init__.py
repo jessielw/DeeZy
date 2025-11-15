@@ -36,7 +36,7 @@ def get_dee_delay(delay: str, compensate: bool = True) -> DeeDelay:
     get_delay = convert_delay_ms(delay)
 
     # get only numbers from delay
-    s_delay = re.search(r"\d+\.?\d*", get_delay)
+    s_delay = re.search(r"-?\d+\.?\d*", get_delay)
 
     # if numbers was detected
     if s_delay:
