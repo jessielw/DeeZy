@@ -62,19 +62,22 @@ def case_insensitive_enum(enum_class):
 
     def converter(value):
         v = value.strip()
-        try:
-            if v.isdigit():
-                return enum_class(int(v))
 
-            # direct name lookup (case-insensitive) e.g. "SURROUND"
+        # first try name
+        try:
             members = enum_class.__members__
             key = v.upper()
             if key in members:
                 return enum_class[key]
+        except Exception:
+            pass
 
-            raise ArgumentTypeError(f"Invalid choice: {value}")
-        except (KeyError, ValueError, TypeError):
-            raise ArgumentTypeError(f"Invalid choice: {value}")
+        # then try value match (case-insensitive)
+        for member in enum_class:
+            if str(member.value).lower() == v.lower():
+                return member
+
+        raise ArgumentTypeError(f"Invalid choice: {value}")
 
     return converter
 
