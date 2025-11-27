@@ -63,7 +63,7 @@ def case_insensitive_enum(enum_class):
     def converter(value):
         v = value.strip()
 
-        #first try name
+        # first try name
         try:
             members = enum_class.__members__
             key = v.upper()
@@ -72,7 +72,7 @@ def case_insensitive_enum(enum_class):
         except Exception:
             pass
 
-        #then try value match (case-insensitive)
+        # then try value match (case-insensitive)
         for member in enum_class:
             if str(member.value).lower() == v.lower():
                 return member
