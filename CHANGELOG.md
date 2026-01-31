@@ -361,7 +361,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `--drc-line-mode`: Dynamic range compression settings.
     - `--drc-rf-mode`: Dynamic range compression settings.
     - `--custom-dialnorm`: Custom dialnorm (0 disables custom dialnorm).
-    - `--no-dialogue-intelligence`: Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.
+    - `--no-dialogue-intelligence`: Dialogue intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.
     - `--speech-threshold`: If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
     - `--no-low-pass-filter`: Disables low pass filter.
     - `--no-surround-3db`: Disables surround 3db attenuation.
