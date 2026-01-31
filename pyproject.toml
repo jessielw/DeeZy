@@ -60,13 +60,9 @@ include = ["deezy*"]
 testpaths = ["tests"]
 
 [project.optional-dependencies]
-dev = [
-    "ruff",
-    "pytest",
-    "pytest-cov",
-    "pyinstaller>=6.13.0",
-    "pyinstaller-hooks-contrib>=2025.1",
-]
+test = ["pytest", "pytest-cov"]
+build = ["pyinstaller>=6.13.0", "pyinstaller-hooks-contrib>=2025.1"]
+dev = ["ruff"]
 docs = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.11",
