@@ -60,15 +60,19 @@ jobs:
         with:
           version: "latest"
 
-      - name: Install dependencies
+      - name: Install test dependencies
         if: steps.should_build.outputs.should_build == 'true'
-        run: uv sync --all-extras
+        run: uv sync --extra test
 
       - name: Run tests
         if: steps.should_build.outputs.should_build == 'true'
         run: uv run pytest
         env:
           PYTHONPATH: ${{ github.workspace }}
+
+      - name: Install build dependencies
+        if: steps.should_build.outputs.should_build == 'true'
+        run: uv sync --extra build --no-dev
 
       - name: Build executable
         if: steps.should_build.outputs.should_build == 'true'

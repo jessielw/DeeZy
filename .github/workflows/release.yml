@@ -61,13 +61,16 @@ jobs:
         with:
           version: "latest"
 
-      - name: Install dependencies
-        run: uv sync --all-extras
+      - name: Install test dependencies
+        run: uv sync --extra test
 
       - name: Run tests
         run: uv run pytest
         env:
           PYTHONPATH: ${{ github.workspace }}
+
+      - name: Install build dependencies
+        run: uv sync --extra build --no-dev
 
       - name: Build executable
         run: uv run python build_executables.py
