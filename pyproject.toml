@@ -1,6 +1,6 @@
 [project]
 name = "deezy"
-version = "1.3.13"
+version = "1.3.14"
 description = "Dolby Encoding Engine Wrapper"
 readme = "README.md"
 requires-python = ">=3.9,<3.14"
@@ -10,7 +10,7 @@ dependencies = [
     "platformdirs>=2.6.0",
     "typing-extensions>=4.15.0",
     "rich>=14.1.0",
-    "oslex2>=0.1.5",
+    "oslex2>=1.0.0",
     "guessit>=3.8.0",
     "unidecode>=1.4.0",
 ]
@@ -59,7 +59,7 @@ include = ["deezy*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "ruff",
     "pytest",

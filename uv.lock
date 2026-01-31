@@ -236,7 +236,7 @@ dependencies = [
     { name = "unidecode" },
 ]
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 dev = [
     { name = "pyinstaller" },
     { name = "pyinstaller-hooks-contrib" },
@@ -253,28 +253,23 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "guessit", specifier = ">=3.8.0" },
-    { name = "oslex2", specifier = ">=0.1.5" },
+    { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.1" },
+    { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.6.11" },
+    { name = "oslex2", specifier = ">=1.0.0" },
     { name = "platformdirs", specifier = ">=2.6.0" },
+    { name = "pyinstaller", marker = "extra == 'dev'", specifier = ">=6.13.0" },
+    { name = "pyinstaller-hooks-contrib", marker = "extra == 'dev'", specifier = ">=2025.1" },
+    { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = ">=10.16.1" },
     { name = "pymediainfo" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "rich", specifier = ">=14.1.0" },
+    { name = "ruff", marker = "extra == 'dev'" },
     { name = "tomlkit" },
     { name = "typing-extensions", specifier = ">=4.15.0" },
     { name = "unidecode", specifier = ">=1.4.0" },
 ]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pyinstaller", specifier = ">=6.13.0" },
-    { name = "pyinstaller-hooks-contrib", specifier = ">=2025.1" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-docs = [
-    { name = "mkdocs", specifier = ">=1.6.1" },
-    { name = "mkdocs-material", specifier = ">=9.6.11" },
-    { name = "pymdown-extensions", specifier = ">=10.16.1" },
-]
+provides-extras = ["dev", "docs"]
 
 [[package]]
 name = "exceptiongroup"
@@ -579,14 +574,14 @@ wheels = [
 
 [[package]]
 name = "oslex2"
-version = "0.1.5"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mslex" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2e/a2/3c7d8b6664b8de905783964541b5e72c29e8432daa886c017749f8472514/oslex2-0.1.5.tar.gz", hash = "sha256:276434abf064a72590cf7e748646e75a6cfcc78b264a5d738fe22974dbd0d1a8", size = 4455, upload-time = "2024-03-28T17:12:37.87Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/5d/faf8eff4efea3e55ce6cc597ab777af4c9d5a5b3f21dba3224729a7e8bc1/oslex2-1.0.0.tar.gz", hash = "sha256:f85ade0d6594e77b4388105c45de7880c7ec57ef018a6ff80088cd392bcd1876", size = 16437, upload-time = "2025-09-17T16:20:58.544Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/ee/ac46497915dd7b8b24d3ac7dd55d54da751f41f809555e385e15b752f99e/oslex2-0.1.5-py3-none-any.whl", hash = "sha256:b877c8558b30afbf55f497e9d3c7b739cdf80afa372ff133e1eddf2421689fc0", size = 3606, upload-time = "2024-03-28T17:12:36.684Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/33/671e0118ee490cd4be9e9674d94aa483dccb66ba37b8a440ca1951b4e2ef/oslex2-1.0.0-py3-none-any.whl", hash = "sha256:e2db57a36da65b83b482ff140f7637a02249fc324ba23189b1ed64bd7b928151", size = 3479, upload-time = "2025-09-17T16:20:57.556Z" },
 ]
 
 [[package]]

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.14] - 2026-01-30
+
+### Fixed
+
+- CLI help string and docs for `--no-dialogue-intelligence`.
+
+### Changed
+
+- Updated oslex2.
+
 ## [1.3.13] - 2025-11-27
 
 ### Fixed
@@ -106,7 +116,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Config:
-
   - **AC4** now supports default bitrate by source channel with an optional **atmos** suffix.
 
     Example:
@@ -165,23 +174,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized atomic move helper in the DEE encoder base class to perform safe, fast output file placement. Uses an atomic replace when possible and falls back to a cross-filesystem-safe move when needed.
 - DRY refactor: replaced per-encoder unlink+move logic with the centralized helper across DD, DDP, Atmos and AC4 encoders. This unifies overwrite semantics and reduces duplicated code.
 - Automatic filename generation has been greatly improved:
-
   - Will check for common attributes via the mediainfo/input name and append that to the automatically generated file name.
   - Detects name, year, season, episode and adds them to the name when generating a new name.
 
 - CLI:
-
   - `--temp-dir` - When supplied, encoders now create a predictable per-input subfolder under the provided base directory: `<temp-dir>/<input_stem>_deezy`. This centralizes temporary artifacts while keeping them isolated per-source for safe reuse and selective cleanup.
   - `--reuse-temp-files` - Opt-in flag that enables reusing extractor outputs (FFmpeg / TrueHDD) when the extractor command signature matches a previously saved extraction. When `--reuse-temp-files` is used the encoder registers metadata about the extraction so subsequent runs can reuse it. This flag implies `--keep-temp` (temp files are preserved when reuse is requested).
 
 - Encoders / Internal:
-
   - Temporary artifact filenames are now codec-scoped (for example: `{output_stem}.DD.wav` or `{output_stem}.DDP_BLURAY.wav`) to avoid cross-variant collisions when a shared temp folder is used.
   - Per-encoder metadata is stored in a single metadata file inside the temp folder and now uses an `"encoders"` map to keep signatures and produced filenames isolated per encoder/format.
   - Metadata writes use atomic same-directory replace semantics (write a tmp file then os.replace) to avoid partially written files.
 
 - Concurrency & phase limits:
-
   - New CLI flags: `--limit-ffmpeg`, `--limit-dee`, `--limit-truehdd` allow fine-tuning concurrency for each heavy phase.
   - If per-phase flags are not provided, each phase defaults to the value of `--max-parallel`.
   - Exception: the DEE phase defaults to a conservative fraction of `--max-parallel` (roughly half) to avoid saturating CPU/IO on slower machines; users can override with `--limit-dee`.
@@ -194,7 +199,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Config **Breaking Change**:
-
   - `[default_bitrates.ddp_bluray]` needs to be renamed to `[default_bitrates.ddp-bluray]` to match the codec properly. This will be automatic if you generate a new config, otherwise you should make this change manually if using the config.
   - Updated some of the default bitrates in the generated config.
 
