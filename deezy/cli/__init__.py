@@ -319,7 +319,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     loudness_group.add_argument(
         "--no-dialogue-intelligence",
         action="store_false",
-        help="Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.",
+        help="Dialogue Intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.",
     )
     loudness_group.add_argument(
         "--speech-threshold",

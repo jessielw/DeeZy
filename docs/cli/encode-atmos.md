@@ -90,7 +90,7 @@ options:
   --custom-dialnorm, CUSTOM_DIALNORM
        Custom dialnorm (0 disables custom dialnorm).
   --no-dialogue-intelligence
-       Dialogue Intelligence enabled. Option ignored for 1770-1 or LeqA metering mode.
+       Dialogue Intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.
   --speech-threshold, SPEECH_THRESHOLD
        [0-100] If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
   --metering-mode, {1770_1,1770_2,1770_3,1770_4,leqa}
