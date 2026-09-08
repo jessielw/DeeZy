@@ -18,6 +18,7 @@ from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.mediainfo import MediainfoParser
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
+from deezy.utils.paths import artifact_stem
 
 
 class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
@@ -131,8 +132,8 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             recommended_free_space=audio_track_info.recommended_free_space,
         )
 
-        # deterministic temp filenames based on final output stem
-        wav_file_name = f"{output.stem}.{CodecFormat.AC4}.wav"
+        # deterministic temp filenames based on the final output
+        wav_file_name = f"{artifact_stem(output)}.{CodecFormat.AC4}.wav"
         logger.debug(f"File paths: {wav_file_name=}, {output=}.")
 
         # early existence check: fail fast to avoid expensive work if the
@@ -260,12 +261,16 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                     pass
             input_file_path = Path(self.temp_dir / wav_file_name)
 
+        # DEE encodes into the temp dir; we move the result to `output` ourselves
+        dee_output = self._dee_output_path(self.temp_dir, output)
+
         # generate JSON
         json_generator = DeeJSONGenerator(
             input_file_path=input_file_path,
-            output_file_path=output,
+            output_file_path=dee_output,
             output_dir=self.temp_dir,
             codec_format=CodecFormat.AC4,
+            job_name=artifact_stem(output),
         )
         json_path = json_generator.ac4_json(
             payload=self.payload,
@@ -298,6 +303,9 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         finally:
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
+
+        # hand the finished encode over to its destination
+        self._finalize_output(dee_output, output)
 
         # return path
         if output.is_file():

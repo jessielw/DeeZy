@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Jobs failing with `ERROR: Cannot open file` when a path exceeded the Windows **260 character** limit. DEE is not long-path aware, so it reported files that were sitting right there as missing. Three changes address this:
+  - DEE now encodes into the temp directory and never sees the destination at all (see **Changed**).
+  - Temp artifacts no longer inherit the full output name (see **Changed**).
+  - Any path that is still over the limit is handed to DEE as an extended-length (`\\?\`) path.
+- `ZeroDivisionError: float division by zero` when DEE finished encoding inside a single progress interval, which made short files fail intermittently on a loaded machine.
+- Progress bars reporting **100%** for DEE measure/encode after a job had already failed. Completion is now gated on DEE's exit code.
+- Temp directory length check only measured the directory itself, so it never caught a path that was too long once a job file was added to it. It now budgets for the job file, names the offending directory, and runs before any directories are created.
+
+### Changed
+
+- DEE now encodes into the job temp directory and DeeZy moves the finished file to its destination.
+  - Every path DEE is given is one DeeZy controls the length of, so a long output directory no longer reaches it.
+  - A failed encode no longer leaves a truncated file at the destination.
+  - The move is a rename when the temp directory and the output share a volume, and a copy across volumes.
+- Temp artifact filenames (`.wav`, `.json`, `_metadata.json`) are now built from a short deterministic hash of the output instead of its full name, keeping them a fixed length regardless of how long the output is.
+  - Names remain stable across runs, but differ from previous versions, so `--reuse-temp-files` will not reuse temp folders created before this release.
+
 ## [1.3.14] - 2026-01-30
 
 ### Fixed

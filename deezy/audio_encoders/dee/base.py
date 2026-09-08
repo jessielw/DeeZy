@@ -22,12 +22,22 @@ from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.enums.channel_count import ChannelCount
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.shared import DeeDelay, DeeFPS, TrackType
-from deezy.exceptions import OutputExistsError, PathTooLongError
+from deezy.exceptions import (
+    OutputExistsError,
+    OutputFileNotFoundError,
+    PathTooLongError,
+)
 from deezy.payloads.shared import ChannelBitrates, CorePayload
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
 from deezy.track_info.utils import parse_delay_from_file
 from deezy.utils.logger import logger
+from deezy.utils.paths import (
+    MAX_ARTIFACT_NAME,
+    MAX_DEE_PATH,
+    artifact_stem,
+    long_path_str,
+)
 
 DolbyChannelType = TypeVar("DolbyChannelType", bound=Enum)
 
@@ -330,7 +340,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             "90000",
             "--verbose",
             "-j",
-            str(json_path),
+            long_path_str(json_path),
         ]
         return dee_cmd
 
@@ -374,8 +384,8 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         """
         Creates a temporary directory and returns its path. If `temp_dir` is provided,
         creates a directory with that name instead of a randomly generated one.
-        If the length of the path to the input file plus the length of `temp_dir`
-        exceeds 259 characters, raises a `PathTooLongError`.
+        If the directory is too deep to hold a job file within the path limit,
+        raises a `PathTooLongError`.
 
         Args:
             file_input (Path): Path object representing the input file.
@@ -411,27 +421,24 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                 dir_name = f"{base_name}_{uuid.uuid4().hex[:4]}"
 
         if temp_dir:
-            # ensure the user-provided base exists, then create job folder
-            temp_dir.mkdir(parents=True, exist_ok=True)
+            # job folder under the user-provided base
             temp_directory = temp_dir / dir_name
-            file_len = len(str(temp_directory))
-            if file_len > 259:
-                raise PathTooLongError(
-                    "Path provided with input file exceeds path length for DEE."
-                )
         else:
-            # create automatic base directory
-            auto_base = Path(platformdirs.user_data_dir())
-            auto_base.mkdir(parents=True, exist_ok=True)
+            # generate unique short sub-directory under the automatic base
+            temp_directory = Path(platformdirs.user_data_dir()) / "deezy" / dir_name
 
-            # create deezy base
-            deezy_base = auto_base / "deezy"
-            deezy_base.mkdir(exist_ok=True)
+        # DEE gets an extended-length path when one is too long for it, but FFMPEG
+        # and truehdd write into this directory too, so it still has to leave room
+        # for a job file inside the platform's ordinary path limit. Checked before
+        # anything is created so an unusable base doesn't litter the disk.
+        if len(str(temp_directory)) + 1 + MAX_ARTIFACT_NAME > MAX_DEE_PATH:
+            raise PathTooLongError(
+                f"Temp directory '{temp_directory}' is too deep to hold a job file "
+                f"within the {MAX_DEE_PATH} character path limit. Use a shorter "
+                "--temp-dir."
+            )
 
-            # generate unique short sub-directory
-            temp_directory = deezy_base / dir_name
-
-        temp_directory.mkdir(exist_ok=True)
+        temp_directory.mkdir(parents=True, exist_ok=True)
         return temp_directory
 
     def _adjacent_temp_dir(self, file_input: Path) -> Path:
@@ -445,7 +452,39 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
 
     def _metadata_path_for_output(self, temp_dir: Path, output: Path) -> Path:
         """Return the metadata.json path used for a given computed output."""
-        return temp_dir / f"{output.stem}_metadata.json"
+        return temp_dir / f"{artifact_stem(output)}_metadata.json"
+
+    @staticmethod
+    def _dee_output_path(temp_dir: Path, output: Path) -> Path:
+        """
+        Return the path inside `temp_dir` that DEE should encode to.
+
+        DEE never writes to the destination itself. Keeping its output in the
+        job temp directory means the only paths it is handed are ones we control
+        the length of, and it leaves nothing behind at the destination if the
+        encode dies partway through.
+        """
+        return temp_dir / f"{artifact_stem(output)}{output.suffix}"
+
+    @staticmethod
+    def _finalize_output(dee_output: Path, output: Path) -> None:
+        """Move DEE's finished encode from the temp directory to its destination."""
+        if not dee_output.is_file():
+            raise OutputFileNotFoundError(
+                f"DEE reported success but left no output at {dee_output.name}"
+            )
+
+        output.parent.mkdir(parents=True, exist_ok=True)
+        # the destination may be longer than the host can open unescaped, and
+        # overwriting was already settled by the early output-exists check
+        src, dst = long_path_str(dee_output), long_path_str(output)
+        try:
+            # atomic, and a cheap rename when temp shares a volume with the output
+            os.replace(src, dst)
+        except OSError:
+            # different volumes; copy across and drop the temp copy
+            shutil.move(src, dst)
+        logger.debug(f"Moved encode to output path {output}.")
 
     def _read_reuse_metadata(self, metadata_path: Path) -> dict | None:
         """Read metadata JSON if present. Returns dict or None on failure."""

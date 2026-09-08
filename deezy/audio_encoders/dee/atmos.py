@@ -16,6 +16,7 @@ from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.mediainfo import MediainfoParser
 from deezy.utils.logger import logger
+from deezy.utils.paths import artifact_stem
 
 
 class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
@@ -196,12 +197,16 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
                 "Cannot process input, not a valid Atmos format"
             )
 
+        # DEE encodes into the temp dir; we move the result to `output` ourselves
+        dee_output = self._dee_output_path(self.temp_dir, output)
+
         # generate JSON
         json_generator = DeeJSONGenerator(
             input_file_path=dee_input_path,
-            output_file_path=output,
+            output_file_path=dee_output,
             output_dir=self.temp_dir,
             codec_format=CodecFormat.ATMOS,
+            job_name=artifact_stem(output),
         )
         json_path = json_generator.atmos_json(
             payload=self.payload,
@@ -234,6 +239,9 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         finally:
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
+
+        # hand the finished encode over to its destination
+        self._finalize_output(dee_output, output)
 
         # return path
         if output.is_file():

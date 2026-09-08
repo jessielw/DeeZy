@@ -62,13 +62,19 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
 
         # normalize encode progress to 0-100% range
         if progress_state["encode_start_value"] is not None:
-            normalized_progress = (
-                (progress_data.value - progress_state["encode_start_value"])
-                / (100 - progress_state["encode_start_value"])
-            ) * 100
-            normalized_progress = max(
-                0, min(100, normalized_progress)
-            )  # clamp to 0-100
+            # a short encode can finish inside a single progress interval, so the
+            # first encode line DEE gives us is already 100 and there is no span
+            # left to scale against
+            encode_span = 100 - progress_state["encode_start_value"]
+            if encode_span <= 0:
+                normalized_progress = 100.0
+            else:
+                normalized_progress = (
+                    (progress_data.value - progress_state["encode_start_value"])
+                    / encode_span
+                ) * 100
+                # clamp to 0-100
+                normalized_progress = max(0, min(100, normalized_progress))
         else:
             normalized_progress = progress_data.value
 
@@ -186,8 +192,13 @@ def process_dee_job(
                             "Failed to append measured dialnorm to progress UI"
                         )
 
+            # DEE has closed stdout, so its result is available here. Settle it
+            # before touching the bars: a job that died partway through must not
+            # be painted as one that ran to 100%.
+            return_code = proc.wait()
+
             # ensure completion for both phases
-            if progress_state["progress"]:
+            if return_code == 0 and progress_state["progress"]:
                 # progress bars handle completion automatically
                 if (
                     progress_state["encode_task_id"] is None
@@ -212,7 +223,7 @@ def process_dee_job(
                         progress_state["encode_task_id"], completed=100
                     )
                     progress_state["progress"].refresh()
-            else:
+            elif return_code == 0:
                 # raw mode completion - ensure both phases show 100%
                 if progress_state["measure_done"]:
                     # if measure completed, show it as 100%
@@ -226,7 +237,6 @@ def process_dee_job(
                     progress_state["last_encode"], handler.encode_task_desc
                 )
 
-    return_code = proc.wait()
     if return_code != 0:
         # parse the output for detailed error information
         error_message = _parse_dee_execution_summary(output_lines)
