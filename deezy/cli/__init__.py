@@ -51,7 +51,7 @@ from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.3.13"
+__version__ = "1.3.14"
 program_name = "DeeZy"
 
 
@@ -1263,21 +1263,20 @@ def execute_encode_command(
                 for i, input_file in enumerate(file_inputs):
                     worker_num = (i % max_parallel) + 1 if use_worker_prefixes else None
                     # use file index for unique output naming
-                    file_id = f"f{i + 1}" if use_worker_prefixes else f"f{i + 1}"
+                    file_id = f"f{i + 1}"
                     # use stem (filename without extension) for cleaner display
                     short_filename = input_file.stem if use_worker_prefixes else None
 
                     # create batch result if tracking is enabled
                     batch_result = None
                     if batch_manager:
-                        actual_file_id = file_id or f"f{i + 1}"
                         # compute centralized log file path used for this input
-                        log_name = f"{input_file.stem}"
+                        log_name = input_file.stem
                         if worker_num is not None:
                             log_name = f"{log_name}.worker{worker_num}"
                         log_file = work_dir / "logs" / f"{log_name}.log"
                         batch_result = batch_manager.create_result(
-                            input_file, actual_file_id, log_file=log_file
+                            input_file, file_id, log_file=log_file
                         )
 
                     # prepare per-job args copy; encoders handle final filename and
@@ -1406,6 +1405,8 @@ def execute_config_command(
     # config commands need their own manager instance
     if config_manager is None:
         config_manager = get_config_manager()
+        if args.config:
+            config_manager.load_config(args.config)
 
     if args.config_command == "generate":
         try:

@@ -34,18 +34,16 @@ class FindDependencies:
         ffmpeg, truehdd, dee = self._locate_beside_program(base_wd)
         ffmpeg, truehdd, dee = self._locate_on_path(ffmpeg, truehdd, dee)
 
-        # user overrides
-        if user_ffmpeg and user_ffmpeg.strip():
-            ffmpeg = Path(user_ffmpeg)
-        if user_truehdd and user_truehdd.strip():
-            truehdd = Path(user_truehdd)
-        if user_dee and user_dee.strip():
-            dee = Path(user_dee)
-
-        # ensure all are Path or None
-        ffmpeg = Path(ffmpeg) if ffmpeg else None
-        truehdd = Path(truehdd) if truehdd else None
-        dee = Path(dee) if dee else None
+        # user overrides, reported here rather than as an opaque OSError from
+        # the first subprocess launch several steps into an encode
+        bad: list[str] = []
+        ffmpeg = self._resolve_override("ffmpeg", user_ffmpeg, ffmpeg, bad)
+        truehdd = self._resolve_override("truehdd", user_truehdd, truehdd, bad)
+        dee = self._resolve_override("dee", user_dee, dee, bad)
+        if bad:
+            raise DependencyNotFoundError(
+                f"Configured dependency path does not exist: {', '.join(bad)}."
+            )
 
         missing = []
         if not ffmpeg:
@@ -59,6 +57,29 @@ class FindDependencies:
                 f"Failed to detect required dependencies: {', '.join(missing)}."
             )
         return Dependencies(ffmpeg=ffmpeg, truehdd=truehdd, dee=dee)  # pyright: ignore[reportArgumentType]
+
+    @staticmethod
+    def _resolve_override(
+        name: str, user_value: str | None, detected: Path | None, bad: list[str]
+    ) -> Path | None:
+        """Apply a user/config supplied path for `name`, validating it exists.
+
+        A bare command name is accepted and looked up on PATH so an override can
+        name a tool the same way a shell would.
+        """
+        if not user_value or not user_value.strip():
+            return Path(detected) if detected else None
+
+        candidate = Path(user_value.strip()).expanduser()
+        if candidate.is_file():
+            return candidate
+
+        on_path = shutil.which(str(candidate))
+        if on_path:
+            return Path(on_path)
+
+        bad.append(f"{name} ('{user_value}')")
+        return None
 
     def _locate_beside_program(self, base_wd: Path) -> tuple[Path | None, ...]:
         def check(path: Path) -> Path | None:

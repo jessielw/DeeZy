@@ -113,7 +113,7 @@ Each ZIP file contains the executable with its proper name (`deezy` or `deezy.ex
 DeeZy uses **pyproject.toml as the single source of truth** for version information:
 
 - **pyproject.toml**: Contains the authoritative version
-- **deezy/utils/\_version.py**: Dynamically reads from pyproject.toml at runtime
+- **deezy/cli/\_\_init\_\_.py**: Holds `__version__`, kept in step with pyproject.toml by `tests/test_version_consistency.py`
 - **version.py**: Helper script for updating versions and creating releases
 
 This approach eliminates version synchronization issues between multiple files.

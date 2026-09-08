@@ -32,7 +32,7 @@ Test-Path $norm
 $norm.Length
 
 # If a path is too long, run with a short temp dir for debugging:
-deezy encode ddp --keep-temp --temp-dir 'C:\short_tmp' --log-to-file --config deezy-conf.toml encode ddp input.mkv
+deezy --config deezy-conf.toml --log-to-file encode ddp --keep-temp --temp-dir 'C:\short_tmp' input.mkv
 ```
 
 Recommendation: prefer a short local `--temp-dir` base (for example `C:\deezy_tmp`) when

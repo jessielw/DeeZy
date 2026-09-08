@@ -31,7 +31,15 @@ class ConfigManager:
             self._initialized = True
 
     def load_config(self, config_path: str | Path | None = None) -> None:
-        """Load configuration from TOML file."""
+        """Load configuration from TOML file.
+
+        A `config_path` given by the user is authoritative: a missing or
+        unreadable file is fatal rather than silently falling back to the
+        defaults, so `--config` never quietly encodes with the wrong settings.
+        """
+        # an explicitly requested config must not fail silently
+        explicit = config_path is not None
+
         # determine search order for config file when none is provided:
         # 1) current working directory (project/local config)
         # 2) user config directory (platformdirs recommended path)
@@ -54,20 +62,30 @@ class ConfigManager:
 
             config_path = found
         else:
-            config_path = Path(config_path)
+            config_path = Path(config_path).expanduser()
+            if not config_path.is_file():
+                exit_application(f"config file not found: {config_path}", EXIT_FAIL)
 
         if config_path and config_path.exists():
             try:
-                with open(config_path, "r", encoding="utf-8") as f:
-                    self.config.update(tomlkit.load(f))
+                with open(config_path, encoding="utf-8") as f:
+                    loaded = tomlkit.load(f)
+                # a reload replaces the previous config rather than merging into it
+                self.config.clear()
+                self.config.update(loaded)
                 self.config_path = config_path
                 logger.debug(f"loaded config from {config_path}")
 
                 # validate config structure
                 self._validate_config()
             except Exception as e:
-                logger.warning(f"failed to load config: {e}")
                 self.config.clear()
+                self.config_path = None
+                if explicit:
+                    exit_application(
+                        f"failed to load config '{config_path}': {e}", EXIT_FAIL
+                    )
+                logger.warning(f"failed to load config: {e}")
         else:
             logger.debug("no config file found, using defaults")
             self.config.clear()
