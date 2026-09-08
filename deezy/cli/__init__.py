@@ -1103,7 +1103,9 @@ def execute_encode_command(
                         shutil.rmtree(oldest)
                 except Exception:
                     # ignore deletion errors; we don't want to abort processing for cleanup failures
-                    logger.debug("Failed to remove an old artifact while trimming output.")
+                    logger.debug(
+                        "Failed to remove an old artifact while trimming output."
+                    )
         except Exception:
             # ignore trimming errors
             logger.debug("Failed to trim old artifacts.")

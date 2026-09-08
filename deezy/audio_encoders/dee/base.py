@@ -184,7 +184,9 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                         )
             except Exception:
                 # if config lookup fails, continue to enum default
-                logger.debug("Configured bitrate lookup failed; using the encoder default.")
+                logger.debug(
+                    "Configured bitrate lookup failed; using the encoder default."
+                )
 
             # validate config bitrate if found
             if config_bitrate is not None:
@@ -722,5 +724,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
     def _short_unique_name(file_input: Path) -> str:
         """Helper method to create a short and unique name with no extension."""
         sanitized = re.sub(r"[^A-Za-z0-9_-]", "_", file_input.stem)[:20]
-        hash_prefix = hashlib.sha1(str(file_input).encode("utf-8"), usedforsecurity=False).hexdigest()[:8]
+        hash_prefix = hashlib.sha1(
+            str(file_input).encode("utf-8"), usedforsecurity=False
+        ).hexdigest()[:8]
         return f"{sanitized}_{hash_prefix}"
