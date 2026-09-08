@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "format:cl": "prettier --write \"CHANGELOG.md\""
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  }
+}
