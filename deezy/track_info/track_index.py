@@ -64,7 +64,7 @@ class TrackIndex:
                 valid_types = ", ".join([f"'{t.value}'" for t in TrackType])
                 raise argparse.ArgumentTypeError(
                     f"Invalid track type '{track_type_str}'. Valid types: {valid_types}"
-                )
+                ) from None
 
             # validate index
             try:
@@ -76,7 +76,7 @@ class TrackIndex:
             except ValueError:
                 raise argparse.ArgumentTypeError(
                     f"Invalid track index '{index_str}'. Must be a number"
-                )
+                ) from None
         else:
             # handle plain number format (defaults to audio)
             try:
@@ -89,7 +89,7 @@ class TrackIndex:
             except ValueError:
                 raise argparse.ArgumentTypeError(
                     f"Invalid track index '{value}'. Expected 'a:N', 's:N',  or 'N'"
-                )
+                ) from None
 
         return cls(track_type=track_type, index=index)
 
