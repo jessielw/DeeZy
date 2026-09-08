@@ -264,13 +264,13 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
                 try:
                     self._release_ffmpeg()
                 except Exception:
-                    pass
+                    logger.debug("Best-effort operation failed; continuing.")
         except Exception:
             # ensure ffmpeg lock is released on unexpected errors
             try:
                 self._release_ffmpeg()
             except Exception:
-                pass
+                logger.debug("Best-effort operation failed; continuing.")
 
         # DEE encodes into the temp dir; we move the result to `output` ourselves
         dee_output = self._dee_output_path(self.temp_dir, output)

@@ -57,7 +57,8 @@ class ConfigManager:
                     if p and p.exists():
                         found = p
                         break
-                except Exception:
+                except Exception as exc:
+                    logger.debug(f"Failed to inspect config candidate {p}: {exc}")
                     continue
 
             config_path = found

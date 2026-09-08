@@ -70,7 +70,7 @@ def artifact_stem(output: Path) -> str:
     truncated prefix still get their own artifacts, and it is stable across
     runs so `--reuse-temp-files` keeps working.
     """
-    digest = hashlib.sha1(output.stem.encode("utf-8")).hexdigest()[
+    digest = hashlib.sha1(output.stem.encode("utf-8"), usedforsecurity=False).hexdigest()[
         :_ARTIFACT_DIGEST_LEN
     ]
     return f"{clean_string(output.stem)[:_ARTIFACT_PREFIX_LEN]}_{digest}"

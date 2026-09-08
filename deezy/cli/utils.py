@@ -221,7 +221,7 @@ def apply_config_defaults_to_args(
             if cfg_j is not None:
                 args.jitter_ms = int(cfg_j)
     except Exception:
-        pass
+        logger.debug("Best-effort operation failed; continuing.")
 
     try:
         if getattr(args, "output_template", None) is None:
@@ -230,7 +230,7 @@ def apply_config_defaults_to_args(
                 # ensure it's a string
                 args.output_template = str(cfg_ot)
     except Exception:
-        pass
+        logger.debug("Best-effort operation failed; continuing.")
 
     bool_keys = (
         "overwrite",
@@ -245,7 +245,7 @@ def apply_config_defaults_to_args(
                 if cfg_b is not None:
                     setattr(args, b, bool(cfg_b))
         except Exception:
-            pass
+            logger.debug("Best-effort operation failed; continuing.")
 
     return (
         resolved_limits.get("limit_ffmpeg"),

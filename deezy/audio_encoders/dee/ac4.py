@@ -258,7 +258,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
                 try:
                     self._release_ffmpeg()
                 except Exception:
-                    pass
+                    logger.debug("Best-effort operation failed; continuing.")
             input_file_path = Path(self.temp_dir / wav_file_name)
 
         # DEE encodes into the temp dir; we move the result to `output` ourselves

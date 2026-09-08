@@ -18,7 +18,7 @@ def main() -> int:
             # entire CLI startup.
             sys.stdout = open(sys.stdout.fileno(), "w", 1, encoding="utf-8")
             sys.stderr = open(sys.stderr.fileno(), "w", 1, encoding="utf-8")
-        except Exception:
+        except Exception:  # noqa: S110
             # if we can't re-open the streams, continue without modification.
             pass
 

@@ -184,7 +184,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                         )
             except Exception:
                 # if config lookup fails, continue to enum default
-                pass
+                logger.debug("Configured bitrate lookup failed; using the encoder default.")
 
             # validate config bitrate if found
             if config_bitrate is not None:
@@ -584,7 +584,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
                     try:
                         tmp_path.unlink()
                     except Exception:
-                        pass
+                        logger.debug("Failed to remove temporary metadata file.")
         except Exception:
             logger.debug("Failed to write metadata.json for reuse.")
 
@@ -682,7 +682,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         """Apply a small random jitter sleep before heavy phases when configured."""
         jitter = getattr(self, "_jitter_ms", 0) or 0
         if jitter > 0:
-            time.sleep(random.uniform(0, jitter) / 1000.0)
+            time.sleep(random.uniform(0, jitter) / 1000.0)  # noqa: S311 - scheduling jitter is not security-sensitive
 
     def _acquire_ffmpeg(self) -> None:
         if self._ffmpeg_sem:
@@ -722,5 +722,5 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
     def _short_unique_name(file_input: Path) -> str:
         """Helper method to create a short and unique name with no extension."""
         sanitized = re.sub(r"[^A-Za-z0-9_-]", "_", file_input.stem)[:20]
-        hash_prefix = hashlib.sha1(str(file_input).encode("utf-8")).hexdigest()[:8]
+        hash_prefix = hashlib.sha1(str(file_input).encode("utf-8"), usedforsecurity=False).hexdigest()[:8]
         return f"{sanitized}_{hash_prefix}"

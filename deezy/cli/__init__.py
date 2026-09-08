@@ -919,9 +919,16 @@ def encode_single_file(
     truehdd_path = dependencies["truehdd_path"]
     dee_path = dependencies["dee_path"]
 
-    # assert required paths are not None
-    assert ffmpeg_path is not None, "ffmpeg_path is required for encoding"
-    assert dee_path is not None, "dee_path is required for encoding"
+    missing_dependencies = []
+    if ffmpeg_path is None:
+        missing_dependencies.append("ffmpeg")
+    if dee_path is None:
+        missing_dependencies.append("dee")
+    if missing_dependencies:
+        exit_application(
+            f"Missing required encoder dependencies: {', '.join(missing_dependencies)}",
+            EXIT_FAIL,
+        )
 
     # set worker prefix for logger system
     if worker_num is not None and short_filename is not None:
@@ -1103,10 +1110,10 @@ def execute_encode_command(
                         shutil.rmtree(oldest)
                 except Exception:
                     # ignore deletion errors; we don't want to abort processing for cleanup failures
-                    pass
+                    logger.debug("Failed to remove an old artifact while trimming output.")
         except Exception:
             # ignore trimming errors
-            pass
+            logger.debug("Failed to trim old artifacts.")
 
     _trim_dir(logs_dir, max_logs, glob_pattern="*.log")
     _trim_dir(batch_results_dir, max_batch_results, glob_pattern="*.json")
@@ -1376,7 +1383,7 @@ def execute_encode_command(
                 logger.info(f"\nBatch results saved to: {batch_file}")
             except Exception:
                 # don't fail on batch save during interrupt
-                pass
+                logger.debug("Failed to save batch results during interruption.")
 
         logger.info("\nProcessing interrupted by user.")
         exit_application("Processing was interrupted.", EXIT_FAIL)
@@ -1391,7 +1398,7 @@ def execute_encode_command(
                 logger.info(f"\nBatch results saved to: {batch_file}")
             except Exception:
                 # don't fail on batch save during error
-                pass
+                logger.debug("Failed to save batch results while handling an error.")
 
         # only catch unexpected errors here
         logger.debug(traceback.format_exc())

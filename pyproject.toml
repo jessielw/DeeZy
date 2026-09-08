@@ -53,6 +53,16 @@ include = ["deezy.py", "version.py", "cli/*.py", "deezy/**/*.py", "tests/*.py"]
 [tool.ruff.lint]
 select = ["F", "I", "UP", "B", "S", "RUF100"]
 
+[tool.ruff.lint.per-file-ignores]
+# Pytest assertions and fixed fixture paths are normal test constructs.
+"tests/**/*.py" = ["S101", "S108"]
+# These modules are process wrappers; arguments are passed as lists with shell=False.
+"deezy/audio_processors/dee.py" = ["S603"]
+"deezy/audio_processors/ffmpeg.py" = ["S603"]
+"deezy/audio_processors/truehdd.py" = ["S603"]
+# This developer-only release utility deliberately invokes uv and git from PATH.
+"version.py" = ["S603", "S607"]
+
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-sort-within-sections = true

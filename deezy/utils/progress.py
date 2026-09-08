@@ -209,7 +209,7 @@ class DEEProgressHandler(ProgressHandler):
             if custom_dialnorm and custom_dialnorm != 0 and custom_dialnorm < 0:
                 self._custom_dialnorm = f"({float(custom_dialnorm):.1f} dB)"
         except Exception:
-            pass
+            logger.debug("Best-effort operation failed; continuing.")
 
         self.measure_task_desc = self.get_step_label(
             "DEE measure", default_current=2, default_total=3

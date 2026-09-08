@@ -212,7 +212,7 @@ def decode_truehd_to_atmos(
             try:
                 stream.close()
             except Exception:
-                pass
+                logger.debug("Best-effort operation failed; continuing.")
 
     # run with or without progress bars
     with progress_handler.progress_context(step_label) as (progress, task_id):
