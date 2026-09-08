@@ -51,7 +51,7 @@ from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.3.15-dev.1"
+__version__ = "1.3.15"
 program_name = "DeeZy"
 
 
@@ -919,17 +919,10 @@ def encode_single_file(
     truehdd_path = dependencies["truehdd_path"]
     dee_path = dependencies["dee_path"]
 
-    missing_dependencies = []
     if ffmpeg_path is None:
-        missing_dependencies.append("ffmpeg")
+        exit_application("Missing required encoder dependency: ffmpeg", EXIT_FAIL)
     if dee_path is None:
-        missing_dependencies.append("dee")
-    if missing_dependencies:
-        exit_application(
-            f"Missing required encoder dependencies: {', '.join(missing_dependencies)}",
-            EXIT_FAIL,
-        )
-
+        exit_application("Missing required encoder dependency: dee", EXIT_FAIL)
     # set worker prefix for logger system
     if worker_num is not None and short_filename is not None:
         worker_prefix = f"Worker {worker_num} ({short_filename})"
