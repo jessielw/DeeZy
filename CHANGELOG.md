@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The move is a rename when the temp directory and the output share a volume, and a copy across volumes.
 - Temp artifact filenames (`.wav`, `.json`, `_metadata.json`) are now built from a short deterministic hash of the output instead of its full name, keeping them a fixed length regardless of how long the output is.
   - Names remain stable across runs, but differ from previous versions, so `--reuse-temp-files` will not reuse temp folders created before this release.
+- Updated dependencies.
+  - Min python version is now 3.10 due to updated guessit.
 
 ## [1.3.14] - 2026-01-30
 
