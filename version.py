@@ -6,10 +6,10 @@ This maintains pyproject.toml as the single source of truth for version info.
 """
 
 import argparse
+from pathlib import Path
 import re
 import subprocess
 import sys
-from pathlib import Path
 
 from deezy.cli import __version__
 

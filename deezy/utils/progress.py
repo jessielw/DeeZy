@@ -1,9 +1,9 @@
-import logging
-import re
-import sys
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
+import logging
+import re
+import sys
 from typing import Any
 
 from rich.progress import (
@@ -161,7 +161,7 @@ def create_ffmpeg_parser(duration: float) -> Callable[[str], ProgressData | None
             )
             progress_ratio = float(total_ms) / float(duration)
             percent_value = min(100.0, progress_ratio * 100.0)
-            percent_formatted = "{:.1%}".format(min(1.0, progress_ratio))
+            percent_formatted = f"{min(1.0, progress_ratio):.1%}"
             return ProgressData(percent_value, percent_formatted)
         return None
 

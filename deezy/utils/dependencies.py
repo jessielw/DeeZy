@@ -1,7 +1,7 @@
-import platform
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
+import platform
+import shutil
 
 from deezy.exceptions import DependencyNotFoundError
 

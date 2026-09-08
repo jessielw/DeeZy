@@ -1,10 +1,10 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import copy
+from pathlib import Path
 import sys
 import tempfile
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 
 from deezy.audio_encoders.dee.ac4 import Ac4Encoder
 from deezy.audio_encoders.dee.atmos import AtmosEncoder
@@ -51,7 +51,7 @@ from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.3.14"
+__version__ = "1.3.15-dev.1"
 program_name = "DeeZy"
 
 
@@ -859,7 +859,7 @@ def cli_parser() -> None:
         # NOTE: DEPRECATED: REMOVE <= 1.4.0
         if args.parse_elementary_delay:
             logger.warning(
-                f"Argument '--parse-elementary-delay' is deprecated and will be removed in 1.4.0. "
+                "Argument '--parse-elementary-delay' is deprecated and will be removed in 1.4.0. "
                 "This is no longer needed and everything is handled automatically."
             )
     dependencies = handle_dependencies(args, config_manager)
@@ -1021,7 +1021,7 @@ def execute_encode_command(
     if temp_dir:
         try:
             temp_dir.mkdir(parents=True, exist_ok=True)
-            setattr(args, "temp_dir", str(temp_dir))
+            args.temp_dir = str(temp_dir)
         except Exception as temp_dir_e:
             logger.warning(
                 f"Failed to create temp directory at {temp_dir} ({temp_dir_e})."
@@ -1112,7 +1112,7 @@ def execute_encode_command(
     _trim_dir(batch_results_dir, max_batch_results, glob_pattern="*.json")
 
     # store computed work_dir on args so encode_single_file can find it
-    setattr(args, "_working_dir", str(work_dir))
+    args._working_dir = str(work_dir)
 
     # Apply config defaults into args and resolve per-phase limits once so both
     # sequential and parallel paths behave identically. Returns resolved
@@ -1152,7 +1152,7 @@ def execute_encode_command(
             if cfg_bod:
                 batch_out_arg = cfg_bod
                 # propagate back onto args so PayloadBuilder will include it
-                setattr(args, "batch_output_dir", cfg_bod)
+                args.batch_output_dir = cfg_bod
         except Exception:
             # ignore config lookup errors and proceed without batch output dir
             batch_out_arg = None

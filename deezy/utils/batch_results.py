@@ -1,7 +1,7 @@
-import json
-import time
 from datetime import datetime, timezone
+import json
 from pathlib import Path
+import time
 from typing import Any
 
 import oslex2

@@ -1,10 +1,10 @@
 import argparse
 import os
+from pathlib import Path
 import shutil
 import sys
 import tempfile
 import time
-from pathlib import Path
 from typing import Any
 
 from deezy.config.manager import ConfigManager, get_config_manager

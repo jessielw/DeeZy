@@ -1,6 +1,6 @@
 import argparse
-import sys
 from pathlib import Path
+import sys
 from typing import Any, cast
 
 import pytest

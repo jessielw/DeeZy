@@ -1,5 +1,5 @@
-import logging
 from collections.abc import Callable
+import logging
 from subprocess import PIPE, STDOUT, Popen
 
 from rich.console import Console

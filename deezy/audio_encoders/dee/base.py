@@ -1,18 +1,18 @@
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from enum import Enum
 import hashlib
 import json
 import os
+from pathlib import Path
 import random
 import re
 import shutil
 import tempfile
 import threading
 import time
-import uuid
-from abc import ABC, abstractmethod
-from collections.abc import Callable
-from enum import Enum
-from pathlib import Path
 from typing import Any, Generic, TypeVar
+import uuid
 
 import platformdirs
 
@@ -491,7 +491,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         if not metadata_path.exists():
             return None
         try:
-            with open(metadata_path, "r", encoding="utf-8") as fh:
+            with open(metadata_path, encoding="utf-8") as fh:
                 return json.load(fh)
         except Exception:
             logger.debug("Failed to read/parse metadata.json; ignoring and continuing.")
