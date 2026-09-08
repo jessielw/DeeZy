@@ -28,6 +28,12 @@ deezy --log-to-file encode ddp --max-parallel 4 *.mkv
 deezy info input.mkv
 ```
 
+### Power management
+
+DeeZy prevents automatic system sleep and hibernation while an encode is in
+progress. The display can still turn off normally. Pass `--allow-sleep`, or set
+`allow_sleep = true` under `[global_defaults]`, to disable this behavior.
+
 ### Track selection
 
 Use `--track-index` with `N`, `a:N` or `s:N` (stream index) to pick which audio to encode. See the `Track Selection` section in the original README for details.

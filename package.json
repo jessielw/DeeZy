@@ -1,7 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "format:cl": "prettier --write \"CHANGELOG.md\""
+    "format:cl": "prettier --write \"CHANGELOG.md\"",
+    "format:docs": "prettier --write \"docs/*md\""
   },
   "devDependencies": {
     "prettier": "^3.0.0"

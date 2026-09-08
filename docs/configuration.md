@@ -28,6 +28,7 @@ truehdd = ""
 [global_defaults]
 keep_temp = false
 max_parallel = 1
+allow_sleep = false
 overwrite = false
 
 [presets]

@@ -49,6 +49,7 @@ from deezy.track_info.track_index import TrackIndex
 from deezy.utils.batch_results import BatchResultsManager
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
+from deezy.utils.power import SleepInhibitor
 from deezy.utils.utils import WORKING_DIRECTORY
 
 __version__ = "1.3.15"
@@ -189,6 +190,14 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help=(
             "Maximum random jitter in milliseconds to apply before heavy phases (FFmpeg/DEE/truehdd). "
             "Helps avoid synchronization spikes when running parallel jobs. Default 0 (disabled)."
+        ),
+    )
+    encode_group.add_argument(
+        "--allow-sleep",
+        action="store_true",
+        help=(
+            "Allow the system to sleep while encoding. By default, DeeZy prevents "
+            "automatic system sleep without keeping the display on."
         ),
     )
     encode_group.add_argument(
@@ -1196,6 +1205,10 @@ def execute_encode_command(
                 f"Batch output dir '{batch_out_dir}' is not writable: {e}", EXIT_FAIL
             )
 
+    sleep_inhibitor = SleepInhibitor()
+    if file_inputs and not getattr(args, "allow_sleep", False):
+        sleep_inhibitor.acquire()
+
     try:
         if max_parallel == 1 or len(file_inputs) == 1:
             # sequential processing
@@ -1398,6 +1411,8 @@ def execute_encode_command(
         # only catch unexpected errors here
         logger.debug(traceback.format_exc())
         exit_application(f"Unexpected error: {e}", EXIT_FAIL)
+    finally:
+        sleep_inhibitor.release()
 
 
 def execute_config_command(

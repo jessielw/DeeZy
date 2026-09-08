@@ -18,8 +18,8 @@ def confirm() -> bool:
 
 
 def main() -> None:
-    print("Fetching latest changes from GitHub...")
-    run(["git", "fetch", "github"])
+    print("Fetching latest changes from origin...")
+    run(["git", "fetch", "origin"])
 
     local_changes = run(
         ["git", "status", "--porcelain"],
@@ -32,7 +32,7 @@ def main() -> None:
             "rev-list",
             "--left-right",
             "--count",
-            "github/main...github/dev",
+            "origin/main...origin/dev",
         ],
         capture=True,
     )
@@ -44,7 +44,7 @@ def main() -> None:
             "git",
             "diff",
             "--stat",
-            "github/main..github/dev",
+            "origin/main..origin/dev",
         ],
         capture=True,
     )
@@ -66,7 +66,7 @@ def main() -> None:
     print(
         "\nThis will:\n"
         "  1. Switch to dev\n"
-        "  2. Reset dev to github/main\n"
+        "  2. Reset dev to origin/main\n"
         "  3. Force-push dev using --force-with-lease\n"
     )
 
@@ -85,10 +85,10 @@ def main() -> None:
 
     print("\nSynchronizing dev...")
     run(["git", "switch", "dev"])
-    run(["git", "reset", "--hard", "github/main"])
-    run(["git", "push", "--force-with-lease", "github", "dev"])
+    run(["git", "reset", "--hard", "origin/main"])
+    run(["git", "push", "--force-with-lease", "origin", "dev"])
 
-    print("\n✓ dev is now synchronized with github/main.")
+    print("\n✓ dev is now synchronized with origin/main.")
 
 
 if __name__ == "__main__":
