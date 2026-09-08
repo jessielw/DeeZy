@@ -233,6 +233,7 @@ def apply_config_defaults_to_args(
         logger.debug("Best-effort operation failed; continuing.")
 
     bool_keys = (
+        "allow_sleep",
         "overwrite",
         "parse_elementary_delay",
         "log_to_file",

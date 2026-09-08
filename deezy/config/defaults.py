@@ -64,6 +64,8 @@ max_batch_results = 50
 overwrite = false
 # Maximum random jitter (ms) applied before heavy phases (FFmpeg/DEE/TrueHDD). 0 = disabled.
 jitter_ms = 0
+# Allow automatic system sleep during encoding. By default DeeZy keeps the system awake.
+allow_sleep = false
 # Per-phase concurrency limits. Set to 0 to inherit the value of `max_parallel`.
 # These allow fine-grained tuning when some phases are more/less intensive.
 limit_ffmpeg = 0

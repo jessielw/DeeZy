@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.15] - 2026-09-08
 
+### Added
+
+- Encode jobs now prevent automatic system sleep and hibernation while work is in progress without keeping the display awake. Use `--allow-sleep` or set `allow_sleep = true` to opt out.
+
 ### Fixed
 
 - Jobs failing with `ERROR: Cannot open file` when a path exceeded the Windows **260 character** limit. DEE is not long-path aware, so it reported files that were sitting right there as missing. Three changes address this:
