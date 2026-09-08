@@ -1,7 +1,6 @@
 from argparse import ArgumentTypeError
 from collections.abc import Sequence
 from enum import Enum
-from typing import Type
 
 
 def _missing_func(cls, value):
@@ -64,13 +63,10 @@ def case_insensitive_enum(enum_class):
         v = value.strip()
 
         # first try name
-        try:
-            members = enum_class.__members__
-            key = v.upper()
-            if key in members:
-                return enum_class[key]
-        except Exception:
-            pass
+        members = enum_class.__members__
+        key = v.upper()
+        if key in members:
+            return enum_class[key]
 
         # then try value match (case-insensitive)
         for member in enum_class:
@@ -82,7 +78,7 @@ def case_insensitive_enum(enum_class):
     return converter
 
 
-def enum_choices(enum_class: Type[Enum] | Sequence[Enum]) -> str:
+def enum_choices(enum_class: type[Enum] | Sequence[Enum]) -> str:
     """
     Returns a string representation of all possible choices in the given enumeration class.
     """

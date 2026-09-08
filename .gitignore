@@ -21,3 +21,6 @@ deezy-conf.toml
 deezy_work/
 .ruff_cache/
 site/
+
+# only used for formatting md etc
+node_modules/

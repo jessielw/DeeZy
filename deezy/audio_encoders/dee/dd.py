@@ -13,6 +13,7 @@ from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.mediainfo import MediainfoParser
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
+from deezy.utils.paths import artifact_stem
 
 
 class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
@@ -197,7 +198,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         self._early_output_exists_check(output, self.payload.overwrite)
 
         # temp filename deterministic per input file so adjacent temp folder is reusable
-        wav_file_name = f"{output.stem}.{CodecFormat.DD}.wav"
+        wav_file_name = f"{artifact_stem(output)}.{CodecFormat.DD}.wav"
         logger.debug(f"File paths: {wav_file_name=}, {output=}.")
 
         # generate ffmpeg cmd
@@ -263,20 +264,24 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
                 try:
                     self._release_ffmpeg()
                 except Exception:
-                    pass
+                    logger.debug("Best-effort operation failed; continuing.")
         except Exception:
             # ensure ffmpeg lock is released on unexpected errors
             try:
                 self._release_ffmpeg()
             except Exception:
-                pass
+                logger.debug("Best-effort operation failed; continuing.")
+
+        # DEE encodes into the temp dir; we move the result to `output` ourselves
+        dee_output = self._dee_output_path(self.temp_dir, output)
 
         # generate JSON
         json_generator = DeeJSONGenerator(
             input_file_path=self.temp_dir / wav_file_name,
-            output_file_path=output,
+            output_file_path=dee_output,
             output_dir=self.temp_dir,
             codec_format=CodecFormat.DD,
+            job_name=artifact_stem(output),
         )
         json_path = json_generator.dd_json(
             payload=self.payload,
@@ -314,6 +319,9 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         finally:
             self._release_dee()
         logger.debug(f"Dee job: {_dee_job}.")
+
+        # hand the finished encode over to its destination
+        self._finalize_output(dee_output, output)
 
         # return path
         if output.is_file():

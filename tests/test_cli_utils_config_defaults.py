@@ -66,10 +66,10 @@ def test_missing_attrs_and_string_boolean_values():
     assert de == 3
     assert th is None
     # jitter should be set from config
-    assert getattr(args, "jitter_ms") == 15
+    assert args.jitter_ms == 15
     # string/number truthy values should become booleans
-    assert getattr(args, "overwrite") is True
-    assert getattr(args, "no_progress_bars") is False
+    assert args.overwrite is True
+    assert args.no_progress_bars is False
 
 
 def test_config_exception_does_not_break():

@@ -1,5 +1,5 @@
-import json
 from copy import deepcopy
+import json
 from pathlib import Path
 
 from deezy.audio_encoders.dee.json.ac4_base import ac4_base
@@ -13,7 +13,7 @@ from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
-from deezy.utils.utils import clean_string
+from deezy.utils.paths import long_path_str
 
 
 class DeeJSONGenerator:
@@ -24,6 +24,7 @@ class DeeJSONGenerator:
         "output_file_path",
         "output_dir",
         "codec_format",
+        "job_name",
     )
 
     def __init__(
@@ -32,18 +33,21 @@ class DeeJSONGenerator:
         output_file_path: Path,
         output_dir: Path,
         codec_format: CodecFormat,
+        job_name: str,
     ) -> None:
         """
         Args:
             input_file_path (Path): Input file path.
-            output_file_path (Path): Output file path.
+            output_file_path (Path): Path DEE encodes to (inside the temp directory).
             output_dir (Path | str): File path only.
+            job_name (str): Shared stem for this job's temp artifacts.
             codec_format (CodecFormat): Current codec format.
         """
         self.input_file_path = input_file_path
         self.output_file_path = output_file_path
         self.output_dir = output_dir
         self.codec_format = codec_format
+        self.job_name = job_name
 
     def dd_json(
         self,
@@ -244,15 +248,12 @@ class DeeJSONGenerator:
     def _write_json(self, json_base: dict) -> Path:
         if not json_base:
             raise ValueError("Missing or invalid json base")
-        file_out = (
-            self.output_dir
-            / f"{clean_string(self.output_file_path.stem)}.{self.codec_format}.json"
-        )
+        file_out = self.output_dir / f"{self.job_name}.{self.codec_format}.json"
         with open(file_out, "w") as json_file:
             json.dump(json_base, json_file, indent=2)
         return file_out
 
     @staticmethod
     def _create_dee_file_path(path: Path) -> str:
-        """DEE expects file paths quoted."""
-        return f'"{path}"' if isinstance(path, Path) else f'"{Path(path)}"'
+        """DEE expects file paths quoted, and short enough for it to open."""
+        return f'"{long_path_str(path if isinstance(path, Path) else Path(path))}"'

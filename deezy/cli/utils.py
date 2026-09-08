@@ -1,10 +1,10 @@
 import argparse
 import os
+from pathlib import Path
 import shutil
 import sys
 import tempfile
 import time
-from pathlib import Path
 from typing import Any
 
 from deezy.config.manager import ConfigManager, get_config_manager
@@ -221,7 +221,7 @@ def apply_config_defaults_to_args(
             if cfg_j is not None:
                 args.jitter_ms = int(cfg_j)
     except Exception:
-        pass
+        logger.debug("Best-effort operation failed; continuing.")
 
     try:
         if getattr(args, "output_template", None) is None:
@@ -230,7 +230,7 @@ def apply_config_defaults_to_args(
                 # ensure it's a string
                 args.output_template = str(cfg_ot)
     except Exception:
-        pass
+        logger.debug("Best-effort operation failed; continuing.")
 
     bool_keys = (
         "overwrite",
@@ -245,7 +245,7 @@ def apply_config_defaults_to_args(
                 if cfg_b is not None:
                     setattr(args, b, bool(cfg_b))
         except Exception:
-            pass
+            logger.debug("Best-effort operation failed; continuing.")
 
     return (
         resolved_limits.get("limit_ffmpeg"),
@@ -286,6 +286,21 @@ def apply_default_bitrate(
                 )
 
 
+def sniff_config_arg(argv: list[str] | None = None) -> str | None:
+    """Read `--config` straight out of argv.
+
+    Presets are injected before argparse runs, so the config that holds them
+    has to be located without a parsed Namespace to read it from.
+    """
+    argv = sys.argv if argv is None else argv
+    for i, arg in enumerate(argv):
+        if arg == "--config":
+            return argv[i + 1] if i + 1 < len(argv) else None
+        if arg.startswith("--config="):
+            return arg.split("=", 1)[1]
+    return None
+
+
 def handle_preset_injection() -> None:
     """Handle preset injection into sys.argv before argparse runs."""
     if len(sys.argv) >= 4 and "preset" in sys.argv and "--name" in sys.argv:
@@ -294,7 +309,7 @@ def handle_preset_injection() -> None:
             if name_idx + 1 < len(sys.argv):
                 preset_name = sys.argv[name_idx + 1]
                 config_manager = get_config_manager()
-                config_manager.load_config()
+                config_manager.load_config(sniff_config_arg())
                 config_manager.inject_preset_args(preset_name)
         except (ValueError, IndexError):
             pass
@@ -310,6 +325,11 @@ def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
     config_manager = None
     if args.sub_command != "config":
         config_manager = get_config_manager()
+        # a user-supplied --config wins over whatever was auto-discovered
+        # (or loaded earlier during preset injection)
+        user_config = getattr(args, "config", None)
+        if user_config:
+            config_manager.load_config(user_config)
     return config_manager
 
 
@@ -363,7 +383,12 @@ def handle_file_inputs(args: argparse.Namespace) -> list[Path]:
     if args.sub_command not in ("find", "info", "encode"):
         return []
 
-    file_inputs = parse_input_s(args.input)
+    try:
+        file_inputs = parse_input_s(args.input)
+    except FileNotFoundError as e:
+        # a mistyped path is a user error, not something to hand back a traceback for
+        exit_application(str(e), EXIT_FAIL)
+
     if not file_inputs and args.sub_command in ("find", "info", "encode"):
         exit_application("No input files were found.", EXIT_FAIL)
 

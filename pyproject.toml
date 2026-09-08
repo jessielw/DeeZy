@@ -1,17 +1,17 @@
 [project]
 name = "deezy"
-version = "1.3.14"
+version = "1.3.15"
 description = "Dolby Encoding Engine Wrapper"
 readme = "README.md"
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "pymediainfo",
     "tomlkit",
-    "platformdirs>=2.6.0",
-    "typing-extensions>=4.15.0",
-    "rich>=14.1.0",
+    "platformdirs>=4.11.7",
+    "typing-extensions>=4.16.0",
+    "rich>=14.3.4",
     "oslex2>=1.0.0",
-    "guessit>=3.8.0",
+    "guessit>=4.4.0",
     "unidecode>=1.4.0",
 ]
 authors = [{ name = "jessielw" }]
@@ -21,7 +21,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -30,6 +29,16 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 urls = { "Source" = "https://github.com/jessielw/deezy", "Tracker" = "https://github.com/jessielw/DeeZy/issues" }
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-cov"]
+build = ["pyinstaller>=6.13.0", "pyinstaller-hooks-contrib>=2025.1"]
+dev = ["ruff", "basedpyright", "poethepoet>=0.48.0"]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.11",
+    "pymdown-extensions>=10.16.1",
+]
 
 [project.scripts]
 deezy = "deezy.__main__:main"
@@ -42,7 +51,21 @@ line-length = 88
 include = ["deezy.py", "version.py", "cli/*.py", "deezy/**/*.py", "tests/*.py"]
 
 [tool.ruff.lint]
-select = ["I"]
+select = ["F", "I", "UP", "B", "S", "RUF100"]
+
+[tool.ruff.lint.per-file-ignores]
+# Pytest assertions and fixed fixture paths are normal test constructs.
+"tests/**/*.py" = ["S101", "S108"]
+# These modules are process wrappers; arguments are passed as lists with shell=False.
+"deezy/audio_processors/dee.py" = ["S603"]
+"deezy/audio_processors/ffmpeg.py" = ["S603"]
+"deezy/audio_processors/truehdd.py" = ["S603"]
+# This developer-only release utility deliberately invokes uv and git from PATH.
+"version.py" = ["S603", "S607"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
 
 [tool.basedpyright]
 include = ["deezy"]
@@ -59,12 +82,11 @@ include = ["deezy*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-[project.optional-dependencies]
-test = ["pytest", "pytest-cov"]
-build = ["pyinstaller>=6.13.0", "pyinstaller-hooks-contrib>=2025.1"]
-dev = ["ruff"]
-docs = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.11",
-    "pymdown-extensions>=10.16.1",
-]
+[tool.poe.tasks]
+typecheck = "basedpyright"
+lint = "ruff check ."
+lint-fix = "ruff check . --fix"
+format-check = "ruff format . --check"
+format-code = "ruff format ."
+format.sequence = ["lint-fix", "format-code"]
+sync-dev = "scripts/sync_dev.py"

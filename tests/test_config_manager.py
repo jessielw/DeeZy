@@ -1,5 +1,5 @@
-import tempfile
 from pathlib import Path
+import tempfile
 from unittest.mock import patch
 
 import pytest
@@ -60,13 +60,30 @@ class TestConfigManagerLoading:
     """Test configuration loading functionality."""
 
     def test_load_config_nonexistent_file(self):
-        """Test loading when config file doesn't exist."""
+        """An explicitly requested config that is missing is fatal."""
         cm = ConfigManager()
 
-        # Try to load from non-existent path
-        cm.load_config(Path("/nonexistent/deezy-conf.toml"))
+        with pytest.raises(SystemExit) as exc:
+            cm.load_config(Path("/nonexistent/deezy-conf.toml"))
 
-        # Should have empty config and no config_path
+        assert exc.value.code == 1
+        assert cm.config == {}
+        assert cm.config_path is None
+
+    def test_load_config_no_file_found_uses_defaults(self, tmp_path, monkeypatch):
+        """Auto-discovery with nothing to find falls back to defaults quietly."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "deezy.config.manager.get_default_config_path",
+            lambda: str(tmp_path / "missing" / "deezy-conf.toml"),
+        )
+        monkeypatch.setattr(
+            "deezy.config.manager.WORKING_DIRECTORY", str(tmp_path / "missing")
+        )
+
+        cm = ConfigManager()
+        cm.load_config()
+
         assert cm.config == {}
         assert cm.config_path is None
 
@@ -99,21 +116,43 @@ class TestConfigManagerLoading:
             temp_path.unlink()
 
     def test_load_config_invalid_toml(self):
-        """Test handling of invalid TOML files."""
+        """An explicitly requested config that will not parse is fatal."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
             f.write("invalid toml content [[[")
             temp_path = Path(f.name)
 
         try:
             cm = ConfigManager()
-            cm.load_config(temp_path)
+            with pytest.raises(SystemExit) as exc:
+                cm.load_config(temp_path)
 
-            # Should have empty config due to parsing error
+            assert exc.value.code == 1
             assert cm.config == {}
             assert cm.config_path is None
 
         finally:
             temp_path.unlink()
+
+    def test_load_config_replaces_previous_config(self):
+        """A reload replaces the previous config rather than merging into it."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write('[presets]\nfirst = "encode ddp"\n')
+            first_path = Path(f.name)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write('[presets]\nsecond = "encode dd"\n')
+            second_path = Path(f.name)
+
+        try:
+            cm = ConfigManager()
+            cm.load_config(first_path)
+            assert cm.list_presets() == ["first"]
+
+            cm.load_config(second_path)
+            assert cm.list_presets() == ["second"]
+            assert cm.config_path == second_path
+        finally:
+            first_path.unlink()
+            second_path.unlink()
 
     def test_validate_config_structure(self):
         """Test that _validate_config ensures required sections exist."""

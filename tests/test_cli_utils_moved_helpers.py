@@ -1,6 +1,6 @@
 import argparse
-import sys
 from pathlib import Path
+import sys
 from typing import Any, cast
 
 import pytest
@@ -16,8 +16,9 @@ class DummyConfigManager:
     def get_default_bitrate(self, fmt, channels_or_mode):
         return self._bitrate_map.get((fmt, channels_or_mode))
 
-    def load_config(self):
+    def load_config(self, config_path=None):
         self.loaded = True
+        self.loaded_path = config_path
 
     def inject_preset_args(self, name):
         self.injected = name
@@ -61,6 +62,67 @@ def test_handle_preset_injection_calls_inject(monkeypatch):
 
     # restore argv
     sys.argv = saved_argv
+
+
+def test_handle_preset_injection_uses_config_flag(monkeypatch):
+    saved_argv = sys.argv[:]
+    sys.argv = [
+        "prog",
+        "--config",
+        "custom.toml",
+        "encode",
+        "preset",
+        "--name",
+        "mypreset",
+    ]
+
+    cfg = DummyConfigManager()
+    monkeypatch.setattr(utils, "get_config_manager", lambda: cfg)
+
+    try:
+        utils.handle_preset_injection()
+    finally:
+        sys.argv = saved_argv
+
+    assert cfg.loaded_path == "custom.toml"
+    assert cfg.injected == "mypreset"
+
+
+@pytest.mark.parametrize(
+    "argv, expected",
+    (
+        (["prog", "--config", "a.toml", "encode"], "a.toml"),
+        (["prog", "--config=b.toml", "encode"], "b.toml"),
+        (["prog", "encode"], None),
+        (["prog", "--config"], None),
+    ),
+)
+def test_sniff_config_arg(argv, expected):
+    assert utils.sniff_config_arg(argv) == expected
+
+
+def test_handle_configuration_loads_user_config(monkeypatch):
+    cfg = DummyConfigManager()
+    monkeypatch.setattr(utils, "get_config_manager", lambda: cfg)
+
+    args = argparse.Namespace(sub_command="encode", config="mine.toml")
+    assert utils.handle_configuration(args) is cfg
+    assert cfg.loaded_path == "mine.toml"
+
+
+def test_handle_file_inputs_reports_bad_path_cleanly(monkeypatch):
+    """A mistyped path exits with a message, not a traceback."""
+
+    def raiser(_inputs):
+        raise FileNotFoundError("'missing.mkv' is not a valid input path.")
+
+    monkeypatch.setattr(utils, "parse_input_s", raiser)
+    args = argparse.Namespace(sub_command="encode", input=["missing.mkv"])
+
+    with pytest.raises(SystemExit) as exc:
+        utils.handle_file_inputs(args)
+
+    assert exc.value.code == 1
 
 
 def test_setup_logging_calls_logger_manager(monkeypatch):

@@ -1,7 +1,7 @@
 import logging
+from pathlib import Path
 import subprocess
 import threading
-from pathlib import Path
 
 from deezy.enums.atmos import WarpMode
 from deezy.enums.shared import TrackType
@@ -10,6 +10,13 @@ from deezy.utils.logger import logger
 from deezy.utils.progress import ProgressHandler, create_ffmpeg_parser
 
 BASE_ATMOS_FILE_NAME = "atmos_meta"
+
+# a failing decode can be very chatty; keep enough of the tail to diagnose it
+MAX_CAPTURED_LINES = 100
+
+# the pipes are already closed by the time we join, so this only ever covers a
+# reader that is mid-line rather than one that could still block
+STREAM_DRAIN_TIMEOUT = 5.0
 
 
 def decode_truehd_to_atmos(
@@ -91,6 +98,12 @@ def decode_truehd_to_atmos(
             stderr=subprocess.PIPE,
             text=True,
         )
+    except BaseException:
+        # truehdd never started (missing binary, bad path); ffmpeg is already
+        # running and would be left orphaned holding the input file open
+        ffmpeg_proc.kill()
+        ffmpeg_proc.wait()
+        raise
     finally:
         if ffmpeg_proc.stdout:
             ffmpeg_proc.stdout.close()
@@ -136,7 +149,8 @@ def decode_truehd_to_atmos(
                         else:
                             logger.info(f"{step_label} {percent_data.formatted}")
                             logger.debug(f"{step_label} {percent_data.formatted}")
-                        sink.append(percent_data.formatted)
+                        # progress ticks are not diagnostics; keeping them grew
+                        # unboundedly and buried the real error in the message
                         continue
 
                 # filter out ffmpeg metadata spam even in debug mode
@@ -174,12 +188,16 @@ def decode_truehd_to_atmos(
                     ):
                         logger.debug(f"[{prefix}] {line}")
                         sink.append(line)
+                        del sink[:-MAX_CAPTURED_LINES]
                         continue
 
-                # default debug logging for non-ffmpeg streams
-                if logger_level == logging.DEBUG and prefix != "ffmpeg":
-                    logger.debug(f"[{prefix}] {line}")
+                # non-ffmpeg streams: always keep the line so a non-zero exit can
+                # be explained without asking the user to re-run in debug mode
+                if prefix != "ffmpeg":
+                    if logger_level == logging.DEBUG:
+                        logger.debug(f"[{prefix}] {line}")
                     sink.append(line)
+                    del sink[:-MAX_CAPTURED_LINES]
 
             # ensure 100% completion
             if prefix == "ffmpeg" and last_percent < 100.0 and duration:
@@ -194,7 +212,7 @@ def decode_truehd_to_atmos(
             try:
                 stream.close()
             except Exception:
-                pass
+                logger.debug("Best-effort operation failed; continuing.")
 
     # run with or without progress bars
     with progress_handler.progress_context(step_label) as (progress, task_id):
@@ -240,8 +258,11 @@ def decode_truehd_to_atmos(
         truehdd_return = truehdd_proc.wait()
         ffmpeg_return = ffmpeg_proc.wait()
 
+        # both pipes are closed now that the processes have exited, so the
+        # readers are about to finish; wait for them so the captured output
+        # used in the error paths below is complete
         for t in threads:
-            t.join(timeout=0.1)
+            t.join(timeout=STREAM_DRAIN_TIMEOUT)
 
     ffmpeg_err = "\n".join(ffmpeg_err_lines)
     truehdd_err = "\n".join(truehdd_err_lines)

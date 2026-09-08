@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.15] - 2026-09-08
+
+### Fixed
+
+- Jobs failing with `ERROR: Cannot open file` when a path exceeded the Windows **260 character** limit. DEE is not long-path aware, so it reported files that were sitting right there as missing. Three changes address this:
+  - DEE now encodes into the temp directory and never sees the destination at all (see **Changed**).
+  - Temp artifacts no longer inherit the full output name (see **Changed**).
+  - Any path that is still over the limit is handed to DEE as an extended-length (`\\?\`) path.
+- `ZeroDivisionError: float division by zero` when DEE finished encoding inside a single progress interval, which made short files fail intermittently on a loaded machine.
+- Progress bars reporting **100%** for DEE measure/encode after a job had already failed. Completion is now gated on DEE's exit code.
+- Temp directory length check only measured the directory itself, so it never caught a path that was too long once a job file was added to it. It now budgets for the job file, names the offending directory, and runs before any directories are created.
+- `--config` was accepted and documented but never actually used. The config manager always auto-discovered `deezy-conf.toml`, so `deezy --config my-config.toml encode ...` silently encoded with a different config than the one asked for. It is now honored throughout, including for `preset --name` lookups, which resolve before argparse runs.
+- `deezy --version` reported **1.3.13** on a **1.3.14** build. The two are now covered by a test so they cannot drift apart again.
+- A failed **truehdd** decode raised with an empty message unless `--log-level debug` was set, because the decoder's own error output was only collected in debug mode. It is now always collected, so the reason is reported on the first run.
+- A failed **FFMPEG** step reported only `FFMPEG error (exit code N)`. The tail of FFMPEG's output is now included in the error.
+- FFMPEG progress ticks were being collected into the buffer used to report a **truehdd** extract failure. The buffer grew for the length of the decode and buried the real error under thousands of percentage strings.
+- Output reader threads were joined with a **0.1 second** timeout, racing the error text they were collecting, so a failure could be reported with truncated or missing output.
+- **FFMPEG** was left running when **truehdd** could not be started (missing binary, bad `--truehdd` path), orphaning a process that held the input file open.
+- An invalid `--ffmpeg`, `--dee`, or `--truehdd` path (or the matching `[dependencies]` config entry) was accepted and only failed several steps into an encode as an opaque OS error. Paths are now checked before any work starts, and a bare command name is resolved on `PATH`.
+- A mistyped input path printed a Python traceback instead of the error message.
+- Docs: the `--config` example in troubleshooting placed the flag after the subcommand, where argparse rejects it, and repeated `encode ddp`.
+
+### Changed
+
+- DEE now encodes into the job temp directory and DeeZy moves the finished file to its destination.
+  - Every path DEE is given is one DeeZy controls the length of, so a long output directory no longer reaches it.
+  - A failed encode no longer leaves a truncated file at the destination.
+  - The move is a rename when the temp directory and the output share a volume, and a copy across volumes.
+- Temp artifact filenames (`.wav`, `.json`, `_metadata.json`) are now built from a short deterministic hash of the output instead of its full name, keeping them a fixed length regardless of how long the output is.
+  - Names remain stable across runs, but differ from previous versions, so `--reuse-temp-files` will not reuse temp folders created before this release.
+- A `--config` path that is missing or will not parse is now a hard error instead of a silent fall back to auto-discovery and built-in defaults, so a typo can no longer quietly change encode settings. An auto-discovered config that fails to parse still warns and falls back.
+- Loading a config now replaces the previously loaded one instead of merging into it.
+- FFMPEG output is now read to completion rather than stopping at the first **100%** progress line, which could leave the process blocked on a full pipe buffer at debug verbosity.
+- Updated dependencies.
+  - Min python version is now 3.10 due to updated guessit.
+  - Dropped the stale **3.9** classifier from package metadata to match.
+
 ## [1.3.14] - 2026-01-30
 
 ### Fixed

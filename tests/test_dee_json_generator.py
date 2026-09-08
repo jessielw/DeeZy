@@ -81,6 +81,7 @@ def test_dd_json_creates_file_and_clean_temp_reflects_payload(tmp_path: Path):
         output_file_path=output,
         output_dir=tmp_path,
         codec_format=CodecFormat.DDP,
+        job_name="job",
     )
 
     json_path = generator.dd_json(
@@ -124,6 +125,7 @@ def test_ac4_and_atmos_clean_temp_and_filename(tmp_path: Path):
         output_file_path=output_ac4,
         output_dir=tmp_path,
         codec_format=CodecFormat.AC4,
+        job_name="job",
     )
 
     json_path_ac4 = generator_ac4.ac4_json(
@@ -167,6 +169,7 @@ def test_ac4_and_atmos_clean_temp_and_filename(tmp_path: Path):
         output_file_path=Path("out.ec3"),
         output_dir=tmp_path,
         codec_format=CodecFormat.ATMOS,
+        job_name="job",
     )
     json_path_atm = generator_atm.atmos_json(
         atmos_payload,

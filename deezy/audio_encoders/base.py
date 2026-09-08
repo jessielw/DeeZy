@@ -1,7 +1,7 @@
-import os
-import shutil
 from collections.abc import Sequence
+import os
 from pathlib import Path
+import shutil
 
 from deezy.exceptions import (
     AutoChannelDetectionError,
@@ -111,7 +111,7 @@ class BaseAudioEncoder:
             except (ValueError, TypeError):
                 raise AutoChannelDetectionError(
                     "Failed to determine output channel automatically"
-                )
+                ) from None
 
         # no suitable channel found -> raise instead of returning None
         raise AutoChannelDetectionError(

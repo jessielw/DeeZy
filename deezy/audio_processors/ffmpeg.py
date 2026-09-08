@@ -1,5 +1,5 @@
-import logging
 from collections.abc import Callable
+import logging
 from subprocess import PIPE, STDOUT, Popen
 
 from rich.console import Console
@@ -8,6 +8,10 @@ from rich.spinner import Spinner
 
 from deezy.utils.logger import logger
 from deezy.utils.progress import ProgressData, ProgressHandler
+
+# FFMPEG only ever explains a failure in the output it already streamed past, so
+# a bounded tail of it is kept to put a reason in the raised error
+MAX_CAPTURED_LINES = 50
 
 
 def _prepare_ffmpeg_command(cmd: list, duration: float | None) -> list:
@@ -63,7 +67,7 @@ def _create_progress_parser(duration: float) -> Callable:
 
 
 def _process_with_progress_bar(
-    proc: Popen, handler: ProgressHandler, step_label: str, duration: float
+    proc: Popen, handler: ProgressHandler, step_label: str, duration: float, sink: list
 ) -> None:
     """Handle FFMPEG process with progress bar when duration is known."""
     parser = _create_progress_parser(duration)
@@ -80,21 +84,25 @@ def _process_with_progress_bar(
                         logger.debug(f"{step_label} {progress_data.formatted}")
                     else:
                         logger.info(f"{step_label} {progress_data.value:.1f}%")
-
-                    if progress_data.value >= 100.0:
-                        break
                 elif line.startswith("progress=end"):
                     logger.debug("FFMPEG progress completed")
-                    break
                 else:
                     logger.debug(line)
+                    _capture(sink, line)
 
         # ensure completion
         handler.ensure_completion(last_percent, step_label, progress, task_id)
 
 
+def _capture(sink: list, line: str) -> None:
+    """Keep a bounded tail of FFMPEG output for error reporting."""
+    if line:
+        sink.append(line)
+        del sink[:-MAX_CAPTURED_LINES]
+
+
 def _process_with_spinner(
-    proc: Popen, handler: ProgressHandler, step_label: str
+    proc: Popen, handler: ProgressHandler, step_label: str, sink: list
 ) -> None:
     """Handle FFMPEG process with loading spinner when duration is unknown."""
 
@@ -106,7 +114,9 @@ def _process_with_spinner(
         with Live(spinner, console=console, refresh_per_second=10, transient=False):
             if proc.stdout:
                 for line in proc.stdout:
-                    logger.debug(line.strip())
+                    line = line.strip()
+                    logger.debug(line)
+                    _capture(sink, line)
 
         # show completion message
         console.print(f"✓ {step_label} completed")
@@ -116,7 +126,9 @@ def _process_with_spinner(
 
         if proc.stdout:
             for line in proc.stdout:
-                logger.debug(line.strip())
+                line = line.strip()
+                logger.debug(line)
+                _capture(sink, line)
 
         logger.info(f"{step_label} completed")
 
@@ -156,11 +168,12 @@ def process_ffmpeg_job(
         step_label = "FFMPEG"
 
     # execute FFMPEG with appropriate progress handling
+    output_tail: list[str] = []
     with Popen(prepared_cmd, stdout=PIPE, stderr=STDOUT, text=True) as proc:
         if duration:
-            _process_with_progress_bar(proc, handler, step_label, duration)
+            _process_with_progress_bar(proc, handler, step_label, duration, output_tail)
         else:
-            _process_with_spinner(proc, handler, step_label)
+            _process_with_spinner(proc, handler, step_label, output_tail)
 
         # check return code
         return_code = proc.poll()
@@ -168,8 +181,10 @@ def process_ffmpeg_job(
             return_code = proc.wait()
 
         if return_code != 0:
+            detail = "\n".join(f"  {line}" for line in output_tail)
             raise ValueError(
                 f"FFMPEG error (exit code {return_code}). Please re-run in debug mode."
+                + (f"\n{detail}" if detail else "")
             )
 
     return True

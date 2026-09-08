@@ -1,10 +1,10 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import copy
+from pathlib import Path
 import sys
 import tempfile
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 
 from deezy.audio_encoders.dee.ac4 import Ac4Encoder
 from deezy.audio_encoders.dee.atmos import AtmosEncoder
@@ -51,7 +51,7 @@ from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.3.13"
+__version__ = "1.3.15"
 program_name = "DeeZy"
 
 
@@ -859,7 +859,7 @@ def cli_parser() -> None:
         # NOTE: DEPRECATED: REMOVE <= 1.4.0
         if args.parse_elementary_delay:
             logger.warning(
-                f"Argument '--parse-elementary-delay' is deprecated and will be removed in 1.4.0. "
+                "Argument '--parse-elementary-delay' is deprecated and will be removed in 1.4.0. "
                 "This is no longer needed and everything is handled automatically."
             )
     dependencies = handle_dependencies(args, config_manager)
@@ -919,10 +919,10 @@ def encode_single_file(
     truehdd_path = dependencies["truehdd_path"]
     dee_path = dependencies["dee_path"]
 
-    # assert required paths are not None
-    assert ffmpeg_path is not None, "ffmpeg_path is required for encoding"
-    assert dee_path is not None, "dee_path is required for encoding"
-
+    if ffmpeg_path is None:
+        exit_application("Missing required encoder dependency: ffmpeg", EXIT_FAIL)
+    if dee_path is None:
+        exit_application("Missing required encoder dependency: dee", EXIT_FAIL)
     # set worker prefix for logger system
     if worker_num is not None and short_filename is not None:
         worker_prefix = f"Worker {worker_num} ({short_filename})"
@@ -1021,7 +1021,7 @@ def execute_encode_command(
     if temp_dir:
         try:
             temp_dir.mkdir(parents=True, exist_ok=True)
-            setattr(args, "temp_dir", str(temp_dir))
+            args.temp_dir = str(temp_dir)
         except Exception as temp_dir_e:
             logger.warning(
                 f"Failed to create temp directory at {temp_dir} ({temp_dir_e})."
@@ -1103,16 +1103,18 @@ def execute_encode_command(
                         shutil.rmtree(oldest)
                 except Exception:
                     # ignore deletion errors; we don't want to abort processing for cleanup failures
-                    pass
+                    logger.debug(
+                        "Failed to remove an old artifact while trimming output."
+                    )
         except Exception:
             # ignore trimming errors
-            pass
+            logger.debug("Failed to trim old artifacts.")
 
     _trim_dir(logs_dir, max_logs, glob_pattern="*.log")
     _trim_dir(batch_results_dir, max_batch_results, glob_pattern="*.json")
 
     # store computed work_dir on args so encode_single_file can find it
-    setattr(args, "_working_dir", str(work_dir))
+    args._working_dir = str(work_dir)
 
     # Apply config defaults into args and resolve per-phase limits once so both
     # sequential and parallel paths behave identically. Returns resolved
@@ -1152,7 +1154,7 @@ def execute_encode_command(
             if cfg_bod:
                 batch_out_arg = cfg_bod
                 # propagate back onto args so PayloadBuilder will include it
-                setattr(args, "batch_output_dir", cfg_bod)
+                args.batch_output_dir = cfg_bod
         except Exception:
             # ignore config lookup errors and proceed without batch output dir
             batch_out_arg = None
@@ -1263,21 +1265,20 @@ def execute_encode_command(
                 for i, input_file in enumerate(file_inputs):
                     worker_num = (i % max_parallel) + 1 if use_worker_prefixes else None
                     # use file index for unique output naming
-                    file_id = f"f{i + 1}" if use_worker_prefixes else f"f{i + 1}"
+                    file_id = f"f{i + 1}"
                     # use stem (filename without extension) for cleaner display
                     short_filename = input_file.stem if use_worker_prefixes else None
 
                     # create batch result if tracking is enabled
                     batch_result = None
                     if batch_manager:
-                        actual_file_id = file_id or f"f{i + 1}"
                         # compute centralized log file path used for this input
-                        log_name = f"{input_file.stem}"
+                        log_name = input_file.stem
                         if worker_num is not None:
                             log_name = f"{log_name}.worker{worker_num}"
                         log_file = work_dir / "logs" / f"{log_name}.log"
                         batch_result = batch_manager.create_result(
-                            input_file, actual_file_id, log_file=log_file
+                            input_file, file_id, log_file=log_file
                         )
 
                     # prepare per-job args copy; encoders handle final filename and
@@ -1377,7 +1378,7 @@ def execute_encode_command(
                 logger.info(f"\nBatch results saved to: {batch_file}")
             except Exception:
                 # don't fail on batch save during interrupt
-                pass
+                logger.debug("Failed to save batch results during interruption.")
 
         logger.info("\nProcessing interrupted by user.")
         exit_application("Processing was interrupted.", EXIT_FAIL)
@@ -1392,7 +1393,7 @@ def execute_encode_command(
                 logger.info(f"\nBatch results saved to: {batch_file}")
             except Exception:
                 # don't fail on batch save during error
-                pass
+                logger.debug("Failed to save batch results while handling an error.")
 
         # only catch unexpected errors here
         logger.debug(traceback.format_exc())
@@ -1406,6 +1407,8 @@ def execute_config_command(
     # config commands need their own manager instance
     if config_manager is None:
         config_manager = get_config_manager()
+        if args.config:
+            config_manager.load_config(args.config)
 
     if args.config_command == "generate":
         try:

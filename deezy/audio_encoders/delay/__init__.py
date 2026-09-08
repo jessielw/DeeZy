@@ -1,5 +1,5 @@
-import re
 from datetime import timedelta
+import re
 
 from deezy.enums.shared import DeeDelay, DeeDelayModes
 from deezy.exceptions import InvalidDelayError
