@@ -1,5 +1,5 @@
-import re
 from pathlib import Path
+import re
 from typing import Any
 
 from babelfish import Language
@@ -77,7 +77,9 @@ class MediainfoParser:
             else:
                 return track_info
         except IndexError:
-            raise MediaInfoError(f"Selected track #{track_index} does not exist.")
+            raise MediaInfoError(
+                f"Selected track #{track_index} does not exist."
+            ) from None
 
     def _get_fps(self) -> float | None:
         """
@@ -185,7 +187,7 @@ class MediainfoParser:
         delay = self._delay_detection(delay_was_stripped, delay_relative_to_video)
 
         # construct new clean path with enhanced context
-        name_parts = [title]
+        name_parts: list[str] = [title or ""]
 
         # add season/episode info for TV shows
         if season is not None and episode is not None:
