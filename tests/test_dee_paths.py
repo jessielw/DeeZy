@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from deezy.audio_encoders.dee import base as dee_base
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.exceptions import OutputFileNotFoundError, PathTooLongError
 from deezy.payloads.shared import ChannelBitrates
@@ -102,14 +103,20 @@ def test_relative_paths_are_never_escaped():
     assert long_path_str(relative) == str(relative)
 
 
-def test_temp_dir_rejects_a_base_with_no_room_for_job_files(tmp_path: Path):
+def test_temp_dir_rejects_a_base_with_no_room_for_job_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     enc = DummyEncoder(generate_dummy_core_payload())
     file_input = tmp_path / "movie.mkv"
     file_input.write_text("x")
 
+    # Simulate a smaller DEE budget so the constructed path stays below the
+    # host filesystem's PATH_MAX and can safely be inspected afterward.
+    monkeypatch.setattr(dee_base, "MAX_DEE_PATH", 256)
+
     # a base deep enough that no job file could sit beside it
     base = tmp_path
-    over_budget = MAX_DEE_PATH - MAX_ARTIFACT_NAME + 64
+    over_budget = dee_base.MAX_DEE_PATH - MAX_ARTIFACT_NAME + 64
     while len(str(base)) < over_budget:
         base = base / ("x" * min(64, over_budget - len(str(base))))
 
