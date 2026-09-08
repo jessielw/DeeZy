@@ -47,7 +47,12 @@ def test_windows_inhibitor_sets_and_restores_execution_state(monkeypatch):
     setter = FakeSetter()
     kernel32 = type("Kernel32", (), {"SetThreadExecutionState": setter})()
     monkeypatch.setattr(power.platform, "system", lambda: "Windows")
-    monkeypatch.setattr(power.ctypes, "WinDLL", lambda *_args, **_kwargs: kernel32)
+    monkeypatch.setattr(
+        power.ctypes,
+        "WinDLL",
+        lambda *_args, **_kwargs: kernel32,
+        raising=False,
+    )
 
     inhibitor = power.SleepInhibitor()
     assert inhibitor.acquire() is True
