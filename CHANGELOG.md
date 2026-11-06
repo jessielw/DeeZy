@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Linux x64 release binaries were built without the MediaInfo library after GitHub's `ubuntu-latest` runner moved to Ubuntu 26.04, which no longer ships it. CI now installs `libmediainfo` before building and fails the build if it is missing from the bundle.
+
 ### Changed
 
 - `--max-parallel` now shows one set of progress bars that update in place, instead of every worker printing a new line per update. Falls back to plain log lines with `--no-progress-bars`, in debug mode, or when output is not a terminal.
