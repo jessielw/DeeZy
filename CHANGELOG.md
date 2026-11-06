@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - How an encode is handed to DEE now lives in a backend (`deezy/audio_encoders/dee/backends/`), so the encoders no longer build DEE job files themselves. Output for the single `dee` is unchanged.
+- Updated some dependencies.
 
 ## [1.3.15] - 2026-09-08
 
