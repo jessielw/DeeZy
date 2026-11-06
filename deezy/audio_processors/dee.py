@@ -95,8 +95,8 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
                 progress_state["measure_task_id"], completed=100
             )
             progress_state["progress"].refresh()
-            progress_state["encode_task_id"] = progress_state["progress"].add_task(
-                handler.encode_task_desc, total=100
+            progress_state["encode_task_id"] = handler.add_task(
+                progress_state["progress"], handler.encode_task_desc
             )
             # attach custom dialnorm to encode task if provided
             handler.attach_custom_dialnorm_to_encode(
@@ -227,9 +227,9 @@ def process_dee_job(
                     progress_state["encode_task_id"] is None
                     and progress_state["last_measure"] == 100.0
                 ):
-                    progress_state["encode_task_id"] = progress_state[
-                        "progress"
-                    ].add_task(handler.encode_task_desc, total=100)
+                    progress_state["encode_task_id"] = handler.add_task(
+                        progress_state["progress"], handler.encode_task_desc
+                    )
                     progress_state["progress"].update(
                         progress_state["encode_task_id"], completed=100
                     )

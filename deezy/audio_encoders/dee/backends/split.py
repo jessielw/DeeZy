@@ -158,9 +158,11 @@ class SplitDeeBackend(DeeBackend):
         atmos_enabled: bool,
     ) -> list[str]:
         if payload.ims_legacy_presentation:
-            raise UnsupportedDeeFeatureError(
+            # kept for backwards compatibility with commands written for the
+            # single 'dee' executable; the split encoder has no such option
+            logger.warning(
                 "--ims-legacy-presentation is not available with the split DEE "
-                "encoders."
+                "encoders and will be ignored."
             )
         if payload.encoding_profile is not Ac4EncodingProfile.IMS:
             raise UnsupportedDeeFeatureError(

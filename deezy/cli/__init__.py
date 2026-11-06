@@ -50,9 +50,10 @@ from deezy.utils.batch_results import BatchResultsManager
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.power import SleepInhibitor
+from deezy.utils.progress import has_shared_progress, shared_progress_display
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 program_name = "DeeZy"
 
 
@@ -943,12 +944,14 @@ def encode_single_file(
         worker_prefix = None
     logger_manager.set_worker_prefix(worker_prefix)
 
-    # Force no progress bars for parallel processing to avoid Rich conflicts.
-    # Rich progress bars don't work well with multiple concurrent instances.
+    # Parallel workers draw into one shared progress display (see
+    # shared_progress_display). Without it, separate bars would fight over the
+    # terminal, so fall back to plain log lines.
     if worker_num is not None:
         # create a copy of args to avoid modifying the shared args object
         args = copy.deepcopy(args)
-        args.no_progress_bars = True
+        if not has_shared_progress():
+            args.no_progress_bars = True
         # set file_id for unique output filename generation (prevents overwrites)
         args.worker_id = file_id if file_id else f"w{worker_num}"
     else:
@@ -1260,7 +1263,13 @@ def execute_encode_command(
 
         # parallel processing
         else:
-            with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+            with (
+                shared_progress_display(
+                    logger.getEffectiveLevel(),
+                    bool(getattr(args, "no_progress_bars", False)),
+                ),
+                ThreadPoolExecutor(max_workers=max_parallel) as executor,
+            ):
                 # Initialize phase semaphores and jitter in the encoder base so
                 # all encoder instances share phase limits.
                 BaseDeeAudioEncoder.init_phase_limits(

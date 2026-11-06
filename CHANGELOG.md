@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-11-06
+
+### Fixed
+
+- Linux x64 release binaries were built without the MediaInfo library after GitHub's `ubuntu-latest` runner moved to Ubuntu 26.04, which no longer ships it. CI now installs `libmediainfo` before building and fails the build if it is missing from the bundle.
+
+### Changed
+
+- `--ims-legacy-presentation` is now ignored with a warning, instead of failing, when using the split DEE encoders, so commands written for the single `dee` executable keep working. Other options the split encoders cannot honor (7.1/Blu-ray, `--custom-dialnorm`, non-IMS `--encoding-profile`) still error rather than silently produce different output.
+- `--max-parallel` now shows one set of progress bars that update in place, instead of every worker printing a new line per update. Falls back to plain log lines with `--no-progress-bars`, in debug mode, or when output is not a terminal.
+
 ## [1.4.0] - 2026-11-06
 
 ### Added

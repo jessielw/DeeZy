@@ -60,6 +60,10 @@ jobs:
         with:
           version: "latest"
 
+      - name: Install MediaInfo library (Linux)
+        if: steps.should_build.outputs.should_build == 'true' && runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libmediainfo0v5
+
       - name: Install test dependencies
         if: steps.should_build.outputs.should_build == 'true'
         run: uv sync --extra test
@@ -77,6 +81,11 @@ jobs:
       - name: Build executable
         if: steps.should_build.outputs.should_build == 'true'
         run: uv run python build_executables.py
+
+      - name: Verify MediaInfo library was bundled (Linux)
+        if: steps.should_build.outputs.should_build == 'true' && runner.os == 'Linux'
+        run: |
+          find pyinstaller_build -name 'libmediainfo*' | grep -q . || { echo "libmediainfo missing from bundle"; exit 1; }
 
       - name: Test executable Onefile
         if: steps.should_build.outputs.should_build == 'true'

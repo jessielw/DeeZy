@@ -61,6 +61,10 @@ jobs:
         with:
           version: "latest"
 
+      - name: Install MediaInfo library (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libmediainfo0v5
+
       - name: Install test dependencies
         run: uv sync --extra test
 
@@ -74,6 +78,11 @@ jobs:
 
       - name: Build executable
         run: uv run python build_executables.py
+
+      - name: Verify MediaInfo library was bundled (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          find pyinstaller_build -name 'libmediainfo*' | grep -q . || { echo "libmediainfo missing from bundle"; exit 1; }
 
       - name: Verify build output
         shell: bash

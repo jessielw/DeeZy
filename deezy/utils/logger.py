@@ -1,6 +1,23 @@
 import logging
 from pathlib import Path
+import sys
 import threading
+
+
+class _LiveStderrHandler(logging.StreamHandler):
+    """Console handler that always writes to the *current* sys.stderr.
+
+    rich swaps sys.stderr while a live progress display runs; resolving it on
+    every emit lets log lines print above the bars instead of tearing them.
+    """
+
+    @property
+    def stream(self):
+        return sys.stderr
+
+    @stream.setter
+    def stream(self, _value) -> None:
+        pass
 
 
 class LoggerManager:
@@ -19,7 +36,7 @@ class LoggerManager:
 
     def _ensure_console_handler(self) -> None:
         if not any(isinstance(h, logging.StreamHandler) for h in self.logger.handlers):
-            console_handler = logging.StreamHandler()
+            console_handler = _LiveStderrHandler()
             console_handler.setFormatter(WorkerFormatter())
             self.logger.addHandler(console_handler)
             self._console_handler = console_handler
