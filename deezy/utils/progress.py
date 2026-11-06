@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import logging
 import re
 import sys
+import threading
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -15,6 +16,87 @@ from deezy.utils.logger import logger, logger_manager
 
 _PERCENT = re.compile(r"(\d+(?:\.\d+)?)\s*%")
 _STEP = re.compile(r"Step (\d+)/(\d+)\s*:\s*(\w+)")
+
+
+_shared_lock = threading.Lock()
+_shared_progress: Progress | None = None
+
+
+def rich_progress_allowed(logger_level: int, no_progress_bars: bool) -> bool:
+    """Whether rich progress bars may be drawn at all in this environment."""
+    # user explicitly disabled progress bars
+    if no_progress_bars:
+        return False
+    # debug mode should use simple text output
+    if logger_level <= logging.DEBUG:
+        return False
+    # bars need a terminal to redraw in place
+    return sys.stdout.isatty()
+
+
+def has_shared_progress() -> bool:
+    """True while a shared progress display (parallel runs) is active."""
+    return _shared_progress is not None
+
+
+def _make_progress() -> Progress:
+    from rich.progress import (
+        BarColumn,
+        Progress,
+        ProgressColumn,
+        SpinnerColumn,
+        TaskProgressColumn,
+        TextColumn,
+        TimeRemainingColumn,
+    )
+    from rich.text import Text
+
+    class DialnormColumn(ProgressColumn):
+        """Render a trailing dialnorm value from task.fields safely."""
+
+        def render(self, task) -> Text:
+            try:
+                val = task.fields.get("dialnorm")
+                return Text(str(val)) if val else Text("")
+            except Exception:
+                return Text("")
+
+    return Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeRemainingColumn(),
+        SpinnerColumn(),
+        DialnormColumn(),
+        transient=False,
+    )
+
+
+@contextmanager
+def shared_progress_display(
+    logger_level: int, no_progress_bars: bool
+) -> Generator[bool, Any, None]:
+    """
+    Run one progress display shared by every parallel worker.
+
+    Each worker adds its own row and removes it when finished, so the rows
+    update in place instead of every worker printing a new line per tick.
+    Log output is routed above the rows by rich. Yields True when active.
+    """
+    global _shared_progress
+    if not rich_progress_allowed(logger_level, no_progress_bars):
+        yield False
+        return
+
+    progress = _make_progress()
+    with progress:
+        with _shared_lock:
+            _shared_progress = progress
+        try:
+            yield True
+        finally:
+            with _shared_lock:
+                _shared_progress = None
 
 
 @dataclass(slots=True)
@@ -41,7 +123,13 @@ class ProgressHandler:
     For wrapper applications, set DEEZY_NO_PROGRESS=1 to ensure clean text output.
     """
 
-    __slots__ = ("logger_level", "no_progress_bars", "step_info", "should_use_bars")
+    __slots__ = (
+        "logger_level",
+        "no_progress_bars",
+        "step_info",
+        "should_use_bars",
+        "_task_ids",
+    )
 
     def __init__(
         self, logger_level: int, no_progress_bars: bool, step_info: dict | None = None
@@ -50,23 +138,26 @@ class ProgressHandler:
         self.no_progress_bars = no_progress_bars
         self.step_info = step_info
         self.should_use_bars = self._should_show_rich_progress()
+        self._task_ids: list = []
 
     def _should_show_rich_progress(self) -> bool:
         """Determine if rich progress bars should be used"""
-        # user explicitly disabled progress bars
-        if self.no_progress_bars:
-            return False
+        return rich_progress_allowed(self.logger_level, self.no_progress_bars)
 
-        # debug mode should use simple text output
-        if self.logger_level <= logging.DEBUG:
-            return False
+    def add_task(self, progress: Progress, description: str) -> TaskID:
+        """Add a task, remembering it so a shared display can drop it afterwards."""
+        task_id = progress.add_task(description, total=100)
+        self._task_ids.append(task_id)
+        return task_id
 
-        # check if stdout is connected to a terminal (TTY)
-        if not sys.stdout.isatty():
-            return False
-
-        # all checks passed, use rich progress bars
-        return True
+    def _release_tasks(self, progress: Progress) -> None:
+        """Remove this handler's rows from a shared display."""
+        for task_id in self._task_ids:
+            try:
+                progress.remove_task(task_id)
+            except Exception:
+                logger.debug("Best-effort operation failed; continuing.")
+        self._task_ids.clear()
 
     def get_step_label(
         self, base_name: str, default_current: int = 1, default_total: int = 3
@@ -96,25 +187,16 @@ class ProgressHandler:
     ) -> Generator[tuple[Progress, TaskID] | tuple[None, None], Any, None]:
         """Context manager for progress bars"""
         if self.should_use_bars:
-            from rich.progress import (
-                BarColumn,
-                Progress,
-                SpinnerColumn,
-                TaskProgressColumn,
-                TextColumn,
-                TimeRemainingColumn,
-            )
+            shared = _shared_progress
+            if shared is not None:
+                try:
+                    yield shared, self.add_task(shared, task_desc)
+                finally:
+                    self._release_tasks(shared)
+                return
 
-            with Progress(
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TaskProgressColumn(),
-                TimeRemainingColumn(),
-                SpinnerColumn(),
-                transient=False,
-            ) as progress:
-                task_id = progress.add_task(task_desc, total=100)
-                yield progress, task_id
+            with _make_progress() as progress:
+                yield progress, self.add_task(progress, task_desc)
         else:
             yield None, None
 
@@ -386,37 +468,20 @@ class DEEProgressHandler(ProgressHandler):
     ) -> Generator[tuple[Progress, TaskID, None] | tuple[None, None, None], Any, None]:
         """Context manager for DEE's two-phase progress"""
         if self.should_use_bars:
-            from rich.progress import (
-                BarColumn,
-                Progress,
-                ProgressColumn,
-                SpinnerColumn,
-                TaskProgressColumn,
-                TextColumn,
-                TimeRemainingColumn,
-            )
-            from rich.text import Text
+            shared = _shared_progress
+            if shared is not None:
+                try:
+                    # encode_task_id starts as None
+                    yield shared, self.add_task(shared, self.measure_task_desc), None
+                finally:
+                    self._release_tasks(shared)
+                return
 
-            class DialnormColumn(ProgressColumn):
-                """Render a trailing dialnorm value from task.fields safely."""
-
-                def render(self, task) -> Text:
-                    try:
-                        val = task.fields.get("dialnorm")
-                        return Text(str(val)) if val else Text("")
-                    except Exception:
-                        return Text("")
-
-            with Progress(
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TaskProgressColumn(),
-                TimeRemainingColumn(),
-                SpinnerColumn(),
-                DialnormColumn(),
-                transient=False,
-            ) as progress:
-                measure_task_id = progress.add_task(self.measure_task_desc, total=100)
-                yield progress, measure_task_id, None  # encode_task_id starts as None
+            with _make_progress() as progress:
+                yield (
+                    progress,
+                    self.add_task(progress, self.measure_task_desc),
+                    None,
+                )
         else:
             yield None, None, None

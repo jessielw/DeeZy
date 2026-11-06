@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `--max-parallel` now shows one set of progress bars that update in place, instead of every worker printing a new line per update. Falls back to plain log lines with `--no-progress-bars`, in debug mode, or when output is not a terminal.
+
 ## [1.4.0] - 2026-11-06
 
 ### Added
