@@ -32,11 +32,11 @@ jobs:
             platform: linux-arm64
             executable: deezy
             artifact_name: deezy-linux-arm64
-          - os: macos-latest
+          - os: macos-15-intel
             platform: macos
             executable: deezy
             artifact_name: deezy-macos-x64
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
             executable: deezy
             artifact_name: deezy-macos-arm64

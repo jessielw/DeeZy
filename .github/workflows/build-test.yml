@@ -21,10 +21,10 @@ jobs:
           - os: ubuntu-22.04-arm
             platform: linux-arm64
             executable: deezy
-          - os: macos-latest
+          - os: macos-15-intel
             platform: macos
             executable: deezy
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
             executable: deezy
           - os: windows-latest
