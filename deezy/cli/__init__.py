@@ -52,7 +52,7 @@ from deezy.utils.logger import logger, logger_manager
 from deezy.utils.power import SleepInhibitor
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.3.15"
+__version__ = "1.4.0"
 program_name = "DeeZy"
 
 

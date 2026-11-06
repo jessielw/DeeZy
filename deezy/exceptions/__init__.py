@@ -46,5 +46,9 @@ class OutputExistsError(DeeZyError):
     """Raised when the intended output file already exists and overwrite was not enabled."""
 
 
+class UnsupportedDeeFeatureError(DeeZyError):
+    """Raised when the installed DEE cannot honour a requested option."""
+
+
 class InvalidAtmosInputError(DeeZyError):
     """Raised when input file is an incompatible Atmos input."""

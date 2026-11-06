@@ -22,3 +22,7 @@ Common options
 - `--ims-legacy-presentation`
 - `--bitrate`
 - DRC options: `--ddp-drc`, `--flat-panel-drc`, `--home-theatre-drc`, `--portable-headphones-drc`, `--portable-speakers-drc`
+
+## Split DEE encoders
+
+`--ims-legacy-presentation` and `--encoding-profile ims_music` are not available with the split DEE encoders, and they accept bitrates 64, 96, 128, 144, 256 and 320 only. See [Installation](../installation.md).

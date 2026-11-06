@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-06
+
+### Added
+
+- Support for the split DEE encoders (`dee_ddp_encoder`, `dee_ddpjoc_encoder`, `dee_ac4ims_encoder`) shipped with newer DEE releases and Dolby Media Encoder, alongside the single `dee` executable.
+  - Point `--dee` (or `[dependencies] dee`) at the folder of encoders, or place them in `apps/dee/` or on `PATH`. An installed Dolby Media Encoder is found automatically on Windows.
+  - Not available with the split encoders, and refused with a clear message: `--custom-dialnorm`, DD+ 7.1 (including Blu-ray DD+), Blu-ray Atmos, AC-4 `--ims-legacy-presentation` and `--encoding-profile ims_music`. Metering is always 1770-4.
+
+### Fixed
+
+- DEE output containing bytes that are not valid text (the split encoders print some in their license line) aborted the job with a `UnicodeDecodeError` on Windows. Output is now decoded leniently.
+
+### Changed
+
+- How an encode is handed to DEE now lives in a backend (`deezy/audio_encoders/dee/backends/`), so the encoders no longer build DEE job files themselves. Output for the single `dee` is unchanged.
+- Updated some dependencies.
+- Faster startup: `guessit`, `pymediainfo`, `tomlkit` and the `rich` progress/spinner modules are now imported only when needed, cutting import time for commands like `--help` from roughly 355ms to 120ms.
+
 ## [1.3.15] - 2026-09-08
 
 ### Added

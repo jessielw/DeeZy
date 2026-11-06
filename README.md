@@ -8,7 +8,7 @@ DeeZy is a compact CLI for encoding and batch-processing audio into Dolby format
 
 ### Note
 
-Currently DeeZy has been tested and works perfectly on DEE **v5.2.0** and **5.2.1**. In the _near_ future DeeZy will support the standalone binaries for later releases.
+DeeZy has been tested and works perfectly on DEE **v5.2.0** and **5.2.1** (the single `dee` executable). Later releases ship as standalone per-codec encoders, which DeeZy also supports; see the installation docs for the layout and its limits.
 
 ### Documentation
 

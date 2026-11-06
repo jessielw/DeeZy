@@ -5,7 +5,9 @@ Common issues
 - "truehdd decoder not found": install truehdd or add to PATH (only required for Atmos)
 - "Invalid bitrate for channel layout": check bitrate guidelines or let DeeZy pick a smart default
 - "FFmpeg not found": install FFmpeg and add to PATH
-- "DEE executable not found": provide `--dee` or set in config
+- "DEE executable not found": provide `--dee` or set in config. For the split DEE encoders this is the folder containing `dee_ddp_encoder`
+- "License file does not exist" / "Provided license file does not enable this tool" (split DEE): the encoders look for `license.lic` beside themselves, and the license must cover the DEE release in use
+- "... is not available with the split DEE encoders": that option needs the single `dee` executable (see Installation)
 
 Debug mode
 

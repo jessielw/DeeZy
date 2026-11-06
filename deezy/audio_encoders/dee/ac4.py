@@ -1,7 +1,7 @@
 from pathlib import Path
 
+from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
@@ -264,29 +264,22 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         # DEE encodes into the temp dir; we move the result to `output` ourselves
         dee_output = self._dee_output_path(self.temp_dir, output)
 
-        # generate JSON
-        json_generator = DeeJSONGenerator(
-            input_file_path=input_file_path,
-            output_file_path=dee_output,
-            output_dir=self.temp_dir,
-            codec_format=CodecFormat.AC4,
-            job_name=artifact_stem(output),
-        )
-        json_path = json_generator.ac4_json(
-            payload=self.payload,
+        # generate DEE command
+        dee_cmd = get_dee_backend(self.payload.dee_path).ac4_command(
+            self.payload,
+            DeeJobFiles(
+                input_file=input_file_path,
+                output_file=dee_output,
+                temp_dir=self.temp_dir,
+                job_name=artifact_stem(output),
+                codec_format=CodecFormat.AC4,
+            ),
             bitrate=runtime_bitrate,
             fps=fps,
             delay=delay,
-            temp_dir=self.temp_dir,
             atmos_enabled=bool(
                 audio_track_info.adm_atmos_wav or audio_track_info.thd_atmos
             ),
-        )
-        logger.debug(f"{json_path=}.")
-
-        # generate DEE command
-        dee_cmd = self.get_dee_json_cmd(
-            dee_path=self.payload.dee_path, json_path=json_path
         )
         logger.debug(f"{dee_cmd=}.")
 

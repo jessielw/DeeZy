@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 from pathlib import Path
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from babelfish import Language
-from guessit import guessit
-from pymediainfo import MediaInfo, Track
+if TYPE_CHECKING:
+    from pymediainfo import MediaInfo, Track
 
 from deezy.enums.shared import TrackType
 from deezy.exceptions import MediaInfoError
@@ -24,8 +25,12 @@ class MediainfoParser:
         # parse file with mediainfo
         self.file_input = file_input
         self.track_index = track_index
+        from pymediainfo import MediaInfo
+
         self.mi_obj = MediaInfo.parse(file_input, legacy_stream_display=True)
         self.mi_audio_obj = self._verify_audio_track(track_index)
+        from guessit import guessit
+
         self.guess = guessit(self.file_input.name)
 
     def get_audio_track_info(self) -> AudioTrackInfo:
@@ -377,14 +382,14 @@ class MediainfoParser:
         Language from guessit can be a list of Language objects or a single Language object.
         We're determining which and getting the alpha3 code if it exists.
         """
+        # duck-typed on `alpha3` so babelfish isn't imported at startup
         language = None
-        lang_type = type(lang)
-        if lang_type is list:
-            get_lang = lang[0]
-            if isinstance(get_lang, Language):
-                language = get_lang
-        elif lang_type is Language:
-            language = lang
+        if isinstance(lang, list):
+            candidate = lang[0] if lang else None
+        else:
+            candidate = lang
+        if hasattr(candidate, "alpha3"):
+            language = candidate
         return language.alpha3 if language else None
 
     @staticmethod

@@ -1,24 +1,20 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 import logging
 import re
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from rich.progress import (
-    BarColumn,
-    Progress,
-    ProgressColumn,
-    SpinnerColumn,
-    TaskID,
-    TaskProgressColumn,
-    TextColumn,
-    TimeRemainingColumn,
-)
-from rich.text import Text
+if TYPE_CHECKING:
+    from rich.progress import Progress, TaskID
 
 from deezy.utils.logger import logger, logger_manager
+
+_PERCENT = re.compile(r"(\d+(?:\.\d+)?)\s*%")
+_STEP = re.compile(r"Step (\d+)/(\d+)\s*:\s*(\w+)")
 
 
 @dataclass(slots=True)
@@ -100,6 +96,15 @@ class ProgressHandler:
     ) -> Generator[tuple[Progress, TaskID] | tuple[None, None], Any, None]:
         """Context manager for progress bars"""
         if self.should_use_bars:
+            from rich.progress import (
+                BarColumn,
+                Progress,
+                SpinnerColumn,
+                TaskProgressColumn,
+                TextColumn,
+                TimeRemainingColumn,
+            )
+
             with Progress(
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
@@ -190,6 +195,10 @@ class DEEProgressHandler(ProgressHandler):
         "_measured_dialnorm",
         "_dialnorm_appended",
         "_custom_dialnorm",
+        "_percent_progress",
+        "_percent_steps",
+        "_last_percent",
+        "_percent_encoding",
     )
 
     def __init__(
@@ -198,10 +207,20 @@ class DEEProgressHandler(ProgressHandler):
         no_progress_bars: bool,
         step_info: dict | None = None,
         custom_dialnorm: int = 0,
+        percent_progress: bool = False,
     ) -> None:
+        """
+        Args:
+            percent_progress: Read plain percentage lines (the split DEE encoders'
+                ``--progress`` output) instead of the single dee's stage lines.
+        """
         super().__init__(logger_level, no_progress_bars, step_info)
         self._measured_dialnorm: str | None = None
         self._dialnorm_appended: bool = False
+        self._percent_progress = percent_progress
+        self._percent_steps: int = 1
+        self._last_percent: tuple[bool, float] | None = None
+        self._percent_encoding: bool = False
 
         # If user provided custom dialnorm (non-zero negative), format and store it
         self._custom_dialnorm: str | None = None
@@ -245,6 +264,9 @@ class DEEProgressHandler(ProgressHandler):
                 ".\n "
             )
 
+        if self._percent_progress:
+            return self._parse_percent_line(line)
+
         if "Stage progress" not in line:
             return None, False
 
@@ -267,6 +289,39 @@ class DEEProgressHandler(ProgressHandler):
                 progress_data = ProgressData(value, f"{value}%")
 
         return progress_data, is_encode
+
+    def _parse_percent_line(self, line: str) -> tuple[ProgressData | None, bool]:
+        """
+        Parse a line from the split DEE encoders' ``--progress`` output.
+
+        They draw one bar that runs 0-100% across every step, with "Step 1/2 :
+        Loudness Measurement" and "Step 2/2 : Encoding" lines announcing where
+        each begins. Measuring therefore only covers the first 1/steps of the
+        bar and is stretched back out; encoding values are passed on as they
+        are for the caller to rescale from where encoding began.
+        """
+        step = _STEP.search(line)
+        if step:
+            self._percent_steps = max(1, int(step.group(2)))
+            self._percent_encoding = step.group(3).lower().startswith("encod")
+            return None, False
+
+        match = _PERCENT.search(line)
+        if not match:
+            return None, False
+
+        value = float(match.group(1))
+        if value > 100:
+            return None, False
+
+        if not self._percent_encoding:
+            value = min(100.0, value * self._percent_steps)
+
+        # the bar is redrawn many times a second at the same value
+        if self._last_percent == (self._percent_encoding, value):
+            return None, False
+        self._last_percent = (self._percent_encoding, value)
+        return ProgressData(value, f"{value}%"), self._percent_encoding
 
     def get_formatted_dialnorm(self) -> str | None:
         """Return a compact formatted dialnorm string like '(-24 dB)' if available."""
@@ -331,6 +386,16 @@ class DEEProgressHandler(ProgressHandler):
     ) -> Generator[tuple[Progress, TaskID, None] | tuple[None, None, None], Any, None]:
         """Context manager for DEE's two-phase progress"""
         if self.should_use_bars:
+            from rich.progress import (
+                BarColumn,
+                Progress,
+                ProgressColumn,
+                SpinnerColumn,
+                TaskProgressColumn,
+                TextColumn,
+                TimeRemainingColumn,
+            )
+            from rich.text import Text
 
             class DialnormColumn(ProgressColumn):
                 """Render a trailing dialnorm value from task.fields safely."""

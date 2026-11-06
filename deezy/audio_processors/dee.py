@@ -4,6 +4,12 @@ from subprocess import PIPE, STDOUT, Popen
 from deezy.utils.logger import logger
 from deezy.utils.progress import DEEProgressHandler
 
+_SUMMARY_START_MARKERS = (
+    "--- Execution summary starts here ---",
+    "---- Summary of errors and warnings ----",
+)
+_SUMMARY_END_MARKERS = ("Time elapsed:", "Execution time:")
+
 
 def _parse_dee_execution_summary(output_lines: list) -> str | None:
     """Parse DEE output to extract execution summary and errors."""
@@ -15,11 +21,12 @@ def _parse_dee_execution_summary(output_lines: list) -> str | None:
     for line in output_lines:
         line = line.strip()
 
-        # look for execution summary section
-        if "--- Execution summary starts here ---" in line:
+        # look for execution summary section (the single dee and the split
+        # encoders word it differently)
+        if any(marker in line for marker in _SUMMARY_START_MARKERS):
             summary_start = True
             continue
-        elif "Time elapsed:" in line and summary_start:
+        elif summary_start and any(marker in line for marker in _SUMMARY_END_MARKERS):
             time_elapsed = line
             break
         elif summary_start:
@@ -140,23 +147,39 @@ def process_dee_job(
         no_progress_bars (bool): Disable progress bars.
         custom_dialnorm (int): If user supplies custom dialnorm (0 is off).
     """
-    # inject verbosity level into cmd list depending on logging level
+    # set the verbosity level in the cmd list depending on logging level
     logger_level = logger.getEffectiveLevel()
-    inject = cmd.index("--verbose") + 1
-    if logger_level == logging.DEBUG:
-        cmd.insert(inject, "debug")
+    level = "debug" if logger_level == logging.DEBUG else "info"
+    if "--verbose" in cmd:
+        # the single dee takes its level as the value following the flag
+        cmd.insert(cmd.index("--verbose") + 1, level)
     else:
-        cmd.insert(inject, "info")
+        # the split encoders already carry a level to be replaced
+        cmd[cmd.index("--loglevel") + 1] = level
 
-    # setup DEE progress handler
+    # setup DEE progress handler; the split encoders report plain percentages
+    # (requested with --progress) rather than the single dee's stage lines
     handler = DEEProgressHandler(
-        logger_level, no_progress_bars, step_info, custom_dialnorm
+        logger_level,
+        no_progress_bars,
+        step_info,
+        custom_dialnorm,
+        percent_progress="--progress" in cmd,
     )
 
     # collect all output for error parsing
     output_lines = []
 
-    with Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True) as proc:
+    # DEE can emit bytes that are not text (the split encoders do in their license
+    # line), so decode leniently rather than die on the platform's codepage
+    with Popen(
+        cmd,
+        stdout=PIPE,
+        stderr=STDOUT,
+        universal_newlines=True,
+        encoding="utf-8",
+        errors="replace",
+    ) as proc:
         progress_state = {
             "measure_done": False,
             "last_measure": 0.0,

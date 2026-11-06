@@ -21,3 +21,7 @@ Common options: `--bitrate`, `--drc-line-mode`, `--stereo-down-mix`
     *Note: You should also pass `--channels 6`*.
 
 Advanced options: `--track-index`, `--delay`, `--custom-dialnorm`, `--metering-mode`, `--no-dialogue-intelligence`, `--speech-threshold`
+
+## Split DEE encoders
+
+`--custom-dialnorm` is not available with the split DEE encoders, and `--metering-mode` is ignored there (always 1770-4). See [Installation](../installation.md).
