@@ -340,9 +340,9 @@ class TestSplitAC4:
         cmd = self.build(tmp_path, split_dir, files, ddp_drc=DeeDRC.NONE)
         assert encoder_options(cmd)["drc_profile_ddp"] == "none"
 
-    def test_legacy_presentation_is_refused(self, tmp_path, split_dir, files):
-        with pytest.raises(UnsupportedDeeFeatureError):
-            self.build(tmp_path, split_dir, files, ims_legacy_presentation=True)
+    def test_legacy_presentation_is_ignored(self, tmp_path, split_dir, files):
+        cmd = self.build(tmp_path, split_dir, files, ims_legacy_presentation=True)
+        assert cmd == self.build(tmp_path, split_dir, files)
 
     def test_music_profile_is_refused(self, tmp_path, split_dir, files):
         with pytest.raises(UnsupportedDeeFeatureError):

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `--ims-legacy-presentation` is now ignored with a warning, instead of failing, when using the split DEE encoders, so commands written for the single `dee` executable keep working. Other options the split encoders cannot honor (7.1/Blu-ray, `--custom-dialnorm`, non-IMS `--encoding-profile`) still error rather than silently produce different output.
 - `--max-parallel` now shows one set of progress bars that update in place, instead of every worker printing a new line per update. Falls back to plain log lines with `--no-progress-bars`, in debug mode, or when output is not a terminal.
 
 ## [1.4.0] - 2026-11-06
