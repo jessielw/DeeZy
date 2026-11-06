@@ -51,6 +51,14 @@ class DeeDelay:
         """
         return self.DELAY != "0:00:00.005333"
 
+    def to_seconds(self) -> float:
+        """The delay as plain seconds, whichever form DEE's JSON wants it in."""
+        if self.MODE is DeeDelayModes.POSITIVE:
+            return float(self.DELAY)
+        # negative delays are kept as a clock string, i.e. '0:00:00.005333'
+        hours, minutes, seconds = self.DELAY.split(":")
+        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
 
 class DeeFPS(Enum):
     FPS_NOT_INDICATED = 0

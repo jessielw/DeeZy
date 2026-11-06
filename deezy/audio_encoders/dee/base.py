@@ -323,30 +323,6 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             return False, desired_rate
 
     @staticmethod
-    def get_dee_json_cmd(dee_path: Path, json_path: Path):
-        """
-        Generate the command for running DEE using the specified DEE and JSON paths.
-
-        Args:
-            dee_path (Path): The path to the DEE executable.
-            json_path (Path): The path to the input JSON file.
-
-        Returns:
-            List[str]: The DEE command with the specified paths.
-        """
-        dee_cmd = [
-            str(dee_path),
-            "--progress-interval",
-            "500",
-            "--diagnostics-interval",
-            "90000",
-            "--verbose",
-            "-j",
-            long_path_str(json_path),
-        ]
-        return dee_cmd
-
-    @staticmethod
     def _get_fps(fps: str | float | int | None):
         """
         Tries to get a valid FPS value from the input, handling conversion from string to float/int,

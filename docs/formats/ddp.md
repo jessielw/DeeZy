@@ -19,3 +19,7 @@ Key features: higher bitrates, advanced processing, smart defaults.
     For rare **5.0** sources, DeeZy can insert a silent **LFE** to produce a **5.1** output (uses the `5.1(side)` layout). This behavior is opt-in via `--upmix-50-to-51`.
 
     *Note: You should also pass `--channels 6`*.
+
+## Split DEE encoders
+
+7.1 output (`--channels 8`) and `--custom-dialnorm` are not available with the split DEE encoders; DeeZy stops with a message instead of encoding something different. `--metering-mode` is ignored there (always 1770-4). See [Installation](../installation.md).

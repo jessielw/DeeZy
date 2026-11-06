@@ -21,6 +21,17 @@ deezy.exe
     └── truehdd/ (truehdd.exe)  # only for Atmos/AC-4 decoding
 ```
 
+DEE can be either of two layouts, and DeeZy picks the right one from what it finds:
+
+- **Single `dee`** (`dee.exe`): the classic Dolby Encoding Engine. Everything is supported.
+- **Split encoders**: newer releases (including the copy bundled with Dolby Media Encoder) ship one executable per codec (`dee_ddp_encoder`, `dee_ddpjoc_encoder`, `dee_ac4ims_encoder`, ...) in a folder.
+
+For the split layout, point `--dee` (or `dee` under `[dependencies]` in the config) at the **folder**, or put the encoders in `apps/dee/` or on your `PATH`. On Windows an installed Dolby Media Encoder is found automatically. A single `dee` always takes priority when both are present.
+
+The split encoders read their license from a `license.lic` beside them, so put your license in that folder. They also need `libmediainfo.dll` beside them, so copy the whole folder rather than just the executables. (Dolby Media Encoder only creates its license while a job is running and removes it afterwards, so it is not left in its own folder.)
+
+Not available with the split encoders (DeeZy stops with a clear message rather than encode something different from what was asked): `--custom-dialnorm`, DD+ 7.1 (including Blu-ray DD+), Blu-ray Atmos, and AC-4 `--ims-legacy-presentation` and `--encoding-profile ims_music`. Metering is always ITU-R BS.1770-4, so `--metering-mode` is ignored.
+
 3. Install via pipx (Python-based install to get the `deezy` CLI shim):
 
 ```powershell

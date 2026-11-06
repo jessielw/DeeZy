@@ -1,7 +1,7 @@
 from pathlib import Path
 
+from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.enums.codec_format import CodecFormat
@@ -261,28 +261,21 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         # DEE encodes into the temp dir; we move the result to `output` ourselves
         dee_output = self._dee_output_path(self.temp_dir, output)
 
-        # generate JSON
-        json_generator = DeeJSONGenerator(
-            input_file_path=self.temp_dir / wav_file_name,
-            output_file_path=dee_output,
-            output_dir=self.temp_dir,
-            codec_format=format_command,
-            job_name=artifact_stem(output),
-        )
-        json_path = json_generator.dd_json(
-            payload=self.payload,
+        # generate DEE command
+        dee_cmd = get_dee_backend(self.payload.dee_path).dd_command(
+            self.payload,
+            DeeJobFiles(
+                input_file=self.temp_dir / wav_file_name,
+                output_file=dee_output,
+                temp_dir=self.temp_dir,
+                job_name=artifact_stem(output),
+                codec_format=format_command,
+            ),
             downmix_mode_off=False,
             bitrate=runtime_bitrate,
             fps=fps,
             delay=delay,
-            temp_dir=self.temp_dir,
             dd_mode=self._determine_output_mode(),
-        )
-        logger.debug(f"{json_path=}.")
-
-        # generate DEE command
-        dee_cmd = self.get_dee_json_cmd(
-            dee_path=self.payload.dee_path, json_path=json_path
         )
         logger.debug(f"{dee_cmd=}.")
 
