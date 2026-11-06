@@ -3,7 +3,6 @@ import sys
 from typing import Any
 
 import oslex2
-import tomlkit
 
 from deezy.config.defaults import CONF_DEFAULT, get_default_config_path
 from deezy.enums.codec_format import CodecFormat
@@ -69,6 +68,8 @@ class ConfigManager:
 
         if config_path and config_path.exists():
             try:
+                import tomlkit
+
                 with open(config_path, encoding="utf-8") as f:
                     loaded = tomlkit.load(f)
                 # a reload replaces the previous config rather than merging into it

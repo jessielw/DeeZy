@@ -2,10 +2,6 @@ from collections.abc import Callable
 import logging
 from subprocess import PIPE, STDOUT, Popen
 
-from rich.console import Console
-from rich.live import Live
-from rich.spinner import Spinner
-
 from deezy.utils.logger import logger
 from deezy.utils.progress import ProgressData, ProgressHandler
 
@@ -108,6 +104,10 @@ def _process_with_spinner(
 
     if handler.should_use_bars:
         # use rich spinner for interactive terminals
+        from rich.console import Console
+        from rich.live import Live
+        from rich.spinner import Spinner
+
         console = Console()
         spinner = Spinner("dots", text=f"{step_label} processing...")
 

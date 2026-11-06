@@ -1,22 +1,15 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 import logging
 import re
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from rich.progress import (
-    BarColumn,
-    Progress,
-    ProgressColumn,
-    SpinnerColumn,
-    TaskID,
-    TaskProgressColumn,
-    TextColumn,
-    TimeRemainingColumn,
-)
-from rich.text import Text
+if TYPE_CHECKING:
+    from rich.progress import Progress, TaskID
 
 from deezy.utils.logger import logger, logger_manager
 
@@ -103,6 +96,15 @@ class ProgressHandler:
     ) -> Generator[tuple[Progress, TaskID] | tuple[None, None], Any, None]:
         """Context manager for progress bars"""
         if self.should_use_bars:
+            from rich.progress import (
+                BarColumn,
+                Progress,
+                SpinnerColumn,
+                TaskProgressColumn,
+                TextColumn,
+                TimeRemainingColumn,
+            )
+
             with Progress(
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
@@ -384,6 +386,16 @@ class DEEProgressHandler(ProgressHandler):
     ) -> Generator[tuple[Progress, TaskID, None] | tuple[None, None, None], Any, None]:
         """Context manager for DEE's two-phase progress"""
         if self.should_use_bars:
+            from rich.progress import (
+                BarColumn,
+                Progress,
+                ProgressColumn,
+                SpinnerColumn,
+                TaskProgressColumn,
+                TextColumn,
+                TimeRemainingColumn,
+            )
+            from rich.text import Text
 
             class DialnormColumn(ProgressColumn):
                 """Render a trailing dialnorm value from task.fields safely."""

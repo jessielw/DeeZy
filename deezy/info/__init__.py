@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 import shutil
+from typing import TYPE_CHECKING
 
-from pymediainfo import MediaInfo, Track
+if TYPE_CHECKING:
+    from pymediainfo import Track
 
 from deezy.track_info.mediainfo import MediainfoParser
 
@@ -25,6 +29,8 @@ def parse_audio_streams(file_input: Path) -> AudioStreams:
         about the audio tracks) and "track_list" (a list of audio track IDs).
     """
     # media info object
+    from pymediainfo import MediaInfo
+
     media_info_obj = MediaInfo.parse(Path(file_input))
 
     # list of tracks to return
