@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             platform: linux
             executable: deezy
             artifact_name: deezy-linux-x64
