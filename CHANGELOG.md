@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-11-07
+
+### Added
+
+- Split DEE encoders now support what the single `dee` does, each checked against the real encoders:
+  - `--custom-dialnorm` for DD, DD+ and Atmos.
+  - DD+ 7.1 for Blu-ray (`ddp-bluray`) and Blu-ray Atmos (`--atmos-mode bluray`).
+  - AC-4 `--encoding-profile ims_music`.
+- New options that only the split DEE encoders offer (the single `dee` stops with a message if they are used):
+  - `--loudness-target` and `--peak-limit` (DD, DD+): measure **and correct** loudness to a target instead of only measuring.
+  - `--loudness-preset` (all formats): measure to `atsc_a85`, `ebu_r128`, `freetv_op59` or `arib_b32` instead of the manual settings.
+  - `--user-data` (DD+): write a user data ID into the stream.
+  - `--bluray-secondary` (DD+): Blu-ray secondary audio (2.0 or 5.1 at 192 or 256 kbps).
+- Docs: a single "split vs. single `dee`" comparison table, updated format pages and troubleshooting entries, and regenerated CLI reference pages.
+
+### Fixed
+
+- Split DEE encoders failed with "license.lic does not exist" for a Dolby Media Encoder install, which keeps its license elsewhere. The license is now found automatically (`dme_license.lic` beside the tools, or in `%APPDATA%\Dolby Media Encoder`).
+- Data rates the split encoders reject are now adjusted to the nearest accepted one instead of failing the encode: AC-4 (72 and 112 kbps were offered but rejected; 96 and 128 could not be chosen) and streaming Atmos (512 kbps).
+
+### Changed
+
+- Still not available with the split encoders: DD+ 7.1 for online media (`ddp --channels 8`, it would silently come out 5.1; the message points to `ddp-bluray` or `--channels 6`) and metering modes other than 1770-4 (measured as 1770-4 with a note; use `--loudness-preset` instead). `--ims-legacy-presentation` is ignored with a warning.
+
 ## [1.4.2] - 2026-11-06
 
 ### Fixed

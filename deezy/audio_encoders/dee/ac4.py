@@ -20,6 +20,9 @@ from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
 from deezy.utils.paths import artifact_stem
 
+# data rates (kbps) the split AC-4 encoder accepts
+SPLIT_AC4_BITRATES = (64, 96, 128, 144, 256, 320)
+
 
 class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
     """AC4 Encoder."""
@@ -53,6 +56,9 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         # bitrate
         # get object based off of desired channels and source audio track channels
         bitrate_obj = Ac4Channels.IMMERSIVE_STEREO.get_bitrate_obj()
+        if Path(self.payload.dee_path).is_dir():
+            # the split encoder offers a different set of data rates
+            bitrate_obj = ChannelBitrates(default=256, choices=SPLIT_AC4_BITRATES)
 
         # check to see if the users bitrate is allowed
         runtime_bitrate = self.get_config_based_bitrate(

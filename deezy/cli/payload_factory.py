@@ -5,7 +5,7 @@ from typing import Any
 
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode, WarpMode
-from deezy.enums.shared import DeeDRC, MeteringMode, StereoDownmix
+from deezy.enums.shared import DeeDRC, LoudnessPreset, MeteringMode, StereoDownmix
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -68,6 +68,17 @@ class PayloadBuilder:
                 args, "no_dialogue_intelligence", True
             ),
             "speech_threshold": cls.safe_get(args, "speech_threshold", 15),
+            "loudness_preset": cls.safe_get(
+                args, "loudness_preset", LoudnessPreset.MANUAL
+            ),
+        }
+
+    @classmethod
+    def _build_loudness_correction_fields(cls, args: argparse.Namespace) -> dict:
+        """Build loudness correction fields (split DEE encoders, DD/DDP)."""
+        return {
+            "loudness_target": cls.safe_get(args, "loudness_target", None),
+            "peak_limit": cls.safe_get(args, "peak_limit", None),
         }
 
     @classmethod
@@ -134,6 +145,7 @@ class PayloadBuilder:
         payload_data.update(cls._build_dolby_fields(args))
         payload_data.update(cls._build_stereo_mix_fields(args))
         payload_data["channels"] = cls.safe_get(args, "channels")
+        payload_data.update(cls._build_loudness_correction_fields(args))
 
         return DDPayload(**payload_data)
 
@@ -157,6 +169,11 @@ class PayloadBuilder:
         payload_data.update(cls._build_dolby_fields(args))
         payload_data.update(cls._build_stereo_mix_fields(args))
         payload_data["channels"] = cls.safe_get(args, "channels")
+        payload_data.update(cls._build_loudness_correction_fields(args))
+        payload_data["user_data"] = int(cls.safe_get(args, "user_data", -1))
+        payload_data["bluray_secondary"] = bool(
+            cls.safe_get(args, "bluray_secondary", False)
+        )
 
         return DDPPayload(**payload_data)
 

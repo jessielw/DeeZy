@@ -8,13 +8,20 @@ from deezy.enums.codec_format import CodecFormat
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
 from deezy.enums.shared import DDEncodingMode, StereoDownmix
-from deezy.exceptions import InvalidExtensionError, OutputFileNotFoundError
+from deezy.exceptions import (
+    ChannelMixError,
+    InvalidExtensionError,
+    OutputFileNotFoundError,
+)
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.shared import ChannelBitrates
 from deezy.track_info.mediainfo import MediainfoParser
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
 from deezy.utils.paths import artifact_stem
+
+# Blu-ray secondary audio data rates (kbps)
+SECONDARY_BITRATES = (192, 256)
 
 
 class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
@@ -272,7 +279,11 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 codec_format=format_command,
             ),
             downmix_mode_off=False,
-            bitrate=runtime_bitrate,
+            bitrate=(
+                self._secondary_bitrate(self.payload.bitrate)
+                if self.payload.bluray_secondary
+                else runtime_bitrate
+            ),
             fps=fps,
             delay=delay,
             dd_mode=self._determine_output_mode(),
@@ -428,7 +439,30 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
 
         return ffmpeg_cmd
 
+    @staticmethod
+    def _secondary_bitrate(requested: int | None) -> int:
+        """Blu-ray secondary audio only allows 192 or 256 kbps."""
+        choices = SECONDARY_BITRATES
+        if requested is None:
+            return choices[0]
+        closest = min(choices, key=lambda rate: abs(rate - requested))
+        if closest != requested:
+            logger.warning(
+                f"Blu-ray secondary audio only allows {choices[0]} or {choices[1]} "
+                f"kbps, using {closest}."
+            )
+        return closest
+
     def _determine_output_mode(self) -> DDEncodingMode:
+        if self.payload.bluray_secondary:
+            if self.payload.channels not in (
+                DolbyDigitalPlusChannels.STEREO,
+                DolbyDigitalPlusChannels.SURROUND,
+            ):
+                raise ChannelMixError(
+                    "Blu-ray secondary audio is only available as 2.0 or 5.1."
+                )
+            return DDEncodingMode.BLURAY_SECONDARY
         if isinstance(self.payload.channels, DolbyDigitalPlusBlurayChannels):
             return DDEncodingMode.BLURAY
         else:

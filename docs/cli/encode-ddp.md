@@ -7,7 +7,7 @@ usage: DeeZy encode ddp [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                         [--temp-dir TEMP_DIR] [--output OUTPUT]
                         [--output-template OUTPUT_TEMPLATE] [--output-preview]
                         [--max-parallel MAX_PARALLEL] [--jitter-ms JITTER_MS]
-                        [--max-logs N] [--max-batch-results N]
+                        [--allow-sleep] [--max-logs N] [--max-batch-results N]
                         [--working-dir WORKING_DIR] [--batch-summary-output]
                         [--batch-output-dir BATCH_OUTPUT_DIR] [--overwrite]
                         [--limit-ffmpeg LIMIT_FFMPEG] [--limit-dee LIMIT_DEE]
@@ -16,10 +16,14 @@ usage: DeeZy encode ddp [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                         [--drc-rf-mode {film_standard,film_light,music_standard,music_light,speech}]
                         [--custom-dialnorm CUSTOM_DIALNORM]
                         [--no-dialogue-intelligence]
+                        [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                         [--speech-threshold SPEECH_THRESHOLD]
                         [--metering-mode {1770_1,1770_2,1770_3,leqa}]
-                        [--no-low-pass-filter] [--no-surround-3db]
-                        [--no-surround-90-deg-phase-shift] [--upmix-50-to-51]
+                        [--loudness-target [-31..-8]]
+                        [--peak-limit PEAK_LIMIT] [--user-data [-1..65535]]
+                        [--bluray-secondary] [--no-low-pass-filter]
+                        [--no-surround-3db] [--no-surround-90-deg-phase-shift]
+                        [--upmix-50-to-51]
                         [--stereo-down-mix {auto,loro,ltrt,dpl2}]
                         [--lt-rt-center {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}]
                         [--lt-rt-surround {-1.5,-3,-4.5,-6,-inf}]
@@ -54,13 +58,15 @@ options:
   --output, OUTPUT
        The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
   --output-template, OUTPUT_TEMPLATE
-     Optional lightweight template to control auto-generated output filenames. Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay}.
+       Optional lightweight template to control auto-generated output filenames. Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay}.
   --output-preview
        When set, render and show template-based filenames but do not write outputs. Useful to validate templates before running batch jobs.
   --max-parallel, MAX_PARALLEL
        Maximum number of files to process in parallel (default: 1).
   --jitter-ms, JITTER_MS
        Maximum random jitter in milliseconds to apply before heavy phases (FFmpeg/DEE/truehdd). Helps avoid synchronization spikes when running parallel jobs. Default 0 (disabled).
+  --allow-sleep
+       Allow the system to sleep while encoding. By default, DeeZy prevents automatic system sleep without keeping the display on.
   --max-logs, N
        Maximum number of log files to keep in the working logs directory for this run. Overrides config value if provided. Use 0 to keep none.
   --max-batch-results, N
@@ -89,10 +95,20 @@ options:
        Custom dialnorm (0 disables custom dialnorm).
   --no-dialogue-intelligence
        Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.
+  --loudness-preset, {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}
+       Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, ARIB B32) instead of the manual settings. Replaces --no-dialogue-intelligence and --speech-threshold. Split DEE encoders only.
   --speech-threshold, SPEECH_THRESHOLD
        [0-100] If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
   --metering-mode, {1770_1,1770_2,1770_3,leqa}
        Loudness measuring mode according to one of the broadcast standards.
+  --loudness-target, [-31..-8]
+       Measure and correct the loudness to this target (LKFS) instead of only measuring. Split DEE encoders only. Can't be combined with --custom-dialnorm.
+  --peak-limit, PEAK_LIMIT
+       Peak limit in dBTP used with --loudness-target (-12 to -0.1, must be at least 6 dB above the target). Defaults to the encoder's -2.
+  --user-data, [-1..65535]
+       Optional user data ID to write into the stream (-1 for none). Split DEE encoders only.
+  --bluray-secondary
+       Encode Blu-ray secondary audio (2.0 or 5.1 at 192 or 256 kbps). Split DEE encoders only.
   --no-low-pass-filter
        Disables low pass filter.
   --no-surround-3db

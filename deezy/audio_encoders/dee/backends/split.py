@@ -1,13 +1,14 @@
+import os
 from pathlib import Path
 
 from deezy.audio_encoders.dee.backends.base import DeeBackend, DeeJobFiles
-from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import (
     DDEncodingMode,
     DeeDelay,
     DeeDelayModes,
     DeeFPS,
+    LoudnessPreset,
     MeteringMode,
     StereoDownmix,
 )
@@ -28,6 +29,24 @@ AC4_IMS_TOOL = "dee_ac4ims_encoder"
 
 def _flag(value: bool) -> str:
     return "1" if value else "0"
+
+
+def find_license(dee_path: Path) -> Path | None:
+    """
+    A license file for the split encoders, when they will not find one themselves.
+
+    The tools look for ``license.lic`` next to themselves. Dolby Media Encoder
+    keeps its license elsewhere (``dme_license.lic`` beside the tools in some
+    installs, ``license.lic`` in its AppData folder in others), so pass that
+    explicitly. Returns None when the default location works or nothing is found.
+    """
+    if (dee_path / "license.lic").is_file():
+        return None
+    candidates = [dee_path / "dme_license.lic"]
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        candidates.append(Path(appdata) / "Dolby Media Encoder" / "license.lic")
+    return next((path for path in candidates if path.is_file()), None)
 
 
 def _options(options: dict[str, str]) -> str:
@@ -57,15 +76,15 @@ class SplitDeeBackend(DeeBackend):
         delay: DeeDelay | None,
         dd_mode: DDEncodingMode,
     ) -> list[str]:
-        if dd_mode in (DDEncodingMode.BLURAY, DDEncodingMode.DDP71):
-            # the tool only offers mono, stereo and 5.1 output layouts and would
+        self._check_options(payload, dd_mode)
+        if dd_mode is DDEncodingMode.DDP71:
+            # only the Blu-ray encoder mode takes 7.1; the plain DD+ one would
             # quietly hand back a 5.1 stream for a 7.1 request
             raise UnsupportedDeeFeatureError(
-                "Dolby Digital Plus 7.1 encoding (including Blu-ray) is not "
-                "available with the split DEE encoders. Use a DEE that provides "
-                "the single 'dee' executable."
+                "Dolby Digital Plus 7.1 for online media is not available with the "
+                "split DEE encoders. Use 'ddp-bluray' for 7.1, '--channels 6' for 5.1, "
+                "or a DEE that provides the single 'dee' executable."
             )
-        self._reject_custom_dialnorm(payload)
 
         encoder = {
             "drc_profile_line": payload.drc_line_mode.to_dee_cmd(),
@@ -83,7 +102,17 @@ class SplitDeeBackend(DeeBackend):
             "ltrt_cmix": payload.ltrt_center_mix_level,
             "ltrt_smix": payload.ltrt_surround_mix_level,
         }
-        mode = "dd" if dd_mode is DDEncodingMode.DD else "ddp"
+        # the Blu-ray mode keeps the 7.1 layout of the input, so it is not given
+        # an output layout at all
+        is_bluray = dd_mode is DDEncodingMode.BLURAY
+        mode = {
+            DDEncodingMode.DD: "dd",
+            DDEncodingMode.BLURAY: "bluray",
+            DDEncodingMode.BLURAY_SECONDARY: "bluray_secondary",
+        }.get(dd_mode, "ddp")
+        user_data = int(getattr(payload, "user_data", -1))
+        if user_data != -1:
+            encoder["user_data"] = str(user_data)
 
         # the JSON flow calls "no downmix" 'off', the command line calls it 'auto'
         channels = "off" if downmix_mode_off else payload.channels.to_dee_cmd()
@@ -101,8 +130,7 @@ class SplitDeeBackend(DeeBackend):
                 delay=delay,
                 payload=payload,
             ),
-            "-c",
-            channels,
+            *([] if is_bluray else ["-c", channels]),
             "-e",
             f"{mode}:{_options(encoder)}",
         ]
@@ -117,13 +145,6 @@ class SplitDeeBackend(DeeBackend):
         delay: DeeDelay | None,
         atmos_mode: AtmosMode,
     ) -> list[str]:
-        if atmos_mode is AtmosMode.BLURAY:
-            raise UnsupportedDeeFeatureError(
-                "Blu-ray (7.1) Atmos encoding is not available with the split DEE "
-                "encoders. Use a DEE that provides the single 'dee' executable."
-            )
-        self._reject_custom_dialnorm(payload)
-
         encoder = {
             "preferred_downmix_mode": payload.preferred_downmix_mode.to_dee_cmd(),
             "loro_cmix": payload.loro_center_mix_level,
@@ -133,6 +154,10 @@ class SplitDeeBackend(DeeBackend):
             "drc_profile_line": payload.drc_line_mode.to_dee_cmd(),
             "drc_profile_rf": payload.drc_rf_mode.to_dee_cmd(),
         }
+        options = _options(encoder)
+        if atmos_mode is AtmosMode.BLURAY:
+            # the 7.1 Blu-ray flavour is an encoder mode of the same tool
+            options = f"bluray:{options}"
         return [
             *self._common_args(
                 DDP_JOC_TOOL,
@@ -144,7 +169,7 @@ class SplitDeeBackend(DeeBackend):
                 payload=payload,
             ),
             "-e",
-            _options(encoder),
+            options,
         ]
 
     def ac4_command(
@@ -164,13 +189,8 @@ class SplitDeeBackend(DeeBackend):
                 "--ims-legacy-presentation is not available with the split DEE "
                 "encoders and will be ignored."
             )
-        if payload.encoding_profile is not Ac4EncodingProfile.IMS:
-            raise UnsupportedDeeFeatureError(
-                f"--encoding-profile {payload.encoding_profile} is not available "
-                "with the split DEE encoders."
-            )
-
         encoder = {
+            "profile": payload.encoding_profile.to_dee_cmd(),
             "drc_profile_ddp": payload.ddp_drc.to_dee_cmd(),
             "drc_profile_flat_panel": payload.flat_panel_drc.to_dee_cmd(),
             "drc_profile_home_theatre": payload.home_theatre_drc.to_dee_cmd(),
@@ -216,6 +236,7 @@ class SplitDeeBackend(DeeBackend):
             "info",
             "--progress",
             "1",
+            *self._license_args(),
             # DEE only ever writes into the job's own temp directory
             "--overwrite",
             "1",
@@ -235,6 +256,10 @@ class SplitDeeBackend(DeeBackend):
             self._loudness(payload),
         ]
 
+    def _license_args(self) -> list[str]:
+        license_file = find_license(Path(self.dee_path))
+        return ["--license", str(license_file)] if license_file else []
+
     @staticmethod
     def _delay_args(delay: DeeDelay | None) -> list[str]:
         if not delay:
@@ -247,25 +272,66 @@ class SplitDeeBackend(DeeBackend):
         return ["--add-silence", f"{seconds}:0"]
 
     @staticmethod
+    def _check_options(
+        payload: DDPayload | DDPPayload, dd_mode: DDEncodingMode
+    ) -> None:
+        """Refuse option combinations the encoders cannot honor."""
+        target = getattr(payload, "loudness_target", None)
+        peak = getattr(payload, "peak_limit", None)
+        if peak is not None and target is None:
+            raise UnsupportedDeeFeatureError("--peak-limit needs --loudness-target.")
+        if target is not None:
+            if int(getattr(payload, "custom_dialnorm", 0) or 0) != 0:
+                raise UnsupportedDeeFeatureError(
+                    "--loudness-target measures and corrects the loudness, so it "
+                    "can't be combined with --custom-dialnorm."
+                )
+            if dd_mode is DDEncodingMode.BLURAY:
+                raise UnsupportedDeeFeatureError(
+                    "--loudness-target is not available for Blu-ray (7.1) DD+."
+                )
+            if getattr(payload, "loudness_preset", LoudnessPreset.MANUAL) is not (
+                LoudnessPreset.MANUAL
+            ):
+                raise UnsupportedDeeFeatureError(
+                    "--loudness-target needs the manual loudness settings, so it "
+                    "can't be combined with --loudness-preset."
+                )
+        if int(getattr(payload, "user_data", -1)) != -1 and dd_mode not in (
+            DDEncodingMode.DDP,
+            DDEncodingMode.DDP71,
+        ):
+            raise UnsupportedDeeFeatureError(
+                "--user-data is only available for plain Dolby Digital Plus."
+            )
+
+    @staticmethod
     def _loudness(payload: LoudnessPayload) -> str:
+        # a custom dialnorm skips measurement and writes the value as-is. The
+        # encoders' --help never lists 'skip', but Dolby Media Encoder uses it
+        custom = int(getattr(payload, "custom_dialnorm", 0) or 0)
+        if custom != 0:
+            return f"skip:custom_dialnorm={custom}"
         # these encoders measure to ITU-R BS.1770-4 only
         if payload.metering_mode is not MeteringMode.MODE_1770_4:
             logger.info(
                 f"Metering mode {payload.metering_mode} is not offered by the split "
                 "DEE encoders, measuring with 1770-4."
             )
-        return "measure_only:" + _options(
-            {
-                "preset": "manual",
-                "dialogue_intelligence": _flag(payload.dialogue_intelligence),
-                "speech_threshold": str(payload.speech_threshold),
-            }
-        )
-
-    @staticmethod
-    def _reject_custom_dialnorm(payload: LoudnessPayload) -> None:
-        if int(getattr(payload, "custom_dialnorm", 0) or 0) != 0:
-            raise UnsupportedDeeFeatureError(
-                "--custom-dialnorm is not available with the split DEE encoders. "
-                "Use a DEE that provides the single 'dee' executable."
-            )
+        preset = getattr(payload, "loudness_preset", LoudnessPreset.MANUAL)
+        if preset is not LoudnessPreset.MANUAL:
+            # a regulation sets its own gating, so the manual options don't apply
+            return "measure_only:" + _options({"preset": preset.to_dee_cmd()})
+        options = {
+            "preset": "manual",
+            "dialogue_intelligence": _flag(payload.dialogue_intelligence),
+            "speech_threshold": str(payload.speech_threshold),
+        }
+        target = getattr(payload, "loudness_target", None)
+        if target is None:
+            return "measure_only:" + _options(options)
+        options["loudness_target"] = str(target)
+        peak = getattr(payload, "peak_limit", None)
+        if peak is not None:
+            options["peak_limit_db"] = f"{peak:g}"
+        return "measure_and_correct:" + _options(options)

@@ -1,7 +1,8 @@
 from deezy.audio_encoders.dee.backends.base import DeeBackend, DeeJobFiles
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
 from deezy.enums.atmos import AtmosMode
-from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS
+from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS, LoudnessPreset
+from deezy.exceptions import UnsupportedDeeFeatureError
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -26,6 +27,7 @@ class LegacyDeeBackend(DeeBackend):
         delay: DeeDelay | None,
         dd_mode: DDEncodingMode,
     ) -> list[str]:
+        self._reject_split_only(payload)
         json_path = self._generator(files).dd_json(
             payload=payload,
             downmix_mode_off=downmix_mode_off,
@@ -47,6 +49,7 @@ class LegacyDeeBackend(DeeBackend):
         delay: DeeDelay | None,
         atmos_mode: AtmosMode,
     ) -> list[str]:
+        self._reject_split_only(payload)
         json_path = self._generator(files).atmos_json(
             payload=payload,
             bitrate=bitrate,
@@ -67,6 +70,7 @@ class LegacyDeeBackend(DeeBackend):
         delay: DeeDelay | None,
         atmos_enabled: bool,
     ) -> list[str]:
+        self._reject_split_only(payload)
         json_path = self._generator(files).ac4_json(
             payload=payload,
             bitrate=bitrate,
@@ -76,6 +80,32 @@ class LegacyDeeBackend(DeeBackend):
             atmos_enabled=atmos_enabled,
         )
         return self._json_command(json_path)
+
+    @staticmethod
+    def _reject_split_only(
+        payload: DDPayload | DDPPayload | AtmosPayload | Ac4Payload,
+    ) -> None:
+        """These options only exist on the split encoders; never drop them silently."""
+        used = []
+        if getattr(payload, "loudness_target", None) is not None:
+            used.append("--loudness-target")
+        if getattr(payload, "peak_limit", None) is not None:
+            used.append("--peak-limit")
+        if getattr(payload, "user_data", -1) != -1:
+            used.append("--user-data")
+        if getattr(payload, "bluray_secondary", False):
+            used.append("--bluray-secondary")
+        if getattr(payload, "loudness_preset", None) not in (
+            None,
+            LoudnessPreset.MANUAL,
+        ):
+            used.append("--loudness-preset")
+        if used:
+            raise UnsupportedDeeFeatureError(
+                f"{', '.join(used)} requires the split DEE encoders "
+                "(dee_ddp_encoder and friends); the single 'dee' executable "
+                "does not offer it."
+            )
 
     @staticmethod
     def _generator(files: DeeJobFiles) -> DeeJSONGenerator:
