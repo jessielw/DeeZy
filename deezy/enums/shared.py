@@ -112,6 +112,23 @@ class DeeDRC(CaseInsensitiveEnum):
         return str(self)
 
 
+class LoudnessPreset(CaseInsensitiveEnum):
+    """Loudness regulation presets of the split DEE encoders."""
+
+    MANUAL = "manual"
+    ATSC_A85 = "atsc_a85"
+    EBU_R128 = "ebu_r128"
+    FREETV_OP59 = "freetv_op59"
+    ARIB_B32 = "arib_b32"
+
+    @override
+    def __str__(self) -> str:
+        return self.value
+
+    def to_dee_cmd(self) -> str:
+        return str(self)
+
+
 class MeteringMode(CaseInsensitiveEnum):
     MODE_1770_1 = "1770_1"
     MODE_1770_2 = "1770_2"

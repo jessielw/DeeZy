@@ -19,6 +19,7 @@ from deezy.enums.shared import (
     DDEncodingMode,
     DeeDRC,
     DeeFPS,
+    LoudnessPreset,
     MeteringMode,
     StereoDownmix,
 )
@@ -322,6 +323,92 @@ class TestSplitDDExtras:
         )
         assert option(cmd, "-e").startswith("bluray_secondary:")
         assert option(cmd, "-c") == "5.1"
+
+
+class TestLoudnessPreset:
+    def dd(self, tmp_path, split_dir, files, dd_mode=DDEncodingMode.DDP, **fields):
+        return SplitDeeBackend(split_dir).dd_command(
+            replace(make_dd_payload(tmp_path), **fields),
+            files,
+            downmix_mode_off=False,
+            bitrate=640,
+            fps=DeeFPS.FPS_24,
+            delay=None,
+            dd_mode=dd_mode,
+        )
+
+    @pytest.mark.parametrize(
+        "preset", [p for p in LoudnessPreset if p.value != "manual"]
+    )
+    def test_preset_replaces_manual_options(self, tmp_path, split_dir, files, preset):
+        cmd = self.dd(tmp_path, split_dir, files, loudness_preset=preset)
+        assert option(cmd, "--loudness-management") == (
+            f"measure_only:preset={preset.value}"
+        )
+
+    def test_preset_with_correction(self, tmp_path, split_dir, files):
+        cmd = self.dd(
+            tmp_path, split_dir, files, loudness_preset=LoudnessPreset.EBU_R128
+        )
+        assert "dialogue_intelligence" not in option(cmd, "--loudness-management")
+
+    def test_preset_cannot_use_a_target(self, tmp_path, split_dir, files):
+        with pytest.raises(UnsupportedDeeFeatureError, match="loudness-preset"):
+            self.dd(
+                tmp_path,
+                split_dir,
+                files,
+                loudness_preset=LoudnessPreset.EBU_R128,
+                loudness_target=-24,
+            )
+
+    def test_custom_dialnorm_wins_over_a_preset(self, tmp_path, split_dir, files):
+        cmd = self.dd(
+            tmp_path,
+            split_dir,
+            files,
+            loudness_preset=LoudnessPreset.EBU_R128,
+            custom_dialnorm=-27,
+        )
+        assert option(cmd, "--loudness-management") == "skip:custom_dialnorm=-27"
+
+    def test_atmos_and_ac4(self, tmp_path, split_dir, files):
+        atmos = SplitDeeBackend(split_dir).atmos_command(
+            replace(
+                make_atmos_payload(tmp_path), loudness_preset=LoudnessPreset.ATSC_A85
+            ),
+            files,
+            bitrate=448,
+            fps=DeeFPS.FPS_24,
+            delay=None,
+            atmos_mode=AtmosMode.STREAMING,
+        )
+        ac4 = SplitDeeBackend(split_dir).ac4_command(
+            make_ac4_payload(tmp_path, loudness_preset=LoudnessPreset.ATSC_A85),
+            files,
+            bitrate=256,
+            fps=DeeFPS.FPS_24,
+            delay=None,
+            atmos_enabled=True,
+        )
+        for cmd in (atmos, ac4):
+            assert (
+                option(cmd, "--loudness-management") == "measure_only:preset=atsc_a85"
+            )
+
+    def test_legacy_refuses_a_preset(self, tmp_path, files):
+        with pytest.raises(UnsupportedDeeFeatureError, match="loudness-preset"):
+            LegacyDeeBackend(Path("dee")).atmos_command(
+                replace(
+                    make_atmos_payload(tmp_path),
+                    loudness_preset=LoudnessPreset.EBU_R128,
+                ),
+                files,
+                bitrate=448,
+                fps=DeeFPS.FPS_24,
+                delay=None,
+                atmos_mode=AtmosMode.STREAMING,
+            )
 
 
 class TestLegacySplitOnlyOptions:

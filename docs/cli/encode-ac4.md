@@ -13,6 +13,7 @@ usage: DeeZy encode ac4 [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                         [--limit-ffmpeg LIMIT_FFMPEG] [--limit-dee LIMIT_DEE]
                         [--limit-truehdd LIMIT_TRUEHDD] [--bitrate BITRATE]
                         [--no-dialogue-intelligence]
+                        [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                         [--speech-threshold SPEECH_THRESHOLD]
                         [--metering-mode {1770_1,1770_2,1770_3,1770_4,leqa}]
                         [--ims-legacy-presentation]
@@ -83,6 +84,8 @@ options:
        The bitrate in Kbps (If too high or low for you desired layout, the bitrate will automatically be adjusted to the closest allowed bitrate).
   --no-dialogue-intelligence
        Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.
+  --loudness-preset, {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}
+       Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, ARIB B32) instead of the manual settings. Replaces --no-dialogue-intelligence and --speech-threshold. Split DEE encoders only.
   --speech-threshold, SPEECH_THRESHOLD
        [0-100] If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
   --metering-mode, {1770_1,1770_2,1770_3,1770_4,leqa}

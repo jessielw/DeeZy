@@ -8,6 +8,7 @@ from deezy.enums.shared import (
     DeeDelay,
     DeeDelayModes,
     DeeFPS,
+    LoudnessPreset,
     MeteringMode,
     StereoDownmix,
 )
@@ -289,6 +290,13 @@ class SplitDeeBackend(DeeBackend):
                 raise UnsupportedDeeFeatureError(
                     "--loudness-target is not available for Blu-ray (7.1) DD+."
                 )
+            if getattr(payload, "loudness_preset", LoudnessPreset.MANUAL) is not (
+                LoudnessPreset.MANUAL
+            ):
+                raise UnsupportedDeeFeatureError(
+                    "--loudness-target needs the manual loudness settings, so it "
+                    "can't be combined with --loudness-preset."
+                )
         if int(getattr(payload, "user_data", -1)) != -1 and dd_mode not in (
             DDEncodingMode.DDP,
             DDEncodingMode.DDP71,
@@ -310,6 +318,10 @@ class SplitDeeBackend(DeeBackend):
                 f"Metering mode {payload.metering_mode} is not offered by the split "
                 "DEE encoders, measuring with 1770-4."
             )
+        preset = getattr(payload, "loudness_preset", LoudnessPreset.MANUAL)
+        if preset is not LoudnessPreset.MANUAL:
+            # a regulation sets its own gating, so the manual options don't apply
+            return "measure_only:" + _options({"preset": preset.to_dee_cmd()})
         options = {
             "preset": "manual",
             "dialogue_intelligence": _flag(payload.dialogue_intelligence),

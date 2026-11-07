@@ -43,9 +43,10 @@ Everything DeeZy offers works with both layouts except the items below. DeeZy ne
 | Blu-ray Atmos (`--atmos-mode bluray`) | Yes | Yes |
 | AC-4 `--encoding-profile ims_music` | Yes | Yes |
 | DD+ 7.1 for online media (`ddp --channels 8`) | Yes | **No**, use `ddp-bluray` (or `--channels 6` for 5.1) |
-| `--metering-mode` other than 1770-4 | Yes | **No**, always measured with ITU-R BS.1770-4 (noted in the log) |
+| `--metering-mode` other than 1770-4 | Yes | **No**, always measured with ITU-R BS.1770-4 (noted in the log). Use `--loudness-preset` for regulation-based measuring |
 | AC-4 `--ims-legacy-presentation` | Yes | **No**, ignored with a warning |
 | `--loudness-target` / `--peak-limit` (DD, DD+) | No | Yes |
+| `--loudness-preset` (all formats) | No | Yes |
 | `--user-data` (DD+) | No | Yes |
 | `--bluray-secondary` (DD+) | No | Yes |
 

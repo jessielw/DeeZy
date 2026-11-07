@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.3] - 2026-11-07
+## [1.5.0] - 2026-11-07
 
 ### Added
 
@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - AC-4 `--encoding-profile ims_music`.
 - New options that only the split DEE encoders offer (the single `dee` stops with a message if they are used):
   - `--loudness-target` and `--peak-limit` (DD, DD+): measure **and correct** loudness to a target instead of only measuring.
+  - `--loudness-preset` (all formats): measure to `atsc_a85`, `ebu_r128`, `freetv_op59` or `arib_b32` instead of the manual settings.
   - `--user-data` (DD+): write a user data ID into the stream.
   - `--bluray-secondary` (DD+): Blu-ray secondary audio (2.0 or 5.1 at 192 or 256 kbps).
 - Docs: a single "split vs. single `dee`" comparison table, updated format pages and troubleshooting entries, and regenerated CLI reference pages.
@@ -26,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Still not available with the split encoders: DD+ 7.1 for online media (`ddp --channels 8`, it would silently come out 5.1; the message points to `ddp-bluray` or `--channels 6`) and metering modes other than 1770-4 (measured as 1770-4 with a note). `--ims-legacy-presentation` is ignored with a warning.
+- Still not available with the split encoders: DD+ 7.1 for online media (`ddp --channels 8`, it would silently come out 5.1; the message points to `ddp-bluray` or `--channels 6`) and metering modes other than 1770-4 (measured as 1770-4 with a note; use `--loudness-preset` instead). `--ims-legacy-presentation` is ignored with a warning.
 
 ## [1.4.2] - 2026-11-06
 

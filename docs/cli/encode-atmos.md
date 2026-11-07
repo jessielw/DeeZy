@@ -18,6 +18,7 @@ usage: DeeZy encode atmos [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                           [--drc-rf-mode {film_standard,film_light,music_standard,music_light,speech}]
                           [--custom-dialnorm CUSTOM_DIALNORM]
                           [--no-dialogue-intelligence]
+                          [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                           [--speech-threshold SPEECH_THRESHOLD]
                           [--metering-mode {1770_1,1770_2,1770_3,1770_4,leqa}]
                           [--lt-rt-center {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}]
@@ -93,6 +94,8 @@ options:
        Custom dialnorm (0 disables custom dialnorm).
   --no-dialogue-intelligence
        Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.
+  --loudness-preset, {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}
+       Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, ARIB B32) instead of the manual settings. Replaces --no-dialogue-intelligence and --speech-threshold. Split DEE encoders only.
   --speech-threshold, SPEECH_THRESHOLD
        [0-100] If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
   --metering-mode, {1770_1,1770_2,1770_3,1770_4,leqa}

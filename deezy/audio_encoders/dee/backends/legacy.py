@@ -1,7 +1,7 @@
 from deezy.audio_encoders.dee.backends.base import DeeBackend, DeeJobFiles
 from deezy.audio_encoders.dee.json.dee_json_generator import DeeJSONGenerator
 from deezy.enums.atmos import AtmosMode
-from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS
+from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS, LoudnessPreset
 from deezy.exceptions import UnsupportedDeeFeatureError
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
@@ -49,6 +49,7 @@ class LegacyDeeBackend(DeeBackend):
         delay: DeeDelay | None,
         atmos_mode: AtmosMode,
     ) -> list[str]:
+        self._reject_split_only(payload)
         json_path = self._generator(files).atmos_json(
             payload=payload,
             bitrate=bitrate,
@@ -69,6 +70,7 @@ class LegacyDeeBackend(DeeBackend):
         delay: DeeDelay | None,
         atmos_enabled: bool,
     ) -> list[str]:
+        self._reject_split_only(payload)
         json_path = self._generator(files).ac4_json(
             payload=payload,
             bitrate=bitrate,
@@ -80,7 +82,9 @@ class LegacyDeeBackend(DeeBackend):
         return self._json_command(json_path)
 
     @staticmethod
-    def _reject_split_only(payload: DDPayload | DDPPayload) -> None:
+    def _reject_split_only(
+        payload: DDPayload | DDPPayload | AtmosPayload | Ac4Payload,
+    ) -> None:
         """These options only exist on the split encoders; never drop them silently."""
         used = []
         if getattr(payload, "loudness_target", None) is not None:
@@ -91,6 +95,11 @@ class LegacyDeeBackend(DeeBackend):
             used.append("--user-data")
         if getattr(payload, "bluray_secondary", False):
             used.append("--bluray-secondary")
+        if getattr(payload, "loudness_preset", None) not in (
+            None,
+            LoudnessPreset.MANUAL,
+        ):
+            used.append("--loudness-preset")
         if used:
             raise UnsupportedDeeFeatureError(
                 f"{', '.join(used)} requires the split DEE encoders "

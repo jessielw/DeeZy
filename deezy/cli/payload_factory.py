@@ -5,7 +5,7 @@ from typing import Any
 
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode, WarpMode
-from deezy.enums.shared import DeeDRC, MeteringMode, StereoDownmix
+from deezy.enums.shared import DeeDRC, LoudnessPreset, MeteringMode, StereoDownmix
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -68,6 +68,9 @@ class PayloadBuilder:
                 args, "no_dialogue_intelligence", True
             ),
             "speech_threshold": cls.safe_get(args, "speech_threshold", 15),
+            "loudness_preset": cls.safe_get(
+                args, "loudness_preset", LoudnessPreset.MANUAL
+            ),
         }
 
     @classmethod

@@ -24,6 +24,16 @@ Key features: higher bitrates, advanced processing, smart defaults.
 
 By default DeeZy measures the loudness and writes the measured dialnorm. `--custom-dialnorm -27` skips measurement and writes that dialnorm instead (both DEE layouts). `--loudness-target` / `--peak-limit` measure and correct instead, exactly as for [DD](dd.md#loudness) (split DEE encoders only).
 
+### Loudness presets
+
+`--loudness-preset` measures to a broadcast regulation instead of the manual settings. Choices: `atsc_a85`, `ebu_r128`, `freetv_op59`, `arib_b32` (default `manual`). Split DEE encoders only.
+
+```bash
+deezy encode ddp --loudness-preset ebu_r128 input.mkv
+```
+
+A preset sets its own gating, so `--no-dialogue-intelligence` and `--speech-threshold` are ignored with it, and it can't be combined with `--loudness-target`. `--custom-dialnorm` still wins if given. The preset changes the measured dialnorm: on the same Atmos clip `manual` gave -18 and `ebu_r128` gave -13.
+
 ## Split-encoder-only options
 
 ```bash

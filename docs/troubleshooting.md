@@ -8,7 +8,7 @@ Common issues
 - "DEE executable not found": provide `--dee` or set in config. For the split DEE encoders this is the folder containing `dee_ddp_encoder`
 - "License file does not exist" / "Provided license file does not enable this tool" (split DEE): DeeZy uses a `license.lic` beside the encoders, else a Dolby Media Encoder license (`dme_license.lic` beside them, or `%APPDATA%\Dolby Media Encoder\license.lic`). The license must cover the DEE release in use
 - "... is not available with the split DEE encoders": that option needs the single `dee` executable (see the comparison table in Installation)
-- "... requires the split DEE encoders": `--loudness-target`, `--peak-limit`, `--user-data` and `--bluray-secondary` only exist in the split encoders
+- "... requires the split DEE encoders": `--loudness-target`, `--peak-limit`, `--loudness-preset`, `--user-data` and `--bluray-secondary` only exist in the split encoders
 - "Dolby Digital Plus 7.1 for online media is not available": a 7.1 source with no `--channels` resolves to 7.1. Pass `--channels 6`, or use `ddp-bluray` for 7.1 with the split encoders
 
 Debug mode

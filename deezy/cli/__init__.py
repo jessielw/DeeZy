@@ -40,6 +40,7 @@ from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
 from deezy.enums.shared import (
     DeeDRC,
     LogLevel,
+    LoudnessPreset,
     MeteringMode,
     StereoDownmix,
     TrackType,
@@ -53,7 +54,7 @@ from deezy.utils.power import SleepInhibitor
 from deezy.utils.progress import has_shared_progress, shared_progress_display
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.4.3"
+__version__ = "1.5.0"
 program_name = "DeeZy"
 
 
@@ -330,6 +331,18 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "--no-dialogue-intelligence",
         action="store_false",
         help="Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.",
+    )
+    loudness_group.add_argument(
+        "--loudness-preset",
+        type=case_insensitive_enum(LoudnessPreset),
+        choices=LoudnessPreset,
+        metavar=enum_choices(LoudnessPreset),
+        default=LoudnessPreset.MANUAL,
+        help=(
+            "Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, "
+            "ARIB B32) instead of the manual settings. Replaces "
+            "--no-dialogue-intelligence and --speech-threshold. Split DEE encoders only."
+        ),
     )
     loudness_group.add_argument(
         "--speech-threshold",
