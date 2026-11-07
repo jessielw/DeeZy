@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -110,7 +111,11 @@ def option(cmd: list[str], flag: str) -> str:
 def encoder_options(cmd: list[str]) -> dict[str, str]:
     value = option(cmd, "-e")
     # DD/DDP lead with the mode ('ddp:...'), the others are bare lists
-    value = value.split(":", 1)[1] if value.split(":")[0] in ("dd", "ddp") else value
+    value = (
+        value.split(":", 1)[1]
+        if value.split(":")[0] in ("dd", "ddp", "bluray", "bluray_secondary")
+        else value
+    )
     return dict(pair.split("=", 1) for pair in value.split(":"))
 
 
@@ -220,20 +225,127 @@ class TestSplitDD:
             "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
         )
 
-    @pytest.mark.parametrize("mode", [DDEncodingMode.BLURAY, DDEncodingMode.DDP71])
-    def test_7_1_is_refused(self, tmp_path, split_dir, files, mode):
-        """The tool has no 7.1 layout and would silently return 5.1."""
+    def test_online_7_1_is_refused(self, tmp_path, split_dir, files):
+        """The plain DD+ mode has no 7.1 layout and would silently return 5.1."""
         with pytest.raises(UnsupportedDeeFeatureError, match="7.1"):
-            self.build(tmp_path, split_dir, files, dd_mode=mode)
+            self.build(tmp_path, split_dir, files, dd_mode=DDEncodingMode.DDP71)
 
-    def test_custom_dialnorm_is_refused(self, tmp_path, split_dir, files):
+    def test_bluray_uses_bluray_mode_without_output_layout(
+        self, tmp_path, split_dir, files
+    ):
+        cmd = self.build(tmp_path, split_dir, files, dd_mode=DDEncodingMode.BLURAY)
+        assert "-c" not in cmd
+        assert option(cmd, "-e").startswith("bluray:")
+
+    def test_custom_dialnorm_skips_measurement(self, tmp_path, split_dir, files):
         payload = make_dd_payload(tmp_path, custom_dialnorm=-27)
-        with pytest.raises(UnsupportedDeeFeatureError, match="custom-dialnorm"):
-            self.build(tmp_path, split_dir, files, payload=payload)
+        cmd = self.build(tmp_path, split_dir, files, payload=payload)
+        assert cmd[cmd.index("--loudness-management") + 1] == "skip:custom_dialnorm=-27"
 
     def test_zero_custom_dialnorm_is_off(self, tmp_path, split_dir, files):
         payload = make_dd_payload(tmp_path, custom_dialnorm="0")
         self.build(tmp_path, split_dir, files, payload=payload)
+
+
+class TestSplitDDExtras:
+    """Options that only the split encoders offer."""
+
+    def build(self, tmp_path, split_dir, files, dd_mode=DDEncodingMode.DDP, **fields):
+        payload = replace(make_dd_payload(tmp_path), **fields)
+        return SplitDeeBackend(split_dir).dd_command(
+            payload,
+            files,
+            downmix_mode_off=False,
+            bitrate=192,
+            fps=DeeFPS.FPS_24,
+            delay=None,
+            dd_mode=dd_mode,
+        )
+
+    def test_loudness_target_measures_and_corrects(self, tmp_path, split_dir, files):
+        cmd = self.build(tmp_path, split_dir, files, loudness_target=-24)
+        assert option(cmd, "--loudness-management") == (
+            "measure_and_correct:preset=manual:dialogue_intelligence=1:"
+            "speech_threshold=15:loudness_target=-24"
+        )
+
+    def test_peak_limit(self, tmp_path, split_dir, files):
+        cmd = self.build(
+            tmp_path, split_dir, files, loudness_target=-27, peak_limit=-3.5
+        )
+        assert option(cmd, "--loudness-management").endswith(
+            "loudness_target=-27:peak_limit_db=-3.5"
+        )
+
+    def test_peak_limit_needs_a_target(self, tmp_path, split_dir, files):
+        with pytest.raises(UnsupportedDeeFeatureError, match="--loudness-target"):
+            self.build(tmp_path, split_dir, files, peak_limit=-3)
+
+    def test_target_and_custom_dialnorm_conflict(self, tmp_path, split_dir, files):
+        with pytest.raises(UnsupportedDeeFeatureError, match="custom-dialnorm"):
+            self.build(
+                tmp_path, split_dir, files, loudness_target=-24, custom_dialnorm=-27
+            )
+
+    def test_loudness_target_is_refused_for_bluray(self, tmp_path, split_dir, files):
+        with pytest.raises(UnsupportedDeeFeatureError, match="Blu-ray"):
+            self.build(
+                tmp_path,
+                split_dir,
+                files,
+                dd_mode=DDEncodingMode.BLURAY,
+                loudness_target=-24,
+            )
+
+    def test_user_data(self, tmp_path, split_dir, files):
+        cmd = self.build(tmp_path, split_dir, files, user_data=100)
+        assert encoder_options(cmd)["user_data"] == "100"
+
+    def test_no_user_data_by_default(self, tmp_path, split_dir, files):
+        assert "user_data" not in encoder_options(
+            self.build(tmp_path, split_dir, files)
+        )
+
+    def test_user_data_is_refused_outside_plain_ddp(self, tmp_path, split_dir, files):
+        with pytest.raises(UnsupportedDeeFeatureError, match="user-data"):
+            self.build(
+                tmp_path,
+                split_dir,
+                files,
+                dd_mode=DDEncodingMode.BLURAY_SECONDARY,
+                user_data=5,
+            )
+
+    def test_bluray_secondary_mode(self, tmp_path, split_dir, files):
+        cmd = self.build(
+            tmp_path, split_dir, files, dd_mode=DDEncodingMode.BLURAY_SECONDARY
+        )
+        assert option(cmd, "-e").startswith("bluray_secondary:")
+        assert option(cmd, "-c") == "5.1"
+
+
+class TestLegacySplitOnlyOptions:
+    @pytest.mark.parametrize(
+        "fields",
+        [
+            {"loudness_target": -24},
+            {"peak_limit": -3.0},
+            {"user_data": 5},
+            {"bluray_secondary": True},
+        ],
+    )
+    def test_are_refused(self, tmp_path, files, fields):
+        payload = replace(make_dd_payload(tmp_path), **fields)
+        with pytest.raises(UnsupportedDeeFeatureError, match="split DEE"):
+            LegacyDeeBackend(Path("dee")).dd_command(
+                payload,
+                files,
+                downmix_mode_off=False,
+                bitrate=640,
+                fps=DeeFPS.FPS_24,
+                delay=None,
+                dd_mode=DDEncodingMode.DDP,
+            )
 
 
 class TestSplitDelay:
@@ -294,16 +406,18 @@ class TestSplitAtmos:
         assert encoder_options(cmd)["drc_profile_line"] == "film_light"
         assert encoder_options(cmd)["preferred_downmix_mode"] == "not_indicated"
 
-    def test_bluray_is_refused(self, tmp_path, split_dir, files):
-        with pytest.raises(UnsupportedDeeFeatureError):
-            SplitDeeBackend(split_dir).atmos_command(
-                make_atmos_payload(tmp_path),
-                files,
-                bitrate=1280,
-                fps=DeeFPS.FPS_24,
-                delay=None,
-                atmos_mode=AtmosMode.BLURAY,
-            )
+    def test_bluray_is_an_encoder_mode(self, tmp_path, split_dir, files):
+        cmd = SplitDeeBackend(split_dir).atmos_command(
+            replace(make_atmos_payload(tmp_path), custom_dialnorm=-27),
+            files,
+            bitrate=1280,
+            fps=DeeFPS.FPS_24,
+            delay=None,
+            atmos_mode=AtmosMode.BLURAY,
+        )
+        assert option(cmd, "-e").startswith("bluray:")
+        assert encoder_options(cmd)["drc_profile_line"] == "film_light"
+        assert option(cmd, "--loudness-management") == "skip:custom_dialnorm=-27"
 
 
 class TestSplitAC4:
@@ -325,6 +439,7 @@ class TestSplitAC4:
         assert option(cmd, "--data-rate") == "256"
         assert "--temp-dir" not in cmd
         assert set(encoder_options(cmd)) == {
+            "profile",
             "drc_profile_ddp",
             "drc_profile_flat_panel",
             "drc_profile_home_theatre",
@@ -344,14 +459,14 @@ class TestSplitAC4:
         cmd = self.build(tmp_path, split_dir, files, ims_legacy_presentation=True)
         assert cmd == self.build(tmp_path, split_dir, files)
 
-    def test_music_profile_is_refused(self, tmp_path, split_dir, files):
-        with pytest.raises(UnsupportedDeeFeatureError):
-            self.build(
-                tmp_path,
-                split_dir,
-                files,
-                encoding_profile=Ac4EncodingProfile.IMS_MUSIC,
-            )
+    def test_profile_is_passed(self, tmp_path, split_dir, files):
+        assert (
+            encoder_options(self.build(tmp_path, split_dir, files))["profile"] == "ims"
+        )
+        cmd = self.build(
+            tmp_path, split_dir, files, encoding_profile=Ac4EncodingProfile.IMS_MUSIC
+        )
+        assert encoder_options(cmd)["profile"] == "ims_music"
 
 
 def test_non_1770_4_metering_is_measured_as_1770_4(tmp_path, split_dir, files):

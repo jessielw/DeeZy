@@ -25,4 +25,4 @@ Common options
 
 ## Split DEE encoders
 
-`--ims-legacy-presentation` and `--encoding-profile ims_music` are not available with the split DEE encoders, and they accept bitrates 64, 96, 128, 144, 256 and 320 only. See [Installation](../installation.md).
+`--encoding-profile ims_music` is supported. `--ims-legacy-presentation` does not exist in the split encoder, so it is ignored with a warning. The split encoder takes data rates 64, 96, 128, 144, 256 and 320 kbps only, so DeeZy uses the nearest of those (for example 112 becomes 128) and says so. See [Installation](../installation.md#split-vs-single-dee).

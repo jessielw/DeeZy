@@ -18,6 +18,9 @@ from deezy.track_info.mediainfo import MediainfoParser
 from deezy.utils.logger import logger
 from deezy.utils.paths import artifact_stem
 
+# data rates (kbps) the split Atmos encoder rejects
+SPLIT_UNSUPPORTED_ATMOS_BITRATES = (512,)
+
 
 class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
     """Atmos Encoder."""
@@ -44,6 +47,16 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         bitrate_obj = self._get_channel_bitrate_object(
             self.payload.atmos_mode, audio_track_info.channels
         )
+        if Path(self.payload.dee_path).is_dir():
+            # the split encoder does not take every data rate the single DEE does
+            bitrate_obj = ChannelBitrates(
+                default=bitrate_obj.default,
+                choices=tuple(
+                    rate
+                    for rate in bitrate_obj.choices
+                    if rate not in SPLIT_UNSUPPORTED_ATMOS_BITRATES
+                ),
+            )
 
         # check to see if the users bitrate is allowed
         runtime_bitrate = self.get_config_based_bitrate(

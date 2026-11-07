@@ -9,8 +9,8 @@ usage: DeeZy encode ddp-bluray [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                                [--output-template OUTPUT_TEMPLATE]
                                [--output-preview]
                                [--max-parallel MAX_PARALLEL]
-                               [--jitter-ms JITTER_MS] [--max-logs N]
-                               [--max-batch-results N]
+                               [--jitter-ms JITTER_MS] [--allow-sleep]
+                               [--max-logs N] [--max-batch-results N]
                                [--working-dir WORKING_DIR]
                                [--batch-summary-output]
                                [--batch-output-dir BATCH_OUTPUT_DIR]
@@ -60,13 +60,15 @@ options:
   --output, OUTPUT
        The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
   --output-template, OUTPUT_TEMPLATE
-     Optional lightweight template to control auto-generated output filenames. Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay}.
+       Optional lightweight template to control auto-generated output filenames. Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay}.
   --output-preview
        When set, render and show template-based filenames but do not write outputs. Useful to validate templates before running batch jobs.
   --max-parallel, MAX_PARALLEL
        Maximum number of files to process in parallel (default: 1).
   --jitter-ms, JITTER_MS
        Maximum random jitter in milliseconds to apply before heavy phases (FFmpeg/DEE/truehdd). Helps avoid synchronization spikes when running parallel jobs. Default 0 (disabled).
+  --allow-sleep
+       Allow the system to sleep while encoding. By default, DeeZy prevents automatic system sleep without keeping the display on.
   --max-logs, N
        Maximum number of log files to keep in the working logs directory for this run. Overrides config value if provided. Use 0 to keep none.
   --max-batch-results, N

@@ -22,6 +22,19 @@ Common options: `--bitrate`, `--drc-line-mode`, `--stereo-down-mix`
 
 Advanced options: `--track-index`, `--delay`, `--custom-dialnorm`, `--metering-mode`, `--no-dialogue-intelligence`, `--speech-threshold`
 
+## Loudness
+
+By default DeeZy measures the loudness and writes the measured dialnorm. `--custom-dialnorm -27` skips measurement and writes that dialnorm instead (works with both DEE layouts).
+
+With the split DEE encoders only, `--loudness-target` measures **and corrects** the audio to a target instead:
+
+```bash
+deezy encode dd --loudness-target -24 input.mkv
+deezy encode dd --loudness-target -27 --peak-limit -3 input.mkv
+```
+
+`--loudness-target` takes -31 to -8 (LKFS). `--peak-limit` (-12 to -0.1 dBTP) must be at least 6 dB above the target and defaults to the encoder's -2. Neither can be combined with `--custom-dialnorm`. The single `dee` stops with a message if you use them.
+
 ## Split DEE encoders
 
-`--custom-dialnorm` is not available with the split DEE encoders, and `--metering-mode` is ignored there (always 1770-4). See [Installation](../installation.md).
+`--metering-mode` is ignored (always 1770-4). Everything else works. See [Installation](../installation.md#split-vs-single-dee).

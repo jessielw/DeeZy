@@ -53,7 +53,7 @@ from deezy.utils.power import SleepInhibitor
 from deezy.utils.progress import has_shared_progress, shared_progress_display
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "1.4.2"
+__version__ = "1.4.3"
 program_name = "DeeZy"
 
 
@@ -358,6 +358,49 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
+    # loudness correction (split DEE encoders only; DD/DDP)
+    loudness_correction_group = argparse.ArgumentParser(add_help=False)
+    loudness_correction_group.add_argument(
+        "--loudness-target",
+        type=int,
+        choices=range(-31, -7),
+        metavar="[-31..-8]",
+        default=None,
+        help=(
+            "Measure and correct the loudness to this target (LKFS) instead of only "
+            "measuring. Split DEE encoders only. Can't be combined with "
+            "--custom-dialnorm."
+        ),
+    )
+    loudness_correction_group.add_argument(
+        "--peak-limit",
+        type=float,
+        default=None,
+        help=(
+            "Peak limit in dBTP used with --loudness-target (-12 to -0.1, must be at "
+            "least 6 dB above the target). Defaults to the encoder's -2."
+        ),
+    )
+
+    # DDP options only the split DEE encoders offer
+    ddp_split_group = argparse.ArgumentParser(add_help=False)
+    ddp_split_group.add_argument(
+        "--user-data",
+        type=int,
+        choices=range(-1, 65536),
+        metavar="[-1..65535]",
+        default=-1,
+        help="Optional user data ID to write into the stream (-1 for none). Split DEE encoders only.",
+    )
+    ddp_split_group.add_argument(
+        "--bluray-secondary",
+        action="store_true",
+        help=(
+            "Encode Blu-ray secondary audio (2.0 or 5.1 at 192 or 256 kbps). "
+            "Split DEE encoders only."
+        ),
+    )
+
     # Atmos/AC4 full metering mode (includes MODE_1770_4)
     atmos_ac4_metering_group = argparse.ArgumentParser(add_help=False)
     atmos_ac4_metering_group.add_argument(
@@ -579,6 +622,8 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "dd_ddp_metering_group": dd_ddp_metering_group,
         "atmos_ac4_metering_group": atmos_ac4_metering_group,
         "preset_metering_group": preset_metering_group,
+        "loudness_correction_group": loudness_correction_group,
+        "ddp_split_group": ddp_split_group,
         "dd_ddp_processing_group": dd_ddp_processing_group,
         "ddp_bluray_processing_group": ddp_bluray_processing_group,
         "stereo_downmix_group": stereo_downmix_group,
@@ -615,6 +660,7 @@ def create_encode_parsers(
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["dd_ddp_metering_group"],
+            argument_groups["loudness_correction_group"],
             argument_groups["dd_ddp_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
@@ -637,6 +683,8 @@ def create_encode_parsers(
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["dd_ddp_metering_group"],
+            argument_groups["loudness_correction_group"],
+            argument_groups["ddp_split_group"],
             argument_groups["dd_ddp_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],

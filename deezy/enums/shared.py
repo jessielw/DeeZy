@@ -141,6 +141,7 @@ class DDEncodingMode(CaseInsensitiveEnum):
     DDP = "ddp"
     DDP71 = "ddp71"
     BLURAY = "bluray"
+    BLURAY_SECONDARY = "bluray_secondary"
 
     def get_encoder_mode(self) -> str:
         return self.value
