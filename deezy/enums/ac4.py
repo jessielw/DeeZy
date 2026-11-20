@@ -15,7 +15,8 @@ class Ac4EncodingProfile(CaseInsensitiveEnum):
         return self.value
 
     def to_dee_cmd(self) -> str:
-        return str(self)
+        """The `mode=` value dee_ac4ims_encoder takes."""
+        return "music" if self is Ac4EncodingProfile.IMS_MUSIC else "general"
 
 
 class Ac4Channels(Enum):

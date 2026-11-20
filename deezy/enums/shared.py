@@ -102,7 +102,8 @@ class DeeDRC(CaseInsensitiveEnum):
     MUSIC_STANDARD = "music_standard"
     MUSIC_LIGHT = "music_light"
     SPEECH = "speech"
-    NONE = "none"  # ac4 is the only codec that supports this
+    # dee_ac4_encoder and dee_dthd_encoder reject this one
+    NONE = "none"
 
     @override
     def __str__(self):

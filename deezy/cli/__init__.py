@@ -295,13 +295,8 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
 
     # DD/DDP/Atmos DRC group (limited choices)
     dd_ddp_atmos_drc_group = argparse.ArgumentParser(add_help=False)
-    dd_ddp_atmos_drc_choices = (
-        DeeDRC.FILM_STANDARD,
-        DeeDRC.FILM_LIGHT,
-        DeeDRC.MUSIC_STANDARD,
-        DeeDRC.MUSIC_LIGHT,
-        DeeDRC.SPEECH,
-    )
+    # dee_ddp_encoder and dee_ddpjoc_encoder take every profile, 'none' included
+    dd_ddp_atmos_drc_choices = tuple(DeeDRC)
     dd_ddp_atmos_drc_group.add_argument(
         "--drc-line-mode",
         type=case_insensitive_enum(DeeDRC),

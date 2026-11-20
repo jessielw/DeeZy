@@ -215,7 +215,7 @@ class TestSplitDD:
     def test_custom_dialnorm_skips_measurement(self, tmp_path, split_dir, files):
         payload = make_dd_payload(tmp_path, custom_dialnorm=-27)
         cmd = self.build(tmp_path, split_dir, files, payload=payload)
-        assert cmd[cmd.index("--loudness-management") + 1] == "skip:custom_dialnorm=-27"
+        assert cmd[cmd.index("--loudness-management") + 1] == "skip:dialnorm=-27"
 
     def test_zero_custom_dialnorm_is_off(self, tmp_path, split_dir, files):
         payload = make_dd_payload(tmp_path, custom_dialnorm="0")
@@ -344,7 +344,7 @@ class TestLoudnessPreset:
             loudness_preset=LoudnessPreset.EBU_R128,
             custom_dialnorm=-27,
         )
-        assert option(cmd, "--loudness-management") == "skip:custom_dialnorm=-27"
+        assert option(cmd, "--loudness-management") == "skip:dialnorm=-27"
 
     def test_atmos_and_ac4(self, tmp_path, split_dir, files):
         atmos = SplitDeeBackend(split_dir).atmos_command(
@@ -440,7 +440,7 @@ class TestSplitAtmos:
         )
         assert option(cmd, "-e").startswith("bluray:")
         assert encoder_options(cmd)["drc_profile_line"] == "film_light"
-        assert option(cmd, "--loudness-management") == "skip:custom_dialnorm=-27"
+        assert option(cmd, "--loudness-management") == "skip:dialnorm=-27"
 
 
 class TestSplitAC4:
@@ -462,7 +462,7 @@ class TestSplitAC4:
         assert option(cmd, "--data-rate") == "256"
         assert "--temp-dir" not in cmd
         assert set(encoder_options(cmd)) == {
-            "profile",
+            "mode",
             "drc_profile_ddp",
             "drc_profile_flat_panel",
             "drc_profile_home_theatre",
@@ -482,14 +482,25 @@ class TestSplitAC4:
         cmd = self.build(tmp_path, split_dir, files, ims_legacy_presentation=True)
         assert cmd == self.build(tmp_path, split_dir, files)
 
-    def test_profile_is_passed(self, tmp_path, split_dir, files):
-        assert (
-            encoder_options(self.build(tmp_path, split_dir, files))["profile"] == "ims"
-        )
+    def test_general_mode_by_default(self, tmp_path, split_dir, files):
+        options = encoder_options(self.build(tmp_path, split_dir, files))
+        assert options["mode"] == "general"
+
+    def test_music_mode_sets_what_dee_requires(self, tmp_path, split_dir, files):
         cmd = self.build(
-            tmp_path, split_dir, files, encoding_profile=Ac4EncodingProfile.IMS_MUSIC
+            tmp_path,
+            split_dir,
+            files,
+            encoding_profile=Ac4EncodingProfile.IMS_MUSIC,
+            ddp_drc=DeeDRC.SPEECH,
+            flat_panel_drc=DeeDRC.FILM_STANDARD,
         )
-        assert encoder_options(cmd)["profile"] == "ims_music"
+        options = encoder_options(cmd)
+        assert options.pop("mode") == "music"
+        # the DD+ transcode profile is not checked by DEE, so it is kept
+        assert options.pop("drc_profile_ddp") == "speech"
+        assert set(options.values()) == {"music_light"}
+        assert "dialogue_intelligence=0" in option(cmd, "--loudness-management")
 
 
 def test_non_1770_4_metering_is_measured_as_1770_4(tmp_path, split_dir, files):

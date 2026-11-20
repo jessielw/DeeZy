@@ -1,12 +1,15 @@
+from dataclasses import replace
 import os
 from pathlib import Path
 
 from deezy.audio_encoders.dee.backends.base import DeeBackend, DeeJobFiles
+from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import (
     DDEncodingMode,
     DeeDelay,
     DeeDelayModes,
+    DeeDRC,
     DeeFPS,
     LoudnessPreset,
     MeteringMode,
@@ -188,13 +191,25 @@ class SplitDeeBackend(DeeBackend):
                 "--ims-legacy-presentation is not available with the split DEE "
                 "encoders and will be ignored."
             )
+        devices = {
+            "drc_profile_flat_panel": payload.flat_panel_drc,
+            "drc_profile_home_theatre": payload.home_theatre_drc,
+            "drc_profile_portable_hp": payload.portable_headphones_drc,
+            "drc_profile_portable_spkr": payload.portable_speakers_drc,
+        }
+        if payload.encoding_profile is Ac4EncodingProfile.IMS_MUSIC:
+            # DEE refuses music mode unless every device profile is music_light
+            # and dialogue intelligence is off (the DD+ profile is free)
+            logger.info(
+                "AC-4 music mode uses music_light DRC on every device and turns "
+                "dialogue intelligence off."
+            )
+            devices = dict.fromkeys(devices, DeeDRC.MUSIC_LIGHT)
+            payload = replace(payload, dialogue_intelligence=False)
         encoder = {
-            "profile": payload.encoding_profile.to_dee_cmd(),
+            "mode": payload.encoding_profile.to_dee_cmd(),
             "drc_profile_ddp": payload.ddp_drc.to_dee_cmd(),
-            "drc_profile_flat_panel": payload.flat_panel_drc.to_dee_cmd(),
-            "drc_profile_home_theatre": payload.home_theatre_drc.to_dee_cmd(),
-            "drc_profile_portable_hp": payload.portable_headphones_drc.to_dee_cmd(),
-            "drc_profile_portable_spkr": payload.portable_speakers_drc.to_dee_cmd(),
+            **{key: drc.to_dee_cmd() for key, drc in devices.items()},
         }
         return [
             *self._common_args(
@@ -307,10 +322,10 @@ class SplitDeeBackend(DeeBackend):
     @staticmethod
     def _loudness(payload: LoudnessPayload) -> str:
         # a custom dialnorm skips measurement and writes the value as-is. The
-        # encoders' --help never lists 'skip', but Dolby Media Encoder uses it
+        # encoders' --help never lists 'skip'; DEE 6.7 takes it as skip:dialnorm=N
         custom = int(getattr(payload, "custom_dialnorm", 0) or 0)
         if custom != 0:
-            return f"skip:custom_dialnorm={custom}"
+            return f"skip:dialnorm={custom}"
         # these encoders measure to ITU-R BS.1770-4 only
         if payload.metering_mode is not MeteringMode.MODE_1770_4:
             logger.info(
