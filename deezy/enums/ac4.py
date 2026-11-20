@@ -2,6 +2,7 @@ from enum import Enum
 
 from typing_extensions import override
 
+from deezy.dee.spec import get_format
 from deezy.enums import CaseInsensitiveEnum
 from deezy.payloads.shared import ChannelBitrates
 
@@ -27,10 +28,7 @@ class Ac4Channels(Enum):
         return str(self.value)
 
     def get_bitrate_obj(self) -> ChannelBitrates:
-        return ChannelBitrates(
-            default=256,
-            choices=(64, 96, 128, 144, 256, 320),
-        )
+        return get_format("ac4-ims").rates("2.0")
 
     @staticmethod
     def get_values_list():

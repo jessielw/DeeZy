@@ -77,6 +77,8 @@ class DownmixOnlyPayload(DolbyPayload):
 class ChannelBitrates:
     default: int
     choices: tuple[int, ...]
+    # the rate DEE picks itself when given none (not DeeZy's default)
+    dee_auto: int | None = None
 
     def get_closest_bitrate(self, target: int) -> int:
         """
