@@ -51,6 +51,18 @@ def find_license(dee_path: Path) -> Path | None:
     return next((path for path in candidates if path.is_file()), None)
 
 
+def require_supported_atmos_mode(atmos_mode: AtmosMode) -> None:
+    """Refuse an Atmos mode DeeZy can't encode yet, before any work starts."""
+    if atmos_mode is AtmosMode.BLURAY:
+        # dee_ddpjoc_encoder's own Blu-ray mode gives a 5.1.2 bed; the 7.1 bed
+        # needs dee_shim (--layout 7.1)
+        raise UnsupportedDeeFeatureError(
+            "DD+ Atmos for Blu-ray needs a 7.1 bed, which DEE 6.7 only encodes "
+            "through dee_shim. This DeeZy version doesn't drive dee_shim yet; use "
+            "'--atmos-mode streaming'."
+        )
+
+
 def _options(options: dict[str, str]) -> str:
     """DEE's `key=value:key=value` option list."""
     return ":".join(f"{key}={value}" for key, value in options.items())
@@ -156,10 +168,7 @@ class SplitDeeBackend(DeeBackend):
             "drc_profile_line": payload.drc_line_mode.to_dee_cmd(),
             "drc_profile_rf": payload.drc_rf_mode.to_dee_cmd(),
         }
-        options = _options(encoder)
-        if atmos_mode is AtmosMode.BLURAY:
-            # the 7.1 Blu-ray flavour is an encoder mode of the same tool
-            options = f"bluray:{options}"
+        require_supported_atmos_mode(atmos_mode)
         return [
             *self._common_args(
                 DDP_JOC_TOOL,
@@ -171,7 +180,7 @@ class SplitDeeBackend(DeeBackend):
                 payload=payload,
             ),
             "-e",
-            options,
+            _options(encoder),
         ]
 
     def ac4_command(

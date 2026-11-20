@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
+from deezy.audio_encoders.dee.backends.split import require_supported_atmos_mode
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
@@ -34,6 +35,8 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
         # file input
         file_input = Path(self.payload.file_input)
         self._check_input_file(file_input)
+        # before the TrueHD decode, which can take a long time
+        require_supported_atmos_mode(self.payload.atmos_mode)
 
         # get audio track information
         mi_parser = MediainfoParser(file_input, self.payload.track_index)

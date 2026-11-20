@@ -447,17 +447,27 @@ class TestSplitAtmos:
         assert encoder_options(cmd)["drc_profile_line"] == "film_light"
         assert encoder_options(cmd)["preferred_downmix_mode"] == "not_indicated"
 
-    def test_bluray_is_an_encoder_mode(self, tmp_path, split_dir, files):
+    def test_bluray_needs_dee_shim(self, tmp_path, split_dir, files):
+        # DEE's own Blu-ray mode gives a 5.1.2 bed, not 7.1
+        with pytest.raises(UnsupportedDeeFeatureError, match="dee_shim"):
+            SplitDeeBackend(split_dir).atmos_command(
+                make_atmos_payload(tmp_path),
+                files,
+                bitrate=1280,
+                fps=DeeFPS.FPS_24,
+                delay=None,
+                atmos_mode=AtmosMode.BLURAY,
+            )
+
+    def test_custom_dialnorm(self, tmp_path, split_dir, files):
         cmd = SplitDeeBackend(split_dir).atmos_command(
             replace(make_atmos_payload(tmp_path), custom_dialnorm=-27),
             files,
-            bitrate=1280,
+            bitrate=448,
             fps=DeeFPS.FPS_24,
             delay=None,
-            atmos_mode=AtmosMode.BLURAY,
+            atmos_mode=AtmosMode.STREAMING,
         )
-        assert option(cmd, "-e").startswith("bluray:")
-        assert encoder_options(cmd)["drc_profile_line"] == "film_light"
         assert option(cmd, "--loudness-management") == "skip:dialnorm=-27"
 
 
