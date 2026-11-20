@@ -125,7 +125,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     encode_group.add_argument(
         "--delay",
         type=str,
-        help="The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).",
+        help="The delay in milliseconds or seconds, decimals allowed. Note '--delay=' is required! (--delay=-10.5ms / --delay=1.25s).",
     )
     # NOTE: DEPRECATED: REMOVE <= 1.4.0
     encode_group.add_argument(
