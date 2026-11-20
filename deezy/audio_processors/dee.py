@@ -150,12 +150,7 @@ def process_dee_job(
     # set the verbosity level in the cmd list depending on logging level
     logger_level = logger.getEffectiveLevel()
     level = "debug" if logger_level == logging.DEBUG else "info"
-    if "--verbose" in cmd:
-        # the single dee takes its level as the value following the flag
-        cmd.insert(cmd.index("--verbose") + 1, level)
-    else:
-        # the split encoders already carry a level to be replaced
-        cmd[cmd.index("--loglevel") + 1] = level
+    cmd[cmd.index("--loglevel") + 1] = level
 
     # setup DEE progress handler; the split encoders report plain percentages
     # (requested with --progress) rather than the single dee's stage lines

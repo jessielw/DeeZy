@@ -56,7 +56,7 @@ def _options(options: dict[str, str]) -> str:
 
 class SplitDeeBackend(DeeBackend):
     """
-    The per-codec DEE encoder executables, driven by command line options.
+    The DEE 6.7 encoder executables, driven by command line options.
 
     ``dee_path`` is the folder holding them. Options these tools do not offer
     raise `UnsupportedDeeFeatureError` rather than being silently dropped, so
@@ -81,9 +81,9 @@ class SplitDeeBackend(DeeBackend):
             # only the Blu-ray encoder mode takes 7.1; the plain DD+ one would
             # quietly hand back a 5.1 stream for a 7.1 request
             raise UnsupportedDeeFeatureError(
-                "Dolby Digital Plus 7.1 for online media is not available with the "
-                "split DEE encoders. Use 'ddp-bluray' for 7.1, '--channels 6' for 5.1, "
-                "or a DEE that provides the single 'dee' executable."
+                "Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim, which this DeeZy "
+                "version doesn't drive yet. Use 'ddp-bluray' for 7.1, or "
+                "'--channels 6' for 5.1."
             )
 
         encoder = {
@@ -114,7 +114,7 @@ class SplitDeeBackend(DeeBackend):
         if user_data != -1:
             encoder["user_data"] = str(user_data)
 
-        # the JSON flow calls "no downmix" 'off', the command line calls it 'auto'
+        # DeeZy's channel enums call "no downmix" 'off'; DEE calls it 'auto'
         channels = "off" if downmix_mode_off else payload.channels.to_dee_cmd()
         if channels == "off":
             channels = "auto"
@@ -183,8 +183,7 @@ class SplitDeeBackend(DeeBackend):
         atmos_enabled: bool,
     ) -> list[str]:
         if payload.ims_legacy_presentation:
-            # kept for backwards compatibility with commands written for the
-            # single 'dee' executable; the split encoder has no such option
+            # kept so older commands still run; DEE 6.7 has no such option
             logger.warning(
                 "--ims-legacy-presentation is not available with the split DEE "
                 "encoders and will be ignored."

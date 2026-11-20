@@ -28,7 +28,7 @@ class Ac4Channels(Enum):
     def get_bitrate_obj(self) -> ChannelBitrates:
         return ChannelBitrates(
             default=256,
-            choices=(64, 72, 112, 144, 256, 320),
+            choices=(64, 96, 128, 144, 256, 320),
         )
 
     @staticmethod

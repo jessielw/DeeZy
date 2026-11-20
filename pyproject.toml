@@ -44,7 +44,7 @@ docs = [
 deezy = "deezy.__main__:main"
 
 [tool.setuptools.package-data]
-"deezy" = ["config/*.py", "config/*.toml", "icon/*", "example_json_flows/*"]
+"deezy" = ["config/*.py", "config/*.toml", "icon/*"]
 
 [tool.ruff]
 line-length = 88

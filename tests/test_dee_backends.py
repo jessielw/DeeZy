@@ -5,7 +5,6 @@ import pytest
 
 from deezy.audio_encoders.dee.backends import (
     DeeJobFiles,
-    LegacyDeeBackend,
     SplitDeeBackend,
     get_dee_backend,
 )
@@ -29,7 +28,7 @@ from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.utils.dependencies import get_executable_extension
-from tests.test_dee_json_generator import make_core_fields, make_dolby_fields
+from tests.utils.payload_helpers import make_core_fields, make_dolby_fields
 
 EXE = get_executable_extension()
 
@@ -124,34 +123,9 @@ class TestBackendSelection:
     def test_folder_is_split(self, split_dir):
         assert isinstance(get_dee_backend(split_dir), SplitDeeBackend)
 
-    def test_file_is_legacy(self, tmp_path):
-        dee = tmp_path / f"dee{EXE}"
-        dee.touch()
-        assert isinstance(get_dee_backend(dee), LegacyDeeBackend)
-
-    def test_unresolved_path_is_legacy(self):
-        # keeps the single-dee behaviour for a path that is only a name
-        assert isinstance(get_dee_backend(Path("dee")), LegacyDeeBackend)
-
-
-class TestLegacyBackend:
-    def test_runs_the_json_job_it_wrote(self, tmp_path, files):
-        backend = LegacyDeeBackend(Path("dee"))
-        cmd = backend.dd_command(
-            make_dd_payload(tmp_path),
-            files,
-            downmix_mode_off=False,
-            bitrate=640,
-            fps=DeeFPS.FPS_24,
-            delay=None,
-            dd_mode=DDEncodingMode.DDP,
-        )
-
-        assert cmd[0] == "dee"
-        assert "--verbose" in cmd
-        json_path = Path(option(cmd, "-j"))
-        assert json_path.is_file()
-        assert json_path.name == f"job.{CodecFormat.DDP}.json"
+    def test_any_path_is_the_tools_folder(self):
+        # the 6.7 tools are the only DEE; detection already checked the folder
+        assert isinstance(get_dee_backend(Path("dee")), SplitDeeBackend)
 
 
 class TestSplitDD:
@@ -394,44 +368,6 @@ class TestLoudnessPreset:
         for cmd in (atmos, ac4):
             assert (
                 option(cmd, "--loudness-management") == "measure_only:preset=atsc_a85"
-            )
-
-    def test_legacy_refuses_a_preset(self, tmp_path, files):
-        with pytest.raises(UnsupportedDeeFeatureError, match="loudness-preset"):
-            LegacyDeeBackend(Path("dee")).atmos_command(
-                replace(
-                    make_atmos_payload(tmp_path),
-                    loudness_preset=LoudnessPreset.EBU_R128,
-                ),
-                files,
-                bitrate=448,
-                fps=DeeFPS.FPS_24,
-                delay=None,
-                atmos_mode=AtmosMode.STREAMING,
-            )
-
-
-class TestLegacySplitOnlyOptions:
-    @pytest.mark.parametrize(
-        "fields",
-        [
-            {"loudness_target": -24},
-            {"peak_limit": -3.0},
-            {"user_data": 5},
-            {"bluray_secondary": True},
-        ],
-    )
-    def test_are_refused(self, tmp_path, files, fields):
-        payload = replace(make_dd_payload(tmp_path), **fields)
-        with pytest.raises(UnsupportedDeeFeatureError, match="split DEE"):
-            LegacyDeeBackend(Path("dee")).dd_command(
-                payload,
-                files,
-                downmix_mode_off=False,
-                bitrate=640,
-                fps=DeeFPS.FPS_24,
-                delay=None,
-                dd_mode=DDEncodingMode.DDP,
             )
 
 

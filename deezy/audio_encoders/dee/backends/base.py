@@ -26,12 +26,10 @@ class DeeJobFiles:
 
 class DeeBackend(ABC):
     """
-    Turns an encode job into the command line for one flavour of DEE.
+    Turns an encode job into the command line for the DEE 6.7 tools.
 
     Encoders decide *what* to encode (channels, bitrate, delay, input prep);
-    a backend only decides *how to ask DEE* for it, so the same encoder code
-    drives both the single ``dee`` executable (JSON job files) and the split
-    per-codec encoder executables (command line options).
+    a backend only decides *how to ask DEE* for it.
     """
 
     __slots__ = ("dee_path",)

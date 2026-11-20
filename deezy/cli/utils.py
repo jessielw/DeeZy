@@ -356,14 +356,16 @@ def handle_dependencies(
 
     atmos_required = getattr(args, "format_command", None) in ("atmos", "ac4")
 
+    finder = FindDependencies()
     try:
-        tools = FindDependencies().get_dependencies(
+        tools = finder.get_dependencies(
             WORKING_DIRECTORY,
             deps["ffmpeg"],
             deps["truehdd"],
             deps["dee"],
             require_truehdd=atmos_required,
         )
+        finder.check_dee_version(Path(tools.dee))
     except DependencyNotFoundError as e:
         exit_application(str(e), EXIT_FAIL)
 

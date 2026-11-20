@@ -175,6 +175,9 @@ def test_handle_dependencies_normal(monkeypatch, tmp_path):
         def get_dependencies(self, *a, **kw):
             return Tools()
 
+        def check_dee_version(self, dee_dir):
+            return "6.7.0"
+
     monkeypatch.setattr(utils, "FindDependencies", lambda: FakeFinder())
 
     res = cast(dict, utils.handle_dependencies(args, cast(Any, cfg)))

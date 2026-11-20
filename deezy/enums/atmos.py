@@ -19,7 +19,6 @@ class AtmosMode(CaseInsensitiveEnum):
                 choices=(
                     384,
                     448,
-                    512,
                     576,
                     640,
                     768,

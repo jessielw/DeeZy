@@ -12,11 +12,16 @@ def fake_tools(tmp_path, monkeypatch):
     """A base dir holding all three tools where the finder expects them."""
     finder = FindDependencies()
     made = {}
-    for name in ("ffmpeg", "truehdd", "dee"):
+    for name in ("ffmpeg", "truehdd"):
         tool = tmp_path / "apps" / name / f"{name}{finder.os_exe}"
         tool.parent.mkdir(parents=True)
         tool.touch()
         made[name] = tool
+    # DEE 6.7 is a folder of per-codec tools
+    dee_dir = tmp_path / "apps" / "dee"
+    dee_dir.mkdir(parents=True)
+    (dee_dir / f"dee_ddp_encoder{finder.os_exe}").touch()
+    made["dee"] = dee_dir
     # keep anything already installed on PATH out of the result
     monkeypatch.setattr("deezy.utils.dependencies.shutil.which", lambda _n: None)
     return finder, tmp_path, made
@@ -60,16 +65,26 @@ def test_blank_override_falls_back_to_detection(fake_tools):
 
 def test_override_may_name_a_tool_on_path(fake_tools, tmp_path, monkeypatch):
     finder, base, _ = fake_tools
-    resolved = tmp_path / "elsewhere" / "dee"
+    resolved = tmp_path / "elsewhere" / "ffmpeg"
     resolved.parent.mkdir()
     resolved.touch()
     monkeypatch.setattr(
         "deezy.utils.dependencies.shutil.which",
-        lambda n: str(resolved) if Path(n).name == "dee" else None,
+        lambda n: str(resolved) if Path(n).name == "ffmpeg" else None,
     )
 
-    deps = finder.get_dependencies(base, user_dee="dee")
-    assert deps.dee == resolved
+    deps = finder.get_dependencies(base, user_ffmpeg="ffmpeg")
+    assert deps.ffmpeg == resolved
+
+
+def test_dee_override_may_name_one_of_the_tools(fake_tools, tmp_path):
+    finder, base, _ = fake_tools
+    folder = tmp_path / "dee67"
+    folder.mkdir()
+    tool = folder / f"dee_ddp_encoder{finder.os_exe}"
+    tool.touch()
+
+    assert finder.get_dependencies(base, user_dee=str(tool)).dee == folder
 
 
 def test_truehdd_optional_when_not_required(fake_tools):
@@ -122,12 +137,23 @@ class TestSplitDee:
 
         assert finder.get_dependencies(base).dee == folder
 
-    def test_single_dee_wins_over_split_encoders(self, split_tools):
-        finder, base, make = split_tools
+    def test_single_dee_is_not_detected(self, split_tools):
+        finder, base, _ = split_tools
         self.base_with_tools(base, with_dee=True)
-        make(base / "apps" / "dee")
 
-        assert finder.get_dependencies(base).dee.is_file()
+        with pytest.raises(DependencyNotFoundError, match="dee_ddp_encoder"):
+            finder.get_dependencies(base)
+
+    def test_single_dee_override_is_rejected(self, split_tools, tmp_path):
+        finder, base, make = split_tools
+        self.base_with_tools(base)
+        make(base / "apps" / "dee")
+        single = tmp_path / "old" / f"dee{finder.os_exe}"
+        single.parent.mkdir()
+        single.touch()
+
+        with pytest.raises(DependencyNotFoundError, match="no longer supported"):
+            finder.get_dependencies(base, user_dee=str(single))
 
     def test_detected_on_path(self, split_tools, monkeypatch):
         finder, base, make = split_tools
@@ -180,3 +206,26 @@ class TestSplitDee:
 
         with pytest.raises(DependencyNotFoundError):
             finder.get_dependencies(base, user_ffmpeg=str(folder))
+
+
+class TestDeeVersion:
+    @pytest.mark.parametrize("version", ["6.7.0+8e353f99", "6.7.1"])
+    def test_6_7_is_accepted(self, monkeypatch, tmp_path, version):
+        monkeypatch.setattr("deezy.utils.dependencies.dee_version", lambda _d: version)
+        assert FindDependencies.check_dee_version(tmp_path) == version
+
+    @pytest.mark.parametrize("version", ["5.2.1", "6.6.0", "6.70.0", None])
+    def test_anything_else_is_refused(self, monkeypatch, tmp_path, version):
+        monkeypatch.setattr("deezy.utils.dependencies.dee_version", lambda _d: version)
+        with pytest.raises(DependencyNotFoundError, match="DEE 6.7"):
+            FindDependencies.check_dee_version(tmp_path)
+
+    def test_version_is_read_from_help(self, monkeypatch, tmp_path):
+        from deezy.utils import dependencies
+
+        class Proc:
+            stdout = "Dolby Encoding Engine version 6.7.0+8e353f99"
+            stderr = ""
+
+        monkeypatch.setattr(dependencies.subprocess, "run", lambda *a, **k: Proc())
+        assert dependencies.dee_version(tmp_path) == "6.7.0+8e353f99"
