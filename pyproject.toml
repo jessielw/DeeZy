@@ -81,6 +81,9 @@ include = ["deezy*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "dee: runs the DEE 6.7 tools; skipped unless DEEZY_DEE_DIR is set (see tests/integration/harness.py)",
+]
 
 [tool.poe.tasks]
 typecheck = "basedpyright"
