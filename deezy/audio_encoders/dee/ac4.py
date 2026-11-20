@@ -2,7 +2,6 @@ from pathlib import Path
 
 from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
 from deezy.enums.ac4 import Ac4Channels
 from deezy.enums.codec_format import CodecFormat
@@ -243,19 +242,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
         )
         logger.debug(f"{dee_cmd=}.")
 
-        # process dee command
-        # optionally jitter and limit concurrent DEE jobs
-        self._maybe_jitter()
-        self._acquire_dee()
-        try:
-            _dee_job = process_dee_job(
-                cmd=dee_cmd,
-                step_info={"current": 2, "total": 3, "name": "DEE measure"},
-                no_progress_bars=self.payload.no_progress_bars,
-            )
-        finally:
-            self._release_dee()
-        logger.debug(f"Dee job: {_dee_job}.")
+        self._run_dee(dee_cmd, dee_output)
 
         # hand the finished encode over to its destination
         self._finalize_output(dee_output, output)

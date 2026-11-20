@@ -2,7 +2,6 @@ from pathlib import Path
 
 from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deezy.audio_processors.dee import process_dee_job
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.shared import DDEncodingMode, StereoDownmix
@@ -257,21 +256,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         )
         logger.debug(f"{dee_cmd=}.")
 
-        # process dee command
-        # optionally jitter and limit concurrent DEE jobs
-        self._maybe_jitter()
-        self._acquire_dee()
-        try:
-            step_info = {"current": 2, "total": 3, "name": "DEE measure"}
-            _dee_job = process_dee_job(
-                cmd=dee_cmd,
-                step_info=step_info,
-                no_progress_bars=self.payload.no_progress_bars,
-                custom_dialnorm=self.payload.custom_dialnorm,
-            )
-        finally:
-            self._release_dee()
-        logger.debug(f"Dee job: {_dee_job}.")
+        self._run_dee(dee_cmd, dee_output, self.payload.custom_dialnorm)
 
         # hand the finished encode over to its destination
         self._finalize_output(dee_output, output)

@@ -19,6 +19,7 @@ import platformdirs
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
+from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.enums.channel_count import ChannelCount
@@ -726,6 +727,35 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
             self._write_signature_metadata(
                 metadata_path, encoder_id, signature, wav_file_name, file_input
             )
+
+    def _run_dee(
+        self, dee_cmd: list[str], dee_output: Path, custom_dialnorm: int = 0
+    ) -> None:
+        """
+        Run DEE in one of the batch's DEE slots.
+
+        A failed run leaves a 0-byte or cut-off file at `dee_output`, so it is
+        deleted rather than kept with the temp files.
+        """
+        # optionally jitter and limit concurrent DEE jobs
+        self._maybe_jitter()
+        self._acquire_dee()
+        try:
+            dee_job = process_dee_job(
+                cmd=dee_cmd,
+                step_info={"current": 2, "total": 3, "name": "DEE measure"},
+                no_progress_bars=self.payload.no_progress_bars,
+                custom_dialnorm=custom_dialnorm,
+            )
+        except BaseException:
+            try:
+                Path(long_path_str(dee_output)).unlink(missing_ok=True)
+            except OSError:
+                logger.debug(f"Could not delete the partial encode {dee_output}.")
+            raise
+        finally:
+            self._release_dee()
+        logger.debug(f"Dee job: {dee_job}.")
 
     def _acquire_ffmpeg(self) -> None:
         if self._ffmpeg_sem:
