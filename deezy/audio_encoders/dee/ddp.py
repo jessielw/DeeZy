@@ -2,6 +2,7 @@ from pathlib import Path
 
 from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
+from deezy.dee.spec import get_format
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
@@ -208,8 +209,11 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
             if isinstance(self.payload.channels, DolbyDigitalPlusBlurayChannels)
             else self.payload.channels.value
         )
-        delay = self._compensate_channel_change(
-            delay, ffmpeg_down_mix or source_channels, output_channels
+        delay = self._compensate(
+            delay,
+            get_format(str(format_command)),
+            ffmpeg_down_mix or source_channels,
+            output_channels,
         )
 
         # early existence check: fail fast to avoid expensive work if the

@@ -8,8 +8,9 @@ from deezy.audio_encoders.dee.backends import (
     SplitDeeBackend,
     get_dee_backend,
 )
-from deezy.audio_encoders.delay import get_dee_delay
+from deezy.dee.spec import get_format
 from deezy.dee.tools import get_executable_extension
+from deezy.delay import Delay, compensation
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.codec_format import CodecFormat
@@ -384,25 +385,33 @@ class TestSplitDelay:
         )
 
     def test_default_compensation_trims_the_start(self, tmp_path, split_dir, files):
-        cmd = self.build(tmp_path, split_dir, files, get_dee_delay("0ms"))
+        cmd = self.build(
+            tmp_path, split_dir, files, Delay.parse("0ms").compensated(256)
+        )
         assert option(cmd, "--start") == "0.005333"
         assert "--add-silence" not in cmd
 
     def test_positive_delay_prepends_silence(self, tmp_path, split_dir, files):
-        cmd = self.build(tmp_path, split_dir, files, get_dee_delay("100ms"))
+        cmd = self.build(
+            tmp_path, split_dir, files, Delay.parse("100ms").compensated(256)
+        )
         assert option(cmd, "--add-silence") == "0.094667:0"
         # left out, DEE would start at the first frame of action
         assert option(cmd, "--start") == "0"
 
     def test_negative_delay_trims_the_start(self, tmp_path, split_dir, files):
-        cmd = self.build(tmp_path, split_dir, files, get_dee_delay("-100ms"))
+        cmd = self.build(
+            tmp_path, split_dir, files, Delay.parse("-100ms").compensated(256)
+        )
         assert option(cmd, "--start") == "0.105333"
         assert "--add-silence" not in cmd
 
     def test_a_delay_equal_to_the_compensation_is_no_shift(
         self, tmp_path, split_dir, files
     ):
-        cmd = self.build(tmp_path, split_dir, files, get_dee_delay("6ms", 288))
+        cmd = self.build(
+            tmp_path, split_dir, files, Delay.parse("6ms").compensated(288)
+        )
         assert option(cmd, "--start") == "0"
         assert "--add-silence" not in cmd
 
@@ -412,20 +421,19 @@ class TestSplitDelay:
         assert "--add-silence" not in cmd
 
     def test_a_channel_change_adds_32_samples(self, tmp_path, split_dir, files):
-        delay = get_dee_delay("0ms").with_channel_change()
-        assert delay.compensation_samples == 288
+        delay = Delay().compensated(
+            compensation(get_format("ddp"), channel_change=True)
+        )
+        assert delay.compensation == 288
         cmd = self.build(tmp_path, split_dir, files, delay)
         assert option(cmd, "--start") == "0.006000"
 
-    @pytest.mark.parametrize("delay", ["-2s", "-10ms", "0ms", "250ms", "3s"])
-    def test_seconds_match_the_millisecond_input(self, delay):
-        expected = (_ms(delay) - 16 / 3) / 1000
-        assert get_dee_delay(delay).offset_seconds() == pytest.approx(expected)
-
-
-def _ms(delay: str) -> float:
-    value = float(delay.rstrip("ms"))
-    return value if delay.endswith("ms") else value * 1000
+    @pytest.mark.parametrize(
+        ("delay", "offset"),
+        [("-2s", -96256), ("-10ms", -736), ("0ms", -256), ("250ms", 11744)],
+    )
+    def test_offsets_are_whole_samples(self, delay, offset):
+        assert Delay.parse(delay).compensated(256).offset == offset
 
 
 class TestSplitAtmos:

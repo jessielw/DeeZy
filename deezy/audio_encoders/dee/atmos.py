@@ -4,6 +4,8 @@ from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
 from deezy.audio_encoders.dee.backends.split import require_supported_atmos_mode
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
+from deezy.dee.spec import get_format
+from deezy.delay import compensation
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.codec_format import CodecFormat
 from deezy.exceptions import (
@@ -69,6 +71,7 @@ class AtmosEncoder(BaseDeeAudioEncoder[AtmosMode]):
             self.payload.delay,
             file_input,
         )
+        delay = delay.compensated(compensation(get_format("ddp-atmos")))
 
         # fps
         fps = self._get_fps(audio_track_info.fps)

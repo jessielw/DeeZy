@@ -131,6 +131,22 @@ def test_start_and_add_silence_are_sample_exact(
 
 
 @pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        # 1743.98 and 1744.03 samples: --add-silence drops the part sample
+        (("--start", "0", "--add-silence", "0.036333:0"), 256 + 1743),
+        (("--start", "0", "--add-silence", "0.036334:0"), 256 + 1744),
+        # 0.48 and 0.53 samples: --start rounds to the nearest
+        (("--start", "0.000010"), 256),
+        (("--start", "0.000011"), 256 - 1),
+    ],
+)
+def test_add_silence_truncates_and_start_rounds(tools, work, imp, args, expected):
+    delay, _ = ddp_delay(tools, work, imp, "ddp", 2, extra=args)
+    assert delay == expected
+
+
+@pytest.mark.parametrize(
     ("presentation", "channels"), [("2ch", 2), ("6ch", 6), ("8ch", 8)]
 )
 def test_truehd_has_no_delay(tools, work, imp, presentation, channels):

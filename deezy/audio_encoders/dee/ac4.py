@@ -3,6 +3,8 @@ from pathlib import Path
 from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_processors.truehdd import decode_truehd_to_atmos
+from deezy.dee.spec import get_format
+from deezy.delay import compensation
 from deezy.enums.ac4 import Ac4Channels
 from deezy.enums.codec_format import CodecFormat
 from deezy.exceptions import (
@@ -69,6 +71,7 @@ class Ac4Encoder(BaseDeeAudioEncoder[Ac4Channels]):
             self.payload.delay,
             file_input,
         )
+        delay = delay.compensated(compensation(get_format("ac4-ims")))
 
         # fps
         fps = self._get_fps(audio_track_info.fps)

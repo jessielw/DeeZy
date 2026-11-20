@@ -18,13 +18,14 @@ import uuid
 import platformdirs
 
 from deezy.audio_encoders.base import BaseAudioEncoder
-from deezy.audio_encoders.delay import get_dee_delay
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.config.manager import ConfigManager, get_config_manager
+from deezy.dee.spec import FormatSpec
+from deezy.delay import Delay, compensation
 from deezy.enums.channel_count import ChannelCount
 from deezy.enums.codec_format import CodecFormat
-from deezy.enums.shared import DeeDelay, DeeFPS, TrackType
+from deezy.enums.shared import DeeFPS, TrackType
 from deezy.exceptions import (
     OutputExistsError,
     OutputFileNotFoundError,
@@ -91,7 +92,7 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         self,
         payload_delay: str | None,
         file_input: Path,
-    ) -> DeeDelay:
+    ) -> Delay:
         delay_str = "0ms"
 
         # get it from the filename if one is not provided via the payload
@@ -104,24 +105,28 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         else:
             delay_str = payload_delay
 
-        # generate dee delay
-        delay = get_dee_delay(delay_str)
+        delay = Delay.parse(delay_str)
         if delay.is_delay():
-            logger.debug(f"Requested delay {delay.requested_ms:g} ms.")
+            logger.debug(
+                f"Requested delay {delay.ms:g} ms ({delay.requested} samples)."
+            )
         return delay
 
     @staticmethod
-    def _compensate_channel_change(
-        delay: DeeDelay, dee_input_channels: int, dee_output_channels: int
-    ) -> DeeDelay:
-        """`delay`, with the extra samples DEE adds when it changes the channel count."""
-        if dee_input_channels == dee_output_channels:
-            return delay
-        delay = delay.with_channel_change()
-        logger.debug(
-            f"DEE changes {dee_input_channels} channels to {dee_output_channels}, "
-            f"compensating {delay.compensation_samples} samples."
-        )
+    def _compensate(
+        delay: Delay,
+        spec: FormatSpec,
+        dee_input_channels: int,
+        dee_output_channels: int,
+    ) -> Delay:
+        """`delay`, less the samples DEE adds to this encode."""
+        channel_change = dee_input_channels != dee_output_channels
+        delay = delay.compensated(compensation(spec, channel_change=channel_change))
+        if channel_change:
+            logger.debug(
+                f"DEE changes {dee_input_channels} channels to "
+                f"{dee_output_channels}, compensating {delay.compensation} samples."
+            )
         return delay
 
     def get_config_based_bitrate(

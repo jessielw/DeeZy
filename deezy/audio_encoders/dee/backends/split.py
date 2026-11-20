@@ -3,11 +3,11 @@ from pathlib import Path
 
 from deezy.audio_encoders.dee.backends.base import DeeBackend, DeeJobFiles
 from deezy.dee.tools import dee_tool, find_license
+from deezy.delay import Delay
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import (
     DDEncodingMode,
-    DeeDelay,
     DeeDRC,
     DeeFPS,
     LoudnessPreset,
@@ -68,7 +68,7 @@ class SplitDeeBackend(DeeBackend):
         downmix_mode_off: bool,
         bitrate: int,
         fps: DeeFPS,
-        delay: DeeDelay | None,
+        delay: Delay | None,
         dd_mode: DDEncodingMode,
     ) -> list[str]:
         self._check_options(payload, dd_mode)
@@ -137,7 +137,7 @@ class SplitDeeBackend(DeeBackend):
         *,
         bitrate: int,
         fps: DeeFPS,
-        delay: DeeDelay | None,
+        delay: Delay | None,
         atmos_mode: AtmosMode,
     ) -> list[str]:
         encoder = {
@@ -171,7 +171,7 @@ class SplitDeeBackend(DeeBackend):
         *,
         bitrate: int,
         fps: DeeFPS,
-        delay: DeeDelay | None,
+        delay: Delay | None,
         atmos_enabled: bool,
     ) -> list[str]:
         if payload.ims_legacy_presentation:
@@ -222,7 +222,7 @@ class SplitDeeBackend(DeeBackend):
         input_format: str,
         bitrate: int,
         fps: DeeFPS,
-        delay: DeeDelay | None,
+        delay: Delay | None,
         payload: LoudnessPayload,
         temp_dir: bool = False,
     ) -> list[str]:
@@ -252,7 +252,7 @@ class SplitDeeBackend(DeeBackend):
             long_path_str(files.output_file),
             "--timecode-frame-rate",
             fps.to_dee_cmd(),
-            *self._delay_args(delay),
+            *(delay or Delay()).dee_args(),
             "--data-rate",
             str(bitrate),
             "--loudness-management",
@@ -262,24 +262,6 @@ class SplitDeeBackend(DeeBackend):
     def _license_args(self) -> list[str]:
         license_file = find_license(Path(self.dee_path))
         return ["--license", str(license_file)] if license_file else []
-
-    @staticmethod
-    def _delay_args(delay: DeeDelay | None) -> list[str]:
-        """
-        Where DEE starts reading, and the silence it prepends.
-
-        ``--start`` is always given: left out, DEE starts at the master's first
-        frame of action instead of the first sample.
-        """
-        offset = delay.offset_seconds() if delay else 0.0
-        if offset < 0:
-            # trim the start of the audio
-            return ["--start", f"{-offset:.6f}"]
-        args = ["--start", "0"]
-        if offset > 0:
-            # prepend silence, nothing appended
-            args += ["--add-silence", f"{offset:.6f}:0"]
-        return args
 
     @staticmethod
     def _check_options(

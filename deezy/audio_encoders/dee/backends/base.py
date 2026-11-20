@@ -2,9 +2,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+from deezy.delay import Delay
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.codec_format import CodecFormat
-from deezy.enums.shared import DDEncodingMode, DeeDelay, DeeFPS
+from deezy.enums.shared import DDEncodingMode, DeeFPS
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -46,7 +47,7 @@ class DeeBackend(ABC):
         downmix_mode_off: bool,
         bitrate: int,
         fps: DeeFPS,
-        delay: DeeDelay | None,
+        delay: Delay | None,
         dd_mode: DDEncodingMode,
     ) -> list[str]:
         """Command for a Dolby Digital / Dolby Digital Plus encode."""
@@ -59,7 +60,7 @@ class DeeBackend(ABC):
         *,
         bitrate: int,
         fps: DeeFPS,
-        delay: DeeDelay | None,
+        delay: Delay | None,
         atmos_mode: AtmosMode,
     ) -> list[str]:
         """Command for a Dolby Digital Plus Atmos (JOC) encode."""
@@ -72,7 +73,7 @@ class DeeBackend(ABC):
         *,
         bitrate: int,
         fps: DeeFPS,
-        delay: DeeDelay | None,
+        delay: Delay | None,
         atmos_enabled: bool,
     ) -> list[str]:
         """Command for an immersive stereo AC-4 encode."""
