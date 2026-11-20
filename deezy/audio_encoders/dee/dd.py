@@ -3,7 +3,6 @@ from pathlib import Path
 from deezy.audio_encoders.dee.backends import DeeJobFiles, get_dee_backend
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.audio_processors.dee import process_dee_job
-from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.shared import DDEncodingMode, StereoDownmix
@@ -216,61 +215,14 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         )
         logger.debug(f"{ffmpeg_cmd=}.")
 
-        # process ffmpeg command
-        # optionally stagger/jitter and limit concurrent ffmpeg jobs
-        self._maybe_jitter()
-        self._acquire_ffmpeg()
-        # reuse-temp-files support: check metadata.json in adjacent temp dir
-        reuse_used = False
-        metadata_path = self._metadata_path_for_output(self.temp_dir, output)
-        # canonical signature for FFmpeg extraction is the exact command string
-        signature = " ".join(map(str, ffmpeg_cmd))
-        try:
-            if getattr(self.payload, "reuse_temp_files", False):
-                if self._check_reuse_signature(
-                    metadata_path,
-                    str(CodecFormat.DD),
-                    signature,
-                    wav_file_name,
-                    self.temp_dir,
-                ):
-                    logger.info("Reusing extracted wav from adjacent temp folder")
-                    reuse_used = True
-
-            if not reuse_used:
-                try:
-                    _ffmpeg_job = process_ffmpeg_job(
-                        cmd=ffmpeg_cmd,
-                        steps=True,
-                        duration=audio_track_info.duration,
-                        step_info={"current": 1, "total": 3, "name": "FFMPEG"},
-                        no_progress_bars=self.payload.no_progress_bars,
-                    )
-                finally:
-                    self._release_ffmpeg()
-                logger.debug(f"FFMPEG job: {_ffmpeg_job}.")
-
-                # on success register metadata for reuse
-                if getattr(self.payload, "reuse_temp_files", False):
-                    self._write_signature_metadata(
-                        metadata_path,
-                        str(CodecFormat.DD),
-                        signature,
-                        wav_file_name,
-                        file_input,
-                    )
-            else:
-                # we acquired the ffmpeg semaphore but didn't run ffmpeg; release it
-                try:
-                    self._release_ffmpeg()
-                except Exception:
-                    logger.debug("Best-effort operation failed; continuing.")
-        except Exception:
-            # ensure ffmpeg lock is released on unexpected errors
-            try:
-                self._release_ffmpeg()
-            except Exception:
-                logger.debug("Best-effort operation failed; continuing.")
+        self._extract_wav(
+            ffmpeg_cmd,
+            encoder_id=str(CodecFormat.DD),
+            wav_file_name=wav_file_name,
+            file_input=file_input,
+            output=output,
+            duration=audio_track_info.duration,
+        )
 
         # DEE encodes into the temp dir; we move the result to `output` ourselves
         dee_output = self._dee_output_path(self.temp_dir, output)

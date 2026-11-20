@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from enum import Enum
 import hashlib
 import json
@@ -18,6 +19,7 @@ import platformdirs
 
 from deezy.audio_encoders.base import BaseAudioEncoder
 from deezy.audio_encoders.delay import get_dee_delay
+from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.enums.channel_count import ChannelCount
 from deezy.enums.codec_format import CodecFormat
@@ -661,6 +663,55 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         jitter = getattr(self, "_jitter_ms", 0) or 0
         if jitter > 0:
             time.sleep(random.uniform(0, jitter) / 1000.0)  # noqa: S311 - scheduling jitter is not security-sensitive
+
+    @contextmanager
+    def _ffmpeg_slot(self) -> Iterator[None]:
+        """Hold one of the batch's FFmpeg slots for the duration of the block."""
+        self._acquire_ffmpeg()
+        try:
+            yield
+        finally:
+            self._release_ffmpeg()
+
+    def _extract_wav(
+        self,
+        ffmpeg_cmd: list[str],
+        *,
+        encoder_id: str,
+        wav_file_name: str,
+        file_input: Path,
+        output: Path,
+        duration: float | None,
+    ) -> None:
+        """
+        Write the job's WAV with FFmpeg, or reuse the one an earlier run made.
+
+        FFmpeg errors propagate: without the WAV, DEE has nothing to encode.
+        """
+        signature = " ".join(map(str, ffmpeg_cmd))
+        metadata_path = self._metadata_path_for_output(self.temp_dir, output)
+        reuse = bool(getattr(self.payload, "reuse_temp_files", False))
+        if reuse and self._check_reuse_signature(
+            metadata_path, encoder_id, signature, wav_file_name, self.temp_dir
+        ):
+            logger.info("Reusing extracted wav from temp folder")
+            return
+
+        # optionally stagger/jitter and limit concurrent ffmpeg jobs
+        self._maybe_jitter()
+        with self._ffmpeg_slot():
+            ffmpeg_job = process_ffmpeg_job(
+                cmd=ffmpeg_cmd,
+                steps=True,
+                duration=duration,
+                step_info={"current": 1, "total": 3, "name": "FFMPEG"},
+                no_progress_bars=self.payload.no_progress_bars,
+            )
+        logger.debug(f"FFMPEG job: {ffmpeg_job}.")
+        if reuse:
+            self._write_signature_metadata(
+                metadata_path, encoder_id, signature, wav_file_name, file_input
+            )
 
     def _acquire_ffmpeg(self) -> None:
         if self._ffmpeg_sem:
