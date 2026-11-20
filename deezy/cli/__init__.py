@@ -6,11 +6,6 @@ import sys
 import tempfile
 import traceback
 
-from deezy.audio_encoders.dee.ac4 import Ac4Encoder
-from deezy.audio_encoders.dee.atmos import AtmosEncoder
-from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deezy.audio_encoders.dee.dd import DDEncoderDEE
-from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
 from deezy.cli.payload_factory import PayloadBuilder
 from deezy.cli.utils import (
     CustomHelpFormatter,
@@ -46,6 +41,8 @@ from deezy.enums.shared import (
     TrackType,
 )
 from deezy.exceptions import OutputExistsError
+from deezy.pipeline.encode import encode
+from deezy.pipeline.run import init_phase_limits
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.batch_results import BatchResultsManager
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
@@ -1030,26 +1027,18 @@ def encode_single_file(
         logger_manager.set_file(log_file)
 
     # build payload and run encoder
-    if args.format_command == "dd":
-        payload = PayloadBuilder.build_dd_payload(
+    builders = {
+        "dd": PayloadBuilder.build_dd_payload,
+        "ddp": PayloadBuilder.build_ddp_payload,
+        "ddp-bluray": PayloadBuilder.build_ddp_payload,
+        "atmos": PayloadBuilder.build_atmos_payload,
+        "ac4": PayloadBuilder.build_ac4_payload,
+    }
+    if args.format_command in builders:
+        payload = builders[args.format_command](
             args, input_file, ffmpeg_path, truehdd_path, dee_path
         )
-        result = DDEncoderDEE(payload).encode()
-    elif args.format_command in ("ddp", "ddp-bluray"):
-        payload = PayloadBuilder.build_ddp_payload(
-            args, input_file, ffmpeg_path, truehdd_path, dee_path
-        )
-        result = DDPEncoderDEE(payload).encode()
-    elif args.format_command == "atmos":
-        payload = PayloadBuilder.build_atmos_payload(
-            args, input_file, ffmpeg_path, truehdd_path, dee_path
-        )
-        result = AtmosEncoder(payload).encode()
-    elif args.format_command == "ac4":
-        payload = PayloadBuilder.build_ac4_payload(
-            args, input_file, ffmpeg_path, truehdd_path, dee_path
-        )
-        result = Ac4Encoder(payload).encode()
+        result = encode(payload)
     elif args.format_command == "preset":
         # this should not happen since config manager converts "preset" to actual format
         raise ValueError(
@@ -1326,9 +1315,8 @@ def execute_encode_command(
                 ),
                 ThreadPoolExecutor(max_workers=max_parallel) as executor,
             ):
-                # Initialize phase semaphores and jitter in the encoder base so
-                # all encoder instances share phase limits.
-                BaseDeeAudioEncoder.init_phase_limits(
+                # the batch's jobs share these per-tool limits
+                init_phase_limits(
                     max_parallel,
                     args.jitter_ms,
                     ffmpeg_limit=ff_limit,

@@ -3,17 +3,18 @@ from pathlib import Path
 
 import pytest
 
-from deezy.audio_encoders.dee.backends import (
-    DeeJobFiles,
-    SplitDeeBackend,
-    get_dee_backend,
+from deezy.dee.commands import (
+    DeeFiles,
+    DeeTools,
+    ac4ims_command,
+    ddp_command,
+    ddpjoc_command,
 )
 from deezy.dee.spec import get_format
 from deezy.dee.tools import get_executable_extension
 from deezy.delay import Delay, compensation
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode, WarpMode
-from deezy.enums.codec_format import CodecFormat
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.shared import (
@@ -29,6 +30,7 @@ from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
+from deezy.pipeline.plan import require_supported_atmos_mode
 from tests.utils.payload_helpers import make_core_fields, make_dolby_fields
 
 EXE = get_executable_extension()
@@ -43,13 +45,9 @@ def split_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def files(tmp_path: Path) -> DeeJobFiles:
-    return DeeJobFiles(
-        input_file=tmp_path / "in.wav",
-        output_file=tmp_path / "out.ec3",
-        temp_dir=tmp_path,
-        job_name="job",
-        codec_format=CodecFormat.DDP,
+def files(tmp_path: Path) -> DeeFiles:
+    return DeeFiles(
+        input=tmp_path / "in.wav", output=tmp_path / "out.ec3", temp_dir=tmp_path
     )
 
 
@@ -120,27 +118,18 @@ def encoder_options(cmd: list[str]) -> dict[str, str]:
     return dict(pair.split("=", 1) for pair in value.split(":"))
 
 
-class TestBackendSelection:
-    def test_folder_is_split(self, split_dir):
-        assert isinstance(get_dee_backend(split_dir), SplitDeeBackend)
-
-    def test_any_path_is_the_tools_folder(self):
-        # the 6.7 tools are the only DEE; detection already checked the folder
-        assert isinstance(get_dee_backend(Path("dee")), SplitDeeBackend)
-
-
 class TestSplitDD:
     def build(self, tmp_path, split_dir, files, payload=None, **kwargs):
         options = {
             "downmix_mode_off": False,
             "bitrate": 640,
             "fps": DeeFPS.FPS_24,
-            "delay": None,
+            "delay": Delay(),
             "dd_mode": DDEncodingMode.DDP,
             **kwargs,
         }
-        return SplitDeeBackend(split_dir).dd_command(
-            payload or make_dd_payload(tmp_path), files, **options
+        return ddp_command(
+            DeeTools(split_dir), payload or make_dd_payload(tmp_path), files, **options
         )
 
     def test_ddp_command(self, tmp_path, split_dir, files):
@@ -148,8 +137,8 @@ class TestSplitDD:
 
         assert cmd[0] == str(split_dir / f"dee_ddp_encoder{EXE}")
         assert option(cmd, "--input-format") == "wav"
-        assert option(cmd, "-i") == str(files.input_file)
-        assert option(cmd, "-o") == str(files.output_file)
+        assert option(cmd, "-i") == str(files.input)
+        assert option(cmd, "-o") == str(files.output)
         assert option(cmd, "--temp-dir") == str(files.temp_dir)
         assert option(cmd, "--data-rate") == "640"
         assert option(cmd, "--timecode-frame-rate") == "24"
@@ -228,13 +217,14 @@ class TestSplitDDExtras:
 
     def build(self, tmp_path, split_dir, files, dd_mode=DDEncodingMode.DDP, **fields):
         payload = replace(make_dd_payload(tmp_path), **fields)
-        return SplitDeeBackend(split_dir).dd_command(
+        return ddp_command(
+            DeeTools(split_dir),
             payload,
             files,
             downmix_mode_off=False,
             bitrate=192,
             fps=DeeFPS.FPS_24,
-            delay=None,
+            delay=Delay(),
             dd_mode=dd_mode,
         )
 
@@ -302,13 +292,14 @@ class TestSplitDDExtras:
 
 class TestLoudnessPreset:
     def dd(self, tmp_path, split_dir, files, dd_mode=DDEncodingMode.DDP, **fields):
-        return SplitDeeBackend(split_dir).dd_command(
+        return ddp_command(
+            DeeTools(split_dir),
             replace(make_dd_payload(tmp_path), **fields),
             files,
             downmix_mode_off=False,
             bitrate=640,
             fps=DeeFPS.FPS_24,
-            delay=None,
+            delay=Delay(),
             dd_mode=dd_mode,
         )
 
@@ -348,23 +339,24 @@ class TestLoudnessPreset:
         assert option(cmd, "--loudness-management") == "skip:dialnorm=-27"
 
     def test_atmos_and_ac4(self, tmp_path, split_dir, files):
-        atmos = SplitDeeBackend(split_dir).atmos_command(
+        atmos = ddpjoc_command(
+            DeeTools(split_dir),
             replace(
                 make_atmos_payload(tmp_path), loudness_preset=LoudnessPreset.ATSC_A85
             ),
             files,
             bitrate=448,
             fps=DeeFPS.FPS_24,
-            delay=None,
-            atmos_mode=AtmosMode.STREAMING,
+            delay=Delay(),
         )
-        ac4 = SplitDeeBackend(split_dir).ac4_command(
+        ac4 = ac4ims_command(
+            DeeTools(split_dir),
             make_ac4_payload(tmp_path, loudness_preset=LoudnessPreset.ATSC_A85),
             files,
             bitrate=256,
             fps=DeeFPS.FPS_24,
-            delay=None,
-            atmos_enabled=True,
+            delay=Delay(),
+            atmos_input=True,
         )
         for cmd in (atmos, ac4):
             assert (
@@ -374,7 +366,8 @@ class TestLoudnessPreset:
 
 class TestSplitDelay:
     def build(self, tmp_path, split_dir, files, delay):
-        return SplitDeeBackend(split_dir).dd_command(
+        return ddp_command(
+            DeeTools(split_dir),
             make_dd_payload(tmp_path),
             files,
             downmix_mode_off=False,
@@ -416,7 +409,7 @@ class TestSplitDelay:
         assert "--add-silence" not in cmd
 
     def test_no_delay_starts_at_the_first_sample(self, tmp_path, split_dir, files):
-        cmd = self.build(tmp_path, split_dir, files, None)
+        cmd = self.build(tmp_path, split_dir, files, Delay())
         assert option(cmd, "--start") == "0"
         assert "--add-silence" not in cmd
 
@@ -438,13 +431,13 @@ class TestSplitDelay:
 
 class TestSplitAtmos:
     def test_command(self, tmp_path, split_dir, files):
-        cmd = SplitDeeBackend(split_dir).atmos_command(
+        cmd = ddpjoc_command(
+            DeeTools(split_dir),
             make_atmos_payload(tmp_path),
             files,
             bitrate=448,
             fps=DeeFPS.FPS_24,
-            delay=None,
-            atmos_mode=AtmosMode.STREAMING,
+            delay=Delay(),
         )
 
         assert cmd[0] == str(split_dir / f"dee_ddpjoc_encoder{EXE}")
@@ -455,39 +448,33 @@ class TestSplitAtmos:
         assert encoder_options(cmd)["drc_profile_line"] == "film_light"
         assert encoder_options(cmd)["preferred_downmix_mode"] == "not_indicated"
 
-    def test_bluray_needs_dee_shim(self, tmp_path, split_dir, files):
+    def test_bluray_needs_dee_shim(self):
         # DEE's own Blu-ray mode gives a 5.1.2 bed, not 7.1
         with pytest.raises(UnsupportedDeeFeatureError, match="dee_shim"):
-            SplitDeeBackend(split_dir).atmos_command(
-                make_atmos_payload(tmp_path),
-                files,
-                bitrate=1280,
-                fps=DeeFPS.FPS_24,
-                delay=None,
-                atmos_mode=AtmosMode.BLURAY,
-            )
+            require_supported_atmos_mode(AtmosMode.BLURAY)
 
     def test_custom_dialnorm(self, tmp_path, split_dir, files):
-        cmd = SplitDeeBackend(split_dir).atmos_command(
+        cmd = ddpjoc_command(
+            DeeTools(split_dir),
             replace(make_atmos_payload(tmp_path), custom_dialnorm=-27),
             files,
             bitrate=448,
             fps=DeeFPS.FPS_24,
-            delay=None,
-            atmos_mode=AtmosMode.STREAMING,
+            delay=Delay(),
         )
         assert option(cmd, "--loudness-management") == "skip:dialnorm=-27"
 
 
 class TestSplitAC4:
     def build(self, tmp_path, split_dir, files, atmos=True, **payload):
-        return SplitDeeBackend(split_dir).ac4_command(
+        return ac4ims_command(
+            DeeTools(split_dir),
             make_ac4_payload(tmp_path, **payload),
             files,
             bitrate=256,
             fps=DeeFPS.FPS_24,
-            delay=None,
-            atmos_enabled=atmos,
+            delay=Delay(),
+            atmos_input=atmos,
         )
 
     def test_atmos_input(self, tmp_path, split_dir, files):
@@ -542,13 +529,14 @@ class TestSplitAC4:
 def test_non_1770_4_metering_is_measured_as_1770_4(tmp_path, split_dir, files):
     """The split encoders only measure 1770-4, so the request is overridden."""
     payload = make_dd_payload(tmp_path, metering_mode=MeteringMode.MODE_1770_1)
-    cmd = SplitDeeBackend(split_dir).dd_command(
+    cmd = ddp_command(
+        DeeTools(split_dir),
         payload,
         files,
         downmix_mode_off=False,
         bitrate=640,
         fps=DeeFPS.FPS_24,
-        delay=None,
+        delay=Delay(),
         dd_mode=DDEncodingMode.DDP,
     )
     assert option(cmd, "--loudness-management").startswith("measure_only:")

@@ -3,21 +3,7 @@ from typing import cast
 
 from pymediainfo import Track
 
-from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
 from deezy.delay import Delay
-
-
-class DummyEncoder(BaseDeeAudioEncoder):
-    """Tiny concrete subclass solely for testing the helper."""
-
-    def _get_channel_bitrate_object(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    def _get_down_mix_config(self, *args, **kwargs) -> str:
-        return ""
-
-    def _generate_ffmpeg_cmd(self, *args, **kwargs) -> list[str]:
-        return []
 
 
 def make_delay(present: bool) -> Delay:
