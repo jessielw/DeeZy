@@ -174,12 +174,13 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         logger.debug(f"File paths: {wav_file_name=}, {output=}.")
 
         # check to see if input channels are accepted by dee
-        dee_allowed_input = self._dee_allowed_input(audio_track_info.channels)
+        # the source's own layout, not the AUTO choice made from it
+        dee_allowed_input = self._dee_allowed_input(source_channels)
 
         # downmix config
         down_mix_config = self._get_down_mix_config(
             self.payload.channels,
-            audio_track_info.channels,
+            source_channels,
             self.payload.stereo_mix,
             dee_allowed_input,
         )

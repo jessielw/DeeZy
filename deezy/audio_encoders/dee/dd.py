@@ -155,12 +155,13 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
         )
 
         # check to see if input channels are accepted by dee
-        dee_allowed_input = self._dee_allowed_input(audio_track_info.channels)
+        # the source's own layout, not the AUTO choice made from it
+        dee_allowed_input = self._dee_allowed_input(source_channels)
 
         # downmix config
         down_mix_config = self._get_down_mix_config(
             self.payload.channels,
-            audio_track_info.channels,
+            source_channels,
             self.payload.stereo_mix,
             dee_allowed_input,
         )
@@ -181,7 +182,7 @@ class DDEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalChannels]):
             # if source channels is 5.0 and the user wants to up-mix to 5.1
             or (
                 allow_50_to_51_upmix
-                and audio_track_info.channels == 5
+                and source_channels == 5
                 and self.payload.channels is DolbyDigitalChannels.SURROUND
                 and self.payload.upmix_50_to_51
             )
