@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 import logging
 
@@ -34,30 +34,38 @@ class StereoDownmix(CaseInsensitiveEnum):
             return self.value
 
 
-class DeeDelayModes(CaseInsensitiveEnum):
-    NEGATIVE = "start"
-    POSITIVE = "prepend_silence_duration"
+# DEE encodes at 48 kHz and starts its output this many samples late
+DEE_SAMPLE_RATE = 48000
+DEE_DELAY_SAMPLES = 256
+# extra delay when DEE itself changes the channel count (e.g. 7.1 to 5.1)
+DEE_CHANNEL_CHANGE_SAMPLES = 32
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class DeeDelay:
-    MODE: DeeDelayModes
-    DELAY: str  # DEE specific delay i.e. '0:00:00.005333'
+    """A requested delay, and the delay DEE adds that the encode takes off."""
+
+    requested_ms: float = 0.0
+    # samples at 48 kHz
+    compensation_samples: int = DEE_DELAY_SAMPLES
 
     def is_delay(self) -> bool:
         """
-        If delay is anything other than the default Dolby compensation value return True.
-        This indicates that we're setting the delay to 0 for the container.
+        True when a delay was asked for. The encode then carries it, so the
+        output's container delay is 0.
         """
-        return self.DELAY != "0:00:00.005333"
+        return self.requested_ms != 0
 
-    def to_seconds(self) -> float:
-        """The delay as plain seconds, whichever form DEE's JSON wants it in."""
-        if self.MODE is DeeDelayModes.POSITIVE:
-            return float(self.DELAY)
-        # negative delays are kept as a clock string, i.e. '0:00:00.005333'
-        hours, minutes, seconds = self.DELAY.split(":")
-        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    def offset_seconds(self) -> float:
+        """How far to shift the audio: > 0 prepends silence, < 0 trims the start."""
+        return self.requested_ms / 1000 - self.compensation_samples / DEE_SAMPLE_RATE
+
+    def with_channel_change(self) -> "DeeDelay":
+        """This delay for an encode where DEE changes the channel count."""
+        return replace(
+            self,
+            compensation_samples=self.compensation_samples + DEE_CHANNEL_CHANGE_SAMPLES,
+        )
 
 
 class DeeFPS(Enum):

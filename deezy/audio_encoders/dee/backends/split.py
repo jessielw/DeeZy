@@ -8,7 +8,6 @@ from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import (
     DDEncodingMode,
     DeeDelay,
-    DeeDelayModes,
     DeeDRC,
     DeeFPS,
     LoudnessPreset,
@@ -276,14 +275,21 @@ class SplitDeeBackend(DeeBackend):
 
     @staticmethod
     def _delay_args(delay: DeeDelay | None) -> list[str]:
-        if not delay:
-            return []
-        seconds = f"{delay.to_seconds():.6f}"
-        if delay.MODE is DeeDelayModes.NEGATIVE:
+        """
+        Where DEE starts reading, and the silence it prepends.
+
+        ``--start`` is always given: left out, DEE starts at the master's first
+        frame of action instead of the first sample.
+        """
+        offset = delay.offset_seconds() if delay else 0.0
+        if offset < 0:
             # trim the start of the audio
-            return ["--start", seconds]
-        # prepend silence, nothing appended
-        return ["--add-silence", f"{seconds}:0"]
+            return ["--start", f"{-offset:.6f}"]
+        args = ["--start", "0"]
+        if offset > 0:
+            # prepend silence, nothing appended
+            args += ["--add-silence", f"{offset:.6f}:0"]
+        return args
 
     @staticmethod
     def _check_options(

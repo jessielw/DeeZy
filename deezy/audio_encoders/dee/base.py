@@ -106,7 +106,21 @@ class BaseDeeAudioEncoder(BaseAudioEncoder, ABC, Generic[DolbyChannelType]):
         # generate dee delay
         delay = get_dee_delay(delay_str)
         if delay.is_delay():
-            logger.debug(f"Generated delay {delay.MODE}:{delay.DELAY}.")
+            logger.debug(f"Requested delay {delay.requested_ms:g} ms.")
+        return delay
+
+    @staticmethod
+    def _compensate_channel_change(
+        delay: DeeDelay, dee_input_channels: int, dee_output_channels: int
+    ) -> DeeDelay:
+        """`delay`, with the extra samples DEE adds when it changes the channel count."""
+        if dee_input_channels == dee_output_channels:
+            return delay
+        delay = delay.with_channel_change()
+        logger.debug(
+            f"DEE changes {dee_input_channels} channels to {dee_output_channels}, "
+            f"compensating {delay.compensation_samples} samples."
+        )
         return delay
 
     def get_config_based_bitrate(

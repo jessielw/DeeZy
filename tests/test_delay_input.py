@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 
 from deezy.audio_encoders.delay import get_dee_delay, parse_delay_ms
-from deezy.enums.shared import DeeDelayModes
 from deezy.exceptions import InvalidDelayError
 from deezy.track_info.utils import (
     clean_title,
@@ -40,16 +39,14 @@ def test_malformed_delays_are_refused(text):
 
 
 def test_a_decimal_delay_reaches_dee_intact():
-    # 10.5 ms less the 16/3 ms DEE adds
-    delay = get_dee_delay("10.5ms")
-    assert delay.MODE is DeeDelayModes.POSITIVE
-    assert delay.to_seconds() == pytest.approx(0.0105 - 0.016 / 3, abs=1e-6)
+    # 10.5 ms less the 256 samples DEE adds
+    assert get_dee_delay("10.5ms").offset_seconds() == pytest.approx(
+        0.0105 - 256 / 48000
+    )
 
 
 def test_a_negative_decimal_delay_trims_the_start():
-    delay = get_dee_delay("-1.5s")
-    assert delay.MODE is DeeDelayModes.NEGATIVE
-    assert delay.to_seconds() == pytest.approx(1.5 + 0.016 / 3, abs=1e-6)
+    assert get_dee_delay("-1.5s").offset_seconds() == pytest.approx(-1.5 - 256 / 48000)
 
 
 @pytest.mark.parametrize(

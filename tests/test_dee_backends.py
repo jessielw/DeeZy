@@ -391,18 +391,36 @@ class TestSplitDelay:
     def test_positive_delay_prepends_silence(self, tmp_path, split_dir, files):
         cmd = self.build(tmp_path, split_dir, files, get_dee_delay("100ms"))
         assert option(cmd, "--add-silence") == "0.094667:0"
-        assert "--start" not in cmd
+        # left out, DEE would start at the first frame of action
+        assert option(cmd, "--start") == "0"
 
-    def test_no_delay_adds_nothing(self, tmp_path, split_dir, files):
-        cmd = self.build(tmp_path, split_dir, files, None)
-        assert "--start" not in cmd
+    def test_negative_delay_trims_the_start(self, tmp_path, split_dir, files):
+        cmd = self.build(tmp_path, split_dir, files, get_dee_delay("-100ms"))
+        assert option(cmd, "--start") == "0.105333"
         assert "--add-silence" not in cmd
+
+    def test_a_delay_equal_to_the_compensation_is_no_shift(
+        self, tmp_path, split_dir, files
+    ):
+        cmd = self.build(tmp_path, split_dir, files, get_dee_delay("6ms", 288))
+        assert option(cmd, "--start") == "0"
+        assert "--add-silence" not in cmd
+
+    def test_no_delay_starts_at_the_first_sample(self, tmp_path, split_dir, files):
+        cmd = self.build(tmp_path, split_dir, files, None)
+        assert option(cmd, "--start") == "0"
+        assert "--add-silence" not in cmd
+
+    def test_a_channel_change_adds_32_samples(self, tmp_path, split_dir, files):
+        delay = get_dee_delay("0ms").with_channel_change()
+        assert delay.compensation_samples == 288
+        cmd = self.build(tmp_path, split_dir, files, delay)
+        assert option(cmd, "--start") == "0.006000"
 
     @pytest.mark.parametrize("delay", ["-2s", "-10ms", "0ms", "250ms", "3s"])
     def test_seconds_match_the_millisecond_input(self, delay):
-        dee_delay = get_dee_delay(delay)
-        expected = abs(_ms(delay) - 16 / 3) / 1000
-        assert dee_delay.to_seconds() == pytest.approx(expected, abs=1e-6)
+        expected = (_ms(delay) - 16 / 3) / 1000
+        assert get_dee_delay(delay).offset_seconds() == pytest.approx(expected)
 
 
 def _ms(delay: str) -> float:

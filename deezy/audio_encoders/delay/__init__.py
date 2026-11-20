@@ -1,7 +1,6 @@
-from datetime import timedelta
 import re
 
-from deezy.enums.shared import DeeDelay, DeeDelayModes
+from deezy.enums.shared import DEE_DELAY_SAMPLES, DeeDelay
 from deezy.exceptions import InvalidDelayError
 
 # a signed number of milliseconds or seconds, e.g. -10ms, 10.5ms, +1.25s
@@ -22,31 +21,18 @@ def parse_delay_ms(delay: str) -> float:
     return -ms if sign == "-" else ms
 
 
-def get_dee_delay(delay: str, compensate: bool = True) -> DeeDelay:
+def get_dee_delay(
+    delay: str, compensation_samples: int = DEE_DELAY_SAMPLES
+) -> DeeDelay:
     """
     The delay to hand DEE for a delay string such as ``-10ms`` or ``1.25s``.
 
     Parameters:
         delay (str): The delay string to be converted.
-        compensate (bool): Whether to take off the 256 samples (at 48 kHz) of
-            delay DEE adds to the encode.
+        compensation_samples (int): The delay DEE adds to the encode, in
+            samples at 48 kHz, which the encode takes off.
 
     Raises:
         InvalidDelayError: If the delay is not a signed number of ms or s.
     """
-    s_delay = parse_delay_ms(delay)
-
-    # subtract the Dolby silence offset
-    if compensate:
-        s_delay -= 16 / 3
-
-    if s_delay < 0:
-        dee_delay_mode = DeeDelayModes.NEGATIVE
-        delay_json = str(timedelta(seconds=(abs(s_delay) / 1000)))
-        if "." not in delay_json:
-            delay_json = f"{delay_json}.0"
-    else:
-        dee_delay_mode = DeeDelayModes.POSITIVE
-        delay_json = format(s_delay / 1000, ".6f")
-
-    return DeeDelay(dee_delay_mode, delay_json)
+    return DeeDelay(parse_delay_ms(delay), compensation_samples)

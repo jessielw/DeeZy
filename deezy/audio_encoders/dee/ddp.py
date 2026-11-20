@@ -42,6 +42,8 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
         # get audio track information
         mi_parser = MediainfoParser(file_input, self.payload.track_index)
         audio_track_info = mi_parser.get_audio_track_info()
+        # AUTO channels overwrite audio_track_info.channels below
+        source_channels = audio_track_info.channels
 
         # if source channels is 5.0 and the user wants to up-mix to 5.1
         allow_50_to_51_upmix = (
@@ -199,6 +201,16 @@ class DDPEncoderDEE(BaseDeeAudioEncoder[DolbyDigitalPlusChannels]):
                 logger.debug("FFMPEG upmix needed from 5.0 to 5.1.")
             else:
                 logger.debug(f"FFMPEG downmix needed mix={ffmpeg_down_mix}.")
+
+        # DEE gets FFmpeg's mix, or the source as it is
+        output_channels = (
+            8
+            if isinstance(self.payload.channels, DolbyDigitalPlusBlurayChannels)
+            else self.payload.channels.value
+        )
+        delay = self._compensate_channel_change(
+            delay, ffmpeg_down_mix or source_channels, output_channels
+        )
 
         # early existence check: fail fast to avoid expensive work if the
         # destination already exists and the user didn't request overwrite.

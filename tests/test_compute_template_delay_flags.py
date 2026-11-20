@@ -4,7 +4,7 @@ from typing import cast
 from pymediainfo import Track
 
 from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deezy.enums.shared import DeeDelay, DeeDelayModes
+from deezy.enums.shared import DeeDelay
 
 
 class DummyEncoder(BaseDeeAudioEncoder):
@@ -22,9 +22,9 @@ class DummyEncoder(BaseDeeAudioEncoder):
 
 def make_delay(present: bool) -> DeeDelay:
     if present:
-        return DeeDelay(DeeDelayModes.POSITIVE, "0:00:00.010000")
-    # default Dolby compensation value -> not a real delay
-    return DeeDelay(DeeDelayModes.POSITIVE, "0:00:00.005333")
+        return DeeDelay(requested_ms=10)
+    # only the default compensation -> not a real delay
+    return DeeDelay()
 
 
 def make_track(is_elementary: bool) -> SimpleNamespace:
@@ -70,6 +70,6 @@ def test_non_elementary_delay_present():
 
 
 def test_elementary_no_delay():
-    # DeeDelay using the default compensation value is not treated as a real delay
+    # a DeeDelay with only the default compensation is not a real delay
     delay = make_delay(present=False)
     assert delay.is_delay() is False
