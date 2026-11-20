@@ -8,9 +8,9 @@ import time
 from typing import Any
 
 from deezy.config.manager import ConfigManager, get_config_manager
+from deezy.dee.tools import DependencyNotFoundError, FindDependencies
 from deezy.info import parse_audio_streams
 from deezy.track_info.track_index import TrackIndex
-from deezy.utils.dependencies import DependencyNotFoundError, FindDependencies
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.file_parser import parse_input_s
 from deezy.utils.logger import logger, logger_manager

@@ -1,8 +1,8 @@
 from dataclasses import replace
-import os
 from pathlib import Path
 
 from deezy.audio_encoders.dee.backends.base import DeeBackend, DeeJobFiles
+from deezy.dee.tools import dee_tool, find_license
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import (
@@ -20,7 +20,6 @@ from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.shared import LoudnessPayload
-from deezy.utils.dependencies import split_dee_tool
 from deezy.utils.logger import logger
 from deezy.utils.paths import long_path_str
 
@@ -31,24 +30,6 @@ AC4_IMS_TOOL = "dee_ac4ims_encoder"
 
 def _flag(value: bool) -> str:
     return "1" if value else "0"
-
-
-def find_license(dee_path: Path) -> Path | None:
-    """
-    A license file for the split encoders, when they will not find one themselves.
-
-    The tools look for ``license.lic`` next to themselves. Dolby Media Encoder
-    keeps its license elsewhere (``dme_license.lic`` beside the tools in some
-    installs, ``license.lic`` in its AppData folder in others), so pass that
-    explicitly. Returns None when the default location works or nothing is found.
-    """
-    if (dee_path / "license.lic").is_file():
-        return None
-    candidates = [dee_path / "dme_license.lic"]
-    appdata = os.environ.get("APPDATA")
-    if appdata:
-        candidates.append(Path(appdata) / "Dolby Media Encoder" / "license.lic")
-    return next((path for path in candidates if path.is_file()), None)
 
 
 def require_supported_atmos_mode(atmos_mode: AtmosMode) -> None:
@@ -252,7 +233,7 @@ class SplitDeeBackend(DeeBackend):
         (only the DDP one does); the others manage their temp files themselves.
         """
         return [
-            str(split_dee_tool(Path(self.dee_path), tool)),
+            str(dee_tool(Path(self.dee_path), tool)),
             # replaced with the active log level when the job is run
             "--loglevel",
             "info",

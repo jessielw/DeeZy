@@ -3,8 +3,9 @@ import sys
 
 import pytest
 
+from deezy.dee import tools
+from deezy.dee.tools import FindDependencies, find_license
 from deezy.exceptions import DependencyNotFoundError
-from deezy.utils.dependencies import FindDependencies
 
 
 @pytest.fixture
@@ -23,7 +24,7 @@ def fake_tools(tmp_path, monkeypatch):
     (dee_dir / f"dee_ddp_encoder{finder.os_exe}").touch()
     made["dee"] = dee_dir
     # keep anything already installed on PATH out of the result
-    monkeypatch.setattr("deezy.utils.dependencies.shutil.which", lambda _n: None)
+    monkeypatch.setattr("deezy.dee.tools.shutil.which", lambda _n: None)
     return finder, tmp_path, made
 
 
@@ -69,7 +70,7 @@ def test_override_may_name_a_tool_on_path(fake_tools, tmp_path, monkeypatch):
     resolved.parent.mkdir()
     resolved.touch()
     monkeypatch.setattr(
-        "deezy.utils.dependencies.shutil.which",
+        "deezy.dee.tools.shutil.which",
         lambda n: str(resolved) if Path(n).name == "ffmpeg" else None,
     )
 
@@ -109,7 +110,7 @@ class TestSplitDee:
     @pytest.fixture
     def split_tools(self, tmp_path, monkeypatch):
         finder = FindDependencies()
-        monkeypatch.setattr("deezy.utils.dependencies.shutil.which", lambda _n: None)
+        monkeypatch.setattr("deezy.dee.tools.shutil.which", lambda _n: None)
         # keep a Dolby Media Encoder install on this machine out of the result
         monkeypatch.delenv("ProgramFiles", raising=False)
 
@@ -161,7 +162,7 @@ class TestSplitDee:
         folder = make(base / "elsewhere")
         marker = folder / f"dee_ddp_encoder{finder.os_exe}"
         monkeypatch.setattr(
-            "deezy.utils.dependencies.shutil.which",
+            "deezy.dee.tools.shutil.which",
             lambda n: str(marker) if "dee_ddp_encoder" in n else None,
         )
 
@@ -211,21 +212,45 @@ class TestSplitDee:
 class TestDeeVersion:
     @pytest.mark.parametrize("version", ["6.7.0+8e353f99", "6.7.1"])
     def test_6_7_is_accepted(self, monkeypatch, tmp_path, version):
-        monkeypatch.setattr("deezy.utils.dependencies.dee_version", lambda _d: version)
+        monkeypatch.setattr("deezy.dee.tools.dee_version", lambda _d: version)
         assert FindDependencies.check_dee_version(tmp_path) == version
 
     @pytest.mark.parametrize("version", ["5.2.1", "6.6.0", "6.70.0", None])
     def test_anything_else_is_refused(self, monkeypatch, tmp_path, version):
-        monkeypatch.setattr("deezy.utils.dependencies.dee_version", lambda _d: version)
+        monkeypatch.setattr("deezy.dee.tools.dee_version", lambda _d: version)
         with pytest.raises(DependencyNotFoundError, match="DEE 6.7"):
             FindDependencies.check_dee_version(tmp_path)
 
     def test_version_is_read_from_help(self, monkeypatch, tmp_path):
-        from deezy.utils import dependencies
-
         class Proc:
             stdout = "Dolby Encoding Engine version 6.7.0+8e353f99"
             stderr = ""
 
-        monkeypatch.setattr(dependencies.subprocess, "run", lambda *a, **k: Proc())
-        assert dependencies.dee_version(tmp_path) == "6.7.0+8e353f99"
+        monkeypatch.setattr(tools.subprocess, "run", lambda *a, **k: Proc())
+        assert tools.dee_version(tmp_path) == "6.7.0+8e353f99"
+
+
+class TestFindLicense:
+    @pytest.fixture
+    def no_appdata(self, monkeypatch):
+        monkeypatch.delenv("APPDATA", raising=False)
+
+    def test_none_when_the_tools_find_their_own(self, tmp_path, no_appdata):
+        (tmp_path / "license.lic").touch()
+        (tmp_path / "dme_license.lic").touch()
+        assert find_license(tmp_path) is None
+
+    def test_dolby_media_encoder_license_beside_the_tools(self, tmp_path, no_appdata):
+        (tmp_path / "dme_license.lic").touch()
+        assert find_license(tmp_path) == tmp_path / "dme_license.lic"
+
+    def test_dolby_media_encoder_license_in_appdata(self, tmp_path, monkeypatch):
+        appdata = tmp_path / "appdata"
+        found = appdata / "Dolby Media Encoder" / "license.lic"
+        found.parent.mkdir(parents=True)
+        found.touch()
+        monkeypatch.setenv("APPDATA", str(appdata))
+        assert find_license(tmp_path / "dee") == found
+
+    def test_none_when_nothing_is_found(self, tmp_path, no_appdata):
+        assert find_license(tmp_path) is None

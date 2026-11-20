@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from subprocess import run
 
-from deezy.utils.dependencies import get_executable_extension
+from deezy.dee.tools import get_executable_extension
 
 
 def get_site_packages() -> Path:

@@ -1,3 +1,8 @@
+"""
+Finds the tools DeeZy runs: the DEE 6.7 encoders, their license, FFmpeg and
+truehdd. Any DEE but 6.7.x is refused.
+"""
+
 from dataclasses import dataclass
 import os
 from pathlib import Path
@@ -10,7 +15,7 @@ from deezy.exceptions import DependencyNotFoundError
 
 # DeeZy drives the DEE 6.7 command-line tools, one executable per codec. This
 # one is always present in such a folder, so it identifies it.
-SPLIT_DEE_MARKER_TOOL = "dee_ddp_encoder"
+DEE_MARKER_TOOL = "dee_ddp_encoder"
 SUPPORTED_DEE_VERSION = "6.7"
 
 # Where the Dolby Media Encoder app unpacks the DEE tools (Windows).
@@ -24,21 +29,21 @@ def get_executable_extension() -> str:
     return ".exe" if platform.system() == "Windows" else ""
 
 
-def split_dee_tool(directory: Path, name: str) -> Path:
+def dee_tool(directory: Path, name: str) -> Path:
     """Path of one DEE executable (e.g. `dee_ddp_encoder`) inside `directory`."""
     return directory / f"{name}{get_executable_extension()}"
 
 
-def is_split_dee_dir(path: Path) -> bool:
+def is_dee_dir(path: Path) -> bool:
     """True when `path` is a folder holding the DEE encoder executables."""
-    return path.is_dir() and split_dee_tool(path, SPLIT_DEE_MARKER_TOOL).is_file()
+    return path.is_dir() and dee_tool(path, DEE_MARKER_TOOL).is_file()
 
 
 def dee_version(dee_dir: Path) -> str | None:
     """The version `dee_ddp_encoder --help` reports, e.g. `6.7.0+8e353f99`."""
     try:
         proc = subprocess.run(  # noqa: S603
-            [str(split_dee_tool(dee_dir, SPLIT_DEE_MARKER_TOOL)), "--help"],
+            [str(dee_tool(dee_dir, DEE_MARKER_TOOL)), "--help"],
             capture_output=True,
             text=True,
             errors="replace",
@@ -48,6 +53,24 @@ def dee_version(dee_dir: Path) -> str | None:
         return None
     found = _DEE_VERSION_LINE.search((proc.stdout or "") + (proc.stderr or ""))
     return found.group(1) if found else None
+
+
+def find_license(dee_dir: Path) -> Path | None:
+    """
+    A license file for the DEE tools, when they will not find one themselves.
+
+    The tools look for ``license.lic`` next to themselves. Dolby Media Encoder
+    keeps its license elsewhere (``dme_license.lic`` beside the tools in some
+    installs, ``license.lic`` in its AppData folder in others), so pass that
+    explicitly. Returns None when the default location works or nothing is found.
+    """
+    if (dee_dir / "license.lic").is_file():
+        return None
+    candidates = [dee_dir / "dme_license.lic"]
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        candidates.append(Path(appdata) / "Dolby Media Encoder" / "license.lic")
+    return next((path for path in candidates if path.is_file()), None)
 
 
 @dataclass(slots=True)
@@ -92,7 +115,7 @@ class FindDependencies:
         if require_truehdd and not truehdd:
             missing.append("truehdd")
         if not dee:
-            missing.append(f"dee (a folder with {SPLIT_DEE_MARKER_TOOL})")
+            missing.append(f"dee (a folder with {DEE_MARKER_TOOL})")
         if missing:
             raise DependencyNotFoundError(
                 f"Failed to detect required dependencies: {', '.join(missing)}."
@@ -145,15 +168,15 @@ class FindDependencies:
             return Path(detected) if detected else None
 
         candidate = Path(user_value.strip()).expanduser()
-        if is_split_dee_dir(candidate):
+        if is_dee_dir(candidate):
             return candidate
-        if candidate.is_file() and is_split_dee_dir(candidate.parent):
+        if candidate.is_file() and is_dee_dir(candidate.parent):
             return candidate.parent
         on_path = shutil.which(str(candidate))
-        if on_path and is_split_dee_dir(Path(on_path).parent):
+        if on_path and is_dee_dir(Path(on_path).parent):
             return Path(on_path).parent
 
-        marker = f"{SPLIT_DEE_MARKER_TOOL}{get_executable_extension()}"
+        marker = f"{DEE_MARKER_TOOL}{get_executable_extension()}"
         if candidate.is_dir():
             reason = f", the folder has no {marker}"
         elif candidate.is_file() or on_path:
@@ -173,7 +196,7 @@ class FindDependencies:
         ffmpeg = check(base_wd / f"apps/ffmpeg/ffmpeg{self.os_exe}")
         truehdd = check(base_wd / f"apps/truehdd/truehdd{self.os_exe}")
         dee_dir = base_wd / "apps/dee"
-        dee = dee_dir if is_split_dee_dir(dee_dir) else None
+        dee = dee_dir if is_dee_dir(dee_dir) else None
         return ffmpeg, truehdd, dee
 
     def _locate_on_path(
@@ -188,7 +211,7 @@ class FindDependencies:
 
         # the DEE tools on PATH, then a Dolby Media Encoder install
         if not dee:
-            marker = which(f"{SPLIT_DEE_MARKER_TOOL}{self.os_exe}")
+            marker = which(f"{DEE_MARKER_TOOL}{self.os_exe}")
             if marker:
                 dee = marker.parent
         if not dee:
@@ -202,4 +225,4 @@ class FindDependencies:
         if not program_files:
             return None
         candidate = Path(program_files) / _DME_RELATIVE_DIR
-        return candidate if is_split_dee_dir(candidate) else None
+        return candidate if is_dee_dir(candidate) else None

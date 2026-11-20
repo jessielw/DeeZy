@@ -9,6 +9,7 @@ from deezy.audio_encoders.dee.backends import (
     get_dee_backend,
 )
 from deezy.audio_encoders.delay import get_dee_delay
+from deezy.dee.tools import get_executable_extension
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.codec_format import CodecFormat
@@ -27,7 +28,6 @@ from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
-from deezy.utils.dependencies import get_executable_extension
 from tests.utils.payload_helpers import make_core_fields, make_dolby_fields
 
 EXE = get_executable_extension()
