@@ -724,9 +724,9 @@ def create_encode_parsers(
         ),
     )
 
-    ### Atmos Command ###
+    ### DD+ Atmos Command ###
     _encode_atmos_parser = encode_subparsers.add_parser(
-        "atmos",
+        "ddp-atmos",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -746,9 +746,9 @@ def create_encode_parsers(
         ),
     )
 
-    ### AC4 Command ###
+    ### AC-4 IMS Command ###
     _encode_ac4_parser = encode_subparsers.add_parser(
-        "ac4",
+        "ac4-ims",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -1031,8 +1031,8 @@ def encode_single_file(
         "dd": PayloadBuilder.build_dd_payload,
         "ddp": PayloadBuilder.build_ddp_payload,
         "ddp-bluray": PayloadBuilder.build_ddp_payload,
-        "atmos": PayloadBuilder.build_atmos_payload,
-        "ac4": PayloadBuilder.build_ac4_payload,
+        "ddp-atmos": PayloadBuilder.build_atmos_payload,
+        "ac4-ims": PayloadBuilder.build_ac4_payload,
     }
     if args.format_command in builders:
         payload = builders[args.format_command](

@@ -35,7 +35,7 @@ def test_each_surround_flag_turns_off_its_own_option(fmt, flag, off):
     assert fields[on.pop()] is True
 
 
-@pytest.mark.parametrize("fmt", ["dd", "ddp", "ddp-bluray", "atmos"])
+@pytest.mark.parametrize("fmt", ["dd", "ddp", "ddp-bluray", "ddp-atmos"])
 def test_drc_none_is_offered(fmt):
     args = parse(
         "encode", fmt, "--drc-line-mode", "none", "--drc-rf-mode", "none", "a.wav"

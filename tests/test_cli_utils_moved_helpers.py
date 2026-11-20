@@ -25,13 +25,13 @@ class DummyConfigManager:
 
 
 def test_apply_default_bitrate_atmos_and_channels():
-    args = argparse.Namespace(format_command="atmos", bitrate=None, atmos_mode=None)
+    args = argparse.Namespace(format_command="ddp-atmos", bitrate=None, atmos_mode=None)
 
     class Mode:
         value = "STREAMING"
 
     args.atmos_mode = Mode()
-    cfg = DummyConfigManager(bitrate_map={("atmos", "STREAMING"): 512})
+    cfg = DummyConfigManager(bitrate_map={("ddp-atmos", "STREAMING"): 512})
 
     utils.apply_default_bitrate(args, cast(Any, cfg))
     assert args.bitrate == 512
@@ -159,7 +159,7 @@ def test_handle_configuration_returns_none_for_config_subcommand(monkeypatch):
 def test_handle_dependencies_normal(monkeypatch, tmp_path):
     args = argparse.Namespace(
         sub_command="encode",
-        format_command="atmos",
+        format_command="ddp-atmos",
         ffmpeg=None,
         truehdd=None,
         dee=None,

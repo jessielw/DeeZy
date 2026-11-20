@@ -167,7 +167,7 @@ def test_channel_clamping_bounds():
 def test_ac4_prefers_atmos_key():
     # AC4 should prefer the atmosphere-specific per-source key (ch_n_atmos)
     cfg = {
-        "default_source_bitrates": {"ac4": {"ch_6_atmos": 320, "ch_6": 256}},
+        "default_source_bitrates": {"ac4-ims": {"ch_6_atmos": 320, "ch_6": 256}},
         "default_bitrates": {},
     }
     setup_config(cfg)
@@ -182,7 +182,7 @@ def test_ac4_prefers_atmos_key():
     # Use AC4's typical choices so the config value 320 is accepted as valid
     res = resolve_bitrate(
         config=ConfigManager(),
-        format_command=CodecFormat.AC4,
+        format_command=CodecFormat.AC4_IMS,
         payload_bitrate=None,
         payload_channels=None,
         info=audio_info,

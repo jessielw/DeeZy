@@ -167,6 +167,24 @@ class TestConfigManagerLoading:
         assert "default_bitrates" in cm.config
         assert "dependencies" in cm.config
 
+    def test_sections_under_renamed_formats_warn(self):
+        """A 1.x config's [default_bitrates.atmos] would be ignored silently."""
+        cm = ConfigManager()
+        cm.config = {
+            "default_bitrates": {"atmos": {"streaming": 768}, "ddp": {"stereo": 128}},
+            "default_source_bitrates": {"ac4": {"ch_6": 320}},
+        }
+        with patch("deezy.config.manager.logger") as log:
+            cm._validate_config()
+
+        warnings = [call.args[0] for call in log.warning.call_args_list]
+        assert warnings == [
+            "Config section [default_bitrates.atmos] is ignored: the 'atmos' format "
+            "is now 'ddp-atmos', so rename it [default_bitrates.ddp-atmos].",
+            "Config section [default_source_bitrates.ac4] is ignored: the 'ac4' "
+            "format is now 'ac4-ims', so rename it [default_source_bitrates.ac4-ims].",
+        ]
+
 
 class TestConfigManagerGeneration:
     """Test configuration file generation."""
@@ -288,7 +306,7 @@ class TestConfigManagerPresets:
         cm.config = {
             "presets": {
                 "streaming_ddp": "encode ddp --channels surround",
-                "bluray_atmos": "encode atmos --atmos-mode bluray",
+                "bluray_atmos": "encode ddp-atmos --atmos-mode bluray",
                 "quick_stereo": "encode ddp --channels stereo",
             }
         }

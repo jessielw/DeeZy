@@ -293,8 +293,8 @@ def source_bitrate_from_config(
         if not fmt_conf:
             return None
         bitrate = None
-        # AC-4 may set a separate rate for TrueHD Atmos sources ('ch_6_atmos')
-        if thd_atmos and fmt == "ac4":
+        # AC-4 IMS may set a separate rate for TrueHD Atmos sources ('ch_6_atmos')
+        if thd_atmos and fmt == str(CodecFormat.AC4_IMS):
             bitrate = fmt_conf.get(f"{key}_atmos")
         if bitrate is None:
             bitrate = fmt_conf.get(key)
@@ -765,7 +765,7 @@ def _plan_ddp_atmos(
     require_supported_atmos_mode(payload.atmos_mode)
     bitrate = resolve_bitrate(
         ctx.config,
-        CodecFormat.ATMOS,
+        CodecFormat.DDP_ATMOS,
         payload.bitrate,
         payload.atmos_mode,
         info,
@@ -782,7 +782,7 @@ def _plan_ddp_atmos(
         payload, info, ctx, spec, "DDP", payload.atmos_mode.get_str_channels(), delay
     )
 
-    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.ATMOS))
+    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.DDP_ATMOS))
     if dee_input is None:
         raise InvalidAtmosInputError("Cannot process input, not a valid Atmos format")
 
@@ -820,7 +820,7 @@ def _plan_ac4_ims(
         )
     bitrate = resolve_bitrate(
         ctx.config,
-        CodecFormat.AC4,
+        CodecFormat.AC4_IMS,
         payload.bitrate,
         Ac4Channels.IMMERSIVE_STEREO,
         info,
@@ -834,17 +834,21 @@ def _plan_ac4_ims(
     fps = get_fps(info.fps)
     output, preview = _output(payload, info, ctx, spec, "AC-4", "2.0", delay)
 
-    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.AC4))
+    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.AC4_IMS))
     steps: list[Step] = [truehdd] if truehdd else []
     if dee_input is None:
         # channel-based input, at least 6 channels (checked above)
-        wav = WavFile(ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.AC4}.wav")
+        wav = WavFile(
+            ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.AC4_IMS}.wav"
+        )
         resample = bool(info.sample_rate and info.sample_rate != DEE_SAMPLE_RATE)
         filters = _filter_args(_PAN_7_1 if info.channels == 8 else None, resample)
         # dee_ac4ims_encoder takes 5.1
         if info.channels != 6:
             filters += ["-ac", "6"]
-        steps.append(_ffmpeg_step(payload, filters, wav, str(CodecFormat.AC4), info))
+        steps.append(
+            _ffmpeg_step(payload, filters, wav, str(CodecFormat.AC4_IMS), info)
+        )
         dee_input = wav.dee_input
 
     files = _dee_files(ctx, dee_input, output)

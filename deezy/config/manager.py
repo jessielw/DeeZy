@@ -10,6 +10,9 @@ from deezy.utils.exit import EXIT_FAIL, exit_application
 from deezy.utils.logger import logger
 from deezy.utils.utils import WORKING_DIRECTORY
 
+# formats 2.0 renamed, by their old name
+RENAMED_FORMATS = {"atmos": "ddp-atmos", "ac4": "ac4-ims"}
+
 
 class ConfigManager:
     """Simple configuration manager that handles presets and config loading."""
@@ -103,6 +106,13 @@ class ConfigManager:
             self.config["default_bitrates"] = {}
         if "dependencies" not in self.config:
             self.config["dependencies"] = {}
+        for section in ("default_bitrates", "default_source_bitrates"):
+            for old, new in RENAMED_FORMATS.items():
+                if old in (self.config.get(section) or {}):
+                    logger.warning(
+                        f"Config section [{section}.{old}] is ignored: the '{old}' "
+                        f"format is now '{new}', so rename it [{section}.{new}]."
+                    )
 
     def get_preset_command(self, preset_name: str) -> str:
         """Get the CLI command string for a preset."""
@@ -177,8 +187,8 @@ class ConfigManager:
         if not format_bitrates:
             return None
 
-        # for Atmos, use the mode (streaming/bluray)
-        if format_str == "atmos" and channels_or_mode:
+        # for DD+ Atmos, use the mode (streaming/bluray)
+        if format_str == "ddp-atmos" and channels_or_mode:
             return format_bitrates.get(channels_or_mode)
 
         # for DD/DDP, use channel configuration
@@ -241,7 +251,7 @@ class ConfigManager:
                 "description": f"preset command: {command}",
             }
             if len(args) >= 2:
-                info["format"] = args[1]  # e.g. 'ddp', 'dd', 'atmos'
+                info["format"] = args[1]  # e.g. 'ddp', 'dd', 'ddp-atmos'
             return info
         except Exception:
             return {

@@ -130,7 +130,7 @@ surround = 448 # DD 5.1
 #
 # Supported codecs:
 #  - dd, ddp: support ch_1..ch_8
-#  - ac4: meaningful only for channels 6..8 (use ch_6..ch_8)
+#  - ac4-ims: meaningful only for channels 6..8 (use ch_6..ch_8)
 #
 
 # Default bitrates for Dolby Digital Plus (E-AC-3)
@@ -157,20 +157,20 @@ surroundex = 384 # DDP 7.1
 [default_bitrates.ddp-bluray]
 surroundex = 1280 # DDP Bluray 7.1
 
-# Default bitrates for Dolby Atmos
-[default_bitrates.atmos]
+# Default bitrates for Dolby Digital Plus Atmos
+[default_bitrates.ddp-atmos]
 streaming = 448 # Atmos Streaming
 bluray = 1280    # Atmos Bluray
 
-# Default bitrates for AC4
-[default_bitrates.ac4]
+# Default bitrates for AC-4 immersive stereo
+[default_bitrates.ac4-ims]
 immersive_stereo = 256 # AC4 Immersive Stereo
 
-# Optional per-source defaults for AC4
+# Optional per-source defaults for AC-4 immersive stereo
 # AC4 encoding choices include 256 as a common default. AC4 is only meaningful
 # for immersive multi-channel sources (6..8) in many workflows; these are examples.
 # Uncomment to opt-in.
-#[default_source_bitrates.ac4]
+#[default_source_bitrates.ac4-ims]
 # ch_6 = 256
 # ch_6_atmos = 320
 # ch_7 = 256
@@ -183,8 +183,8 @@ immersive_stereo = 256 # AC4 Immersive Stereo
 streaming_ddp = "encode ddp --channels surround --bitrate 448"
 bluray_dd = "encode dd --channels surround --bitrate 640"
 auto_stereo_ddp = "encode ddp --channels stereo"
-streaming_atmos = "encode atmos --atmos-mode streaming"
-ac4_stereo = "encode ac4 --bitrate 256"
+streaming_atmos = "encode ddp-atmos --atmos-mode streaming"
+ac4_stereo = "encode ac4-ims --bitrate 256"
 """
 # fmt: on
 

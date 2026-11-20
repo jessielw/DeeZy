@@ -9,8 +9,8 @@ class CodecFormat(CaseInsensitiveEnum):
     DD = "dd"
     DDP = "ddp"
     DDP_BLURAY = "ddp-bluray"
-    ATMOS = "atmos"
-    AC4 = "ac4"
+    DDP_ATMOS = "ddp-atmos"
+    AC4_IMS = "ac4-ims"
 
     @override
     def __str__(self) -> str:

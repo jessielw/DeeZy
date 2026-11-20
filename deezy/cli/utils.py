@@ -261,7 +261,7 @@ def apply_default_bitrate(
     """Apply default bitrate based on format and channels/mode if none specified."""
     if not hasattr(args, "bitrate") or args.bitrate is None:
         channels_or_mode = None
-        if args.format_command == "atmos":
+        if args.format_command == "ddp-atmos":
             if hasattr(args, "atmos_mode") and args.atmos_mode:
                 channels_or_mode = (
                     args.atmos_mode.value
@@ -354,7 +354,7 @@ def handle_dependencies(
         config_value = config_deps.get(key)
         deps[key] = cli_value or config_value
 
-    atmos_required = getattr(args, "format_command", None) in ("atmos", "ac4")
+    atmos_required = getattr(args, "format_command", None) in ("ddp-atmos", "ac4-ims")
 
     finder = FindDependencies()
     try:
