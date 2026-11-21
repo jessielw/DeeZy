@@ -2,9 +2,10 @@
 DeeZy's Atmos formats from a DAMF master, with the real tools.
 
 DEE reads the master as it is. A synthetic master (an impulse in every
-element) shows that DDP Atmos from a master lands on the master's own sample,
-delay or not. The sample's DAMF must give the same bytes as the TrueHD Atmos
-stream it was decoded from, since DeeZy decodes that stream to the same DAMF.
+element) shows that DDP Atmos, and DD and DD+ rendered from a master, land on
+the master's own sample, delay or not. The sample's DAMF must give the same
+bytes as the TrueHD Atmos stream it was decoded from, since DeeZy decodes that
+stream to the same DAMF.
 
 The planner and runner run in-process with the shipped default config, so the
 tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
@@ -35,9 +36,17 @@ BUILDERS = {
     "ddp-atmos": PayloadBuilder.build_atmos_payload,
     "ac4-ims": PayloadBuilder.build_ac4_payload,
     "ddp": PayloadBuilder.build_ddp_payload,
+    "dd": PayloadBuilder.build_dd_payload,
+    "aac": PayloadBuilder.build_aac_payload,
     "measure": PayloadBuilder.build_measure_payload,
 }
-SUFFIX = {"ddp-atmos": ".ec3", "ac4-ims": ".ac4", "ddp": ".ec3"}
+SUFFIX = {
+    "ddp-atmos": ".ec3",
+    "ac4-ims": ".ac4",
+    "ddp": ".ec3",
+    "dd": ".ac3",
+    "aac": ".aac",
+}
 
 
 @pytest.fixture(scope="module")
@@ -134,8 +143,63 @@ def test_a_master_is_measured_as_atmos(tools, work, parser, config, noise_master
 def test_a_channel_based_format_refuses_a_master(
     tools, work, parser, config, noise_master
 ):
-    with pytest.raises(InvalidAtmosInputError, match="ddp can't encode an Atmos"):
-        job(tools, work, parser, config, "ddp", [], noise_master)
+    with pytest.raises(InvalidAtmosInputError, match="aac can't encode an Atmos"):
+        job(tools, work, parser, config, "aac", [], noise_master)
+
+
+# (id, format, arguments, channels out, delay in samples)
+RENDERS = [
+    ("ddp_51", "ddp", [], 6, 0),
+    ("ddp_51_delay_neg", "ddp", ["--delay=-20ms"], 6, -960),
+    ("ddp_51_delay_pos", "ddp", ["--delay=100ms"], 6, 4800),
+    ("ddp_20", "ddp", ["--channels", "2"], 2, 0),
+    ("ddp_20_delay_neg", "ddp", ["--channels", "2", "--delay=-20ms"], 2, -960),
+    ("ddp_10", "ddp", ["--channels", "1"], 1, 0),
+    ("dd_51", "dd", [], 6, 0),
+    ("dd_20_delay_pos", "dd", ["--channels", "2", "--delay=100ms"], 2, 4800),
+    ("dd_10", "dd", ["--channels", "1"], 1, 0),
+    ("secondary_20", "ddp", ["--bluray-secondary", "--channels", "2"], 2, 0),
+]
+
+
+@pytest.mark.parametrize(
+    ("fmt", "args", "channels", "delay"),
+    [pytest.param(f, a, c, d, id=i) for i, f, a, c, d in RENDERS],
+)
+def test_dd_and_ddp_render_a_master_on_its_sample(
+    tools, work, parser, config, impulse_master, fmt, args, channels, delay
+):
+    """DEE adds 256 samples to a 5.1 render and 288 to a 2.0 or 1.0 one."""
+    out_path = encode(tools, work, parser, config, fmt, args, impulse_master)
+    assert int(mediainfo(out_path)["channel_s"]) == channels
+    out = decode(tools, out_path)
+    frames = [out.peak(c)[0] for c in range(out.channels) if out.peak(c)[1] > 0.02]
+    assert frames, "the impulse is missing from every channel"
+    # lossy coding may move a transient's peak by a sample (DD+ mono peaks
+    # one late, as it does from PCM)
+    for frame in frames:
+        assert abs(frame - (AT + delay)) <= 1
+
+
+@pytest.mark.parametrize("fmt", ["dd", "ddp"])
+def test_a_render_encodes_as_dee_does_by_hand(
+    tools, work, parser, config, noise_master, fmt
+):
+    """
+    DeeZy's DRC, downmix, phase-shift and 3 dB options at their defaults change
+    no byte of a render (DEE ignores the last two for a master).
+    """
+    out = encode(tools, work, parser, config, fmt, [], noise_master)
+    by_hand = work / "masters_out" / f"by_hand{SUFFIX[fmt]}"
+    rate = "448" if fmt == "dd" else "192"
+    result = tools.dee(
+        "dee_ddp_encoder", "--input-format", "atmos_mezz", "-i", noise_master,
+        "-o", by_hand, "--temp-dir", by_hand.parent, "--start", "0.005333",
+        "--data-rate", rate, "--loudness-management", "measure_only",
+        "-c", "5.1", "-e", fmt,
+    )  # fmt: skip
+    assert result.ok, result.error()
+    assert md5(out) == md5(by_hand)
 
 
 def test_the_samples_damf_encodes_as_its_truehd_stream_does(

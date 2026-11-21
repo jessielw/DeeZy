@@ -588,6 +588,61 @@ MASTER_SCENARIOS = [
 ]
 SCENARIOS += MASTER_SCENARIOS
 
+# --- dd and ddp from a master: DEE renders it (5.1 +256 samples, 2.0/1.0 +288)
+D16 = info(16, damf=True)
+RENDER_SCENARIOS = [
+    ("dd_damf_stereo", ["dd", "--channels", "2"], D16, DAMF),
+    ("dd_damf_mono", ["dd", "--channels", "1"], D16, DAMF),
+    ("dd_damf_few", ["dd"], info(4, damf=True), DAMF),
+    ("dd_damf_640", ["dd", "--bitrate", "640"], D16, DAMF),
+    ("dd_damf_delay_neg", ["dd", "--delay=-20ms"], D16, DAMF),
+    ("dd_damf_stereo_delay", ["dd", "--channels", "2", "--delay=100ms"], D16, DAMF),
+    ("dd_damf_dpl2_51", ["dd", "--stereo-down-mix", "dpl2"], D16, DAMF),
+    (
+        "dd_damf_dpl2_stereo",
+        ["dd", "--channels", "2", "--stereo-down-mix", "dpl2"],
+        D16,
+        DAMF,
+    ),
+    ("dd_damf_ltrt_51", ["dd", "--stereo-down-mix", "ltrt"], D16, DAMF),
+    ("dd_adm_target", ["dd", "--loudness-target", "-24"], info(16, adm=True), WAV),
+    ("ddp_damf_stereo", ["ddp", "--channels", "2"], D16, DAMF),
+    ("ddp_damf_mono", ["ddp", "--channels", "1"], D16, DAMF),
+    ("ddp_damf_51", ["ddp", "--channels", "6"], D16, DAMF),
+    ("ddp_damf_71", ["ddp", "--channels", "8"], D16, DAMF),
+    ("ddp_damf_delay_pos", ["ddp", "--delay=100ms"], D16, DAMF),
+    ("ddp_damf_dialnorm", ["ddp", "--custom-dialnorm", "-27"], D16, DAMF),
+    ("ddp_damf_preset", ["ddp", "--loudness-preset", "ebu_r128"], D16, DAMF),
+    ("ddp_damf_dpl2_51", ["ddp", "--stereo-down-mix", "dpl2"], D16, DAMF),
+    (
+        "ddp_damf_ltrt_stereo",
+        ["ddp", "--channels", "2", "--stereo-down-mix", "ltrt"],
+        D16,
+        DAMF,
+    ),
+    ("ddp_damf_secondary", ["ddp", "--bluray-secondary"], D16, DAMF),
+    (
+        "ddp_damf_secondary_stereo",
+        ["ddp", "--bluray-secondary", "--channels", "2", "--bitrate", "100"],
+        D16,
+        DAMF,
+    ),
+    (
+        "ddp_damf_secondary_mono",
+        ["ddp", "--bluray-secondary", "--channels", "1"],
+        D16,
+        DAMF,
+    ),
+    ("ddp_damf_user_data", ["ddp", "--user-data", "7"], D16, DAMF),
+    ("ddp_damf_pipe_always", ["ddp", "--pipe", "always"], D16, DAMF),
+    ("ddp_damf_output_bad", ["ddp", "--output", str(OUT / "x.ac3")], D16, DAMF),
+    ("bluray_damf", ["ddp-bluray"], D16, DAMF),
+    # a TrueHD Atmos stream is no master: FFmpeg decodes its 7.1 presentation
+    ("dd_thd_atmos", ["dd"], info(8, thd=True), MKV),
+    ("ddp_thd_atmos", ["ddp"], info(8, thd=True), MKV),
+]
+SCENARIOS += RENDER_SCENARIOS
+
 # --- measure (arguments start with 'measure', which replaces 'encode')
 MEASURE_SCENARIOS = [
     ("measure_6", ["measure"], info(6), MKV),

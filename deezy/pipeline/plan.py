@@ -192,14 +192,18 @@ class PlanContext:
 
 def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> JobPlan:
     """The plan for one encode. ``info`` is the probed source track."""
-    if info.atmos_master and not isinstance(
-        payload, AtmosPayload | Ac4Payload | Ac4AtmosPayload | TrueHDAtmosPayload
-    ):
-        raise InvalidAtmosInputError(
-            f"{_format_name(payload)} can't encode an Atmos master yet: FFmpeg would "
-            "mix its objects without their positions. Encode it with ddp-atmos, "
-            "thd-atmos, ac4-atmos or ac4-ims, or measure it with 'deezy measure'."
-        )
+    if info.atmos_master:
+        if isinstance(payload, DDPayload | DDPPayload):
+            return _plan_dd_render(payload, info, ctx)
+        if not isinstance(
+            payload, AtmosPayload | Ac4Payload | Ac4AtmosPayload | TrueHDAtmosPayload
+        ):
+            raise InvalidAtmosInputError(
+                f"{_format_name(payload)} can't encode an Atmos master yet: FFmpeg "
+                "would mix its objects without their positions. Encode it with dd, "
+                "ddp, ddp-atmos, thd-atmos, ac4-atmos or ac4-ims, or measure it "
+                "with 'deezy measure'."
+            )
     if isinstance(payload, DDPayload):
         return _plan_dd(payload, info, ctx)
     if isinstance(payload, DDPPayload):
@@ -894,6 +898,114 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         output=output,
         temp_dir=ctx.temp_dir,
         steps=_pcm_steps(payload, filters, transport, str(format_command), info, dee),
+        free_space_needed=info.recommended_free_space,
+        preview=preview,
+    )
+
+
+# --- DD and DD+ rendered from an Atmos master
+
+# the layout DEE renders a master to when none is asked for, and the one its
+# delay is counted from: a 2.0 or 1.0 render adds the 32 samples of a downmix
+MASTER_RENDER_CHANNELS = 6
+
+
+def _plan_dd_render(
+    payload: DDPayload | DDPPayload, info: AudioTrackInfo, ctx: PlanContext
+) -> JobPlan:
+    """
+    DD or DD+ from a DAMF or ADM BWF master, which DEE renders to the layout
+    asked for (1.0, 2.0 or 5.1). No FFmpeg step: the master goes to DEE as it
+    is. A TrueHD Atmos stream is not a master here; FFmpeg decodes its 7.1
+    presentation as for any other source.
+    """
+    dd = isinstance(payload, DDPayload)
+    format_command = CodecFormat.DD if dd else CodecFormat.DDP
+    name = str(format_command)
+    if isinstance(payload.channels, DolbyDigitalPlusBlurayChannels):
+        raise InvalidAtmosInputError(
+            "ddp-bluray can't encode an Atmos master: DEE's Blu-ray 7.1 mode "
+            "doesn't take one. Encode it as 5.1 with ddp, or with ddp-atmos."
+        )
+    spec = get_format(name)
+    layouts = DolbyDigitalChannels if dd else DolbyDigitalPlusChannels
+    surround = layouts.SURROUND
+    channels = payload.channels
+    if channels.value == 8:
+        raise ChannelMixError(
+            "DEE renders an Atmos master to 5.1 at most for DD+; use --channels 6, "
+            "or ddp-atmos to keep the objects."
+        )
+    kind = "DAMF" if info.damf_atmos else "ADM BWF"
+    if channels.value == 0:
+        channels = surround
+        logger.info(f"No supplied channels, defaulting to {channels}.")
+    logger.info(f"DEE renders the {kind} master to {channels}.")
+    stereo = channels.value == 2
+
+    stereo_mix = payload.preferred_downmix_mode
+    if stereo and stereo_mix in (StereoDownmix.LTRT, StereoDownmix.DPLII):
+        # DEE renders a master's 2.0 itself; a downmix mode changes no byte of it
+        raise UnsupportedDeeFeatureError(
+            f"--stereo-down-mix {stereo_mix.value} can't apply to a 2.0 render of an "
+            "Atmos master: DEE renders the 2.0 itself and takes no downmix mode "
+            "for it. Leave it at loro, or encode 5.1."
+        )
+    if dd and stereo_mix is StereoDownmix.DPLII and not stereo:
+        # as for PCM: AC-3 has no DPL II flag (DEE refuses ltrt-pl2 for DD)
+        logger.info(
+            "DD has no DPL II downmix flag, so the stream is marked Lt/Rt preferred."
+        )
+        payload = replace(payload, preferred_downmix_mode=StereoDownmix.LTRT)
+    if payload.pipe is PipeMode.ALWAYS:
+        logger.info("--pipe always: the master goes to DEE as it is, with no PCM.")
+
+    bluray_secondary = bool(getattr(payload, "bluray_secondary", False))
+    if dd:
+        dd_mode = DDEncodingMode.DD
+    else:
+        # refuses a secondary layout other than 2.0 or 5.1
+        dd_mode = _ddp_mode(channels, bluray_secondary)
+    if bluray_secondary:
+        bitrate = secondary_bitrate(payload.bitrate, str(channels))
+    else:
+        bitrate = resolve_bitrate(
+            ctx.config,
+            format_command,
+            payload.bitrate,
+            payload.channels,
+            info,
+            channels.get_bitrate_obj(),
+            info.channels,
+            layouts.AUTO,
+            lambda _source: surround,
+        )
+
+    delay = get_delay(payload)
+    fps = get_fps(info.fps)
+    label = "DD" if dd else "DDP"
+    output, preview = _output(payload, info, ctx, spec, label, str(channels), delay)
+    delay = _compensate(delay, spec, MASTER_RENDER_CHANNELS, channels.value)
+
+    files = replace(
+        _dee_files(ctx, Path(payload.file_input), output), input_format="atmos_mezz"
+    )
+    dee_argv = ddp_command(
+        _tools(payload, ctx),
+        replace(payload, channels=channels),
+        files,
+        downmix_mode_off=False,
+        bitrate=bitrate,
+        fps=fps,
+        delay=delay,
+        dd_mode=dd_mode,
+    )
+    return JobPlan(
+        format=spec.name,
+        source=Path(payload.file_input),
+        output=output,
+        temp_dir=ctx.temp_dir,
+        steps=(DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm),),
         free_space_needed=info.recommended_free_space,
         preview=preview,
     )
