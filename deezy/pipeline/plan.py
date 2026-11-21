@@ -50,7 +50,7 @@ from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.shared import ChannelBitrates, CorePayload
-from deezy.pipeline.transport import NamedPipe, Transport, WavFile
+from deezy.pipeline.transport import NamedPipe, Transport, WavFile, expected_samples
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
 from deezy.track_info.utils import parse_delay_from_file
@@ -452,13 +452,18 @@ def _pcm_steps(
 
 
 def choose_transport(
-    payload: CorePayload, ctx: PlanContext, wav: Path, channels: int
+    payload: CorePayload,
+    ctx: PlanContext,
+    wav: Path,
+    channels: int,
+    duration: float | None = None,
 ) -> Transport:
     """
     A named pipe for ``--pipe auto`` or ``always``, else the WAV at ``wav``.
 
-    ``channels`` is what FFmpeg writes. ``auto`` falls back to the WAV where a
-    pipe can't be used; ``always`` refuses there instead.
+    ``channels`` is what FFmpeg writes, and ``duration`` the source's length in
+    milliseconds, which sets the pipe's sample count. ``auto`` falls back to the WAV
+    where a pipe can't be used; ``always`` refuses there instead.
     """
     mode = getattr(payload, "pipe", PipeMode.NEVER)
     if mode is PipeMode.NEVER:
@@ -469,7 +474,7 @@ def choose_transport(
     elif payload.reuse_temp_files:
         reason = "--reuse-temp-files needs the temp WAV, which a pipe doesn't write"
     if reason is None:
-        return NamedPipe(str(ctx.pipe_name), channels)
+        return NamedPipe(str(ctx.pipe_name), channels, expected_samples(duration))
     if mode is PipeMode.ALWAYS:
         raise PipeError(f"--pipe always: {reason}. Use --pipe auto or never.")
     logger.debug(f"Writing a temp WAV for DEE: {reason}.")
@@ -610,6 +615,7 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
         ctx,
         ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.DD}.wav",
         dee_input_channels,
+        info.duration,
     )
     resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
     if dplii:
@@ -786,6 +792,7 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         ctx,
         ctx.temp_dir / f"{artifact_stem(output)}.{format_command}.wav",
         dee_input_channels,
+        info.duration,
     )
     resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
     if bluray or channels == DolbyDigitalPlusChannels.SURROUNDEX:

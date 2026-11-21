@@ -20,8 +20,8 @@ def step_lines(step: Step) -> list[str]:
     """The command lines a step runs, with DeeZy's log levels filled in.
 
     A pipe step runs two at once: DEE, which opens the pipe, then FFmpeg,
-    which writes into it. FFmpeg's progress options, which DeeZy adds only to
-    drive its display, are left out.
+    which writes into it. FFmpeg's progress options, which DeeZy adds when it
+    runs the step, are left out.
     """
     if isinstance(step, PipeStep):
         return [

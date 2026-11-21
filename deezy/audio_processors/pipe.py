@@ -8,9 +8,12 @@ display, and FFmpeg runs without one.
 DEE ends its encode cleanly at the end of the stream, however the stream
 ends, so an FFmpeg that dies partway would leave a short encode that looks
 complete. FFmpeg's failure therefore fails the job, whatever DEE reports.
+FFmpeg reports how many bytes it wrote, so a caller can also tell whether DEE
+read them all.
 """
 
 import os
+import re
 from subprocess import PIPE, STDOUT, Popen
 import threading
 import time
@@ -26,6 +29,8 @@ PIPE_ROOT = "\\\\.\\pipe\\"
 PIPE_OPEN_TIMEOUT = 60.0
 # FFmpeg ends as soon as DEE closes the pipe
 FFMPEG_EXIT_TIMEOUT = 10.0
+# a line of FFmpeg's -progress report, such as 'total_size=1024'
+_PROGRESS_LINE = re.compile(r"([a-z0-9_]+)=(.*)")
 
 
 def pipe_exists(name: str) -> bool:
@@ -47,6 +52,8 @@ class _Feeder:
         self.dee: Popen | None = None
         self.proc: Popen | None = None
         self.returncode: int | None = None
+        # the bytes FFmpeg has written into the pipe, from its progress report
+        self.written: int | None = None
         self.tail: list[str] = []
         # DEE was ended here because FFmpeg failed
         self.killed_dee = False
@@ -71,17 +78,26 @@ class _Feeder:
                 self.proc = proc
                 if proc.stdout:
                     for line in proc.stdout:
-                        line = line.strip()
-                        if line:
-                            logger.debug(line)
-                            self.tail.append(line)
-                            del self.tail[:-MAX_CAPTURED_LINES]
+                        self._read(line.strip())
                 self.returncode = proc.wait()
             if self.returncode != 0:
                 self._end_dee()
         except BaseException as e:
             self.error = e
             self._end_dee()
+
+    def _read(self, line: str) -> None:
+        """Note FFmpeg's progress report, and log and keep its other lines."""
+        if not line:
+            return
+        if report := _PROGRESS_LINE.fullmatch(line):
+            key, value = report.groups()
+            if key == "total_size" and value.isdigit():
+                self.written = int(value)
+            return
+        logger.debug(line)
+        self.tail.append(line)
+        del self.tail[:-MAX_CAPTURED_LINES]
 
     def _wait_for_pipe(self, dee: Popen) -> bool:
         """True once DEE's pipe exists; False if DEE exits first or we stop."""
@@ -121,6 +137,13 @@ class _Feeder:
         )
 
 
+def with_progress_report(cmd: list[str]) -> list[str]:
+    """A planned FFmpeg command with its log level, reporting to stdout."""
+    cmd = with_loglevel(cmd)
+    at = cmd.index("-i")
+    return [*cmd[:at], "-progress", "pipe:1", "-nostats", *cmd[at:]]
+
+
 def process_pipe_job(
     dee_cmd: list[str],
     ffmpeg_cmd: list[str],
@@ -128,14 +151,15 @@ def process_pipe_job(
     step_info: dict | None = None,
     no_progress_bars: bool = False,
     custom_dialnorm: int = 0,
-) -> None:
+) -> int | None:
     """
     Run DEE reading the named pipe ``pipe_name``, and FFmpeg writing into it.
 
+    Returns the bytes FFmpeg wrote into the pipe, or None if it didn't say.
     Raises DEE's error when DEE fails on its own, and FFmpeg's when FFmpeg
     fails, including when DEE then finished the short stream it was given.
     """
-    feeder = _Feeder(with_loglevel(ffmpeg_cmd), pipe_name)
+    feeder = _Feeder(with_progress_report(ffmpeg_cmd), pipe_name)
     dee_error: Exception | None = None
     try:
         process_dee_job(
@@ -162,3 +186,4 @@ def process_pipe_job(
         raise PipeError("DEE finished without FFmpeg writing into its pipe.")
     if feeder.returncode != 0:
         raise feeder.failure()
+    return feeder.written

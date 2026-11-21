@@ -5,6 +5,7 @@ reuse, cleanup of partial output, and the move to the destination.
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import replace
 import hashlib
 import json
 import os
@@ -347,6 +348,24 @@ def run_dee(
     logger.debug(f"Dee job: {dee_job}.")
 
 
+def _stopped_short(step: PipeStep, written: int | None) -> bool:
+    """Whether FFmpeg wrote more samples than DEE was told to read."""
+    count = step.pipe.sample_count
+    if count is None:
+        return False
+    if written is None:
+        logger.debug("FFMPEG did not report what it wrote into the pipe.")
+        return True
+    return written // step.pipe.frame_bytes > count
+
+
+def _without_sample_count(step: PipeStep) -> tuple[str, ...]:
+    """The step's DEE command, with no sample count in its input format."""
+    told = step.pipe.dee_input_format
+    untold = replace(step.pipe, sample_count=None).dee_input_format
+    return tuple(untold if arg == told else arg for arg in step.dee.argv)
+
+
 def run_pipe(
     step: PipeStep, no_progress_bars: bool, print_commands: bool = False
 ) -> None:
@@ -355,21 +374,33 @@ def run_pipe(
     FFmpeg slot.
 
     Only a pipe step holds two slots, and every one takes DEE's first, so jobs
-    waiting on each other's slots can't block each other for good. A failed
+    waiting on each other's slots can't block each other for good. DEE stops
+    silently at the pipe's sample count, so a source longer than its count
+    (one whose length was misreported) is encoded again without one. A failed
     run's partial output is deleted, as in `run_dee`.
     """
     jitter()
     with slot("dee"), slot("ffmpeg"):
         announce(step, print_commands)
-        try:
-            process_pipe_job(
-                dee_cmd=list(step.dee.argv),
+
+        def encode(dee_argv: tuple[str, ...]) -> int | None:
+            return process_pipe_job(
+                dee_cmd=list(dee_argv),
                 ffmpeg_cmd=list(step.ffmpeg_argv),
                 pipe_name=step.pipe.name,
                 step_info={"current": 1, "total": 2, "name": "DEE measure"},
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.dee.custom_dialnorm,
             )
+
+        try:
+            if _stopped_short(step, encode(step.dee.argv)):
+                logger.warning(
+                    "The source is longer than its reported duration, so DEE "
+                    "stopped short of the end. Encoding it again without a "
+                    "sample count; its progress will be coarse."
+                )
+                encode(_without_sample_count(step))
         except BaseException:
             try:
                 Path(long_path_str(step.dee.output)).unlink(missing_ok=True)

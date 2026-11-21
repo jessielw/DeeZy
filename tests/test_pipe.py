@@ -21,7 +21,7 @@ from deezy.pipeline.plan import (
     choose_transport,
 )
 from deezy.pipeline.show import command_lines, step_lines
-from deezy.pipeline.transport import NamedPipe, WavFile
+from deezy.pipeline.transport import NamedPipe, WavFile, expected_samples
 from tests.utils.payload_helpers import generate_dummy_core_payload
 
 
@@ -43,6 +43,22 @@ def ctx(tmp_path, pipe_name: str | None = "deezy-1-job") -> PlanContext:
 def test_pipes_where_it_can(tmp_path, mode):
     transport = choose_transport(payload(mode), ctx(tmp_path), tmp_path / "x.wav", 6)
     assert transport == NamedPipe("deezy-1-job", 6)
+
+
+def test_pipe_counts_the_samples_of_a_known_length(tmp_path):
+    transport = choose_transport(
+        payload(PipeMode.AUTO), ctx(tmp_path), tmp_path / "x.wav", 2, 3000.0
+    )
+    assert transport == NamedPipe("deezy-1-job", 2, expected_samples(3000.0))
+
+
+@pytest.mark.parametrize(
+    ("duration_ms", "count"),
+    # MediaInfo's milliseconds, plus 1% and a second at 48 kHz
+    [(3000.0, 145_440 + 48_000), (1.0, 49 + 48_000), (None, None), (0.0, None)],
+)
+def test_expected_samples(duration_ms, count):
+    assert expected_samples(duration_ms) == count
 
 
 def test_never_writes_the_wav(tmp_path):
@@ -82,6 +98,13 @@ def test_named_pipe_tells_dee_the_raw_format():
     assert named.dee_input == "named_pipe://\\\\.\\pipe\\deezy-1-job"
     assert named.dee_input_format == (
         "pcm_s24le:sample_rate=48000:channels=8:streaming=1"
+    )
+    assert named.frame_bytes == 24
+
+
+def test_named_pipe_tells_dee_its_sample_count():
+    assert NamedPipe("deezy-1-job", 2, 1000).dee_input_format == (
+        "pcm_s24le:sample_rate=48000:channels=2:sample_count=1000:streaming=1"
     )
 
 
@@ -156,8 +179,9 @@ PY = sys.executable
 
 
 def py(code: str) -> list[str]:
-    # '-v' is where the FFmpeg log level goes; the script ignores it
-    return [PY, "-c", code, "-v"]
+    # '-v' takes FFmpeg's log level and '-i' its progress options; the script
+    # ignores both
+    return [PY, "-c", code, "-v", "-i", "in.mkv"]
 
 
 @pytest.fixture
@@ -186,6 +210,27 @@ def run_job(ffmpeg_code: str) -> None:
 def test_both_succeed(fake_dee):
     fake_dee["code"] = "import time; time.sleep(0.3)"
     run_job("pass")
+
+
+def test_returns_what_ffmpeg_reported_writing(fake_dee):
+    fake_dee["code"] = "import time; time.sleep(0.3)"
+    report = (
+        "import sys; assert sys.argv[3:6] == ['-progress', 'pipe:1', '-nostats']; "
+        "print('Stream mapping:'); print('total_size=10'); "
+        "print('out_time_us=5'); print('total_size=4096'); print('progress=end')"
+    )
+    written = pipe.process_pipe_job(["dee"], py(report), "deezy-1-job")
+    assert written == 4096
+
+
+def test_progress_lines_stay_out_of_ffmpeg_error(fake_dee):
+    fake_dee["code"] = "pass"
+    with pytest.raises(PipeError) as err:
+        run_job(
+            "print('total_size=1'); print('Conversion failed!'); raise SystemExit(1)"
+        )
+    assert "Conversion failed!" in str(err.value)
+    assert "total_size" not in str(err.value)
 
 
 def test_ffmpeg_failing_ends_a_waiting_dee(fake_dee):
@@ -230,6 +275,52 @@ def test_run_pipe_deletes_the_partial_output(tmp_path, monkeypatch):
     with pytest.raises(PipeError):
         run.run_pipe(step, no_progress_bars=True)
     assert not step.dee.output.exists()
+
+
+def counted_step(tmp_path, count: int | None) -> PipeStep:
+    named = NamedPipe("deezy-1-job", 2, count)
+    dee = DeeStep(
+        argv=("dee_ddp_encoder", "--input-format", named.dee_input_format),
+        output=tmp_path / "x.ec3",
+    )
+    return PipeStep(("ffmpeg", "-v", "-i", "in.mkv"), dee, named)
+
+
+@pytest.fixture
+def pipe_runs(monkeypatch):
+    """Replace the pipe job; each call records DEE's input format."""
+    state = {"written": None, "formats": []}
+
+    def fake(dee_cmd, **_kwargs):
+        state["formats"].append(dee_cmd[dee_cmd.index("--input-format") + 1])
+        return state["written"]
+
+    monkeypatch.setattr(run, "process_pipe_job", fake)
+    run.init_phase_limits(max_parallel=1)
+    return state
+
+
+@pytest.mark.parametrize(
+    ("count", "written"),
+    # 6 bytes is one sample of 2 channels
+    [(100, 100 * 6), (100, 50 * 6), (None, None), (None, 10**9)],
+)
+def test_run_pipe_encodes_once_when_dee_read_everything(
+    tmp_path, pipe_runs, count, written
+):
+    pipe_runs["written"] = written
+    run.run_pipe(counted_step(tmp_path, count), no_progress_bars=True)
+    assert len(pipe_runs["formats"]) == 1
+
+
+@pytest.mark.parametrize("written", [101 * 6, None])
+def test_run_pipe_encodes_again_when_dee_stopped_short(tmp_path, pipe_runs, written):
+    pipe_runs["written"] = written
+    run.run_pipe(counted_step(tmp_path, 100), no_progress_bars=True)
+    assert pipe_runs["formats"] == [
+        "pcm_s24le:sample_rate=48000:channels=2:sample_count=100:streaming=1",
+        "pcm_s24le:sample_rate=48000:channels=2:streaming=1",
+    ]
 
 
 def test_run_pipe_holds_a_dee_and_an_ffmpeg_slot(tmp_path, monkeypatch):

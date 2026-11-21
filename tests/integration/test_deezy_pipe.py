@@ -14,6 +14,7 @@ tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
 
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 import math
 import os
 from pathlib import Path
@@ -188,6 +189,30 @@ def test_piped_encode_lines_up_with_the_wav_encode(
         assert abs(10 * math.log10(energy[1] / energy[0])) < 1.0, f"channel {c}"
 
 
+def test_a_source_longer_than_reported_is_encoded_in_full(tools, work, parser, config):
+    # DEE stops silently at the pipe's sample count, so a 3 s source told as
+    # 1 s must be caught and encoded again
+    src = noise_source(work, 6)
+    run.init_phase_limits(max_parallel=1)
+    out_dir = work / "pipe_short"
+    full = encode(tools, parser, config, ["ddp"], src, out_dir / "never.ec3", "never")
+    plan, payload = plan_for(
+        tools, parser, config, ["ddp"], src, out_dir / "always.ec3", "always"
+    )
+    (step,) = plan.steps
+    assert isinstance(step, PipeStep)
+    assert step.pipe.sample_count is not None
+    assert step.pipe.sample_count > 3 * 48000
+    short = replace(step.pipe, sample_count=48000)
+    told = step.pipe.dee_input_format
+    argv = tuple(
+        short.dee_input_format if arg == told else arg for arg in step.dee.argv
+    )
+    step = replace(step, pipe=short, dee=replace(step.dee, argv=argv))
+    piped = run.run_plan(replace(plan, steps=(step,)), payload)
+    assert md5(piped) == md5(full)
+
+
 def test_parallel_pipes_match_the_wav_encodes(tools, work, parser, config):
     sources = [noise_source(work, 6), noise_source(work, 2)]
     run.init_phase_limits(max_parallel=2)
@@ -248,9 +273,10 @@ def test_writer_dying_partway_fails_the_job(tools, work):
         "import sys; f = open(sys.argv[1], 'wb'); "
         "f.write(bytes(48000 * 6 * 3)); f.close(); sys.exit(1)"
     )
+    # '-v' and '-i' are where FFmpeg's log level and progress options go
     with pytest.raises(PipeError, match="exit code 1"):
         process_pipe_job(
             dee_cmd(tools, work, name),
-            [sys.executable, "-c", writer, NamedPipe(name, 6).path, "-v"],
+            [sys.executable, "-c", writer, NamedPipe(name, 6).path, "-v", "-i", "x"],
             name,
         )

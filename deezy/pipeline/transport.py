@@ -9,12 +9,29 @@ and input.
 """
 
 from dataclasses import dataclass
+import math
 from pathlib import Path
 
 from deezy.audio_processors.pipe import PIPE_ROOT
 
 # FFmpeg resamples to DEE's only rate before either transport
 SAMPLE_RATE = 48000
+# bytes per sample of the pipe's 24-bit PCM
+PIPE_SAMPLE_BYTES = 3
+
+
+def expected_samples(duration_ms: float | None) -> int | None:
+    """
+    The samples per channel DEE is told a pipe will carry, so it can show its
+    progress: the source's length (MediaInfo's, in milliseconds) plus 1% and a
+    second, or None when unknown.
+
+    Told too few, DEE silently stops at the count, which the runner catches;
+    told too many, it encodes the same and only finishes its progress late.
+    """
+    if not duration_ms or duration_ms <= 0:
+        return None
+    return math.ceil(duration_ms / 1000 * SAMPLE_RATE * 1.01) + SAMPLE_RATE
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +73,8 @@ class NamedPipe:
     # unique to the job: DeeZy's process ID and the job's temp directory
     name: str
     channels: int
+    # see `expected_samples`; without it DEE shows only coarse progress
+    sample_count: int | None = None
 
     @property
     def path(self) -> str:
@@ -69,10 +88,16 @@ class NamedPipe:
         return ["-f", "s24le", self.path]
 
     @property
+    def frame_bytes(self) -> int:
+        """The bytes of one sample in every channel."""
+        return PIPE_SAMPLE_BYTES * self.channels
+
+    @property
     def dee_input_format(self) -> str:
-        return (
-            f"pcm_s24le:sample_rate={SAMPLE_RATE}:channels={self.channels}:streaming=1"
-        )
+        fmt = f"pcm_s24le:sample_rate={SAMPLE_RATE}:channels={self.channels}"
+        if self.sample_count is not None:
+            fmt += f":sample_count={self.sample_count}"
+        return fmt + ":streaming=1"
 
     @property
     def dee_input(self) -> str:
