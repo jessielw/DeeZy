@@ -12,6 +12,7 @@ class CodecFormat(CaseInsensitiveEnum):
     DDP_ATMOS = "ddp-atmos"
     AC4 = "ac4"
     AC4_IMS = "ac4-ims"
+    AC4_ATMOS = "ac4-atmos"
     AAC = "aac"
     THD = "thd"
     THD_ATMOS = "thd-atmos"

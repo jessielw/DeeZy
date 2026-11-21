@@ -14,7 +14,7 @@ from deezy.enums.shared import (
     StereoDownmix,
 )
 from deezy.payloads.aac import AacPayload
-from deezy.payloads.ac4 import Ac4ChannelPayload, Ac4Payload
+from deezy.payloads.ac4 import Ac4AtmosPayload, Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
@@ -263,6 +263,43 @@ class PayloadBuilder:
         )
 
         return Ac4Payload(**payload_data)
+
+    @classmethod
+    def build_ac4_atmos_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> Ac4AtmosPayload:
+        """Build the AC-4 Atmos payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_ac4ajoc_encoder measures to 1770-4 only
+        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(
+            {
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
+                "flat_panel_drc": cls.safe_get(
+                    args, "flat_panel_drc", DeeDRC.FILM_LIGHT
+                ),
+                "home_theatre_drc": cls.safe_get(
+                    args, "home_theatre_drc", DeeDRC.FILM_LIGHT
+                ),
+                "portable_headphones_drc": cls.safe_get(
+                    args, "portable_headphones_drc", DeeDRC.FILM_LIGHT
+                ),
+                "portable_speakers_drc": cls.safe_get(
+                    args, "portable_speakers_drc", DeeDRC.FILM_LIGHT
+                ),
+            }
+        )
+        return Ac4AtmosPayload(**payload_data)
 
     @classmethod
     def build_aac_payload(

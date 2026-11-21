@@ -188,6 +188,10 @@ immersive_stereo = 256 # AC4 Immersive Stereo
 # ch_8 = 256
 # ch_8_atmos = 320
 
+# Default bitrates for AC-4 Atmos (level 3: 256, 320, 448 or 768)
+[default_bitrates.ac4-atmos]
+atmos = 448
+
 # Default bitrates for AAC (always 2.0 out), by profile
 [default_bitrates.aac]
 aaclc = 192   # AAC-LC, 56-576

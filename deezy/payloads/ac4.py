@@ -21,6 +21,21 @@ class Ac4Payload(LoudnessPayload):
 
 
 @dataclass(slots=True)
+class Ac4AtmosPayload(LoudnessPayload):
+    """AC-4 with Dolby Atmos (the `ac4-atmos` format)."""
+
+    # for a TrueHD Atmos source, the warp mode truehdd writes when it has none
+    thd_warp_mode: WarpMode | None = None
+    flat_panel_drc: DeeDRC = DeeDRC.FILM_LIGHT
+    home_theatre_drc: DeeDRC = DeeDRC.FILM_LIGHT
+    portable_headphones_drc: DeeDRC = DeeDRC.FILM_LIGHT
+    portable_speakers_drc: DeeDRC = DeeDRC.FILM_LIGHT
+    # the encoder only measures (measure_only); it has no skip mode and can't
+    # correct the loudness
+    loudness_preset: LoudnessPreset = LoudnessPreset.MANUAL
+
+
+@dataclass(slots=True)
 class Ac4ChannelPayload(LoudnessPayload):
     """Channel-based AC-4 (the `ac4` format)."""
 

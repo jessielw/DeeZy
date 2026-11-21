@@ -963,6 +963,24 @@ def create_encode_parsers(
         ),
     )
 
+    ### AC-4 Atmos Command ###
+    _encode_ac4_atmos_parser = encode_subparsers.add_parser(
+        "ac4-atmos",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["bitrate_group"],
+            argument_groups["loudness_group"],
+            argument_groups["ac4_drc_group"],
+            argument_groups["truehdd_options_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
     ### AAC Command ###
     _encode_aac_parser = encode_subparsers.add_parser(
         "aac",
@@ -1314,6 +1332,7 @@ def encode_single_file(
         "ddp-atmos": PayloadBuilder.build_atmos_payload,
         "ac4": PayloadBuilder.build_ac4_channel_payload,
         "ac4-ims": PayloadBuilder.build_ac4_payload,
+        "ac4-atmos": PayloadBuilder.build_ac4_atmos_payload,
         "aac": PayloadBuilder.build_aac_payload,
         "thd": PayloadBuilder.build_thd_payload,
         "thd-atmos": PayloadBuilder.build_thd_atmos_payload,

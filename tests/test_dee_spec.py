@@ -23,6 +23,8 @@ DEFAULTS = {
     # DeeZy's AC-4 defaults sit above Dolby's 64 and 128
     ("ac4", "ac4", "2.0"): 96,
     ("ac4", "ac4", "5.1"): 192,
+    # a step above Dolby's 320 at level 3
+    ("ac4-atmos", "level3", "atmos"): 448,
     # DeeZy raises only AAC-LC above Dolby's 64 kbps
     ("aac", "aaclc", "2.0"): 192,
     ("aac", "heaac", "2.0"): 64,
@@ -118,6 +120,7 @@ def test_extensions():
     assert spec.get_format("ac4-ims").extension == ".ac4"
     assert spec.get_format("aac").extension == ".aac"
     assert spec.get_format("ac4").extension == ".ac4"
+    assert spec.get_format("ac4-atmos").extensions == (".ac4",)
 
 
 def test_truehd_is_lossless_and_starts_on_time():
@@ -130,8 +133,9 @@ def test_truehd_is_lossless_and_starts_on_time():
     assert fmt.tool.name == "dee_dthd_encoder"
 
 
-def test_ac4_takes_the_manifest_offset_as_its_delay():
-    fmt = spec.get_format("ac4")
+@pytest.mark.parametrize("name", ["ac4", "ac4-atmos"])
+def test_ac4_takes_the_manifest_offset_as_its_delay(name):
+    fmt = spec.get_format(name)
     assert fmt.delay_samples == 2048
     assert fmt.channel_change_samples == 0
 

@@ -291,6 +291,22 @@ def formats() -> Mapping[str, FormatSpec]:
             0,
         ),
         FormatSpec(
+            "ac4-atmos",
+            tool("dee_ac4ajoc_encoder"),
+            # --level 3, for A/V content (level 4 is Dolby's for music and
+            # podcasts). DeeZy's default is a step above DEE's 320
+            {
+                "level3": ModeSpec(
+                    "", {"atmos": _probed(448, "dee_ac4ajoc_encoder", "level3")}
+                )
+            },
+            (".ac4",),
+            # the manifest's offset; no AC-4 decoder here to measure it
+            -fixture()["delays"]["ac4ajoc_manifest_offset"],
+            # an Atmos master's channel count is not DEE's to change
+            0,
+        ),
+        FormatSpec(
             "thd",
             tool("dee_dthd_encoder"),
             {

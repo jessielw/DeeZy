@@ -486,6 +486,72 @@ THD_ATMOS_SCENARIOS = [
 ]
 SCENARIOS += THD_ATMOS_SCENARIOS
 
+# --- ac4-atmos (dee_ac4ajoc_encoder --level 3; measure_only; manifest offset)
+AC4_ATMOS_SCENARIOS = [
+    ("ac4_atmos_thd", ["ac4-atmos"], info(8, thd=True), MKV),
+    (
+        "ac4_atmos_thd_warp",
+        ["ac4-atmos", "--thd-warp-mode", "prologiciix"],
+        info(8, thd=True),
+        MKV,
+    ),
+    ("ac4_atmos_damf", ["ac4-atmos"], info(16, fps=None, damf=True), DAMF),
+    (
+        "ac4_atmos_damf_warp",
+        ["ac4-atmos", "--thd-warp-mode", "normal"],
+        info(16, damf=True),
+        DAMF,
+    ),
+    ("ac4_atmos_damf_few", ["ac4-atmos"], info(4, damf=True), DAMF),
+    ("ac4_atmos_adm", ["ac4-atmos"], info(16, adm=True), WAV),
+    ("ac4_atmos_768", ["ac4-atmos", "--bitrate", "768"], info(8, thd=True), MKV),
+    # not a level 3 rate: the next one up
+    ("ac4_atmos_bitrate", ["ac4-atmos", "--bitrate", "400"], info(8, thd=True), MKV),
+    (
+        "ac4_atmos_drc",
+        [
+            "ac4-atmos",
+            *("--flat-panel-drc", "speech", "--home-theatre-drc", "none"),
+            *("--portable-headphones-drc", "music_light"),
+            *("--portable-speakers-drc", "film_standard"),
+        ],
+        info(16, damf=True),
+        DAMF,
+    ),
+    (
+        "ac4_atmos_preset",
+        ["ac4-atmos", "--loudness-preset", "ebu_r128"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "ac4_atmos_manual",
+        ["ac4-atmos", "--no-dialogue-intelligence", "--speech-threshold", "30"],
+        info(16, damf=True),
+        DAMF,
+    ),
+    ("ac4_atmos_delay_pos", ["ac4-atmos", "--delay=100ms"], info(16, damf=True), DAMF),
+    ("ac4_atmos_delay_neg", ["ac4-atmos", "--delay=-20ms"], info(8, thd=True), MKV),
+    ("ac4_atmos_filename_delay", ["ac4-atmos"], info(8, thd=True), DELAYED),
+    ("ac4_atmos_fps", ["ac4-atmos"], info(8, fps=25, thd=True), MKV),
+    (
+        "ac4_atmos_output",
+        ["ac4-atmos", "--output", str(OUT / "x.ac4")],
+        info(16, damf=True),
+        DAMF,
+    ),
+    (
+        "ac4_atmos_output_bad",
+        ["ac4-atmos", "--output", str(OUT / "x.ec3")],
+        info(16, damf=True),
+        DAMF,
+    ),
+    ("ac4_atmos_reuse", ["ac4-atmos", "--reuse-temp-files"], info(8, thd=True), MKV),
+    ("ac4_atmos_channel_based", ["ac4-atmos"], info(8), MKV),
+    ("ac4_atmos_wav", ["ac4-atmos"], info(6), WAV),
+]
+SCENARIOS += AC4_ATMOS_SCENARIOS
+
 # --- Atmos masters (DAMF and ADM BWF go to DEE as they are)
 MASTER_SCENARIOS = [
     # a probed DAMF has a channel per bed channel and object, and no video
@@ -623,6 +689,7 @@ BUILDERS = {
     "ddp-atmos": PayloadBuilder.build_atmos_payload,
     "ac4": PayloadBuilder.build_ac4_channel_payload,
     "ac4-ims": PayloadBuilder.build_ac4_payload,
+    "ac4-atmos": PayloadBuilder.build_ac4_atmos_payload,
     "aac": PayloadBuilder.build_aac_payload,
     "thd": PayloadBuilder.build_thd_payload,
     "thd-atmos": PayloadBuilder.build_thd_atmos_payload,

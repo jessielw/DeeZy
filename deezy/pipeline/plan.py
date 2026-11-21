@@ -18,6 +18,7 @@ from deezy.dee.commands import (
     DeeTools,
     aac_command,
     ac4_command,
+    ac4ajoc_command,
     ac4ims_command,
     ddp_command,
     ddpjoc_command,
@@ -52,7 +53,7 @@ from deezy.exceptions import (
     UnsupportedDeeFeatureError,
 )
 from deezy.payloads.aac import AacPayload
-from deezy.payloads.ac4 import Ac4ChannelPayload, Ac4Payload
+from deezy.payloads.ac4 import Ac4AtmosPayload, Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
@@ -65,6 +66,11 @@ from deezy.track_info.track_index import TrackIndex
 from deezy.track_info.utils import parse_delay_from_file
 from deezy.utils.logger import logger
 from deezy.utils.paths import artifact_stem
+
+# the payloads that take TrueHD Atmos or an Atmos master
+AtmosInputPayload = (
+    AtmosPayload | Ac4Payload | Ac4AtmosPayload | MeasurePayload | TrueHDAtmosPayload
+)
 
 # the source layouts DEE takes as they are
 DEE_INPUT_CHANNELS = (1, 2, 6, 8)
@@ -187,12 +193,12 @@ class PlanContext:
 def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> JobPlan:
     """The plan for one encode. ``info`` is the probed source track."""
     if info.atmos_master and not isinstance(
-        payload, AtmosPayload | Ac4Payload | TrueHDAtmosPayload
+        payload, AtmosPayload | Ac4Payload | Ac4AtmosPayload | TrueHDAtmosPayload
     ):
         raise InvalidAtmosInputError(
             f"{_format_name(payload)} can't encode an Atmos master yet: FFmpeg would "
             "mix its objects without their positions. Encode it with ddp-atmos, "
-            "thd-atmos or ac4-ims, or measure it with 'deezy measure'."
+            "thd-atmos, ac4-atmos or ac4-ims, or measure it with 'deezy measure'."
         )
     if isinstance(payload, DDPayload):
         return _plan_dd(payload, info, ctx)
@@ -202,6 +208,8 @@ def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         return _plan_ddp_atmos(payload, info, ctx)
     if isinstance(payload, Ac4Payload):
         return _plan_ac4_ims(payload, info, ctx)
+    if isinstance(payload, Ac4AtmosPayload):
+        return _plan_ac4_atmos(payload, info, ctx)
     if isinstance(payload, AacPayload):
         return _plan_aac(payload, info, ctx)
     if isinstance(payload, Ac4ChannelPayload):
@@ -563,7 +571,7 @@ def _tools(payload: CorePayload, ctx: PlanContext) -> DeeTools:
 
 
 def _truehdd_step(
-    payload: AtmosPayload | Ac4Payload | MeasurePayload | TrueHDAtmosPayload,
+    payload: AtmosInputPayload,
     info: AudioTrackInfo,
     ctx: PlanContext,
     reuse_id: str,
@@ -907,7 +915,7 @@ def require_supported_atmos_mode(atmos_mode: AtmosMode) -> None:
 
 
 def _atmos_input(
-    payload: AtmosPayload | Ac4Payload | MeasurePayload | TrueHDAtmosPayload,
+    payload: AtmosInputPayload,
     info: AudioTrackInfo,
     ctx: PlanContext,
     reuse_id: str,
@@ -1144,6 +1152,63 @@ def _plan_ac4_ims(
         output=output,
         temp_dir=ctx.temp_dir,
         steps=tuple(steps),
+        free_space_needed=info.recommended_free_space,
+        preview=preview,
+    )
+
+
+# --- AC-4 Atmos
+
+# DeeZy's config key and layout name for AC-4 Atmos, which has no channel layout
+AC4_ATMOS = "atmos"
+
+
+def _plan_ac4_atmos(
+    payload: Ac4AtmosPayload, info: AudioTrackInfo, ctx: PlanContext
+) -> JobPlan:
+    spec = get_format("ac4-atmos")
+    if not info.atmos:
+        raise InvalidAtmosInputError(
+            "ac4-atmos encodes TrueHD Atmos or an Atmos master (DAMF or ADM BWF). "
+            "Encode channel-based audio with 'ac4'."
+        )
+    bitrate = resolve_bitrate(
+        ctx.config,
+        CodecFormat.AC4_ATMOS,
+        payload.bitrate,
+        AC4_ATMOS,
+        info,
+        spec.rates(AC4_ATMOS),
+        info.channels,
+        None,
+        lambda _source: AC4_ATMOS,
+    )
+
+    delay = get_delay(payload).compensated(compensation(spec))
+    fps = get_fps(info.fps)
+    output, preview = _output(payload, info, ctx, spec, "AC-4", "Atmos", delay)
+
+    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.AC4_ATMOS))
+    if dee_input is None:
+        raise InvalidAtmosInputError("Cannot process input, not a valid Atmos format")
+
+    files = _dee_files(ctx, dee_input, output)
+    dee_argv = ac4ajoc_command(
+        _tools(payload, ctx),
+        payload,
+        files,
+        manifest=ctx.temp_dir / f"{artifact_stem(output)}.manifest.json",
+        bitrate=bitrate,
+        fps=fps,
+        delay=delay,
+    )
+    steps: tuple[Step, ...] = (DeeStep(tuple(dee_argv), files.output),)
+    return JobPlan(
+        format=spec.name,
+        source=Path(payload.file_input),
+        output=output,
+        temp_dir=ctx.temp_dir,
+        steps=(truehdd, *steps) if truehdd else steps,
         free_space_needed=info.recommended_free_space,
         preview=preview,
     )

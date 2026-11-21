@@ -382,6 +382,7 @@ def handle_dependencies(
     atmos_required = getattr(args, "format_command", None) in (
         "ddp-atmos",
         "thd-atmos",
+        "ac4-atmos",
         "ac4-ims",
     )
 

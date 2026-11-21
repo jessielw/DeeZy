@@ -22,7 +22,7 @@ from deezy.enums.shared import (
 )
 from deezy.exceptions import UnsupportedDeeFeatureError
 from deezy.payloads.aac import AacPayload
-from deezy.payloads.ac4 import Ac4ChannelPayload, Ac4Payload
+from deezy.payloads.ac4 import Ac4AtmosPayload, Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
@@ -36,6 +36,7 @@ DDP_TOOL = "dee_ddp_encoder"
 DDP_JOC_TOOL = "dee_ddpjoc_encoder"
 AC4_IMS_TOOL = "dee_ac4ims_encoder"
 AC4_TOOL = "dee_ac4_encoder"
+AC4_ATMOS_TOOL = "dee_ac4ajoc_encoder"
 AAC_TOOL = "dee_aac_encoder"
 MEASURE_TOOL = "dee_measure_loudness"
 THD_TOOL = "dee_dthd_encoder"
@@ -305,6 +306,51 @@ def ac4_command(
     ]
 
 
+# Dolby's level for A/V content; level 4 is for music, podcasts and audiobooks
+AC4_ATMOS_LEVEL = 3
+
+
+def ac4ajoc_command(
+    tools: DeeTools,
+    payload: Ac4AtmosPayload,
+    files: DeeFiles,
+    *,
+    manifest: Path,
+    bitrate: int,
+    fps: DeeFPS,
+    delay: Delay,
+) -> list[str]:
+    """
+    An AC-4 Atmos encode of a master with dee_ac4ajoc_encoder. Like
+    dee_ac4_encoder it requires an output manifest; it reads the master's kind
+    from the file, so it takes no --input-format.
+    """
+    devices = {
+        "drc_profile_flat_panel": payload.flat_panel_drc.to_dee_cmd(),
+        "drc_profile_home_theatre": payload.home_theatre_drc.to_dee_cmd(),
+        "drc_profile_portable_hp": payload.portable_headphones_drc.to_dee_cmd(),
+        "drc_profile_portable_spkr": payload.portable_speakers_drc.to_dee_cmd(),
+    }
+    return [
+        *_common_args(
+            tools,
+            AC4_ATMOS_TOOL,
+            files,
+            input_format=None,
+            bitrate=bitrate,
+            fps=fps,
+            delay=delay,
+            payload=payload,
+        ),
+        "--level",
+        str(AC4_ATMOS_LEVEL),
+        "--output-manifest",
+        long_path_str(manifest),
+        "-e",
+        _options(devices),
+    ]
+
+
 def aac_command(
     tools: DeeTools,
     payload: AacPayload,
@@ -528,7 +574,7 @@ def _common_args(
     tool: str,
     files: DeeFiles,
     *,
-    input_format: str,
+    input_format: str | None,
     bitrate: int,
     fps: DeeFPS,
     delay: Delay,
@@ -539,10 +585,13 @@ def _common_args(
     """
     Options every encoder takes, in a stable order.
 
-    ``temp_dir`` is for the encoders that have a ``--temp-dir`` option; the
-    others manage their temp files themselves. ``loudness_arg`` replaces the
-    usual ``--loudness-management`` value.
+    ``input_format`` is None for an encoder with no ``--input-format`` option,
+    which tells its inputs apart itself. ``temp_dir`` is for the encoders that
+    have a ``--temp-dir`` option; the others manage their temp files
+    themselves. ``loudness_arg`` replaces the usual ``--loudness-management``
+    value.
     """
+    input_format = files.input_format or input_format
     return [
         str(dee_tool(tools.dee_dir, tool)),
         # replaced with the active log level when the job is run
@@ -555,8 +604,7 @@ def _common_args(
         "--overwrite",
         "1",
         *(["--temp-dir", long_path_str(files.temp_dir)] if temp_dir else []),
-        "--input-format",
-        files.input_format or input_format,
+        *(["--input-format", input_format] if input_format else []),
         "-i",
         long_path_str(files.input) if isinstance(files.input, Path) else files.input,
         "-o",
