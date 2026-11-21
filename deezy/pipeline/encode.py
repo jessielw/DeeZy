@@ -7,6 +7,7 @@ from deezy.dee.tools import find_license
 from deezy.payloads.shared import CorePayload
 from deezy.pipeline.plan import JobPlan, PlanContext, plan_job
 from deezy.pipeline.run import check_input_file, run_plan, temp_dir_path
+from deezy.pipeline.show import command_lines
 from deezy.track_info.mediainfo import MediainfoParser
 from deezy.utils.logger import logger
 
@@ -40,5 +41,15 @@ def plan(payload: CorePayload) -> JobPlan:
 
 
 def encode(payload: CorePayload) -> Path:
-    """Encode one source track and return the output path."""
-    return run_plan(plan(payload), payload)
+    """
+    Encode one source track and return the output path.
+
+    A dry run prints the plan's command lines instead and runs nothing.
+    """
+    job = plan(payload)
+    if payload.dry_run and not job.preview:
+        for line in command_lines(job):
+            print(line, flush=True)
+        logger.info(f"Dry run: nothing was run. The output would be {job.output}")
+        return job.output
+    return run_plan(job, payload)

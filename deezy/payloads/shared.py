@@ -26,6 +26,10 @@ class CorePayload:
     overwrite: bool
     output_template: str
     output_preview: bool
+    # print each command line as it starts
+    print_commands: bool
+    # plan and print the commands, but run nothing
+    dry_run: bool
 
 
 @dataclass(slots=True)

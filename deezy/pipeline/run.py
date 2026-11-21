@@ -30,7 +30,8 @@ from deezy.exceptions import (
     PathTooLongError,
 )
 from deezy.payloads.shared import CorePayload
-from deezy.pipeline.plan import DeeStep, FfmpegStep, JobPlan, TruehddStep
+from deezy.pipeline.plan import DeeStep, FfmpegStep, JobPlan, Step, TruehddStep
+from deezy.pipeline.show import step_line
 from deezy.utils.logger import logger
 from deezy.utils.paths import (
     MAX_ARTIFACT_NAME,
@@ -238,6 +239,12 @@ def write_signature_metadata(
         logger.debug("Failed to write metadata.json for reuse.")
 
 
+def announce(step: Step, print_commands: bool) -> None:
+    """Print the step's command line (``--print-commands``) as it starts."""
+    if print_commands:
+        print(step_line(step), flush=True)
+
+
 def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
     """
     Write the job's WAV with FFmpeg, or reuse the one an earlier run made.
@@ -255,6 +262,7 @@ def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
 
     jitter()
     with slot("ffmpeg"):
+        announce(step, payload.print_commands)
         ffmpeg_job = process_ffmpeg_job(
             cmd=list(step.argv),
             steps=True,
@@ -280,6 +288,7 @@ def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
         ):
             logger.info("Reusing decoded atmos from temp folder")
             return
+        announce(step, payload.print_commands)
         decode_truehd_to_atmos(
             output_dir=step.output_dir,
             file_input=step.file_input,
@@ -302,7 +311,9 @@ def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
             )
 
 
-def run_dee(step: DeeStep, no_progress_bars: bool) -> None:
+def run_dee(
+    step: DeeStep, no_progress_bars: bool, print_commands: bool = False
+) -> None:
     """
     Run DEE in one of the batch's DEE slots.
 
@@ -311,6 +322,7 @@ def run_dee(step: DeeStep, no_progress_bars: bool) -> None:
     """
     jitter()
     with slot("dee"):
+        announce(step, print_commands)
         try:
             dee_job = process_dee_job(
                 cmd=list(step.argv),
@@ -373,7 +385,7 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
                 run_truehdd(step, plan, payload)
             else:
                 logger.debug(f"dee_cmd={list(step.argv)}.")
-                run_dee(step, payload.no_progress_bars)
+                run_dee(step, payload.no_progress_bars, payload.print_commands)
                 dee_output = step.output
         if dee_output is None:
             raise OutputFileNotFoundError("The plan has no DEE step.")

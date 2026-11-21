@@ -48,6 +48,8 @@ class PayloadBuilder:
             "file_output": Path(args.output) if cls.safe_get(args, "output") else None,
             "output_template": cls.safe_get(args, "output_template"),
             "output_preview": cls.safe_get(args, "output_preview", False),
+            "print_commands": cls.safe_get(args, "print_commands", False),
+            "dry_run": cls.safe_get(args, "dry_run", False),
             "worker_id": cls.safe_get(args, "worker_id"),
             "batch_output_dir": Path(cls.safe_get(args, "batch_output_dir"))
             if cls.safe_get(args, "batch_output_dir")

@@ -10,18 +10,21 @@ from deezy.utils.progress import ProgressData, ProgressHandler
 MAX_CAPTURED_LINES = 50
 
 
+def ffmpeg_loglevel() -> str:
+    """The level that goes after a planned FFmpeg command's ``-v``."""
+    return "info" if logger.getEffectiveLevel() == logging.DEBUG else "quiet"
+
+
+def with_loglevel(cmd: list) -> list:
+    """A copy of a planned FFmpeg command with its ``-v`` level filled in."""
+    cmd = cmd.copy()
+    cmd.insert(cmd.index("-v") + 1, ffmpeg_loglevel())
+    return cmd
+
+
 def _prepare_ffmpeg_command(cmd: list, duration: float | None) -> list:
     """Prepare FFMPEG command with appropriate options for progress tracking."""
-    # make a copy to avoid modifying the original command list
-    cmd = cmd.copy()
-
-    # inject verbosity level based on logging level
-    logger_level = logger.getEffectiveLevel()
-    inject = cmd.index("-v") + 1
-    if logger_level == logging.DEBUG:
-        cmd.insert(inject, "info")
-    else:
-        cmd.insert(inject, "quiet")
+    cmd = with_loglevel(cmd)
 
     # add progress options before input if we have duration for accurate tracking
     if duration:

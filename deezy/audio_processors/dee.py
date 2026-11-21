@@ -133,6 +133,14 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
                 progress_state["measure_done"] = True
 
 
+def with_loglevel(cmd: list) -> list:
+    """A copy of a planned DEE command with ``--loglevel`` set from DeeZy's level."""
+    level = "debug" if logger.getEffectiveLevel() == logging.DEBUG else "info"
+    cmd = cmd.copy()
+    cmd[cmd.index("--loglevel") + 1] = level
+    return cmd
+
+
 def process_dee_job(
     cmd: list,
     step_info: dict | None = None,
@@ -147,10 +155,8 @@ def process_dee_job(
         no_progress_bars (bool): Disable progress bars.
         custom_dialnorm (int): If user supplies custom dialnorm (0 is off).
     """
-    # set the verbosity level in the cmd list depending on logging level
+    cmd = with_loglevel(cmd)
     logger_level = logger.getEffectiveLevel()
-    level = "debug" if logger_level == logging.DEBUG else "info"
-    cmd[cmd.index("--loglevel") + 1] = level
 
     # setup DEE progress handler; the split encoders report plain percentages
     # (requested with --progress) rather than the single dee's stage lines

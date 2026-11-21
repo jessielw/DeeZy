@@ -20,6 +20,33 @@ MAX_CAPTURED_LINES = 100
 STREAM_DRAIN_TIMEOUT = 5.0
 
 
+def truehd_extract_command(
+    ffmpeg_path: Path, file_input: Path, track_index: TrackIndex
+) -> list[str]:
+    """FFmpeg copying the TrueHD track to stdout, for truehdd to read."""
+    # even in debug, FFmpeg's file info would only be noise here
+    level = "warning" if logger.getEffectiveLevel() == logging.DEBUG else "quiet"
+    return [
+        str(ffmpeg_path),
+        "-hide_banner",
+        "-y",
+        "-i",
+        str(file_input),
+        "-map",
+        f"0:a:{track_index.index}"
+        if track_index.track_type is TrackType.AUDIO
+        else f"0:{track_index.index}",
+        "-c",
+        "copy",
+        "-f",
+        "truehd",
+        "-",
+        "-v",
+        level,
+        "-stats",
+    ]
+
+
 def truehdd_command(
     truehdd_path: Path,
     output_dir: Path,
@@ -77,33 +104,8 @@ def decode_truehd_to_atmos(
     Returns list of paths to the generated .atmos files (raises on failure).
     """
     # pipe mode: stream TrueHD from ffmpeg to truehdd stdin
-    ffmpeg_cmd = [
-        str(ffmpeg_path),
-        "-hide_banner",
-        "-y",
-        "-i",
-        str(file_input),
-        "-map",
-        f"0:a:{track_index.index}"
-        if track_index.track_type is TrackType.AUDIO
-        else f"0:{track_index.index}",
-        "-c",
-        "copy",
-        "-f",
-        "truehd",
-        "-",
-        "-v",
-        "-stats",
-    ]
-
-    # inject verbosity level into cmd list depending on logging level
+    ffmpeg_cmd = truehd_extract_command(ffmpeg_path, file_input, track_index)
     logger_level = logger.getEffectiveLevel()
-    inject = ffmpeg_cmd.index("-v") + 1
-    if logger_level == logging.DEBUG:
-        ffmpeg_cmd.insert(inject, "warning")  # even in debug, suppress file info spam
-    else:
-        ffmpeg_cmd.insert(inject, "quiet")
-
     truehdd_cmd = truehdd_command(truehdd_path, output_dir, warp_mode)
 
     ffmpeg_proc = subprocess.Popen(

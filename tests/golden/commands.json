@@ -1,0 +1,5187 @@
+{
+ "dd_auto_6": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_auto_8": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_auto_2": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_auto_1": {
+  "output": "/out/in [1.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.dd.wav",
+     "-o",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "mono",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_auto_3": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "2",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_auto_5": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "2",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_upmix50": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=5.1(side)|FL=c0|FR=c1|FC=c2|LFE=0*c0|SL=c3|SR=c4",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "auto",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=not_indicated:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_upmix50_auto": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=5.1(side)|FL=c0|FR=c1|FC=c2|LFE=0*c0|SL=c3|SR=c4",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "auto",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=not_indicated:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_stereo_from6": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_stereo_from8": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_dpl2": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=matrix_encoding=dplii",
+     "-ac",
+     "2",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "auto",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=not_indicated:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_dpl2_auto2": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=matrix_encoding=dplii",
+     "-ac",
+     "2",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "auto",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=not_indicated:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_ltrt": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.dd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "224",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=ltrt:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_mono_from2": {
+  "output": "/out/in [1.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.dd.wav",
+     "-o",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "mono",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_441": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_norate": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_delay_pos": {
+  "output": "/out/in [5.1] s1 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.dd.wav",
+     "-o",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--add-silence",
+     "0.094667:0",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_delay_neg": {
+  "output": "/out/in [5.1] s1 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.dd.wav",
+     "-o",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "1.505333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_delay_frames": {
+  "output": "/out/in [5.1] s1 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.dd.wav",
+     "-o",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.047042",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_filename_delay": {
+  "output": "/out/Movie DELAY -10.5ms [5.1] s1 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/Movie DELAY -10.5ms.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/MovieDELAY105ms51s1r0wNo_9e11600172e1b321.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/MovieDELAY105ms51s1r0wNo_9e11600172e1b321.dd.wav",
+     "-o",
+     "/temp/job/MovieDELAY105ms51s1r0wNo_9e11600172e1b321.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.015833",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_dialnorm": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "skip:dialnorm=-27",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ],
+    "custom_dialnorm": -27
+   }
+  ]
+ },
+ "dd_target": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_and_correct:preset=manual:dialogue_intelligence=1:speech_threshold=15:loudness_target=-24:peak_limit_db=-2",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_target_dialnorm": {
+  "error": "UnsupportedDeeFeatureError: --loudness-target measures and corrects the loudness, so it can't be combined with --custom-dialnorm."
+ },
+ "dd_peak_only": {
+  "error": "UnsupportedDeeFeatureError: --peak-limit needs --loudness-target."
+ },
+ "dd_preset": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=ebu_r128",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_drc": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=none:drc_profile_rf=music_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_flags": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=0:speech_threshold=30",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=0:surround_90deg_phase_shift=0:surround_3dB_attenuation=0:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_mix": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-6:loro_smix=-4.5:ltrt_cmix=0:ltrt_smix=-inf"
+    ]
+   }
+  ]
+ },
+ "dd_metering": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_bitrate_invalid": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "512",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_bitrate_ok": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "640",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_upmix_refused": {
+  "error": "ChannelMixError: Up-mixing is not supported."
+ },
+ "dd_fps_none": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "not_indicated",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_fps_25": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "25",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_fps_odd": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "not_indicated",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_rel_delay": {
+  "output": "/out/in [5.1] s0 r-40 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r40wNone_899b01d420f46756.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r40wNone_899b01d420f46756.dd.wav",
+     "-o",
+     "/temp/job/in51s0r40wNone_899b01d420f46756.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_output": {
+  "output": "/out/x.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/x_11f6ad8ec52a2984.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/x_11f6ad8ec52a2984.dd.wav",
+     "-o",
+     "/temp/job/x_11f6ad8ec52a2984.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_output_bad": {
+  "error": "InvalidExtensionError: DD output must end with the suffix '.ac3'."
+ },
+ "dd_template": {
+  "output": "/out/T {title} {channels} [5.1] s0.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/Ttitlechannels51s0_9c211061d4f824a6.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/Ttitlechannels51s0_9c211061d4f824a6.dd.wav",
+     "-o",
+     "/temp/job/Ttitlechannels51s0_9c211061d4f824a6.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_preview": {
+  "output": "/out/T {title} [5.1] s0.ac3",
+  "preview": true,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/Ttitle51s0_e00f17f43ac3cd5f.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/Ttitle51s0_e00f17f43ac3cd5f.dd.wav",
+     "-o",
+     "/temp/job/Ttitle51s0_e00f17f43ac3cd5f.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_batch_dir": {
+  "output": "/out/batch/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_track": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:2",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_stream_track": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:3",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_auto_6": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_auto_2": {
+  "output": "/out/in [2.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "128",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_auto_1": {
+  "output": "/out/in [1.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ddp.wav",
+     "-o",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "64",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "mono",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_auto_5": {
+  "output": "/out/in [2.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "2",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "128",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_auto_8": {
+  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim, which this DeeZy version doesn't drive yet. Use 'ddp-bluray' for 7.1, or '--channels 6' for 5.1."
+ },
+ "ddp_8": {
+  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim, which this DeeZy version doesn't drive yet. Use 'ddp-bluray' for 7.1, or '--channels 6' for 5.1."
+ },
+ "ddp_6_from8": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_2_from6": {
+  "output": "/out/in [2.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "128",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_2_from8": {
+  "output": "/out/in [2.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "128",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_1_from6": {
+  "output": "/out/in [1.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ddp.wav",
+     "-o",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "64",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "mono",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_upmix50": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=5.1(side)|FL=c0|FR=c1|FC=c2|LFE=0*c0|SL=c3|SR=c4",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_upmix50_441": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=5.1(side)|FL=c0|FR=c1|FC=c2|LFE=0*c0|SL=c3|SR=c4,aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_dpl2": {
+  "output": "/out/in [2.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "128",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=ltrt-pl2:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_user_data": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:user_data=5"
+    ]
+   }
+  ]
+ },
+ "ddp_target": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_and_correct:preset=manual:dialogue_intelligence=1:speech_threshold=15:loudness_target=-20",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_dialnorm": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip:dialnorm=-31",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ],
+    "custom_dialnorm": -31
+   }
+  ]
+ },
+ "ddp_secondary_2": {
+  "output": "/out/in [2.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "bluray_secondary:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_secondary_6": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "bluray_secondary:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_secondary_6_200": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "bluray_secondary:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_secondary_auto": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "bluray_secondary:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_secondary_1": {
+  "error": "ChannelMixError: Blu-ray secondary audio is only available as 2.0 or 5.1."
+ },
+ "ddp_secondary_user_data": {
+  "error": "UnsupportedDeeFeatureError: --user-data is only available for plain Dolby Digital Plus."
+ },
+ "ddp_bitrate_invalid": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_delay": {
+  "output": "/out/in [5.1] s1 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.ddp.wav",
+     "-o",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--add-silence",
+     "0.036334:0",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_441": {
+  "output": "/out/in [2.0] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ddp.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "128",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "stereo",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_output_eac3": {
+  "output": "/out/x.eac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/x_11f6ad8ec52a2984.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/x_11f6ad8ec52a2984.ddp.wav",
+     "-o",
+     "/temp/job/x_11f6ad8ec52a2984.eac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "ddp_output_bad": {
+  "error": "InvalidExtensionError: DDP output must end with the suffix '.ec3' or '.eac3'."
+ },
+ "bluray_8": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1280",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "bluray:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "bluray_8_441": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1280",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "bluray:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "bluray_8_1664": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1664",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "bluray:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "bluray_8_bad_rate": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1280",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "bluray:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "bluray_6": {
+  "error": "ChannelMixError: Up-mixing is not supported."
+ },
+ "bluray_delay": {
+  "output": "/out/in [7.1] s1 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s1r0wNone_1eba38fc477b0805.ddp-bluray.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s1r0wNone_1eba38fc477b0805.ddp-bluray.wav",
+     "-o",
+     "/temp/job/in71s1r0wNone_1eba38fc477b0805.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.025333",
+     "--data-rate",
+     "1280",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "bluray:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "bluray_dialnorm": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp-bluray.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1280",
+     "--loudness-management",
+     "skip:dialnorm=-20",
+     "-e",
+     "bluray:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ],
+    "custom_dialnorm": -20
+   }
+  ]
+ },
+ "atmos_thd": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "atmos_thd_warp": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "--warp-mode",
+      "prologiciix",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "atmos_thd_1024": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1024",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "atmos_thd_512": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "576",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "atmos_adm": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "atmos_bluray": {
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos for Blu-ray needs a 7.1 bed, which DEE 6.7 only encodes through dee_shim. This DeeZy version doesn't drive dee_shim yet; use '--atmos-mode streaming'."
+ },
+ "atmos_plain": {
+  "error": "InvalidAtmosInputError: Cannot process input, not a valid Atmos format"
+ },
+ "atmos_upmix": {
+  "error": "ChannelMixError: Up-mixing is not supported."
+ },
+ "atmos_dialnorm": {
+  "output": "/out/in [5.1] s1 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s1r0wNone_b6dd59c857b75460.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--add-silence",
+     "0.044667:0",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "skip:dialnorm=-20",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ],
+    "custom_dialnorm": -20
+   }
+  ]
+ },
+ "atmos_drc": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=ltrt:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=none:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "atmos_preset": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=atsc_a85",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_thd": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_thd_warp": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "--warp-mode",
+      "loro",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_adm": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_6": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_8": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-ac",
+     "6",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_7": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "6",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_2": {
+  "error": "ChannelMixError: AC-4 needs a source of at least 6 channels or TrueHD Atmos (the track has 2)."
+ },
+ "ac4_music": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=0:speech_threshold=15",
+     "-e",
+     "mode=music:drc_profile_ddp=film_light:drc_profile_flat_panel=music_light:drc_profile_home_theatre=music_light:drc_profile_portable_hp=music_light:drc_profile_portable_spkr=music_light"
+    ]
+   }
+  ]
+ },
+ "ac4_drc": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=none:drc_profile_flat_panel=speech:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_441": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_8_441": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-ac",
+     "6",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_bitrate": {
+  "output": "/out/in [2.0] s0 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "128",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_delay": {
+  "output": "/out/in [2.0] s1 r0 wNone.ac4",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.ac4-ims.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ac4ims_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.ac4-ims.wav",
+     "-o",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.ac4",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.010333",
+     "--data-rate",
+     "256",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "mode=general:drc_profile_ddp=film_light:drc_profile_flat_panel=film_light:drc_profile_home_theatre=film_light:drc_profile_portable_hp=film_light:drc_profile_portable_spkr=film_light"
+    ]
+   }
+  ]
+ },
+ "ac4_output_bad": {
+  "error": "InvalidExtensionError: AC-4 output must end with the suffix '.ac4'."
+ }
+}

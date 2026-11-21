@@ -248,6 +248,19 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_true",
         help=("Overwrite existing output files instead of failing."),
     )
+    encode_group.add_argument(
+        "--print-commands",
+        action="store_true",
+        help="Print each FFmpeg, truehdd and DEE command line as it starts.",
+    )
+    encode_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Probe the input and print the FFmpeg, truehdd and DEE command lines "
+            "the encode would run, without running them or writing any file."
+        ),
+    )
 
     # per-phase concurrency limits
     encode_group.add_argument(
@@ -1281,7 +1294,10 @@ def execute_encode_command(
                     # When running in output-preview mode we already emit the
                     # previewed path from the encoder; suppress the duplicate
                     # "Job successful" path line to avoid confusion.
-                    if not getattr(args, "output_preview", False):
+                    if not (
+                        getattr(args, "output_preview", False)
+                        or getattr(args, "dry_run", False)
+                    ):
                         logger.info(f"Job successful! Output file path:\n{result}")
                     successful_files.append((input_file, result))
 
@@ -1372,7 +1388,10 @@ def execute_encode_command(
                         # When running in output-preview mode we already emit the
                         # previewed path from the encoder; suppress the duplicate
                         # "Job successful" path line to avoid confusion.
-                        if not getattr(args, "output_preview", False):
+                        if not (
+                            getattr(args, "output_preview", False)
+                            or getattr(args, "dry_run", False)
+                        ):
                             logger.info(f"Job successful! Output file path:\n{result}")
                         successful_files.append((input_file, result))
 
