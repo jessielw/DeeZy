@@ -22,6 +22,7 @@ from deezy.dee.commands import (
     ddp_command,
     ddpjoc_command,
     measure_command,
+    thd_atmos_command,
     thd_command,
 )
 from deezy.dee.spec import FormatSpec, get_format
@@ -57,7 +58,7 @@ from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.measure import MeasurePayload
 from deezy.payloads.shared import ChannelBitrates, CorePayload
-from deezy.payloads.thd import TrueHDPayload
+from deezy.payloads.thd import TrueHDAtmosPayload, TrueHDPayload
 from deezy.pipeline.transport import NamedPipe, Transport, WavFile, expected_samples
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
@@ -185,11 +186,13 @@ class PlanContext:
 
 def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> JobPlan:
     """The plan for one encode. ``info`` is the probed source track."""
-    if info.atmos_master and not isinstance(payload, AtmosPayload | Ac4Payload):
+    if info.atmos_master and not isinstance(
+        payload, AtmosPayload | Ac4Payload | TrueHDAtmosPayload
+    ):
         raise InvalidAtmosInputError(
             f"{_format_name(payload)} can't encode an Atmos master yet: FFmpeg would "
-            "mix its objects without their positions. Encode it with ddp-atmos or "
-            "ac4-ims, or measure it with 'deezy measure'."
+            "mix its objects without their positions. Encode it with ddp-atmos, "
+            "thd-atmos or ac4-ims, or measure it with 'deezy measure'."
         )
     if isinstance(payload, DDPayload):
         return _plan_dd(payload, info, ctx)
@@ -205,6 +208,8 @@ def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         return _plan_ac4(payload, info, ctx)
     if isinstance(payload, TrueHDPayload):
         return _plan_thd(payload, info, ctx)
+    if isinstance(payload, TrueHDAtmosPayload):
+        return _plan_thd_atmos(payload, info, ctx)
     raise TypeError(f"no plan for {type(payload).__name__}")
 
 
@@ -558,7 +563,7 @@ def _tools(payload: CorePayload, ctx: PlanContext) -> DeeTools:
 
 
 def _truehdd_step(
-    payload: AtmosPayload | Ac4Payload | MeasurePayload,
+    payload: AtmosPayload | Ac4Payload | MeasurePayload | TrueHDAtmosPayload,
     info: AudioTrackInfo,
     ctx: PlanContext,
     reuse_id: str,
@@ -902,7 +907,7 @@ def require_supported_atmos_mode(atmos_mode: AtmosMode) -> None:
 
 
 def _atmos_input(
-    payload: AtmosPayload | Ac4Payload | MeasurePayload,
+    payload: AtmosPayload | Ac4Payload | MeasurePayload | TrueHDAtmosPayload,
     info: AudioTrackInfo,
     ctx: PlanContext,
     reuse_id: str,
@@ -1303,6 +1308,56 @@ def _plan_thd(
         output=output,
         temp_dir=ctx.temp_dir,
         steps=_pcm_steps(payload, filters, wav, str(CodecFormat.THD), info, dee),
+        free_space_needed=info.recommended_free_space,
+        preview=preview,
+    )
+
+
+# --- TrueHD Atmos
+
+
+def _plan_thd_atmos(
+    payload: TrueHDAtmosPayload, info: AudioTrackInfo, ctx: PlanContext
+) -> JobPlan:
+    spec = get_format("thd-atmos")
+    if not info.atmos:
+        raise InvalidAtmosInputError(
+            "thd-atmos encodes TrueHD Atmos or an Atmos master (DAMF or ADM BWF). "
+            "Encode channel-based audio with 'thd'."
+        )
+    if payload.legacy_authoring:
+        logger.info(
+            "Legacy authoring: the stream suits older disc-authoring tools and "
+            "carries no warp mode."
+        )
+        if info.thd_atmos and payload.thd_warp_mode is not None:
+            logger.warning(
+                "With --legacy-authoring the stream reports no warp mode, "
+                "whatever --thd-warp-mode sets."
+            )
+
+    delay = get_delay(payload).compensated(compensation(spec))
+    fps = get_fps(info.fps)
+    # named by its largest channel-based presentation
+    output, preview = _output(payload, info, ctx, spec, "TrueHD", "7.1", delay)
+
+    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.THD_ATMOS))
+    if dee_input is None:
+        raise InvalidAtmosInputError("Cannot process input, not a valid Atmos format")
+
+    files = _dee_files(ctx, dee_input, output)
+    dee_argv = thd_atmos_command(
+        _tools(payload, ctx), payload, files, fps=fps, delay=delay
+    )
+    steps: tuple[Step, ...] = (
+        DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm),
+    )
+    return JobPlan(
+        format=spec.name,
+        source=Path(payload.file_input),
+        output=output,
+        temp_dir=ctx.temp_dir,
+        steps=(truehdd, *steps) if truehdd else steps,
         free_space_needed=info.recommended_free_space,
         preview=preview,
     )

@@ -277,7 +277,7 @@ def apply_default_bitrate(
     if getattr(args, "bluray_secondary", False):
         return
     # TrueHD is lossless and has no data rate
-    if getattr(args, "format_command", None) == "thd":
+    if getattr(args, "format_command", None) in ("thd", "thd-atmos"):
         return
     if not hasattr(args, "bitrate") or args.bitrate is None:
         channels_or_mode = None
@@ -379,7 +379,11 @@ def handle_dependencies(
         config_value = config_deps.get(key)
         deps[key] = cli_value or config_value
 
-    atmos_required = getattr(args, "format_command", None) in ("ddp-atmos", "ac4-ims")
+    atmos_required = getattr(args, "format_command", None) in (
+        "ddp-atmos",
+        "thd-atmos",
+        "ac4-ims",
+    )
 
     finder = FindDependencies()
     try:

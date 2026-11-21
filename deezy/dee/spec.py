@@ -306,6 +306,17 @@ def formats() -> Mapping[str, FormatSpec]:
             0,
         ),
         FormatSpec(
+            "thd-atmos",
+            tool("dee_dthd_encoder"),
+            # the 8ch, 6ch and 2ch presentations are downmixes DEE derives
+            {"atmos": ModeSpec("", {"atmos": LayoutSpec(None)})},
+            (".thd", ".mlp"),
+            # an impulse in a master decodes on its own sample
+            0,
+            # an Atmos master's channel count is not DEE's to change
+            0,
+        ),
+        FormatSpec(
             "aac",
             tool("dee_aac_encoder"),
             # DeeZy's default raises only AAC-LC above DEE's 64 kbps

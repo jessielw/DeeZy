@@ -9895,6 +9895,1014 @@
    }
   ]
  },
+ "thd_atmos_thd": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_thd_warp": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "--warp-mode",
+      "prologiciix",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_legacy": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_legacy_warp": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "--warp-mode",
+      "normal",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_damf": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "not_indicated",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_damf_warp": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_damf_few": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_adm": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.wav",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_drc": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=music_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=music_light",
+     "--presentation",
+     "6ch:drc_profile=music_light",
+     "--presentation",
+     "2ch:drc_profile=music_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_dialnorm": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "skip:dialnorm=-27"
+    ],
+    "custom_dialnorm": -27
+   }
+  ]
+ },
+ "thd_atmos_preset": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=ebu_r128"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_manual": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=0:speech_threshold=30"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_delay_pos": {
+  "output": "/out/in [7.1] s1 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s1r0wNone_1eba38fc477b0805.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--add-silence",
+     "0.100000:0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_delay_neg": {
+  "output": "/out/in [7.1] s1 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s1r0wNone_1eba38fc477b0805.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.020000",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_filename_delay": {
+  "output": "/out/Movie DELAY -10.5ms [7.1] s1 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/Movie DELAY -10.5ms.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/MovieDELAY105ms71s1r0wNo_376955b3fa50e53e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.010500",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_fps": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "25",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_output_mlp": {
+  "output": "/out/x.mlp",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/x_11f6ad8ec52a2984.mlp",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_output_bad": {
+  "error": "InvalidExtensionError: TrueHD output must end with the suffix '.thd' or '.mlp'."
+ },
+ "thd_atmos_reuse": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_channel_based": {
+  "error": "InvalidAtmosInputError: thd-atmos encodes TrueHD Atmos or an Atmos master (DAMF or ADM BWF). Encode channel-based audio with 'thd'."
+ },
+ "thd_atmos_wav": {
+  "error": "InvalidAtmosInputError: thd-atmos encodes TrueHD Atmos or an Atmos master (DAMF or ADM BWF). Encode channel-based audio with 'thd'."
+ },
  "atmos_damf": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
   "preview": false,
@@ -10231,25 +11239,25 @@
   ]
  },
  "dd_damf": {
-  "error": "InvalidAtmosInputError: dd can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos or ac4-ims, or measure it with 'deezy measure'."
+  "error": "InvalidAtmosInputError: dd can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos, thd-atmos or ac4-ims, or measure it with 'deezy measure'."
  },
  "ddp_damf": {
-  "error": "InvalidAtmosInputError: ddp can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos or ac4-ims, or measure it with 'deezy measure'."
+  "error": "InvalidAtmosInputError: ddp can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos, thd-atmos or ac4-ims, or measure it with 'deezy measure'."
  },
  "ddp_adm": {
-  "error": "InvalidAtmosInputError: ddp can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos or ac4-ims, or measure it with 'deezy measure'."
+  "error": "InvalidAtmosInputError: ddp can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos, thd-atmos or ac4-ims, or measure it with 'deezy measure'."
  },
  "ac4ch_damf": {
-  "error": "InvalidAtmosInputError: ac4 can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos or ac4-ims, or measure it with 'deezy measure'."
+  "error": "InvalidAtmosInputError: ac4 can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos, thd-atmos or ac4-ims, or measure it with 'deezy measure'."
  },
  "aac_damf": {
-  "error": "InvalidAtmosInputError: aac can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos or ac4-ims, or measure it with 'deezy measure'."
+  "error": "InvalidAtmosInputError: aac can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos, thd-atmos or ac4-ims, or measure it with 'deezy measure'."
  },
  "thd_damf": {
-  "error": "InvalidAtmosInputError: thd can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos or ac4-ims, or measure it with 'deezy measure'."
+  "error": "InvalidAtmosInputError: thd can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos, thd-atmos or ac4-ims, or measure it with 'deezy measure'."
  },
  "thd_adm": {
-  "error": "InvalidAtmosInputError: thd can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos or ac4-ims, or measure it with 'deezy measure'."
+  "error": "InvalidAtmosInputError: thd can't encode an Atmos master yet: FFmpeg would mix its objects without their positions. Encode it with ddp-atmos, thd-atmos or ac4-ims, or measure it with 'deezy measure'."
  },
  "measure_6": {
   "output": "/temp/job/loudness.json",

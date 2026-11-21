@@ -644,9 +644,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         ),
     )
 
-    # TrueHD options
-    thd_options_group = argparse.ArgumentParser(add_help=False)
-    thd_options_group.add_argument(
+    # channel-based TrueHD channels
+    thd_channels_group = argparse.ArgumentParser(add_help=False)
+    thd_channels_group.add_argument(
         "--channels",
         type=case_insensitive_enum(TrueHDChannels),
         choices=TrueHDChannels,
@@ -657,6 +657,8 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             "holds every source channel, filling the rest with silence."
         ),
     )
+    # TrueHD and TrueHD Atmos DRC and dialnorm
+    thd_options_group = argparse.ArgumentParser(add_help=False)
     # dee_dthd_encoder has no 'none'
     thd_drc_choices = tuple(drc for drc in DeeDRC if drc is not DeeDRC.NONE)
     thd_options_group.add_argument(
@@ -672,6 +674,17 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         type=dialnorm_options,
         default=0,
         help="Custom dialnorm (0 disables custom dialnorm).",
+    )
+
+    # TrueHD Atmos options
+    thd_atmos_options_group = argparse.ArgumentParser(add_help=False)
+    thd_atmos_options_group.add_argument(
+        "--legacy-authoring",
+        action="store_true",
+        help=(
+            "Make the stream for older disc-authoring tools (DEE's legacy "
+            "authoring). The stream then carries no warp mode."
+        ),
     )
 
     # AAC options
@@ -794,7 +807,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "ac4_ims_drc_group": ac4_ims_drc_group,
         "ac4_channels_group": ac4_channels_group,
         "aac_options_group": aac_options_group,
+        "thd_channels_group": thd_channels_group,
         "thd_options_group": thd_options_group,
+        "thd_atmos_options_group": thd_atmos_options_group,
         "preset_channels_group": preset_channels_group,
         "pcm_transport_group": pcm_transport_group,
     }
@@ -974,7 +989,26 @@ def create_encode_parsers(
             argument_groups["input_group"],
             argument_groups["encode_group"],
             argument_groups["loudness_group"],
+            argument_groups["thd_channels_group"],
             argument_groups["thd_options_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
+    ### TrueHD Atmos Command ###
+    _encode_thd_atmos_parser = encode_subparsers.add_parser(
+        "thd-atmos",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["loudness_group"],
+            argument_groups["thd_options_group"],
+            argument_groups["thd_atmos_options_group"],
+            argument_groups["truehdd_options_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -1282,6 +1316,7 @@ def encode_single_file(
         "ac4-ims": PayloadBuilder.build_ac4_payload,
         "aac": PayloadBuilder.build_aac_payload,
         "thd": PayloadBuilder.build_thd_payload,
+        "thd-atmos": PayloadBuilder.build_thd_atmos_payload,
     }
     if args.format_command in builders:
         payload = builders[args.format_command](

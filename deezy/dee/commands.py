@@ -28,7 +28,7 @@ from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.measure import MeasurePayload
 from deezy.payloads.shared import LoudnessPayload
-from deezy.payloads.thd import TrueHDPayload
+from deezy.payloads.thd import TrueHDAtmosPayload, TrueHDPayload
 from deezy.utils.logger import logger
 from deezy.utils.paths import long_path_str
 
@@ -362,7 +362,7 @@ def measure_command(
     ]
 
 
-def check_thd_options(payload: TrueHDPayload) -> None:
+def check_thd_options(payload: TrueHDPayload | TrueHDAtmosPayload) -> None:
     """Refuse what dee_dthd_encoder takes no value for."""
     if payload.drc is DeeDRC.NONE:
         raise UnsupportedDeeFeatureError(
@@ -372,26 +372,28 @@ def check_thd_options(payload: TrueHDPayload) -> None:
         )
 
 
-def thd_command(
+def _dthd_command(
     tools: DeeTools,
-    payload: TrueHDPayload,
+    payload: TrueHDPayload | TrueHDAtmosPayload,
     files: DeeFiles,
     *,
+    top: str,
+    input_format: str,
+    downmixes: tuple[str, ...],
     fps: DeeFPS,
     delay: Delay,
+    top_options: dict[str, str] | None = None,
 ) -> list[str]:
     """
-    A channel-based TrueHD encode with dee_dthd_encoder. ``payload.channels``
-    is the input's layout, which is the stream's top presentation; DEE derives
-    the smaller ones from it, and each gets the payload's DRC.
+    A dee_dthd_encoder command line. The input feeds the ``top`` presentation;
+    each of ``downmixes`` is one DEE derives from it. Each presentation's DRC
+    is set on its own, so every one of them is given the payload's.
     """
     check_thd_options(payload)
-    top = payload.channels.value
-    drc = payload.drc.to_dee_cmd()
-    downmixes = []
-    for channels in (6, 2):
-        if channels < top:
-            downmixes += ["--presentation", f"{channels}ch:drc_profile={drc}"]
+    drc = {"drc_profile": payload.drc.to_dee_cmd()}
+    below = []
+    for name in downmixes:
+        below += ["--presentation", f"{name}:{_options(drc)}"]
     return [
         str(dee_tool(tools.dee_dir, THD_TOOL)),
         # replaced with the active log level when the job is run
@@ -407,12 +409,12 @@ def thd_command(
         long_path_str(files.temp_dir),
         # the input options belong to the --presentation before them
         "--presentation",
-        f"{payload.channels.to_dee_cmd()}:drc_profile={drc}",
+        f"{top}:{_options({**drc, **(top_options or {})})}",
         "--input-format",
-        files.input_format or "wav",
+        files.input_format or input_format,
         "-i",
         long_path_str(files.input) if isinstance(files.input, Path) else files.input,
-        *downmixes,
+        *below,
         "-o",
         long_path_str(files.output),
         "--timecode-frame-rate",
@@ -421,6 +423,67 @@ def thd_command(
         "--loudness-management",
         loudness(payload),
     ]
+
+
+def thd_command(
+    tools: DeeTools,
+    payload: TrueHDPayload,
+    files: DeeFiles,
+    *,
+    fps: DeeFPS,
+    delay: Delay,
+) -> list[str]:
+    """
+    A channel-based TrueHD encode with dee_dthd_encoder. ``payload.channels``
+    is the input's layout, which is the stream's top presentation; DEE derives
+    the smaller ones from it.
+    """
+    top = payload.channels.value
+    return _dthd_command(
+        tools,
+        payload,
+        files,
+        top=payload.channels.to_dee_cmd(),
+        input_format="wav",
+        downmixes=tuple(f"{channels}ch" for channels in (6, 2) if channels < top),
+        fps=fps,
+        delay=delay,
+    )
+
+
+# D7: Dolby's default is 12 elements; more keep more of the master's detail
+THD_ATMOS_ELEMENTS = 16
+
+
+def thd_atmos_command(
+    tools: DeeTools,
+    payload: TrueHDAtmosPayload,
+    files: DeeFiles,
+    *,
+    fps: DeeFPS,
+    delay: Delay,
+) -> list[str]:
+    """
+    A TrueHD Atmos encode of a master with dee_dthd_encoder. The stream also
+    carries the 7.1, 5.1 and 2.0 presentations DEE renders from it.
+
+    Legacy authoring is off unless asked for (D7). Dolby's default is on, and
+    then the stream carries no warp mode.
+    """
+    return _dthd_command(
+        tools,
+        payload,
+        files,
+        top="atmos",
+        top_options={
+            "number_of_elements": str(THD_ATMOS_ELEMENTS),
+            "legacy_authoring": _flag(payload.legacy_authoring),
+        },
+        input_format="atmos_mezz",
+        downmixes=("8ch", "6ch", "2ch"),
+        fps=fps,
+        delay=delay,
+    )
 
 
 def aac_loudness(payload: AacPayload) -> str:

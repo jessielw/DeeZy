@@ -420,6 +420,72 @@ THD_SCENARIOS = [
 ]
 SCENARIOS += THD_SCENARIOS
 
+# --- thd-atmos (TrueHD Atmos: 16 elements, legacy authoring off by default)
+THD_ATMOS_SCENARIOS = [
+    ("thd_atmos_thd", ["thd-atmos"], info(8, thd=True), MKV),
+    (
+        "thd_atmos_thd_warp",
+        ["thd-atmos", "--thd-warp-mode", "prologiciix"],
+        info(8, thd=True),
+        MKV,
+    ),
+    ("thd_atmos_legacy", ["thd-atmos", "--legacy-authoring"], info(8, thd=True), MKV),
+    (
+        "thd_atmos_legacy_warp",
+        ["thd-atmos", "--legacy-authoring", "--thd-warp-mode", "normal"],
+        info(8, thd=True),
+        MKV,
+    ),
+    ("thd_atmos_damf", ["thd-atmos"], info(16, fps=None, damf=True), DAMF),
+    (
+        "thd_atmos_damf_warp",
+        ["thd-atmos", "--thd-warp-mode", "normal"],
+        info(16, damf=True),
+        DAMF,
+    ),
+    ("thd_atmos_damf_few", ["thd-atmos"], info(4, damf=True), DAMF),
+    ("thd_atmos_adm", ["thd-atmos"], info(16, adm=True), WAV),
+    ("thd_atmos_drc", ["thd-atmos", "--drc", "music_light"], info(8, thd=True), MKV),
+    (
+        "thd_atmos_dialnorm",
+        ["thd-atmos", "--custom-dialnorm", "-27"],
+        info(16, damf=True),
+        DAMF,
+    ),
+    (
+        "thd_atmos_preset",
+        ["thd-atmos", "--loudness-preset", "ebu_r128"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "thd_atmos_manual",
+        ["thd-atmos", "--no-dialogue-intelligence", "--speech-threshold", "30"],
+        info(16, damf=True),
+        DAMF,
+    ),
+    ("thd_atmos_delay_pos", ["thd-atmos", "--delay=100ms"], info(16, damf=True), DAMF),
+    ("thd_atmos_delay_neg", ["thd-atmos", "--delay=-20ms"], info(8, thd=True), MKV),
+    ("thd_atmos_filename_delay", ["thd-atmos"], info(8, thd=True), DELAYED),
+    ("thd_atmos_fps", ["thd-atmos"], info(8, fps=25, thd=True), MKV),
+    (
+        "thd_atmos_output_mlp",
+        ["thd-atmos", "--output", str(OUT / "x.mlp")],
+        info(16, damf=True),
+        DAMF,
+    ),
+    (
+        "thd_atmos_output_bad",
+        ["thd-atmos", "--output", str(OUT / "x.ec3")],
+        info(16, damf=True),
+        DAMF,
+    ),
+    ("thd_atmos_reuse", ["thd-atmos", "--reuse-temp-files"], info(8, thd=True), MKV),
+    ("thd_atmos_channel_based", ["thd-atmos"], info(8), MKV),
+    ("thd_atmos_wav", ["thd-atmos"], info(6), WAV),
+]
+SCENARIOS += THD_ATMOS_SCENARIOS
+
 # --- Atmos masters (DAMF and ADM BWF go to DEE as they are)
 MASTER_SCENARIOS = [
     # a probed DAMF has a channel per bed channel and object, and no video
@@ -559,6 +625,7 @@ BUILDERS = {
     "ac4-ims": PayloadBuilder.build_ac4_payload,
     "aac": PayloadBuilder.build_aac_payload,
     "thd": PayloadBuilder.build_thd_payload,
+    "thd-atmos": PayloadBuilder.build_thd_atmos_payload,
 }
 
 

@@ -14,6 +14,7 @@ class CodecFormat(CaseInsensitiveEnum):
     AC4_IMS = "ac4-ims"
     AAC = "aac"
     THD = "thd"
+    THD_ATMOS = "thd-atmos"
 
     @override
     def __str__(self) -> str:
