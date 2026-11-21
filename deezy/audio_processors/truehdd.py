@@ -24,7 +24,6 @@ def truehdd_command(
     truehdd_path: Path,
     output_dir: Path,
     warp_mode: WarpMode | None,
-    bed_conform: bool,
 ) -> list[str]:
     """
     truehdd decoding a TrueHD stream from stdin to a DAMF master.
@@ -40,7 +39,6 @@ def truehdd_command(
         "--output-path",
         str(output_dir / BASE_ATMOS_FILE_NAME),
         *(["--warp-mode", warp_mode.to_truehdd_cmd()] if warp_mode else []),
-        *(["--bed-conform"] if bed_conform else []),
         "-",
     ]
 
@@ -60,7 +58,6 @@ def decode_truehd_to_atmos(
     track_index: TrackIndex,
     ffmpeg_path: Path,
     truehdd_path: Path,
-    bed_conform: bool,
     warp_mode: WarpMode | None,
     duration: float | None = None,
     step_info: dict | None = None,
@@ -107,7 +104,7 @@ def decode_truehd_to_atmos(
     else:
         ffmpeg_cmd.insert(inject, "quiet")
 
-    truehdd_cmd = truehdd_command(truehdd_path, output_dir, warp_mode, bed_conform)
+    truehdd_cmd = truehdd_command(truehdd_path, output_dir, warp_mode)
 
     ffmpeg_proc = subprocess.Popen(
         ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True

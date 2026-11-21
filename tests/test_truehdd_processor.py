@@ -33,7 +33,6 @@ def run_decode(tmp_path, output_dir=None):
         track_index=TrackIndex.audio(0),
         ffmpeg_path=Path("ffmpeg"),
         truehdd_path=Path("truehdd"),
-        bed_conform=True,
         warp_mode=WarpMode.NORMAL,
         no_progress_bars=True,
     )
@@ -134,7 +133,7 @@ def test_successful_decode_returns_atmos_path(tmp_path, patch_popen):
 
 def test_no_warp_mode_is_passed_by_default(tmp_path):
     """A stream with no warp mode keeps none, which DEE renders as warping."""
-    cmd = truehdd_mod.truehdd_command(Path("truehdd"), tmp_path, None, False)
+    cmd = truehdd_mod.truehdd_command(Path("truehdd"), tmp_path, None)
     assert "--warp-mode" not in cmd
     assert cmd[-1] == "-"
 
@@ -148,7 +147,7 @@ def test_no_warp_mode_is_passed_by_default(tmp_path):
     ],
 )
 def test_a_chosen_warp_mode_is_passed(tmp_path, warp, name):
-    cmd = truehdd_mod.truehdd_command(Path("truehdd"), tmp_path, warp, False)
+    cmd = truehdd_mod.truehdd_command(Path("truehdd"), tmp_path, warp)
     assert cmd[cmd.index("--warp-mode") + 1] == name
 
 
@@ -159,3 +158,9 @@ def test_damf_warp_mode_reads_the_header(tmp_path):
     damf.write_text("presentations:\n  - type: home\n")
     assert truehdd_mod.damf_warp_mode(damf) is None
     assert truehdd_mod.damf_warp_mode(tmp_path / "missing.atmos") is None
+
+
+def test_bed_conform_is_never_passed(tmp_path):
+    """It changes no DEE output, and costs disk space and time."""
+    cmd = truehdd_mod.truehdd_command(Path("truehdd"), tmp_path, WarpMode.NORMAL)
+    assert "--bed-conform" not in cmd

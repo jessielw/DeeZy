@@ -9,6 +9,5 @@ from deezy.payloads.shared import DownmixOnlyPayload
 class AtmosPayload(DownmixOnlyPayload):
     atmos_mode: AtmosMode
     thd_warp_mode: WarpMode | None
-    bed_conform: bool
     # split DEE encoders only
     loudness_preset: LoudnessPreset = LoudnessPreset.MANUAL

@@ -286,7 +286,6 @@ def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
             track_index=step.track_index,
             ffmpeg_path=step.ffmpeg,
             truehdd_path=step.truehdd,
-            bed_conform=step.bed_conform,
             warp_mode=step.warp_mode,
             duration=step.duration,
             step_info={"current": 1, "total": 3, "name": "truehdd"},

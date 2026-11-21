@@ -557,11 +557,6 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="The warp mode truehdd gives a TrueHD Atmos stream that has none. "
         "Without it the stream keeps none, which DEE renders as warping.",
     )
-    truehdd_options_group.add_argument(
-        "--bed-conform",
-        action="store_true",
-        help="Enables bed conformance for Atmos content (truehd).",
-    )
 
     # AC4 basic options
     ac4_basic_options_group = argparse.ArgumentParser(add_help=False)

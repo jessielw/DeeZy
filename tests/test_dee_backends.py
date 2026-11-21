@@ -80,7 +80,6 @@ def make_atmos_payload(tmp_path: Path, **overrides) -> AtmosPayload:
     return AtmosPayload(
         atmos_mode=AtmosMode.STREAMING,
         thd_warp_mode=WarpMode.NORMAL,
-        bed_conform=False,
         **make_core_fields(tmp_path, keep_temp=False),
         **{k: v for k, v in dolby.items() if k in keys},
         **overrides,
@@ -90,7 +89,6 @@ def make_atmos_payload(tmp_path: Path, **overrides) -> AtmosPayload:
 def make_ac4_payload(tmp_path: Path, **overrides) -> Ac4Payload:
     fields = {
         "thd_warp_mode": WarpMode.NORMAL,
-        "bed_conform": False,
         "ims_legacy_presentation": False,
         "encoding_profile": Ac4EncodingProfile.IMS,
         "ddp_drc": DeeDRC.FILM_LIGHT,

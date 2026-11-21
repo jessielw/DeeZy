@@ -83,7 +83,6 @@ class TruehddStep:
     truehdd: Path
     # None: truehdd passes no warp mode
     warp_mode: WarpMode | None
-    bed_conform: bool
     output_dir: Path
     reuse_id: str
     duration: float | None = None
@@ -465,7 +464,6 @@ def _truehdd_step(
         ffmpeg=payload.ffmpeg_path,
         truehdd=payload.truehdd_path,
         warp_mode=payload.thd_warp_mode,
-        bed_conform=payload.bed_conform,
         output_dir=ctx.temp_dir,
         reuse_id=reuse_id,
         duration=info.duration,
