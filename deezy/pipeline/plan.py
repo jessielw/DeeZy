@@ -81,7 +81,8 @@ class TruehddStep:
     track_index: TrackIndex
     ffmpeg: Path
     truehdd: Path
-    warp_mode: WarpMode
+    # None: truehdd passes no warp mode
+    warp_mode: WarpMode | None
     bed_conform: bool
     output_dir: Path
     reuse_id: str
@@ -93,7 +94,8 @@ class TruehddStep:
 
     @property
     def signature(self) -> str:
-        return f"truehdd:{self.warp_mode.to_truehdd_cmd()}"
+        warp = self.warp_mode.to_truehdd_cmd() if self.warp_mode else "none"
+        return f"truehdd:{warp}"
 
 
 @dataclass(frozen=True, slots=True)

@@ -552,9 +552,10 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "--thd-warp-mode",
         type=case_insensitive_enum(WarpMode),
         choices=WarpMode,
-        default=WarpMode.NORMAL,
+        default=None,
         metavar=enum_choices(WarpMode),
-        help="Specify warp mode when not present in metadata (truehdd).",
+        help="The warp mode truehdd gives a TrueHD Atmos stream that has none. "
+        "Without it the stream keeps none, which DEE renders as warping.",
     )
     truehdd_options_group.add_argument(
         "--bed-conform",

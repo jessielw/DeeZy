@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import re
 import subprocess
 import threading
 
@@ -19,6 +20,40 @@ MAX_CAPTURED_LINES = 100
 STREAM_DRAIN_TIMEOUT = 5.0
 
 
+def truehdd_command(
+    truehdd_path: Path,
+    output_dir: Path,
+    warp_mode: WarpMode | None,
+    bed_conform: bool,
+) -> list[str]:
+    """
+    truehdd decoding a TrueHD stream from stdin to a DAMF master.
+
+    truehdd only applies ``warp_mode`` to a stream that has none. Without it,
+    such a stream's master has no warp mode either, and DEE renders it as
+    'warping', its own default.
+    """
+    return [
+        str(truehdd_path),
+        "--progress",
+        "decode",
+        "--output-path",
+        str(output_dir / BASE_ATMOS_FILE_NAME),
+        *(["--warp-mode", warp_mode.to_truehdd_cmd()] if warp_mode else []),
+        *(["--bed-conform"] if bed_conform else []),
+        "-",
+    ]
+
+
+def damf_warp_mode(damf: Path) -> str | None:
+    """The warpMode a DAMF master's header names, or None (also when unreadable)."""
+    try:
+        found = re.search(r"^\s*warpMode:\s*(\S+)", damf.read_text(), re.MULTILINE)
+    except OSError:
+        return None
+    return found.group(1) if found else None
+
+
 def decode_truehd_to_atmos(
     output_dir: Path,
     file_input: Path,
@@ -26,7 +61,7 @@ def decode_truehd_to_atmos(
     ffmpeg_path: Path,
     truehdd_path: Path,
     bed_conform: bool,
-    warp_mode: WarpMode,
+    warp_mode: WarpMode | None,
     duration: float | None = None,
     step_info: dict | None = None,
     no_progress_bars: bool = False,
@@ -72,20 +107,7 @@ def decode_truehd_to_atmos(
     else:
         ffmpeg_cmd.insert(inject, "quiet")
 
-    truehdd_cmd = [
-        str(truehdd_path),
-        "--progress",
-        "decode",
-        "--output-path",
-        str(output_dir / BASE_ATMOS_FILE_NAME),
-        "--warp-mode",
-        warp_mode.to_truehdd_cmd(),
-        "--bed-conform",
-        "-",
-    ]
-    # remove bed conform if desired
-    if not bed_conform:
-        truehdd_cmd.remove("--bed-conform")
+    truehdd_cmd = truehdd_command(truehdd_path, output_dir, warp_mode, bed_conform)
 
     ffmpeg_proc = subprocess.Popen(
         ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True

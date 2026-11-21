@@ -21,7 +21,7 @@ import platformdirs
 
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
-from deezy.audio_processors.truehdd import decode_truehd_to_atmos
+from deezy.audio_processors.truehdd import damf_warp_mode, decode_truehd_to_atmos
 from deezy.exceptions import (
     InputFileNotFoundError,
     NotEnoughSpaceError,
@@ -292,6 +292,11 @@ def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
             step_info={"current": 1, "total": 3, "name": "truehdd"},
             no_progress_bars=payload.no_progress_bars,
         )
+        if step.warp_mode is None and damf_warp_mode(step.output) is None:
+            logger.info(
+                "The TrueHD Atmos stream has no warp mode, so DEE renders it as "
+                "warping, its default. Use --thd-warp-mode to choose another."
+            )
         if reuse:
             write_signature_metadata(
                 meta, step.reuse_id, step.signature, step.output.name, plan.source

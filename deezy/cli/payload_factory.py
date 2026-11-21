@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from deezy.enums.ac4 import Ac4EncodingProfile
-from deezy.enums.atmos import AtmosMode, WarpMode
+from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import DeeDRC, LoudnessPreset, MeteringMode, StereoDownmix
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
@@ -199,7 +199,7 @@ class PayloadBuilder:
         payload_data.update(
             {
                 "atmos_mode": cls.safe_get(args, "atmos_mode", AtmosMode.STREAMING),
-                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", WarpMode.NORMAL),
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
                 "bed_conform": cls.safe_get(args, "bed_conform", False),
             }
         )
@@ -227,7 +227,7 @@ class PayloadBuilder:
         # AC4-specific fields
         payload_data.update(
             {
-                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", WarpMode.NORMAL),
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
                 "bed_conform": cls.safe_get(args, "bed_conform", False),
                 "ims_legacy_presentation": cls.safe_get(
                     args, "ims_legacy_presentation", False
