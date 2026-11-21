@@ -5653,6 +5653,1167 @@
  "ac4_output_bad": {
   "error": "InvalidExtensionError: AC-4 output must end with the suffix '.ac4'."
  },
+ "aac_2": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.033333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_1": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.034000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_6": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.034000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_8": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.034000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_3": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "2",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.033333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_7": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "2",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.033333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_441": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.034000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_heaac": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.089167",
+     "--data-rate",
+     "64",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "heaac"
+    ]
+   }
+  ]
+ },
+ "aac_heaacv2": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.150083",
+     "--data-rate",
+     "56",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "heaacv2"
+    ]
+   }
+  ]
+ },
+ "aac_lc_64": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.035625",
+     "--data-rate",
+     "64",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_lc_80": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.035458",
+     "--data-rate",
+     "80",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_lc_low": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.035625",
+     "--data-rate",
+     "56",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_heaac_100": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.090563",
+     "--data-rate",
+     "100",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "heaac"
+    ]
+   }
+  ]
+ },
+ "aac_heaacv2_high": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.149417",
+     "--data-rate",
+     "63",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "heaacv2"
+    ]
+   }
+  ]
+ },
+ "aac_delay_pos": {
+  "output": "/out/in [2.0] s1 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.aac.wav",
+     "-o",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--add-silence",
+     "0.066000:0",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_delay_neg": {
+  "output": "/out/in [2.0] s1 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.aac.wav",
+     "-o",
+     "/temp/job/in20s1r0wNone_ad27fe24a03d246e.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.083333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_filename_delay": {
+  "output": "/out/Movie DELAY -10.5ms [2.0] s1 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/Movie DELAY -10.5ms.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/MovieDELAY105ms20s1r0wNo_a45350cec12cc140.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/MovieDELAY105ms20s1r0wNo_a45350cec12cc140.aac.wav",
+     "-o",
+     "/temp/job/MovieDELAY105ms20s1r0wNo_a45350cec12cc140.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.043833",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_target": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.034000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_and_correct:preset=manual:dialogue_intelligence=1:speech_threshold=15:loudness_target=-23:peak_limit_db=-1",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_preset": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.034000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_and_correct:preset=ebu_r128",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
+ "aac_target_preset": {
+  "error": "UnsupportedDeeFeatureError: --loudness-target needs the manual loudness settings, so it can't be combined with --loudness-preset."
+ },
+ "aac_peak_only": {
+  "error": "UnsupportedDeeFeatureError: --peak-limit needs --loudness-target."
+ },
+ "aac_output_bad": {
+  "error": "InvalidExtensionError: AAC output must end with the suffix '.aac'."
+ },
+ "aac_output": {
+  "output": "/out/x.aac",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/x_11f6ad8ec52a2984.aac.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_aac_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/x_11f6ad8ec52a2984.aac.wav",
+     "-o",
+     "/temp/job/x_11f6ad8ec52a2984.aac",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.033333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "skip",
+     "-e",
+     "aaclc"
+    ]
+   }
+  ]
+ },
  "nopipe_auto": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
   "preview": false,
@@ -6669,6 +7830,181 @@
       "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
       "-ac",
       "8",
+      "-map_metadata",
+      "-1",
+      "-f",
+      "s24le",
+      "//./pipe/deezy-PID-JOB"
+     ]
+    }
+   }
+  ]
+ },
+ "pipe_aac_6": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "pipe": {
+     "dee": [
+      "/tools/dee/dee_aac_encoder",
+      "--loglevel",
+      "info",
+      "--progress",
+      "1",
+      "--overwrite",
+      "1",
+      "--temp-dir",
+      "/temp/job",
+      "--input-format",
+      "pcm_s24le:sample_rate=48000:channels=6:sample_count=2956800:streaming=1",
+      "-i",
+      "named_pipe:////./pipe/deezy-PID-JOB",
+      "-o",
+      "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+      "--timecode-frame-rate",
+      "23.976",
+      "--start",
+      "0.034000",
+      "--data-rate",
+      "192",
+      "--loudness-management",
+      "skip",
+      "-e",
+      "aaclc"
+     ],
+     "ffmpeg": [
+      "/tools/ffmpeg",
+      "-y",
+      "-drc_scale",
+      "0",
+      "-hide_banner",
+      "-v",
+      "quiet",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "pcm_s24le",
+      "-map_metadata",
+      "-1",
+      "-f",
+      "s24le",
+      "//./pipe/deezy-PID-JOB"
+     ]
+    }
+   }
+  ]
+ },
+ "pipe_aac_8_441": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "pipe": {
+     "dee": [
+      "/tools/dee/dee_aac_encoder",
+      "--loglevel",
+      "info",
+      "--progress",
+      "1",
+      "--overwrite",
+      "1",
+      "--temp-dir",
+      "/temp/job",
+      "--input-format",
+      "pcm_s24le:sample_rate=48000:channels=8:sample_count=2956800:streaming=1",
+      "-i",
+      "named_pipe:////./pipe/deezy-PID-JOB",
+      "-o",
+      "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+      "--timecode-frame-rate",
+      "23.976",
+      "--start",
+      "0.034000",
+      "--data-rate",
+      "192",
+      "--loudness-management",
+      "skip",
+      "-e",
+      "aaclc"
+     ],
+     "ffmpeg": [
+      "/tools/ffmpeg",
+      "-y",
+      "-drc_scale",
+      "0",
+      "-hide_banner",
+      "-v",
+      "quiet",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "pcm_s24le",
+      "-af",
+      "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+      "-ar",
+      "48000",
+      "-map_metadata",
+      "-1",
+      "-f",
+      "s24le",
+      "//./pipe/deezy-PID-JOB"
+     ]
+    }
+   }
+  ]
+ },
+ "pipe_aac_target": {
+  "output": "/out/in [2.0] s0 r0 wNone.aac",
+  "preview": false,
+  "steps": [
+   {
+    "pipe": {
+     "dee": [
+      "/tools/dee/dee_aac_encoder",
+      "--loglevel",
+      "info",
+      "--progress",
+      "1",
+      "--overwrite",
+      "1",
+      "--temp-dir",
+      "/temp/job",
+      "--input-format",
+      "pcm_s24le:sample_rate=48000:channels=2:sample_count=2956800:streaming=1",
+      "-i",
+      "named_pipe:////./pipe/deezy-PID-JOB",
+      "-o",
+      "/temp/job/in20s0r0wNone_de377edef4e7af71.aac",
+      "--timecode-frame-rate",
+      "23.976",
+      "--start",
+      "0.033333",
+      "--data-rate",
+      "192",
+      "--loudness-management",
+      "measure_and_correct:preset=manual:dialogue_intelligence=1:speech_threshold=15:loudness_target=-24",
+      "-e",
+      "aaclc"
+     ],
+     "ffmpeg": [
+      "/tools/ffmpeg",
+      "-y",
+      "-drc_scale",
+      "0",
+      "-hide_banner",
+      "-v",
+      "quiet",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "pcm_s24le",
       "-map_metadata",
       "-1",
       "-f",

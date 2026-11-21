@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 import deezy
+from deezy.enums.aac import AacProfile
 from deezy.enums.ac4 import Ac4Channels
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.dd import DolbyDigitalChannels
@@ -38,6 +39,15 @@ def accepted(path: tuple[str, ...]) -> set[int]:
     for key in path:
         node = node[key]
     return set(node["rates"])
+
+
+@pytest.mark.parametrize("profile", list(AacProfile), ids=str)
+def test_aac_choices_are_in_dee_range(profile):
+    low, high = RATES["dee_aac_encoder"][profile.value]
+    rates = profile.get_bitrate_obj()
+    assert min(rates.choices) == low
+    assert max(rates.choices) == high
+    assert rates.default in rates.choices
 
 
 @pytest.mark.parametrize(("member", "path"), CASES, ids=lambda c: str(c))

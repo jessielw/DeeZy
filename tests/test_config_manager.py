@@ -393,5 +393,37 @@ class TestConfigManagerUtilities:
         assert cm.has_valid_config() is False
 
 
+class TestDefaultBitrates:
+    """Rates keyed by mode or profile rather than by channels."""
+
+    def test_aac_rates_are_keyed_by_profile(self):
+        from deezy.enums.aac import AacProfile
+
+        cm = ConfigManager()
+        cm.config = {"default_bitrates": {"aac": {"aaclc": 160, "heaacv2": 48}}}
+        assert cm.get_default_bitrate("aac", AacProfile.AAC_LC) == 160
+        assert cm.get_default_bitrate("aac", "heaacv2") == 48
+        assert cm.get_default_bitrate("aac", AacProfile.HE_AAC) is None
+
+    def test_atmos_rates_take_the_mode_enum_or_its_name(self):
+        from deezy.enums.atmos import AtmosMode
+
+        cm = ConfigManager()
+        cm.config = {"default_bitrates": {"ddp-atmos": {"streaming": 576}}}
+        assert cm.get_default_bitrate("ddp-atmos", AtmosMode.STREAMING) == 576
+        assert cm.get_default_bitrate("ddp-atmos", "streaming") == 576
+
+    def test_shipped_config_has_the_aac_defaults(self):
+        from deezy.config.defaults import CONF_DEFAULT
+
+        cm = ConfigManager()
+        cm.config = tomlkit.parse(CONF_DEFAULT).unwrap()
+        assert cm.config["default_bitrates"]["aac"] == {
+            "aaclc": 192,
+            "heaac": 64,
+            "heaacv2": 56,
+        }
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

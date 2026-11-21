@@ -21,6 +21,7 @@ from deezy.enums.shared import (
     StereoDownmix,
 )
 from deezy.exceptions import UnsupportedDeeFeatureError
+from deezy.payloads.aac import AacPayload
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -32,6 +33,7 @@ from deezy.utils.paths import long_path_str
 DDP_TOOL = "dee_ddp_encoder"
 DDP_JOC_TOOL = "dee_ddpjoc_encoder"
 AC4_IMS_TOOL = "dee_ac4ims_encoder"
+AAC_TOOL = "dee_aac_encoder"
 
 
 @dataclass(frozen=True, slots=True)
@@ -216,6 +218,71 @@ def ac4ims_command(
     ]
 
 
+def aac_command(
+    tools: DeeTools,
+    payload: AacPayload,
+    files: DeeFiles,
+    *,
+    bitrate: int,
+    fps: DeeFPS,
+    delay: Delay,
+) -> list[str]:
+    """An AAC encode with dee_aac_encoder. The output is always 2.0."""
+    return [
+        *_common_args(
+            tools,
+            AAC_TOOL,
+            files,
+            input_format="wav",
+            temp_dir=True,
+            bitrate=bitrate,
+            fps=fps,
+            delay=delay,
+            payload=payload,
+            loudness_arg=aac_loudness(payload),
+        ),
+        "-e",
+        payload.aac_profile.to_dee_cmd(),
+    ]
+
+
+def aac_loudness(payload: AacPayload) -> str:
+    """
+    dee_aac_encoder's --loudness-management value.
+
+    AAC carries no loudness metadata and the encoder has no measure-only mode,
+    so DeeZy leaves the audio as it is (skip) unless a target or a regulation
+    asks for it to be corrected.
+    """
+    target = payload.loudness_target
+    peak = payload.peak_limit
+    preset = payload.loudness_preset
+    if peak is not None and target is None:
+        raise UnsupportedDeeFeatureError("--peak-limit needs --loudness-target.")
+    if preset is not LoudnessPreset.MANUAL:
+        if target is not None:
+            raise UnsupportedDeeFeatureError(
+                "--loudness-target needs the manual loudness settings, so it "
+                "can't be combined with --loudness-preset."
+            )
+        logger.info(
+            f"AAC carries no loudness metadata, so --loudness-preset corrects "
+            f"the audio to {preset.to_dee_cmd()}."
+        )
+        return "measure_and_correct:" + _options({"preset": preset.to_dee_cmd()})
+    if target is None:
+        return "skip"
+    options = {
+        "preset": "manual",
+        "dialogue_intelligence": _flag(payload.dialogue_intelligence),
+        "speech_threshold": str(payload.speech_threshold),
+        "loudness_target": str(target),
+    }
+    if peak is not None:
+        options["peak_limit_db"] = f"{peak:g}"
+    return "measure_and_correct:" + _options(options)
+
+
 def _common_args(
     tools: DeeTools,
     tool: str,
@@ -227,12 +294,14 @@ def _common_args(
     delay: Delay,
     payload: LoudnessPayload,
     temp_dir: bool = False,
+    loudness_arg: str | None = None,
 ) -> list[str]:
     """
     Options every encoder takes, in a stable order.
 
     ``temp_dir`` is for the encoders that have a ``--temp-dir`` option; the
-    others manage their temp files themselves.
+    others manage their temp files themselves. ``loudness_arg`` replaces the
+    usual ``--loudness-management`` value.
     """
     return [
         str(dee_tool(tools.dee_dir, tool)),
@@ -258,7 +327,7 @@ def _common_args(
         "--data-rate",
         str(bitrate),
         "--loudness-management",
-        loudness(payload),
+        loudness_arg or loudness(payload),
     ]
 
 

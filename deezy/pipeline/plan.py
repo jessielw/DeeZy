@@ -16,6 +16,7 @@ from deezy.config.manager import ConfigManager
 from deezy.dee.commands import (
     DeeFiles,
     DeeTools,
+    aac_command,
     ac4ims_command,
     ddp_command,
     ddpjoc_command,
@@ -45,6 +46,7 @@ from deezy.exceptions import (
     PipeError,
     UnsupportedDeeFeatureError,
 )
+from deezy.payloads.aac import AacPayload
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -185,6 +187,8 @@ def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         return _plan_ddp_atmos(payload, info, ctx)
     if isinstance(payload, Ac4Payload):
         return _plan_ac4_ims(payload, info, ctx)
+    if isinstance(payload, AacPayload):
+        return _plan_aac(payload, info, ctx)
     raise TypeError(f"no plan for {type(payload).__name__}")
 
 
@@ -372,11 +376,22 @@ def _output(
 
 
 def _compensate(
-    delay: Delay, spec: FormatSpec, dee_input_channels: int, dee_output_channels: int
+    delay: Delay,
+    spec: FormatSpec,
+    dee_input_channels: int,
+    dee_output_channels: int,
+    *,
+    mode: str | None = None,
+    bitrate: int | None = None,
 ) -> Delay:
-    """`delay`, less the samples DEE adds to this encode."""
+    """
+    `delay`, less the samples DEE adds to this encode. ``mode`` and ``bitrate``
+    are for an encoder whose delay depends on the rate.
+    """
     channel_change = dee_input_channels != dee_output_channels
-    delay = delay.compensated(compensation(spec, channel_change=channel_change))
+    delay = delay.compensated(
+        compensation(spec, channel_change=channel_change, mode=mode, bitrate=bitrate)
+    )
     if channel_change:
         logger.debug(
             f"DEE changes {dee_input_channels} channels to {dee_output_channels}, "
@@ -992,6 +1007,65 @@ def _plan_ac4_ims(
         output=output,
         temp_dir=ctx.temp_dir,
         steps=tuple(steps),
+        free_space_needed=info.recommended_free_space,
+        preview=preview,
+    )
+
+
+# --- AAC
+
+
+def _plan_aac(payload: AacPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobPlan:
+    spec = get_format("aac")
+    profile = payload.aac_profile
+    source_channels = info.channels
+    bitrate = resolve_bitrate(
+        ctx.config,
+        CodecFormat.AAC,
+        payload.bitrate,
+        profile,
+        info,
+        profile.get_bitrate_obj(),
+        source_channels,
+        None,
+        lambda _source: profile,
+    )
+
+    delay = get_delay(payload)
+    fps = get_fps(info.fps)
+    output, preview = _output(payload, info, ctx, spec, "AAC", "2.0", delay)
+
+    # dee_aac_encoder takes 1.0, 2.0, 5.1 and 7.1 and always encodes 2.0;
+    # FFmpeg downmixes any other layout to 2.0 first
+    ffmpeg_down_mix = None if source_channels in DEE_INPUT_CHANNELS else 2
+    dee_input_channels = ffmpeg_down_mix or source_channels
+    delay = _compensate(
+        delay, spec, dee_input_channels, 2, mode=profile.value, bitrate=bitrate
+    )
+
+    transport = choose_transport(
+        payload,
+        ctx,
+        ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.AAC}.wav",
+        dee_input_channels,
+        info.duration,
+    )
+    resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
+    filters = _filter_args(_PAN_7_1 if source_channels == 8 else None, resample)
+    if ffmpeg_down_mix:
+        filters += ["-ac", str(ffmpeg_down_mix)]
+
+    files = _dee_files(ctx, transport, output)
+    dee_argv = aac_command(
+        _tools(payload, ctx), payload, files, bitrate=bitrate, fps=fps, delay=delay
+    )
+    dee = DeeStep(tuple(dee_argv), files.output)
+    return JobPlan(
+        format=spec.name,
+        source=Path(payload.file_input),
+        output=output,
+        temp_dir=ctx.temp_dir,
+        steps=_pcm_steps(payload, filters, transport, str(CodecFormat.AAC), info, dee),
         free_space_needed=info.recommended_free_space,
         preview=preview,
     )

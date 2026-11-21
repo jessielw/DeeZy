@@ -161,6 +161,24 @@ def test_compensation_per_format(name, channel_change, samples):
 
 
 @pytest.mark.parametrize(
+    ("mode", "bitrate", "channel_change", "samples"),
+    [
+        ("aaclc", 192, False, 1600),
+        ("aaclc", 192, True, 1632),
+        ("aaclc", 64, False, 1710),
+        ("heaac", 64, True, 4312),
+        ("heaacv2", 56, False, 7172),
+    ],
+)
+def test_aac_compensation_follows_the_rate(mode, bitrate, channel_change, samples):
+    spec = get_format("aac")
+    assert (
+        compensation(spec, channel_change=channel_change, mode=mode, bitrate=bitrate)
+        == samples
+    )
+
+
+@pytest.mark.parametrize(
     ("name", "delay"),
     [
         ("Movie DELAY -10.5ms.ac3", "-10.5ms"),

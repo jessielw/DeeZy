@@ -95,14 +95,27 @@ def seconds_arg(samples: int, *, truncated: bool = False) -> str:
     return f"{us // 1_000_000}.{us % 1_000_000:06d}"
 
 
-def compensation(spec: FormatSpec, *, channel_change: bool = False) -> int:
+def compensation(
+    spec: FormatSpec,
+    *,
+    channel_change: bool = False,
+    mode: str | None = None,
+    bitrate: int | None = None,
+) -> int:
     """
     The samples DEE adds to an encode, which the encode takes off.
 
     ``channel_change`` is for an encode where DEE itself changes the channel
-    count, which adds the spec's channel-change samples.
+    count, which adds the spec's channel-change samples. ``mode`` and
+    ``bitrate`` pick the delay of an encoder whose delay depends on the rate
+    (AAC).
     """
-    return spec.delay_samples + (spec.channel_change_samples if channel_change else 0)
+    base = spec.delay_samples
+    if bitrate is not None:
+        at_rate = spec.mode(mode).delay_at(bitrate)
+        if at_rate is not None:
+            base = at_rate
+    return base + (spec.channel_change_samples if channel_change else 0)
 
 
 @dataclass(frozen=True, slots=True)

@@ -290,6 +290,50 @@ SCENARIOS = [
     ("ac4_bitrate", ["ac4-ims", "--bitrate", "100"], info(6), MKV),
     ("ac4_delay", ["ac4-ims", "--delay=-5ms"], info(6), MKV),
     ("ac4_output_bad", ["ac4-ims", "--output", str(OUT / "x.ec3")], info(6), MKV),
+    # --- aac (always 2.0 out; delay per rate, +32 unless DEE gets 2.0)
+    ("aac_2", ["aac"], info(2), MKV),
+    ("aac_1", ["aac"], info(1), MKV),
+    ("aac_6", ["aac"], info(6), MKV),
+    ("aac_8", ["aac"], info(8), MKV),
+    ("aac_3", ["aac"], info(3), MKV),
+    ("aac_7", ["aac"], info(7), MKV),
+    ("aac_441", ["aac"], info(6, rate=44100), MKV),
+    ("aac_heaac", ["aac", "--aac-profile", "heaac"], info(2), MKV),
+    ("aac_heaacv2", ["aac", "--aac-profile", "heaacv2"], info(6), MKV),
+    ("aac_lc_64", ["aac", "--bitrate", "64"], info(2), MKV),
+    ("aac_lc_80", ["aac", "--bitrate", "80"], info(2), MKV),
+    ("aac_lc_low", ["aac", "--bitrate", "20"], info(2), MKV),
+    (
+        "aac_heaac_100",
+        ["aac", "--aac-profile", "heaac", "--bitrate", "100"],
+        info(2),
+        MKV,
+    ),
+    (
+        "aac_heaacv2_high",
+        ["aac", "--aac-profile", "heaacv2", "--bitrate", "96"],
+        info(2),
+        MKV,
+    ),
+    ("aac_delay_pos", ["aac", "--delay=100ms"], info(6), MKV),
+    ("aac_delay_neg", ["aac", "--delay=-50ms"], info(2), MKV),
+    ("aac_filename_delay", ["aac"], info(2), DELAYED),
+    (
+        "aac_target",
+        ["aac", "--loudness-target", "-23", "--peak-limit", "-1"],
+        info(6),
+        MKV,
+    ),
+    ("aac_preset", ["aac", "--loudness-preset", "ebu_r128"], info(6), MKV),
+    (
+        "aac_target_preset",
+        ["aac", "--loudness-target", "-23", "--loudness-preset", "ebu_r128"],
+        info(6),
+        MKV,
+    ),
+    ("aac_peak_only", ["aac", "--peak-limit", "-1"], info(6), MKV),
+    ("aac_output_bad", ["aac", "--output", str(OUT / "x.m4a")], info(2), MKV),
+    ("aac_output", ["aac", "--output", str(OUT / "x.aac")], info(2), MKV),
     # --- --pipe where DeeZy doesn't pipe (anything but Windows)
     ("nopipe_auto", ["ddp", "--pipe", "auto"], info(6), MKV),
     ("nopipe_always", ["ddp", "--pipe", "always"], info(6), MKV),
@@ -325,6 +369,9 @@ PIPE_SCENARIOS = [
     ),
     ("pipe_bluray_8", ["ddp-bluray"], info(8), MKV),
     ("pipe_bluray_10", ["ddp-bluray"], info(10), MKV),
+    ("pipe_aac_6", ["aac"], info(6), MKV),
+    ("pipe_aac_8_441", ["aac"], info(8, rate=44100), MKV),
+    ("pipe_aac_target", ["aac", "--loudness-target", "-24"], info(2), MKV),
     # these keep their WAV or DAMF
     ("pipe_ac4_6", ["ac4-ims"], info(6), MKV),
     ("pipe_atmos_thd", ["ddp-atmos"], info(8, thd=True), MKV),
@@ -339,6 +386,7 @@ BUILDERS = {
     "ddp-bluray": PayloadBuilder.build_ddp_payload,
     "ddp-atmos": PayloadBuilder.build_atmos_payload,
     "ac4-ims": PayloadBuilder.build_ac4_payload,
+    "aac": PayloadBuilder.build_aac_payload,
 }
 
 

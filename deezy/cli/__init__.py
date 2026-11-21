@@ -27,6 +27,7 @@ from deezy.cli.utils import (
 from deezy.config.defaults import get_default_config_path
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.enums import case_insensitive_enum, enum_choices
+from deezy.enums.aac import AacProfile
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
@@ -611,6 +612,20 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             help="Dynamic range compression settings for AC4.",
         )
 
+    # AAC options
+    aac_options_group = argparse.ArgumentParser(add_help=False)
+    aac_options_group.add_argument(
+        "--aac-profile",
+        type=case_insensitive_enum(AacProfile),
+        choices=AacProfile,
+        metavar=enum_choices(AacProfile),
+        default=AacProfile.AAC_LC,
+        help=(
+            "AAC profile: aaclc (56-576 kbps, default 192), heaac (16-143, "
+            "default 64) or heaacv2 (14-63, default 56). The output is always 2.0."
+        ),
+    )
+
     # preset metering mode (full choices for flexibility)
     preset_metering_group = argparse.ArgumentParser(add_help=False)
     preset_metering_group.add_argument(
@@ -621,7 +636,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
-    # how FFmpeg's PCM reaches DEE (DD, DD+ and DD+ Blu-ray)
+    # how FFmpeg's PCM reaches DEE (DD, DD+, DD+ Blu-ray and AAC)
     pcm_transport_group = argparse.ArgumentParser(add_help=False)
     pcm_transport_group.add_argument(
         "--pipe",
@@ -667,6 +682,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "truehdd_options_group": truehdd_options_group,
         "ac4_basic_options_group": ac4_basic_options_group,
         "ac4_drc_group": ac4_drc_group,
+        "aac_options_group": aac_options_group,
         "preset_channels_group": preset_channels_group,
         "pcm_transport_group": pcm_transport_group,
     }
@@ -797,6 +813,25 @@ def create_encode_parsers(
         ),
     )
 
+    ### AAC Command ###
+    _encode_aac_parser = encode_subparsers.add_parser(
+        "aac",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["bitrate_group"],
+            argument_groups["loudness_group"],
+            argument_groups["loudness_correction_group"],
+            argument_groups["aac_options_group"],
+            argument_groups["pcm_transport_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
     ### Preset Command ###
     encode_preset_parser = encode_subparsers.add_parser(
         "preset",
@@ -815,6 +850,7 @@ def create_encode_parsers(
             argument_groups["truehdd_options_group"],
             argument_groups["ac4_basic_options_group"],
             argument_groups["ac4_drc_group"],
+            argument_groups["aac_options_group"],
             argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
@@ -1065,6 +1101,7 @@ def encode_single_file(
         "ddp-bluray": PayloadBuilder.build_ddp_payload,
         "ddp-atmos": PayloadBuilder.build_atmos_payload,
         "ac4-ims": PayloadBuilder.build_ac4_payload,
+        "aac": PayloadBuilder.build_aac_payload,
     }
     if args.format_command in builders:
         payload = builders[args.format_command](

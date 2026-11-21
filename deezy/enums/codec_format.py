@@ -11,6 +11,7 @@ class CodecFormat(CaseInsensitiveEnum):
     DDP_BLURAY = "ddp-bluray"
     DDP_ATMOS = "ddp-atmos"
     AC4_IMS = "ac4-ims"
+    AAC = "aac"
 
     @override
     def __str__(self) -> str:

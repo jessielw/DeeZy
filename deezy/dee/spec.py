@@ -29,6 +29,10 @@ CHANNEL_CHANGE_SAMPLES = 32
 # list for it
 _SHIM_DDP_71_RATES = (384, 448, 504, 576, 640, 704, 768, 832, 896, 960, 1008, 1024)
 
+# dee_aac_encoder's own default rates, from its --help (the probe records only
+# the ranges)
+_AAC_DEE_AUTO = {"aaclc": 64, "heaac": 64, "heaacv2": 56}
+
 
 @cache
 def fixture() -> Mapping[str, Any]:
@@ -69,6 +73,18 @@ class ModeSpec:
     # the encoder's -e mode, or '' for a tool that takes none
     dee_mode: str
     layouts: Mapping[str, LayoutSpec]
+    # (lowest kbps, highest kbps, samples) for an encoder whose delay depends on
+    # the data rate; empty when the format's delay_samples applies
+    delay_bands: tuple[tuple[int, int, int], ...] = ()
+
+    def delay_at(self, bitrate: int) -> int | None:
+        """The delay at ``bitrate``, or None when the mode has no bands."""
+        for low, high, samples in self.delay_bands:
+            if low <= bitrate <= high:
+                return samples
+        if self.delay_bands:
+            raise ValueError(f"no {self.dee_mode} delay recorded for {bitrate} kbps")
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +155,27 @@ def _probed(default: int, *path: str) -> LayoutSpec:
     if default not in rates.choices:
         raise ValueError(f"default {default} is not a rate DEE takes for {path}")
     return LayoutSpec(rates)
+
+
+def _aac(mode: str, default: int) -> ModeSpec:
+    """
+    A dee_aac_encoder mode. It takes every whole kbps in its range, and its
+    delay depends on the rate.
+    """
+    low, high = fixture()["rates"]["dee_aac_encoder"][mode]
+    rates = ChannelBitrates(
+        default=default,
+        choices=tuple(range(low, high + 1)),
+        dee_auto=_AAC_DEE_AUTO[mode],
+    )
+    if default not in rates.choices:
+        raise ValueError(f"default {default} is not a rate DEE takes for {mode}")
+    bands = fixture()["delays"]["aac_codec_delay_bands"][mode]
+    return ModeSpec(
+        mode,
+        {"2.0": LayoutSpec(rates)},
+        delay_bands=tuple((low, high, samples) for low, high, samples in bands),
+    )
 
 
 def _ddp(mode: str, defaults: Mapping[str, int]) -> ModeSpec:
@@ -229,6 +266,21 @@ def formats() -> Mapping[str, FormatSpec]:
             # unmeasured: no AC-4 decoder here, so DeeZy keeps 1.5.0's value
             DDP_DELAY_SAMPLES,
             0,
+        ),
+        FormatSpec(
+            "aac",
+            tool("dee_aac_encoder"),
+            # DeeZy's default raises only AAC-LC above DEE's 64 kbps
+            {
+                "aaclc": _aac("aaclc", 192),
+                "heaac": _aac("heaac", 64),
+                "heaacv2": _aac("heaacv2", 56),
+            },
+            (".aac",),
+            # the delay is per rate (delay_bands); none is fixed
+            0,
+            # the output is always 2.0, so any other input is a channel change
+            CHANNEL_CHANGE_SAMPLES,
         ),
     )
     return {spec.name: spec for spec in table}

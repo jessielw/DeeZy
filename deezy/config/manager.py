@@ -187,9 +187,11 @@ class ConfigManager:
         if not format_bitrates:
             return None
 
-        # for DD+ Atmos, use the mode (streaming/bluray)
-        if format_str == "ddp-atmos" and channels_or_mode:
-            return format_bitrates.get(channels_or_mode)
+        # DD+ Atmos is keyed by its mode (streaming/bluray), AAC by its
+        # profile (aaclc/heaac/heaacv2)
+        if format_str in ("ddp-atmos", "aac") and channels_or_mode:
+            key = getattr(channels_or_mode, "value", channels_or_mode)
+            return format_bitrates.get(str(key).lower())
 
         # for DD/DDP, use channel configuration
         if channels_or_mode:

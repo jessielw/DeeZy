@@ -285,6 +285,11 @@ def apply_default_bitrate(
                     if hasattr(args.atmos_mode, "value")
                     else str(args.atmos_mode)
                 )
+        elif args.format_command == "aac":
+            # AAC's rates are per profile; the output is always 2.0
+            profile = getattr(args, "aac_profile", None)
+            if profile:
+                channels_or_mode = getattr(profile, "value", str(profile))
         else:
             if hasattr(args, "channels") and args.channels:
                 channels_or_mode = args.channels

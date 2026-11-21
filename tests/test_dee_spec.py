@@ -20,6 +20,10 @@ DEFAULTS = {
     ("ddp-atmos", "streaming", "atmos"): 448,
     ("ddp-atmos", "bluray", "atmos"): 1280,
     ("ac4-ims", "ims", "2.0"): 256,
+    # DeeZy raises only AAC-LC above Dolby's 64 kbps
+    ("aac", "aaclc", "2.0"): 192,
+    ("aac", "heaac", "2.0"): 64,
+    ("aac", "heaacv2", "2.0"): 56,
 }
 
 
@@ -107,6 +111,50 @@ def test_extensions():
     assert spec.get_format("dd").extension == ".ac3"
     assert spec.get_format("ddp").extensions == (".ec3", ".eac3")
     assert spec.get_format("ac4-ims").extension == ".ac4"
+    assert spec.get_format("aac").extension == ".aac"
+
+
+@pytest.mark.parametrize(
+    ("mode", "low", "high", "auto"),
+    [("aaclc", 56, 576, 64), ("heaac", 16, 143, 64), ("heaacv2", 14, 63, 56)],
+)
+def test_aac_takes_every_whole_rate_in_its_range(mode, low, high, auto):
+    rates = spec.get_format("aac").rates("2.0", mode=mode)
+    assert rates.choices == tuple(range(low, high + 1))
+    assert rates.dee_auto == auto
+
+
+@pytest.mark.parametrize(
+    ("mode", "rate", "samples"),
+    [
+        ("aaclc", 56, 1710),
+        ("aaclc", 71, 1710),
+        ("aaclc", 72, 1702),
+        ("aaclc", 87, 1702),
+        ("aaclc", 88, 1600),
+        ("aaclc", 576, 1600),
+        ("heaac", 16, 4480),
+        ("heaac", 64, 4280),
+        ("heaac", 76, 4347),
+        ("heaacv2", 14, 7172),
+        ("heaacv2", 63, 7172),
+    ],
+)
+def test_aac_delay_follows_the_rate(mode, rate, samples):
+    assert spec.get_format("aac").mode(mode).delay_at(rate) == samples
+
+
+def test_aac_delay_bands_cover_every_rate():
+    fmt = spec.get_format("aac")
+    for name, mode in fmt.modes.items():
+        for rate in mode.layouts["2.0"].rates.choices:
+            assert mode.delay_at(rate) is not None, (name, rate)
+    with pytest.raises(ValueError, match="no aaclc delay"):
+        fmt.mode("aaclc").delay_at(600)
+
+
+def test_fixed_delay_formats_have_no_bands():
+    assert spec.get_format("ddp").mode().delay_at(448) is None
 
 
 @pytest.mark.parametrize(

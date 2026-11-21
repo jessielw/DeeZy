@@ -66,7 +66,7 @@ overwrite = false
 jitter_ms = 0
 # Allow automatic system sleep during encoding. By default DeeZy keeps the system awake.
 allow_sleep = false
-# How FFmpeg's audio reaches DEE for dd, ddp and ddp-bluray: "auto" pipes it on
+# How FFmpeg's audio reaches DEE for dd, ddp, ddp-bluray and aac: "auto" pipes it on
 # Windows (a temp WAV elsewhere or with --reuse-temp-files), "always" pipes it or
 # refuses the job, "never" always writes the temp WAV.
 pipe = "auto"
@@ -181,6 +181,12 @@ immersive_stereo = 256 # AC4 Immersive Stereo
 # ch_7_atmos = 320
 # ch_8 = 256
 # ch_8_atmos = 320
+
+# Default bitrates for AAC (always 2.0 out), by profile
+[default_bitrates.aac]
+aaclc = 192   # AAC-LC, 56-576
+heaac = 64    # HE-AAC, 16-143
+heaacv2 = 56  # HE-AAC v2, 14-63
 
 [presets]
 # Example presets - customize as needed

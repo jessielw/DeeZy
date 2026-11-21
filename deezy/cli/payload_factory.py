@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from deezy.enums.aac import AacProfile
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import (
@@ -12,6 +13,7 @@ from deezy.enums.shared import (
     PipeMode,
     StereoDownmix,
 )
+from deezy.payloads.aac import AacPayload
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -259,3 +261,27 @@ class PayloadBuilder:
         )
 
         return Ac4Payload(**payload_data)
+
+    @classmethod
+    def build_aac_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> AacPayload:
+        """Build AAC payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_aac_encoder measures to 1770-4 only, and only when it corrects
+        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_correction_fields(args))
+        payload_data["aac_profile"] = cls.safe_get(
+            args, "aac_profile", AacProfile.AAC_LC
+        )
+        return AacPayload(**payload_data)
