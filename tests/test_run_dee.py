@@ -57,3 +57,12 @@ def test_custom_dialnorm_reaches_the_progress_display(tmp_path, monkeypatch):
     step = DeeStep(("dee_ddp_encoder",), tmp_path / "job.ec3", custom_dialnorm=-27)
     run.run_dee(step, no_progress_bars=True)
     assert seen["custom_dialnorm"] == -27
+
+
+def test_a_missing_dee_tool_is_named(tmp_path):
+    from deezy.exceptions import DependencyNotFoundError
+
+    tool = tmp_path / "dee_dthd_encoder.exe"
+    step = DeeStep((str(tool), "--loglevel", "info"), tmp_path / "job.thd")
+    with pytest.raises(DependencyNotFoundError, match="without the TrueHD encoder"):
+        run.run_dee(step, no_progress_bars=True)

@@ -19,6 +19,7 @@ from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.measure import MeasurePayload
+from deezy.payloads.thd import TrueHDPayload
 
 
 @dataclass(slots=True)
@@ -358,3 +359,30 @@ class PayloadBuilder:
             }
         )
         return MeasurePayload(**payload_data)
+
+    @classmethod
+    def build_thd_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> TrueHDPayload:
+        """Build the channel-based TrueHD payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_dthd_encoder measures to 1770-4 only
+        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(
+            {
+                "channels": cls.safe_get(args, "channels"),
+                "drc": cls.safe_get(args, "drc", DeeDRC.FILM_LIGHT),
+                "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
+            }
+        )
+        return TrueHDPayload(**payload_data)

@@ -22,6 +22,7 @@ from deezy.dee.commands import (
     ddp_command,
     ddpjoc_command,
     measure_command,
+    thd_command,
 )
 from deezy.dee.spec import FormatSpec, get_format
 from deezy.delay import Delay, compensation
@@ -39,6 +40,7 @@ from deezy.enums.shared import (
     StereoDownmix,
     TrackType,
 )
+from deezy.enums.thd import TrueHDChannels
 from deezy.exceptions import (
     AutoChannelDetectionError,
     ChannelMixError,
@@ -55,6 +57,7 @@ from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.measure import MeasurePayload
 from deezy.payloads.shared import ChannelBitrates, CorePayload
+from deezy.payloads.thd import TrueHDPayload
 from deezy.pipeline.transport import NamedPipe, Transport, WavFile, expected_samples
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
@@ -194,6 +197,8 @@ def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         return _plan_aac(payload, info, ctx)
     if isinstance(payload, Ac4ChannelPayload):
         return _plan_ac4(payload, info, ctx)
+    if isinstance(payload, TrueHDPayload):
+        return _plan_thd(payload, info, ctx)
     raise TypeError(f"no plan for {type(payload).__name__}")
 
 
@@ -436,12 +441,14 @@ def ffmpeg_argv(
     )
 
 
-def _filter_args(mix: str | None, resample: bool) -> list[str]:
-    """``-af`` with a channel mix, the 48 kHz resampler, or both."""
+def _filter_args(
+    mix: str | None, resample: bool, rate: int = DEE_SAMPLE_RATE
+) -> list[str]:
+    """``-af`` with a channel mix, the resampler to ``rate``, or both."""
     chain = [f for f in (mix, _RESAMPLE if resample else None) if f]
     args = ["-af", ",".join(chain)] if chain else []
     if resample:
-        args += ["-ar", str(DEE_SAMPLE_RATE)]
+        args += ["-ar", str(rate)]
     return args
 
 
@@ -1172,6 +1179,111 @@ def _plan_aac(payload: AacPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     )
 
 
+# --- channel-based TrueHD
+
+# FFmpeg's conversions that keep each source channel as it is and add silent
+# ones (a back centre, which TrueHD has no slot for, is split between the
+# surrounds)
+_MONO_TO_STEREO = "pan=stereo|c0=c0|c1=c0"
+_PAD_TO_51 = "aformat=channel_layouts=5.1|5.1(side)"
+_PAD_TO_71 = "aformat=channel_layouts=7.1"
+THD_SAMPLE_RATES = (48000, 96000)
+
+
+def thd_channel_resolver(source_channels: int) -> TrueHDChannels:
+    """The TrueHD layout AUTO picks: the smallest that holds every channel."""
+    if source_channels <= 2:
+        return TrueHDChannels.STEREO
+    if source_channels <= 6:
+        return TrueHDChannels.SURROUND
+    return TrueHDChannels.SURROUNDEX
+
+
+def thd_sample_rate(source_rate: int | None) -> int:
+    """The rate DEE encodes: 96 kHz for a source above 48 kHz, else 48 kHz."""
+    return 96000 if source_rate and source_rate > 48000 else 48000
+
+
+def _thd_mix(
+    source_channels: int, channels: TrueHDChannels
+) -> tuple[str | None, int | None]:
+    """The ``-af`` channel filter and the ``-ac`` count that give DEE ``channels``."""
+    if channels is TrueHDChannels.SURROUNDEX:
+        # DEE's 7.1 has the sides before the backs
+        if source_channels == 8:
+            return _PAN_7_1, None
+        return f"{_PAD_TO_71},{_PAN_7_1}", None
+    if source_channels == channels.value:
+        return None, None
+    if source_channels < channels.value:
+        return (_MONO_TO_STEREO if source_channels == 1 else _PAD_TO_51), None
+    # a downmix the user asked for
+    return None, channels.value
+
+
+def _plan_thd(
+    payload: TrueHDPayload, info: AudioTrackInfo, ctx: PlanContext
+) -> JobPlan:
+    spec = get_format("thd")
+    source_channels = info.channels
+    fits = thd_channel_resolver(source_channels)
+    channels = payload.channels
+    if channels is TrueHDChannels.AUTO:
+        channels = fits
+        logger.info(f"No supplied channels, defaulting to {channels}.")
+    elif channels.value > fits.value:
+        raise ChannelMixError("Up-mixing is not supported.")
+    if source_channels == 1:
+        logger.info(
+            "TrueHD has no 1.0 layout, so the mono source is encoded as 2.0 with "
+            "the source unchanged in both channels."
+        )
+    elif source_channels < channels.value:
+        logger.info(
+            f"TrueHD has no {source_channels}-channel layout, so the source is "
+            f"encoded as {channels} with silent channels added. Every channel is "
+            "kept as it is, except a back centre, which is split between the "
+            "surrounds."
+        )
+
+    rate = thd_sample_rate(info.sample_rate)
+    if rate == 96000:
+        logger.info(
+            "DEE applies its apodizing filter to a 96 kHz TrueHD encode, so the "
+            "audio is filtered, not bit-exact; dee_shim can turn it off."
+        )
+
+    delay = get_delay(payload).compensated(compensation(spec))
+    fps = get_fps(info.fps)
+    output, preview = _output(payload, info, ctx, spec, "TrueHD", str(channels), delay)
+
+    # dee_dthd_encoder reads WAV only
+    wav = WavFile(ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.THD}.wav")
+    mix, down_mix = _thd_mix(source_channels, channels)
+    filters = _filter_args(mix, info.sample_rate != rate, rate)
+    if down_mix:
+        filters += ["-ac", str(down_mix)]
+
+    files = _dee_files(ctx, wav, output)
+    dee_argv = thd_command(
+        _tools(payload, ctx),
+        replace(payload, channels=channels),
+        files,
+        fps=fps,
+        delay=delay,
+    )
+    dee = DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm)
+    return JobPlan(
+        format=spec.name,
+        source=Path(payload.file_input),
+        output=output,
+        temp_dir=ctx.temp_dir,
+        steps=_pcm_steps(payload, filters, wav, str(CodecFormat.THD), info, dee),
+        free_space_needed=info.recommended_free_space,
+        preview=preview,
+    )
+
+
 # --- loudness measurement
 
 # the layouts dee_measure_loudness reads; FFmpeg pads 3 to 5 channels to 5.1
@@ -1213,7 +1325,9 @@ def plan_measure(
         )
         truehdd, dee_input = _atmos_input(payload, info, ctx, MEASURE)
         if dee_input is None:
-            raise InvalidAtmosInputError("Cannot process input, not a valid Atmos format")
+            raise InvalidAtmosInputError(
+                "Cannot process input, not a valid Atmos format"
+            )
         files = DeeFiles(input=dee_input, output=manifest, temp_dir=ctx.temp_dir)
         dee = DeeStep(
             tuple(measure_command(tools, payload, files, input_format="atmos_mezz")),

@@ -276,6 +276,9 @@ def apply_default_bitrate(
     # plain DD+ rates configured for its layout would override them
     if getattr(args, "bluray_secondary", False):
         return
+    # TrueHD is lossless and has no data rate
+    if getattr(args, "format_command", None) == "thd":
+        return
     if not hasattr(args, "bitrate") or args.bitrate is None:
         channels_or_mode = None
         if args.format_command == "ddp-atmos":

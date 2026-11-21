@@ -42,6 +42,7 @@ from deezy.enums.shared import (
     StereoDownmix,
     TrackType,
 )
+from deezy.enums.thd import TrueHDChannels
 from deezy.exceptions import OutputExistsError
 from deezy.pipeline.encode import encode
 from deezy.pipeline.measure import measure, summary
@@ -643,6 +644,36 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         ),
     )
 
+    # TrueHD options
+    thd_options_group = argparse.ArgumentParser(add_help=False)
+    thd_options_group.add_argument(
+        "--channels",
+        type=case_insensitive_enum(TrueHDChannels),
+        choices=TrueHDChannels,
+        default=TrueHDChannels.AUTO,
+        metavar=enum_choices(TrueHDChannels),
+        help=(
+            "The number of channels: 2.0, 5.1 or 7.1. Auto takes the smallest that "
+            "holds every source channel, filling the rest with silence."
+        ),
+    )
+    # dee_dthd_encoder has no 'none'
+    thd_drc_choices = tuple(drc for drc in DeeDRC if drc is not DeeDRC.NONE)
+    thd_options_group.add_argument(
+        "--drc",
+        type=case_insensitive_enum(DeeDRC),
+        choices=thd_drc_choices,
+        metavar=enum_choices(thd_drc_choices),
+        default=DeeDRC.FILM_LIGHT,
+        help="Dynamic range compression profile, for every presentation.",
+    )
+    thd_options_group.add_argument(
+        "--custom-dialnorm",
+        type=dialnorm_options,
+        default=0,
+        help="Custom dialnorm (0 disables custom dialnorm).",
+    )
+
     # AAC options
     aac_options_group = argparse.ArgumentParser(add_help=False)
     aac_options_group.add_argument(
@@ -763,6 +794,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "ac4_ims_drc_group": ac4_ims_drc_group,
         "ac4_channels_group": ac4_channels_group,
         "aac_options_group": aac_options_group,
+        "thd_options_group": thd_options_group,
         "preset_channels_group": preset_channels_group,
         "pcm_transport_group": pcm_transport_group,
     }
@@ -927,6 +959,22 @@ def create_encode_parsers(
             argument_groups["loudness_correction_group"],
             argument_groups["aac_options_group"],
             argument_groups["pcm_transport_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
+    ### TrueHD Command ###
+    _encode_thd_parser = encode_subparsers.add_parser(
+        "thd",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["loudness_group"],
+            argument_groups["thd_options_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -1233,6 +1281,7 @@ def encode_single_file(
         "ac4": PayloadBuilder.build_ac4_channel_payload,
         "ac4-ims": PayloadBuilder.build_ac4_payload,
         "aac": PayloadBuilder.build_aac_payload,
+        "thd": PayloadBuilder.build_thd_payload,
     }
     if args.format_command in builders:
         payload = builders[args.format_command](

@@ -379,6 +379,44 @@ SCENARIOS = [
     ("nopipe_always", ["ddp", "--pipe", "always"], info(6), MKV),
 ]
 
+# --- thd (channel-based TrueHD: lossless, WAV only, 48 or 96 kHz)
+THD_SCENARIOS = [
+    ("thd_auto_2", ["thd"], info(2), MKV),
+    ("thd_auto_6", ["thd"], info(6), MKV),
+    ("thd_auto_8", ["thd"], info(8), MKV),
+    ("thd_auto_1", ["thd"], info(1), MKV),
+    ("thd_auto_3", ["thd"], info(3), MKV),
+    ("thd_auto_5", ["thd"], info(5), MKV),
+    ("thd_auto_7", ["thd"], info(7), MKV),
+    ("thd_auto_10", ["thd"], info(10), MKV),
+    ("thd_51_from8", ["thd", "--channels", "6"], info(8), MKV),
+    ("thd_20_from6", ["thd", "--channels", "2"], info(6), MKV),
+    ("thd_20_from8", ["thd", "--channels", "2"], info(8), MKV),
+    ("thd_51_from5", ["thd", "--channels", "6"], info(5), MKV),
+    ("thd_20_from1", ["thd", "--channels", "2"], info(1), MKV),
+    ("thd_51_from2", ["thd", "--channels", "6"], info(2), MKV),
+    ("thd_71_from6", ["thd", "--channels", "8"], info(6), MKV),
+    ("thd_96k", ["thd"], info(8, rate=96000), MKV),
+    ("thd_441", ["thd"], info(2, rate=44100), MKV),
+    ("thd_882", ["thd"], info(6, rate=88200), MKV),
+    ("thd_192k", ["thd"], info(2, rate=192000), MKV),
+    ("thd_drc_8", ["thd", "--drc", "speech"], info(8), MKV),
+    ("thd_drc_6", ["thd", "--drc", "music_light"], info(6), MKV),
+    ("thd_drc_2", ["thd", "--drc", "film_standard"], info(2), MKV),
+    ("thd_dialnorm", ["thd", "--custom-dialnorm", "-27"], info(6), MKV),
+    ("thd_preset", ["thd", "--loudness-preset", "ebu_r128"], info(6), MKV),
+    ("thd_manual", ["thd", "--no-dialogue-intelligence"], info(6), MKV),
+    ("thd_delay_pos", ["thd", "--delay=100ms"], info(6), MKV),
+    ("thd_delay_neg", ["thd", "--delay=-20ms"], info(8), MKV),
+    ("thd_delay_96k", ["thd", "--delay=-20ms"], info(2, rate=96000), MKV),
+    ("thd_fps", ["thd"], info(6, fps=25), MKV),
+    ("thd_output_mlp", ["thd", "--output", str(OUT / "x.mlp")], info(6), MKV),
+    ("thd_output_bad", ["thd", "--output", str(OUT / "x.ac3")], info(6), MKV),
+    ("thd_reuse", ["thd", "--reuse-temp-files"], info(6), MKV),
+    ("thd_from_atmos", ["thd"], info(8, thd=True), MKV),
+]
+SCENARIOS += THD_SCENARIOS
+
 # --- measure (arguments start with 'measure', which replaces 'encode')
 MEASURE_SCENARIOS = [
     ("measure_6", ["measure"], info(6), MKV),
@@ -466,6 +504,7 @@ PIPE_SCENARIOS = [
     ("pipe_ac4_6", ["ac4-ims"], info(6), MKV),
     ("pipe_atmos_thd", ["ddp-atmos"], info(8, thd=True), MKV),
     ("pipe_measure_thd", ["measure"], info(8, thd=True), MKV),
+    ("pipe_thd_6", ["thd"], info(6), MKV),
 ]
 ALL_SCENARIOS = [(*s, None) for s in SCENARIOS] + [
     (*s, PIPE_NAME) for s in PIPE_SCENARIOS
@@ -479,6 +518,7 @@ BUILDERS = {
     "ac4": PayloadBuilder.build_ac4_channel_payload,
     "ac4-ims": PayloadBuilder.build_ac4_payload,
     "aac": PayloadBuilder.build_aac_payload,
+    "thd": PayloadBuilder.build_thd_payload,
 }
 
 

@@ -28,6 +28,7 @@ from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.measure import MeasurePayload
 from deezy.payloads.shared import LoudnessPayload
+from deezy.payloads.thd import TrueHDPayload
 from deezy.utils.logger import logger
 from deezy.utils.paths import long_path_str
 
@@ -37,6 +38,7 @@ AC4_IMS_TOOL = "dee_ac4ims_encoder"
 AC4_TOOL = "dee_ac4_encoder"
 AAC_TOOL = "dee_aac_encoder"
 MEASURE_TOOL = "dee_measure_loudness"
+THD_TOOL = "dee_dthd_encoder"
 
 
 @dataclass(frozen=True, slots=True)
@@ -355,6 +357,67 @@ def measure_command(
         long_path_str(files.input) if isinstance(files.input, Path) else files.input,
         "--output-manifest",
         long_path_str(files.output),
+        "--loudness-management",
+        loudness(payload),
+    ]
+
+
+def check_thd_options(payload: TrueHDPayload) -> None:
+    """Refuse what dee_dthd_encoder takes no value for."""
+    if payload.drc is DeeDRC.NONE:
+        raise UnsupportedDeeFeatureError(
+            "The TrueHD encoder has no 'none' DRC profile; dee_shim adds one, "
+            "which this DeeZy version doesn't drive yet. Use film_light, "
+            "film_standard, music_light, music_standard or speech."
+        )
+
+
+def thd_command(
+    tools: DeeTools,
+    payload: TrueHDPayload,
+    files: DeeFiles,
+    *,
+    fps: DeeFPS,
+    delay: Delay,
+) -> list[str]:
+    """
+    A channel-based TrueHD encode with dee_dthd_encoder. ``payload.channels``
+    is the input's layout, which is the stream's top presentation; DEE derives
+    the smaller ones from it, and each gets the payload's DRC.
+    """
+    check_thd_options(payload)
+    top = payload.channels.value
+    drc = payload.drc.to_dee_cmd()
+    downmixes = []
+    for channels in (6, 2):
+        if channels < top:
+            downmixes += ["--presentation", f"{channels}ch:drc_profile={drc}"]
+    return [
+        str(dee_tool(tools.dee_dir, THD_TOOL)),
+        # replaced with the active log level when the job is run
+        "--loglevel",
+        "info",
+        "--progress",
+        "1",
+        *(["--license", str(tools.license)] if tools.license else []),
+        # DEE only ever writes into the job's own temp directory
+        "--overwrite",
+        "1",
+        "--temp-dir",
+        long_path_str(files.temp_dir),
+        # the input options belong to the --presentation before them
+        "--presentation",
+        f"{payload.channels.to_dee_cmd()}:drc_profile={drc}",
+        "--input-format",
+        files.input_format or "wav",
+        "-i",
+        long_path_str(files.input) if isinstance(files.input, Path) else files.input,
+        *downmixes,
+        "-o",
+        long_path_str(files.output),
+        "--timecode-frame-rate",
+        fps.to_dee_cmd(),
+        *delay.dee_args(),
         "--loudness-management",
         loudness(payload),
     ]

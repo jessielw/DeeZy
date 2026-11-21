@@ -25,6 +25,7 @@ from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.audio_processors.pipe import process_pipe_job
 from deezy.audio_processors.truehdd import damf_warp_mode, decode_truehd_to_atmos
 from deezy.exceptions import (
+    DependencyNotFoundError,
     InputFileNotFoundError,
     NotEnoughSpaceError,
     OutputExistsError,
@@ -320,6 +321,14 @@ def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
             )
 
 
+def missing_tool(tool: Path) -> DependencyNotFoundError:
+    """The error for a DEE tool that isn't in the DEE folder."""
+    hint = ""
+    if tool.stem == "dee_dthd_encoder":
+        hint = " DEE 6.7 for Linux comes without the TrueHD encoder."
+    return DependencyNotFoundError(f"{tool.name} is not in {tool.parent}.{hint}")
+
+
 def run_dee(
     step: DeeStep, no_progress_bars: bool, print_commands: bool = False
 ) -> None:
@@ -339,6 +348,11 @@ def run_dee(
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.custom_dialnorm,
             )
+        except FileNotFoundError as e:
+            tool = Path(step.argv[0])
+            if tool.is_file():
+                raise
+            raise missing_tool(tool) from e
         except BaseException:
             try:
                 Path(long_path_str(step.output)).unlink(missing_ok=True)

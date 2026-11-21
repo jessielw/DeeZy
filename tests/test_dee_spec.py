@@ -31,10 +31,12 @@ DEFAULTS = {
 
 
 def all_layouts():
+    """Every layout with a data rate (a lossless format has none)."""
     for fmt in spec.formats().values():
         for mode_name, mode in fmt.modes.items():
             for layout_name, layout in mode.layouts.items():
-                yield (fmt.name, mode_name, layout_name), layout
+                if layout.rates is not None:
+                    yield (fmt.name, mode_name, layout_name), layout
 
 
 def test_fixture_is_packaged():
@@ -116,6 +118,16 @@ def test_extensions():
     assert spec.get_format("ac4-ims").extension == ".ac4"
     assert spec.get_format("aac").extension == ".aac"
     assert spec.get_format("ac4").extension == ".ac4"
+
+
+def test_truehd_is_lossless_and_starts_on_time():
+    fmt = spec.get_format("thd")
+    assert set(fmt.mode().layouts) == {"2.0", "5.1", "7.1"}
+    with pytest.raises(ValueError, match="lossless"):
+        fmt.rates("5.1")
+    assert fmt.extensions == (".thd", ".mlp")
+    assert (fmt.delay_samples, fmt.channel_change_samples) == (0, 0)
+    assert fmt.tool.name == "dee_dthd_encoder"
 
 
 def test_ac4_takes_the_manifest_offset_as_its_delay():

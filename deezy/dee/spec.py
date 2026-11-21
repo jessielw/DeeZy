@@ -63,7 +63,8 @@ class ToolSpec:
 
 @dataclass(frozen=True, slots=True)
 class LayoutSpec:
-    rates: ChannelBitrates
+    # None for a lossless format, which has no data rate
+    rates: ChannelBitrates | None
     # DEE alone can't encode this layout; dee_shim can
     needs_shim: bool = False
 
@@ -123,7 +124,10 @@ class FormatSpec:
             ) from None
 
     def rates(self, layout: str, mode: str | None = None) -> ChannelBitrates:
-        return self.layout(layout, mode).rates
+        rates = self.layout(layout, mode).rates
+        if rates is None:
+            raise ValueError(f"{self.name} is lossless and has no data rate")
+        return rates
 
 
 @cache
@@ -284,6 +288,21 @@ def formats() -> Mapping[str, FormatSpec]:
             # the manifest's offset; no AC-4 decoder here to measure it
             -fixture()["delays"]["ac4_manifest_offset"]["2.0"],
             # unmeasured, and the manifest gives the same offset for a downmix
+            0,
+        ),
+        FormatSpec(
+            "thd",
+            tool("dee_dthd_encoder"),
+            {
+                "thd": ModeSpec(
+                    "", {layout: LayoutSpec(None) for layout in ("2.0", "5.1", "7.1")}
+                )
+            },
+            (".thd", ".mlp"),
+            # an impulse decodes on its own sample at 48 kHz (at 96 kHz DEE's
+            # apodizing filter puts the peak one sample later)
+            0,
+            # DEE encodes the layout it is given
             0,
         ),
         FormatSpec(
