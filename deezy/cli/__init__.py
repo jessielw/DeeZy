@@ -28,7 +28,7 @@ from deezy.config.defaults import get_default_config_path
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.aac import AacProfile
-from deezy.enums.ac4 import Ac4EncodingProfile
+from deezy.enums.ac4 import Ac4ChannelBasedChannels, Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
@@ -593,10 +593,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Encoding profile. For encoding music content, select ims_music.",
     )
 
-    # AC4 DRC options (full DeeDRC enum choices)
+    # AC-4 per-device DRC (AC-4 IMS and channel-based AC-4)
     ac4_drc_group = argparse.ArgumentParser(add_help=False)
     ac4_drc_args = (
-        "--ddp-drc",
         "--flat-panel-drc",
         "--home-theatre-drc",
         "--portable-headphones-drc",
@@ -609,8 +608,36 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             choices=DeeDRC,
             metavar=enum_choices(DeeDRC),
             default=DeeDRC.FILM_LIGHT,
-            help="Dynamic range compression settings for AC4.",
+            help=(
+                "Dynamic range compression settings for AC4 (channel-based AC-4 "
+                "has no 'none')."
+            ),
         )
+
+    # the DD+ DRC profile AC-4 IMS carries
+    ac4_ims_drc_group = argparse.ArgumentParser(add_help=False)
+    ac4_ims_drc_group.add_argument(
+        "--ddp-drc",
+        type=case_insensitive_enum(DeeDRC),
+        choices=DeeDRC,
+        metavar=enum_choices(DeeDRC),
+        default=DeeDRC.FILM_LIGHT,
+        help="Dynamic range compression settings for AC4.",
+    )
+
+    # channel-based AC-4 channels
+    ac4_channels_group = argparse.ArgumentParser(add_help=False)
+    ac4_channels_group.add_argument(
+        "--channels",
+        type=case_insensitive_enum(Ac4ChannelBasedChannels),
+        choices=Ac4ChannelBasedChannels,
+        default=Ac4ChannelBasedChannels.AUTO,
+        metavar=enum_choices(Ac4ChannelBasedChannels),
+        help=(
+            "The number of channels: 2.0 or 5.1. Auto takes 5.1 from 6 channels "
+            "or more (DEE downmixes 7.1) and 2.0 below that."
+        ),
+    )
 
     # AAC options
     aac_options_group = argparse.ArgumentParser(add_help=False)
@@ -636,7 +663,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
-    # how FFmpeg's PCM reaches DEE (DD, DD+, DD+ Blu-ray and AAC)
+    # how FFmpeg's PCM reaches DEE (DD, DD+, DD+ Blu-ray, AC-4 and AAC)
     pcm_transport_group = argparse.ArgumentParser(add_help=False)
     pcm_transport_group.add_argument(
         "--pipe",
@@ -682,6 +709,8 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "truehdd_options_group": truehdd_options_group,
         "ac4_basic_options_group": ac4_basic_options_group,
         "ac4_drc_group": ac4_drc_group,
+        "ac4_ims_drc_group": ac4_ims_drc_group,
+        "ac4_channels_group": ac4_channels_group,
         "aac_options_group": aac_options_group,
         "preset_channels_group": preset_channels_group,
         "pcm_transport_group": pcm_transport_group,
@@ -793,6 +822,28 @@ def create_encode_parsers(
         ),
     )
 
+    ### channel-based AC-4 Command ###
+    _encode_ac4_channel_parser = encode_subparsers.add_parser(
+        "ac4",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["bitrate_group"],
+            argument_groups["loudness_group"],
+            argument_groups["loudness_correction_group"],
+            argument_groups["ac4_drc_group"],
+            argument_groups["stereo_downmix_group"],
+            argument_groups["downmix_metadata_group"],
+            argument_groups["ac4_channels_group"],
+            argument_groups["pcm_transport_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
     ### AC-4 IMS Command ###
     _encode_ac4_parser = encode_subparsers.add_parser(
         "ac4-ims",
@@ -803,6 +854,7 @@ def create_encode_parsers(
             argument_groups["loudness_group"],
             argument_groups["atmos_ac4_metering_group"],
             argument_groups["ac4_basic_options_group"],
+            argument_groups["ac4_ims_drc_group"],
             argument_groups["ac4_drc_group"],
             argument_groups["truehdd_options_group"],
         ),
@@ -849,6 +901,7 @@ def create_encode_parsers(
             argument_groups["atmos_options_group"],
             argument_groups["truehdd_options_group"],
             argument_groups["ac4_basic_options_group"],
+            argument_groups["ac4_ims_drc_group"],
             argument_groups["ac4_drc_group"],
             argument_groups["aac_options_group"],
             argument_groups["pcm_transport_group"],
@@ -1100,6 +1153,7 @@ def encode_single_file(
         "ddp": PayloadBuilder.build_ddp_payload,
         "ddp-bluray": PayloadBuilder.build_ddp_payload,
         "ddp-atmos": PayloadBuilder.build_atmos_payload,
+        "ac4": PayloadBuilder.build_ac4_channel_payload,
         "ac4-ims": PayloadBuilder.build_ac4_payload,
         "aac": PayloadBuilder.build_aac_payload,
     }

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from deezy.enums.ac4 import Ac4EncodingProfile
+from deezy.enums.ac4 import Ac4ChannelBasedChannels, Ac4EncodingProfile
 from deezy.enums.atmos import WarpMode
-from deezy.enums.shared import DeeDRC, LoudnessPreset
+from deezy.enums.shared import DeeDRC, LoudnessPreset, StereoDownmix
 from deezy.payloads.shared import LoudnessPayload
 
 
@@ -17,4 +17,24 @@ class Ac4Payload(LoudnessPayload):
     portable_headphones_drc: DeeDRC
     portable_speakers_drc: DeeDRC
     # split DEE encoders only
+    loudness_preset: LoudnessPreset = LoudnessPreset.MANUAL
+
+
+@dataclass(slots=True)
+class Ac4ChannelPayload(LoudnessPayload):
+    """Channel-based AC-4 (the `ac4` format)."""
+
+    channels: Ac4ChannelBasedChannels
+    flat_panel_drc: DeeDRC
+    home_theatre_drc: DeeDRC
+    portable_headphones_drc: DeeDRC
+    portable_speakers_drc: DeeDRC
+    preferred_downmix_mode: StereoDownmix
+    loro_center_mix_level: str
+    loro_surround_mix_level: str
+    ltrt_center_mix_level: str
+    ltrt_surround_mix_level: str
+    # None only measures (measure_only); AC-4 has no skip mode
+    loudness_target: int | None = None
+    peak_limit: float | None = None
     loudness_preset: LoudnessPreset = LoudnessPreset.MANUAL

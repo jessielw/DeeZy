@@ -11,7 +11,10 @@ from deezy.utils.logger import logger
 from deezy.utils.utils import WORKING_DIRECTORY
 
 # formats 2.0 renamed, by their old name
-RENAMED_FORMATS = {"atmos": "ddp-atmos", "ac4": "ac4-ims"}
+RENAMED_FORMATS = {"atmos": "ddp-atmos"}
+# 1.x's 'ac4' was immersive stereo; 2.0's is channel-based AC-4, so only the
+# keys that are IMS's own give an old section away
+IMS_ONLY_KEYS = {"default_bitrates": "immersive_stereo"}
 
 
 class ConfigManager:
@@ -113,6 +116,19 @@ class ConfigManager:
                         f"Config section [{section}.{old}] is ignored: the '{old}' "
                         f"format is now '{new}', so rename it [{section}.{new}]."
                     )
+            ac4 = (self.config.get(section) or {}).get("ac4") or {}
+            ims_keys = sorted(
+                key
+                for key in ac4
+                if key == IMS_ONLY_KEYS.get(section) or str(key).endswith("_atmos")
+            )
+            if ims_keys:
+                logger.warning(
+                    f"Config [{section}.ac4] has immersive stereo keys "
+                    f"({', '.join(ims_keys)}), which are ignored: 'ac4' is now "
+                    f"channel-based AC-4 and immersive stereo is 'ac4-ims', so "
+                    f"move them to [{section}.ac4-ims]."
+                )
 
     def get_preset_command(self, preset_name: str) -> str:
         """Get the CLI command string for a preset."""

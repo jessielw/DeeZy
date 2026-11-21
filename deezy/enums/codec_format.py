@@ -10,6 +10,7 @@ class CodecFormat(CaseInsensitiveEnum):
     DDP = "ddp"
     DDP_BLURAY = "ddp-bluray"
     DDP_ATMOS = "ddp-atmos"
+    AC4 = "ac4"
     AC4_IMS = "ac4-ims"
     AAC = "aac"
 

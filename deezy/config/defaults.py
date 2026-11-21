@@ -66,7 +66,7 @@ overwrite = false
 jitter_ms = 0
 # Allow automatic system sleep during encoding. By default DeeZy keeps the system awake.
 allow_sleep = false
-# How FFmpeg's audio reaches DEE for dd, ddp, ddp-bluray and aac: "auto" pipes it on
+# How FFmpeg's audio reaches DEE for dd, ddp, ddp-bluray, ac4 and aac: "auto" pipes it on
 # Windows (a temp WAV elsewhere or with --reuse-temp-files), "always" pipes it or
 # refuses the job, "never" always writes the temp WAV.
 pipe = "auto"
@@ -134,6 +134,7 @@ surround = 448 # DD 5.1
 #
 # Supported codecs:
 #  - dd, ddp: support ch_1..ch_8
+#  - ac4: ch_1..ch_8 (2.0 below 6 channels, 5.1 from 6)
 #  - ac4-ims: meaningful only for channels 6..8 (use ch_6..ch_8)
 #
 
@@ -165,6 +166,11 @@ surroundex = 1280 # DDP Bluray 7.1
 [default_bitrates.ddp-atmos]
 streaming = 448 # Atmos Streaming
 bluray = 1280    # Atmos Bluray
+
+# Default bitrates for channel-based AC-4
+[default_bitrates.ac4]
+stereo = 96     # AC-4 2.0
+surround = 192  # AC-4 5.1
 
 # Default bitrates for AC-4 immersive stereo
 [default_bitrates.ac4-ims]

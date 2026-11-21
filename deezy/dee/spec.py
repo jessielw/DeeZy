@@ -268,6 +268,25 @@ def formats() -> Mapping[str, FormatSpec]:
             0,
         ),
         FormatSpec(
+            "ac4",
+            tool("dee_ac4_encoder"),
+            # DeeZy's defaults are one step or more above DEE's 64 and 128
+            {
+                "ac4": ModeSpec(
+                    "",
+                    {
+                        "2.0": _probed(96, "dee_ac4_encoder", "2.0"),
+                        "5.1": _probed(192, "dee_ac4_encoder", "5.1"),
+                    },
+                )
+            },
+            (".ac4",),
+            # the manifest's offset; no AC-4 decoder here to measure it
+            -fixture()["delays"]["ac4_manifest_offset"]["2.0"],
+            # unmeasured, and the manifest gives the same offset for a downmix
+            0,
+        ),
+        FormatSpec(
             "aac",
             tool("dee_aac_encoder"),
             # DeeZy's default raises only AAC-LC above DEE's 64 kbps

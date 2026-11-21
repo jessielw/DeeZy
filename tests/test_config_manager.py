@@ -171,8 +171,12 @@ class TestConfigManagerLoading:
         """A 1.x config's [default_bitrates.atmos] would be ignored silently."""
         cm = ConfigManager()
         cm.config = {
-            "default_bitrates": {"atmos": {"streaming": 768}, "ddp": {"stereo": 128}},
-            "default_source_bitrates": {"ac4": {"ch_6": 320}},
+            "default_bitrates": {
+                "atmos": {"streaming": 768},
+                "ddp": {"stereo": 128},
+                "ac4": {"immersive_stereo": 256},
+            },
+            "default_source_bitrates": {"ac4": {"ch_6": 320, "ch_6_atmos": 320}},
         }
         with patch("deezy.config.manager.logger") as log:
             cm._validate_config()
@@ -181,9 +185,25 @@ class TestConfigManagerLoading:
         assert warnings == [
             "Config section [default_bitrates.atmos] is ignored: the 'atmos' format "
             "is now 'ddp-atmos', so rename it [default_bitrates.ddp-atmos].",
-            "Config section [default_source_bitrates.ac4] is ignored: the 'ac4' "
-            "format is now 'ac4-ims', so rename it [default_source_bitrates.ac4-ims].",
+            "Config [default_bitrates.ac4] has immersive stereo keys "
+            "(immersive_stereo), which are ignored: 'ac4' is now channel-based AC-4 "
+            "and immersive stereo is 'ac4-ims', so move them to "
+            "[default_bitrates.ac4-ims].",
+            "Config [default_source_bitrates.ac4] has immersive stereo keys "
+            "(ch_6_atmos), which are ignored: 'ac4' is now channel-based AC-4 and "
+            "immersive stereo is 'ac4-ims', so move them to "
+            "[default_source_bitrates.ac4-ims].",
         ]
+
+    def test_channel_based_ac4_sections_do_not_warn(self):
+        cm = ConfigManager()
+        cm.config = {
+            "default_bitrates": {"ac4": {"stereo": 96, "surround": 192}},
+            "default_source_bitrates": {"ac4": {"ch_6": 256}},
+        }
+        with patch("deezy.config.manager.logger") as log:
+            cm._validate_config()
+        assert not log.warning.call_args_list
 
 
 class TestConfigManagerGeneration:
@@ -412,6 +432,14 @@ class TestDefaultBitrates:
         cm.config = {"default_bitrates": {"ddp-atmos": {"streaming": 576}}}
         assert cm.get_default_bitrate("ddp-atmos", AtmosMode.STREAMING) == 576
         assert cm.get_default_bitrate("ddp-atmos", "streaming") == 576
+
+    def test_ac4_rates_are_keyed_by_layout(self):
+        from deezy.enums.ac4 import Ac4ChannelBasedChannels
+
+        cm = ConfigManager()
+        cm.config = {"default_bitrates": {"ac4": {"stereo": 64, "surround": 256}}}
+        assert cm.get_default_bitrate("ac4", Ac4ChannelBasedChannels.STEREO) == 64
+        assert cm.get_default_bitrate("ac4", Ac4ChannelBasedChannels.SURROUND) == 256
 
     def test_shipped_config_has_the_aac_defaults(self):
         from deezy.config.defaults import CONF_DEFAULT

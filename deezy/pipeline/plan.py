@@ -17,13 +17,14 @@ from deezy.dee.commands import (
     DeeFiles,
     DeeTools,
     aac_command,
+    ac4_command,
     ac4ims_command,
     ddp_command,
     ddpjoc_command,
 )
 from deezy.dee.spec import FormatSpec, get_format
 from deezy.delay import Delay, compensation
-from deezy.enums.ac4 import Ac4Channels
+from deezy.enums.ac4 import Ac4ChannelBasedChannels, Ac4Channels
 from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.channel_count import ChannelCount
 from deezy.enums.codec_format import CodecFormat
@@ -47,7 +48,7 @@ from deezy.exceptions import (
     UnsupportedDeeFeatureError,
 )
 from deezy.payloads.aac import AacPayload
-from deezy.payloads.ac4 import Ac4Payload
+from deezy.payloads.ac4 import Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
@@ -189,6 +190,8 @@ def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         return _plan_ac4_ims(payload, info, ctx)
     if isinstance(payload, AacPayload):
         return _plan_aac(payload, info, ctx)
+    if isinstance(payload, Ac4ChannelPayload):
+        return _plan_ac4(payload, info, ctx)
     raise TypeError(f"no plan for {type(payload).__name__}")
 
 
@@ -929,6 +932,102 @@ def _plan_ddp_atmos(
         output=output,
         temp_dir=ctx.temp_dir,
         steps=(truehdd, *steps) if truehdd else steps,
+        free_space_needed=info.recommended_free_space,
+        preview=preview,
+    )
+
+
+# --- channel-based AC-4
+
+# the layouts dee_ac4_encoder reads; FFmpeg converts any other one first
+AC4_INPUT_CHANNELS = (2, 6, 8)
+
+
+def ac4_channel_resolver(source_channels: int) -> Ac4ChannelBasedChannels:
+    """The AC-4 layout AUTO picks, also for the config lookup."""
+    if source_channels < 6:
+        return Ac4ChannelBasedChannels.STEREO
+    return Ac4ChannelBasedChannels.SURROUND
+
+
+def _plan_ac4(
+    payload: Ac4ChannelPayload, info: AudioTrackInfo, ctx: PlanContext
+) -> JobPlan:
+    spec = get_format("ac4")
+    # D2: 1.x's 'ac4' was immersive stereo, so an old preset lands here
+    logger.info(
+        "'ac4' is channel-based AC-4 (2.0 or 5.1) since DeeZy 2.0; immersive "
+        "stereo is 'ac4-ims'."
+    )
+    source_channels = info.channels
+    channels = payload.channels
+    bitrate_obj = (
+        ac4_channel_resolver(source_channels).get_bitrate_obj()
+        if channels is Ac4ChannelBasedChannels.AUTO
+        else channels.get_bitrate_obj()
+    )
+    bitrate = resolve_bitrate(
+        ctx.config,
+        CodecFormat.AC4,
+        payload.bitrate,
+        channels,
+        info,
+        bitrate_obj,
+        source_channels,
+        Ac4ChannelBasedChannels.AUTO,
+        ac4_channel_resolver,
+    )
+
+    if channels is Ac4ChannelBasedChannels.AUTO:
+        channels = ac4_channel_resolver(source_channels)
+        logger.info(f"No supplied channels, defaulting to {channels}.")
+    elif source_channels != 1:
+        check_for_up_mixing(source_channels, channels.value)
+    if source_channels == 1:
+        if channels is not Ac4ChannelBasedChannels.STEREO:
+            raise ChannelMixError("Up-mixing is not supported.")
+        logger.info(
+            "AC-4 has no 1.0 layout, so the mono source is encoded as 2.0 with "
+            "the same signal in both channels."
+        )
+
+    delay = get_delay(payload)
+    fps = get_fps(info.fps)
+    output, preview = _output(payload, info, ctx, spec, "AC-4", str(channels), delay)
+
+    ffmpeg_down_mix = None if source_channels in AC4_INPUT_CHANNELS else channels.value
+    dee_input_channels = ffmpeg_down_mix or source_channels
+    delay = _compensate(delay, spec, dee_input_channels, channels.value)
+
+    transport = choose_transport(
+        payload,
+        ctx,
+        ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.AC4}.wav",
+        dee_input_channels,
+        info.duration,
+    )
+    resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
+    filters = _filter_args(_PAN_7_1 if source_channels == 8 else None, resample)
+    if ffmpeg_down_mix:
+        filters += ["-ac", str(ffmpeg_down_mix)]
+
+    files = _dee_files(ctx, transport, output)
+    dee_argv = ac4_command(
+        _tools(payload, ctx),
+        replace(payload, channels=channels),
+        files,
+        manifest=ctx.temp_dir / f"{artifact_stem(output)}.manifest.json",
+        bitrate=bitrate,
+        fps=fps,
+        delay=delay,
+    )
+    dee = DeeStep(tuple(dee_argv), files.output)
+    return JobPlan(
+        format=spec.name,
+        source=Path(payload.file_input),
+        output=output,
+        temp_dir=ctx.temp_dir,
+        steps=_pcm_steps(payload, filters, transport, str(CodecFormat.AC4), info, dee),
         free_space_needed=info.recommended_free_space,
         preview=preview,
     )

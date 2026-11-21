@@ -22,7 +22,7 @@ from deezy.enums.shared import (
 )
 from deezy.exceptions import UnsupportedDeeFeatureError
 from deezy.payloads.aac import AacPayload
-from deezy.payloads.ac4 import Ac4Payload
+from deezy.payloads.ac4 import Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
@@ -33,6 +33,7 @@ from deezy.utils.paths import long_path_str
 DDP_TOOL = "dee_ddp_encoder"
 DDP_JOC_TOOL = "dee_ddpjoc_encoder"
 AC4_IMS_TOOL = "dee_ac4ims_encoder"
+AC4_TOOL = "dee_ac4_encoder"
 AAC_TOOL = "dee_aac_encoder"
 
 
@@ -213,6 +214,88 @@ def ac4ims_command(
             delay=delay,
             payload=payload,
         ),
+        "-e",
+        _options(encoder),
+    ]
+
+
+# dee_ac4_encoder's loudness targets (the DD+ encoder's go up to -8)
+AC4_TARGETS = range(-31, -9)
+
+
+def check_ac4_options(payload: Ac4ChannelPayload) -> None:
+    """Refuse what dee_ac4_encoder doesn't take, before any work starts."""
+    target = payload.loudness_target
+    if payload.peak_limit is not None and target is None:
+        raise UnsupportedDeeFeatureError("--peak-limit needs --loudness-target.")
+    if target is not None and target not in AC4_TARGETS:
+        raise UnsupportedDeeFeatureError(
+            f"AC-4 takes loudness targets from -31 to -10 LKFS, not {target}."
+        )
+    if target is not None and payload.loudness_preset is not LoudnessPreset.MANUAL:
+        raise UnsupportedDeeFeatureError(
+            "--loudness-target needs the manual loudness settings, so it "
+            "can't be combined with --loudness-preset."
+        )
+    devices = (
+        payload.flat_panel_drc,
+        payload.home_theatre_drc,
+        payload.portable_headphones_drc,
+        payload.portable_speakers_drc,
+    )
+    if DeeDRC.NONE in devices:
+        raise UnsupportedDeeFeatureError(
+            "The AC-4 encoder has no 'none' DRC profile; use film_light, "
+            "film_standard, music_light, music_standard or speech."
+        )
+    if "-inf" in (payload.loro_center_mix_level, payload.ltrt_center_mix_level):
+        raise UnsupportedDeeFeatureError(
+            "AC-4 takes center downmix levels from -6 to +3 dB, not -inf."
+        )
+
+
+def ac4_command(
+    tools: DeeTools,
+    payload: Ac4ChannelPayload,
+    files: DeeFiles,
+    *,
+    manifest: Path,
+    bitrate: int,
+    fps: DeeFPS,
+    delay: Delay,
+) -> list[str]:
+    """
+    A channel-based AC-4 encode with dee_ac4_encoder, which requires an output
+    manifest (it holds the offset an MP4 muxer would put in the edit list).
+    """
+    check_ac4_options(payload)
+    encoder = {
+        "drc_profile_flat_panel": payload.flat_panel_drc.to_dee_cmd(),
+        "drc_profile_home_theatre": payload.home_theatre_drc.to_dee_cmd(),
+        "drc_profile_portable_hp": payload.portable_headphones_drc.to_dee_cmd(),
+        "drc_profile_portable_spkr": payload.portable_speakers_drc.to_dee_cmd(),
+        "preferred_downmix_mode": payload.preferred_downmix_mode.to_dee_cmd(),
+        "loro_cmix": payload.loro_center_mix_level,
+        "loro_smix": payload.loro_surround_mix_level,
+        "ltrt_cmix": payload.ltrt_center_mix_level,
+        "ltrt_smix": payload.ltrt_surround_mix_level,
+    }
+    return [
+        *_common_args(
+            tools,
+            AC4_TOOL,
+            files,
+            input_format="wav",
+            temp_dir=True,
+            bitrate=bitrate,
+            fps=fps,
+            delay=delay,
+            payload=payload,
+        ),
+        "--output-manifest",
+        long_path_str(manifest),
+        "-c",
+        payload.channels.to_dee_cmd(),
         "-e",
         _options(encoder),
     ]

@@ -11,7 +11,7 @@ import pytest
 
 import deezy
 from deezy.enums.aac import AacProfile
-from deezy.enums.ac4 import Ac4Channels
+from deezy.enums.ac4 import Ac4ChannelBasedChannels, Ac4Channels
 from deezy.enums.atmos import AtmosMode
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
@@ -31,6 +31,8 @@ CASES = [
     (AtmosMode.STREAMING, ("dee_ddpjoc_encoder", "ddpjoc")),
     (AtmosMode.BLURAY, ("dee_ddpjoc_encoder", "bluray")),
     (Ac4Channels.IMMERSIVE_STEREO, ("dee_ac4ims_encoder",)),
+    (Ac4ChannelBasedChannels.STEREO, ("dee_ac4_encoder", "2.0")),
+    (Ac4ChannelBasedChannels.SURROUND, ("dee_ac4_encoder", "5.1")),
 ]
 
 

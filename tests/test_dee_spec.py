@@ -20,6 +20,9 @@ DEFAULTS = {
     ("ddp-atmos", "streaming", "atmos"): 448,
     ("ddp-atmos", "bluray", "atmos"): 1280,
     ("ac4-ims", "ims", "2.0"): 256,
+    # DeeZy's AC-4 defaults sit above Dolby's 64 and 128
+    ("ac4", "ac4", "2.0"): 96,
+    ("ac4", "ac4", "5.1"): 192,
     # DeeZy raises only AAC-LC above Dolby's 64 kbps
     ("aac", "aaclc", "2.0"): 192,
     ("aac", "heaac", "2.0"): 64,
@@ -112,6 +115,13 @@ def test_extensions():
     assert spec.get_format("ddp").extensions == (".ec3", ".eac3")
     assert spec.get_format("ac4-ims").extension == ".ac4"
     assert spec.get_format("aac").extension == ".aac"
+    assert spec.get_format("ac4").extension == ".ac4"
+
+
+def test_ac4_takes_the_manifest_offset_as_its_delay():
+    fmt = spec.get_format("ac4")
+    assert fmt.delay_samples == 2048
+    assert fmt.channel_change_samples == 0
 
 
 @pytest.mark.parametrize(
