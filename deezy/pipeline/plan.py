@@ -582,13 +582,28 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
 # --- Dolby Digital Plus and DD+ Blu-ray
 
 
+def ddp_auto_layouts() -> list[int]:
+    """
+    The DD+ layouts AUTO may pick: those DEE encodes without dee_shim.
+
+    DD+ 7.1 needs dee_shim, which DeeZy doesn't drive yet, so AUTO encodes a
+    7.1 source as 5.1 rather than refusing it.
+    """
+    spec = get_format("ddp")
+    return [
+        value
+        for value in DolbyDigitalPlusChannels.get_values_list()
+        if not spec.layout(str(DolbyDigitalPlusChannels(value))).needs_shim
+    ]
+
+
 def ddp_channel_resolver(source_channels: int) -> DolbyDigitalPlusChannels:
-    """The DD+ layout AUTO picks for the config lookup."""
+    """The DD+ layout AUTO picks, also for the config lookup."""
     if source_channels == 1:
         return DolbyDigitalPlusChannels.MONO
     if 1 < source_channels < 6:
         return DolbyDigitalPlusChannels.STEREO
-    if source_channels == 6:
+    if source_channels == 6 or 8 not in ddp_auto_layouts():
         return DolbyDigitalPlusChannels.SURROUND
     return DolbyDigitalPlusChannels.SURROUNDEX
 
@@ -661,10 +676,14 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     if channels != DolbyDigitalPlusChannels.AUTO and not upmix_50:
         check_for_up_mixing(source_channels, channels.value)
     elif channels is DolbyDigitalPlusChannels.AUTO:
-        channels = DolbyDigitalPlusChannels(
-            auto_channels(source_channels, DolbyDigitalPlusChannels.get_values_list())
-        )
+        accepted = ddp_auto_layouts()
+        channels = DolbyDigitalPlusChannels(auto_channels(source_channels, accepted))
         logger.info(f"No supplied channels, defaulting to {channels}.")
+        if source_channels == 8 and 8 not in accepted:
+            logger.info(
+                "Dolby Digital Plus 7.1 needs dee_shim, which this DeeZy version "
+                "doesn't drive yet, so the 7.1 source is encoded as 5.1."
+            )
 
     delay = get_delay(payload)
     fps = get_fps(info.fps)
