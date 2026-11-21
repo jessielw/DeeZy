@@ -8,6 +8,7 @@ from .harness import (
     make_damf,
     md5,
     mediainfo,
+    synthetic_damf,
     truehd_content,
     warp_mode,
     xcorr,
@@ -261,12 +262,12 @@ def test_warp_mode_changes_rendered_output(tools, work, damf, name):
     assert len({hashes[w] for w in WARPS[1:]}) == 4
 
 
-def thd_atmos(tools, src, out_dir, legacy):
+def thd_atmos(tools, src, out_dir, legacy, duration=SHORT):
     out = out_dir / "o.thd"
     pres = f"atmos:number_of_elements=16:legacy_authoring={legacy}"
     result = tools.dee(
         "dee_dthd_encoder", "--presentation", pres, "--input-format", "atmos_mezz",
-        "-i", src, "-o", out, "--temp-dir", out_dir, *SHORT,
+        "-i", src, "-o", out, "--temp-dir", out_dir, *duration,
     )  # fmt: skip
     assert result.ok, result.error()
     return out
@@ -276,7 +277,9 @@ def thd_atmos(tools, src, out_dir, legacy):
 def test_warp_mode_is_only_a_flag_in_truehd(tools, work, damf, legacy):
     """TrueHD codes the objects, so warp mode changes no decoded content.
 
-    legacy_authoring=0 keeps the flag (none becomes warping); 1 drops it.
+    legacy_authoring=0 keeps the flag (none becomes warping). At 1 truehdd
+    reports no warp mode, though ProLogicIIx still changes header bytes
+    (test_prologiciix_changes_only_truehd_header_bytes).
     """
     content, flags = set(), {}
     for warp in (None, "normal", "ProLogicIIx"):
@@ -295,6 +298,42 @@ def test_warp_mode_is_only_a_flag_in_truehd(tools, work, damf, legacy):
             "normal": "normal",
             "ProLogicIIx": "ProLogicIIx",
         }
+
+
+@pytest.fixture(scope="module")
+def synthetic_master(work):
+    return synthetic_damf(work / "synthetic")
+
+
+@pytest.mark.parametrize("legacy", [0, 1])
+def test_prologiciix_changes_only_truehd_header_bytes(
+    tools, work, synthetic_master, legacy
+):
+    """ProLogicIIx changes TrueHD Atmos bytes at both legacy settings.
+
+    The change sits in the stream's periodic headers: truehdd decodes the same
+    audio and metadata, and at legacy_authoring=1 reports no warp mode. The
+    synthetic master encodes the same bytes every run, so hashes compare it.
+    """
+    if not tools.truehdd:
+        pytest.skip("set DEEZY_TRUEHDD for the TrueHD Atmos decode")
+    outs = {}
+    for warp, run_no in ((None, 1), (None, 2), ("ProLogicIIx", 1)):
+        out_dir = work / f"synthwarp_{legacy}_{warp or 'none'}_{run_no}"
+        out_dir.mkdir(exist_ok=True)
+        src = damf_with_warp(synthetic_master, warp)
+        outs[warp, run_no] = thd_atmos(tools, src, out_dir, legacy, duration=())
+    plain, prologic = outs[None, 1], outs["ProLogicIIx", 1]
+    assert md5(plain) == md5(outs[None, 2])
+    assert md5(plain) != md5(prologic)
+    assert plain.stat().st_size == prologic.stat().st_size
+
+    decoded = {}
+    for warp, out in (("none", plain), ("prologic", prologic)):
+        content = truehd_content(tools, out, out.parent / "dec")
+        decoded[warp] = (content, warp_mode(out.parent / "dec" / "m.atmos"))
+    assert decoded["none"][0] == decoded["prologic"][0]
+    assert decoded["prologic"][1] == (None if legacy else "ProLogicIIx")
 
 
 @pytest.mark.parametrize("legacy", [0, 1])

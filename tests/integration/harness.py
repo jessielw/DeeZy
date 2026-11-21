@@ -24,6 +24,7 @@ import shutil
 import struct
 import subprocess
 import sys
+from typing import Literal
 import wave
 
 SR = 48000
@@ -182,20 +183,24 @@ def noise_wav(
     path: Path, channels: int, seconds: float = 3.0, amp: float = 0.2
 ) -> Path:
     """Deterministic white noise, 24-bit."""
-    frames = int(SR * seconds)
-    state = 12345
-    peak = int(amp * (2**23 - 1))
-    buf = bytearray()
-    for _ in range(frames * channels):
-        state = (1103515245 * state + 12345) & 0x7FFFFFFF
-        value = (state % (2 * peak + 1)) - peak
-        buf += value.to_bytes(3, "little", signed=True)
     with wave.open(str(path), "wb") as w:
         w.setnchannels(channels)
         w.setsampwidth(3)
         w.setframerate(SR)
-        w.writeframes(bytes(buf))
+        w.writeframes(noise_samples(int(SR * seconds) * channels, amp, "little"))
     return path
+
+
+def noise_samples(count: int, amp: float, byteorder: Literal["little", "big"]) -> bytes:
+    """`count` 24-bit samples of deterministic white noise."""
+    state = 12345
+    peak = int(amp * (2**23 - 1))
+    buf = bytearray()
+    for _ in range(count):
+        state = (1103515245 * state + 12345) & 0x7FFFFFFF
+        value = (state % (2 * peak + 1)) - peak
+        buf += value.to_bytes(3, byteorder, signed=True)
+    return bytes(buf)
 
 
 # --- Decoded output ------------------------------------------------------------
@@ -384,3 +389,68 @@ def damf_with_warp(damf: Path, warp: str | None) -> Path:
     out = damf.with_name(f"warp_{warp or 'none'}_{tag}.atmos")
     out.write_text(text)
     return out
+
+
+# shaped like the Atmos sample: an LFE-only bed and 15 objects. A master with a
+# full 7.1 bed and few objects hides the ProLogicIIx difference that
+# test_prologiciix_changes_only_truehd_header_bytes checks.
+SYNTHETIC_BED = (3, "LFE")
+SYNTHETIC_OBJECTS = [
+    (10 + i, (round(-1 + i / 7, 3), 1 - (i % 3), i % 2)) for i in range(15)
+]
+
+
+def synthetic_damf(out_dir: Path, seconds: float = 2.0) -> Path:
+    """A short DAMF master of noise: an LFE bed and 15 objects that never move.
+
+    DEE encodes it to the same TrueHD bytes every run, unlike the sample, so
+    file hashes can compare its TrueHD Atmos encodes.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    bed_id, bed_name = SYNTHETIC_BED
+    header = [
+        "version: 0.5.1",
+        "presentations:",
+        "  - type: home",
+        "    simplified: false",
+        "    metadata: m.atmos.metadata",
+        "    audio: m.atmos.audio",
+        "    offset: 0.0",
+        "    fps: 24",
+        f"    scBedConfiguration: [{bed_id}]",
+        "    creationTool: deezy-tests",
+        "    creationToolVersion: 1.0",
+        "    bedInstances:",
+        "      - channels:",
+        f"          - channel: {bed_name}",
+        f"            ID: {bed_id}",
+        "    objects:",
+        *(f"      - ID: {oid}" for oid, _ in SYNTHETIC_OBJECTS),
+    ]
+    (out_dir / "m.atmos").write_text("\n".join(header) + "\n")
+
+    shared = ["samplePos: 0", "active: true"]
+    tail = ["importance: 1.0", "gain: 0", "rampLength: 0", "trimBypass: false"]
+    events = [f"sampleRate: {SR}", "events:"]
+    events += [f"  - ID: {bed_id}", *(f"    {line}" for line in (
+        *shared, *tail, "headTrackMode: undefined", "binauralRenderMode: off",
+    ))]  # fmt: skip
+    for oid, pos in SYNTHETIC_OBJECTS:
+        events += [f"  - ID: {oid}", *(f"    {line}" for line in (
+            *shared, f"pos: [{', '.join(str(p) for p in pos)}]", "snap: false",
+            "elevation: true", "zones: all", "size: 0.0", *tail, "dialog: -1",
+            "music: -1", "screenFactor: 0.0", "depthFactor: 0.25",
+            "headTrackMode: undefined", "binauralRenderMode: undefined",
+        ))]  # fmt: skip
+    (out_dir / "m.atmos.metadata").write_text("\n".join(events) + "\n")
+
+    # CAF: 24-bit big-endian PCM, one frame per packet
+    channels = 1 + len(SYNTHETIC_OBJECTS)
+    pcm = noise_samples(int(SR * seconds) * channels, 0.2, "big")
+    desc = struct.pack(">dIIIIII", SR, 0x6C70636D, 0, 3 * channels, 1, channels, 24)
+    caf = b"caff" + struct.pack(">HH", 1, 0)
+    caf += b"desc" + struct.pack(">q", len(desc)) + desc
+    # the data chunk starts with a 4-byte edit count
+    caf += b"data" + struct.pack(">qI", len(pcm) + 4, 0) + pcm
+    (out_dir / "m.atmos.audio").write_bytes(caf)
+    return out_dir / "m.atmos"
