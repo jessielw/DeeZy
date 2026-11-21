@@ -591,6 +591,15 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
     dplii = (
         channels is DolbyDigitalChannels.STEREO and stereo_mix is StereoDownmix.DPLII
     )
+    # DPL II is a stereo mix FFmpeg makes. A DD stream of any other layout can
+    # only carry the preferred-downmix flag, and AC-3 has no DPL II one (DEE
+    # refuses ltrt-pl2 for DD), so it gets Lt/Rt, the matrix-surround flag
+    if stereo_mix is StereoDownmix.DPLII and not dplii:
+        logger.info(
+            "DD has no DPL II downmix flag, so the stream is marked Lt/Rt "
+            "preferred. A DPL II mix needs --channels 2."
+        )
+        payload = replace(payload, preferred_downmix_mode=StereoDownmix.LTRT)
     # DEE leaves the layout alone ('off') when it is the source's, when FFmpeg
     # makes the DPL II mix (DD has none), or when DEE can't take the source
     downmix_off = channels.value == source_channels or dplii or not dee_allowed_input
@@ -625,7 +634,8 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
         filters = _filter_args(_PAN_50_TO_51, resample)
     else:
         filters = _filter_args(None, resample)
-    if (ffmpeg_down_mix and not upmix_50) or stereo_mix is StereoDownmix.DPLII:
+    # a DPL II request on a non-stereo output has no FFmpeg mix, so no -ac
+    if ffmpeg_down_mix and not upmix_50:
         filters += ["-ac", f"{ffmpeg_down_mix}"]
 
     files = _dee_files(ctx, transport, output)

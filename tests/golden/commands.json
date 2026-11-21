@@ -723,6 +723,183 @@
    }
   ]
  },
+ "dd_dpl2_auto6": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=ltrt:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_dpl2_51": {
+  "output": "/out/in [5.1] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.dd.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=ltrt:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "dd_dpl2_mono": {
+  "output": "/out/in [1.0] s0 r0 wNone.ac3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.dd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.dd.wav",
+     "-o",
+     "/temp/job/in10s0r0wNone_727f0961cb9f3fa2.ac3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "mono",
+     "-e",
+     "dd:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=ltrt:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
  "dd_ltrt": {
   "output": "/out/in [2.0] s0 r0 wNone.ac3",
   "preview": false,
