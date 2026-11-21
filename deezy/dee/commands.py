@@ -26,6 +26,7 @@ from deezy.payloads.ac4 import Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
+from deezy.payloads.measure import MeasurePayload
 from deezy.payloads.shared import LoudnessPayload
 from deezy.utils.logger import logger
 from deezy.utils.paths import long_path_str
@@ -35,6 +36,7 @@ DDP_JOC_TOOL = "dee_ddpjoc_encoder"
 AC4_IMS_TOOL = "dee_ac4ims_encoder"
 AC4_TOOL = "dee_ac4_encoder"
 AAC_TOOL = "dee_aac_encoder"
+MEASURE_TOOL = "dee_measure_loudness"
 
 
 @dataclass(frozen=True, slots=True)
@@ -326,6 +328,35 @@ def aac_command(
         ),
         "-e",
         payload.aac_profile.to_dee_cmd(),
+    ]
+
+
+def measure_command(
+    tools: DeeTools, payload: MeasurePayload, files: DeeFiles, *, input_format: str
+) -> list[str]:
+    """
+    A loudness measurement with dee_measure_loudness. ``files.output`` is the
+    loudness manifest it writes. The tool has no --temp-dir, and the measured
+    audio it could also write isn't needed.
+    """
+    return [
+        str(dee_tool(tools.dee_dir, MEASURE_TOOL)),
+        # replaced with the active log level when the job is run
+        "--loglevel",
+        "info",
+        "--progress",
+        "1",
+        *(["--license", str(tools.license)] if tools.license else []),
+        "--overwrite",
+        "1",
+        "--input-format",
+        files.input_format or input_format,
+        "-i",
+        long_path_str(files.input) if isinstance(files.input, Path) else files.input,
+        "--output-manifest",
+        long_path_str(files.output),
+        "--loudness-management",
+        loudness(payload),
     ]
 
 

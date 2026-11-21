@@ -8135,6 +8135,772 @@
  "nopipe_always": {
   "error": "PipeError: --pipe always: DeeZy pipes PCM into DEE only on Windows. Use --pipe auto or never."
  },
+ "measure_6": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_2": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_1": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_3": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "6",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_5": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "6",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_7": {
+  "error": "UnsupportedDeeFeatureError: DEE measures 1.0, 2.0 and 5.1 (and Atmos), not 7 channels. A downmix to 5.1 would change the loudness, so DeeZy doesn't measure one."
+ },
+ "measure_8": {
+  "error": "UnsupportedDeeFeatureError: DEE measures 1.0, 2.0 and 5.1 (and Atmos), not 8 channels. A downmix to 5.1 would change the loudness, so DeeZy doesn't measure one."
+ },
+ "measure_441": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_96k_5": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-ac",
+     "6",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_thd": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_thd_warp": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "--warp-mode",
+      "normal",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_adm": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_preset": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=ebu_r128"
+    ]
+   }
+  ]
+ },
+ "measure_manual": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=0:speech_threshold=30"
+    ]
+   }
+  ]
+ },
+ "measure_output": {
+  "output": "/out/loud.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_output_dir": {
+  "output": "/out/in.loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_output_dir_track": {
+  "output": "/out/in.a2.loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:2",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_output_dir_stream": {
+  "output": "/out/in.s3.loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:3",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
  "pipe_dd_auto_6": {
   "output": "/out/in [5.1] s0 r0 wNone.ac3",
   "preview": false,
@@ -9463,6 +10229,200 @@
    }
   ]
  },
+ "pipe_measure_6": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "pipe": {
+     "dee": [
+      "/tools/dee/dee_measure_loudness",
+      "--loglevel",
+      "info",
+      "--progress",
+      "1",
+      "--overwrite",
+      "1",
+      "--input-format",
+      "pcm_s24le:sample_rate=48000:channels=6:sample_count=2956800:streaming=1",
+      "-i",
+      "named_pipe:////./pipe/deezy-PID-JOB",
+      "--output-manifest",
+      "/temp/job/loudness.json",
+      "--loudness-management",
+      "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+     ],
+     "ffmpeg": [
+      "/tools/ffmpeg",
+      "-y",
+      "-drc_scale",
+      "0",
+      "-hide_banner",
+      "-v",
+      "quiet",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "pcm_s24le",
+      "-map_metadata",
+      "-1",
+      "-f",
+      "s24le",
+      "//./pipe/deezy-PID-JOB"
+     ]
+    }
+   }
+  ]
+ },
+ "pipe_measure_5_441": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "pipe": {
+     "dee": [
+      "/tools/dee/dee_measure_loudness",
+      "--loglevel",
+      "info",
+      "--progress",
+      "1",
+      "--overwrite",
+      "1",
+      "--input-format",
+      "pcm_s24le:sample_rate=48000:channels=6:sample_count=2956800:streaming=1",
+      "-i",
+      "named_pipe:////./pipe/deezy-PID-JOB",
+      "--output-manifest",
+      "/temp/job/loudness.json",
+      "--loudness-management",
+      "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+     ],
+     "ffmpeg": [
+      "/tools/ffmpeg",
+      "-y",
+      "-drc_scale",
+      "0",
+      "-hide_banner",
+      "-v",
+      "quiet",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "pcm_s24le",
+      "-af",
+      "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+      "-ar",
+      "48000",
+      "-ac",
+      "6",
+      "-map_metadata",
+      "-1",
+      "-f",
+      "s24le",
+      "//./pipe/deezy-PID-JOB"
+     ]
+    }
+   }
+  ]
+ },
+ "pipe_measure_always": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "pipe": {
+     "dee": [
+      "/tools/dee/dee_measure_loudness",
+      "--loglevel",
+      "info",
+      "--progress",
+      "1",
+      "--overwrite",
+      "1",
+      "--input-format",
+      "pcm_s24le:sample_rate=48000:channels=1:sample_count=2956800:streaming=1",
+      "-i",
+      "named_pipe:////./pipe/deezy-PID-JOB",
+      "--output-manifest",
+      "/temp/job/loudness.json",
+      "--loudness-management",
+      "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+     ],
+     "ffmpeg": [
+      "/tools/ffmpeg",
+      "-y",
+      "-drc_scale",
+      "0",
+      "-hide_banner",
+      "-v",
+      "quiet",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "pcm_s24le",
+      "-map_metadata",
+      "-1",
+      "-f",
+      "s24le",
+      "//./pipe/deezy-PID-JOB"
+     ]
+    }
+   }
+  ]
+ },
+ "pipe_measure_never": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
  "pipe_ac4_6": {
   "output": "/out/in [2.0] s0 r0 wNone.ac4",
   "preview": false,
@@ -9576,6 +10536,60 @@
      "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
      "-e",
      "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "pipe_measure_thd": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
     ]
    }
   ]

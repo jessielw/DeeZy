@@ -18,6 +18,7 @@ from deezy.payloads.ac4 import Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
+from deezy.payloads.measure import MeasurePayload
 
 
 @dataclass(slots=True)
@@ -330,3 +331,30 @@ class PayloadBuilder:
             }
         )
         return Ac4ChannelPayload(**payload_data)
+
+    @classmethod
+    def build_measure_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> MeasurePayload:
+        """Build the loudness measurement payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_measure_loudness measures to 1770-4 only
+        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        output_dir = cls.safe_get(args, "output_dir")
+        payload_data.update(
+            {
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode"),
+                "output_dir": Path(output_dir) if output_dir else None,
+            }
+        )
+        return MeasurePayload(**payload_data)

@@ -27,7 +27,14 @@ from deezy.cli.utils import apply_config_defaults_to_args, apply_default_bitrate
 from deezy.config.defaults import CONF_DEFAULT
 from deezy.config.manager import ConfigManager
 from deezy.dee.tools import get_executable_extension
-from deezy.pipeline.plan import DeeStep, FfmpegStep, PipeStep, PlanContext, plan_job
+from deezy.pipeline.plan import (
+    DeeStep,
+    FfmpegStep,
+    PipeStep,
+    PlanContext,
+    plan_job,
+    plan_measure,
+)
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.utils.logger import logger
 
@@ -372,6 +379,49 @@ SCENARIOS = [
     ("nopipe_always", ["ddp", "--pipe", "always"], info(6), MKV),
 ]
 
+# --- measure (arguments start with 'measure', which replaces 'encode')
+MEASURE_SCENARIOS = [
+    ("measure_6", ["measure"], info(6), MKV),
+    ("measure_2", ["measure"], info(2), MKV),
+    ("measure_1", ["measure"], info(1), MKV),
+    ("measure_3", ["measure"], info(3), MKV),
+    ("measure_5", ["measure"], info(5), MKV),
+    ("measure_7", ["measure"], info(7), MKV),
+    ("measure_8", ["measure"], info(8), MKV),
+    ("measure_441", ["measure"], info(2, rate=44100), MKV),
+    ("measure_96k_5", ["measure"], info(5, rate=96000), MKV),
+    ("measure_thd", ["measure"], info(8, thd=True), MKV),
+    (
+        "measure_thd_warp",
+        ["measure", "--thd-warp-mode", "normal"],
+        info(8, thd=True),
+        MKV,
+    ),
+    ("measure_adm", ["measure"], info(8, adm=True), WAV),
+    ("measure_preset", ["measure", "--loudness-preset", "ebu_r128"], info(6), MKV),
+    (
+        "measure_manual",
+        ["measure", "--no-dialogue-intelligence", "--speech-threshold", "30"],
+        info(6),
+        MKV,
+    ),
+    ("measure_output", ["measure", "--output", str(OUT / "loud.json")], info(6), MKV),
+    ("measure_output_dir", ["measure", "--output-dir", str(OUT)], info(6), MKV),
+    (
+        "measure_output_dir_track",
+        ["measure", "--output-dir", str(OUT), "--track-index", "2"],
+        info(6),
+        MKV,
+    ),
+    (
+        "measure_output_dir_stream",
+        ["measure", "--output-dir", str(OUT), "--track-index", "s:3"],
+        info(2),
+        MKV,
+    ),
+]
+SCENARIOS += MEASURE_SCENARIOS
+
 # planned as on Windows, where each job gets a named pipe
 PIPE_NAME = "deezy-PID-JOB"
 PIPE_SCENARIOS = [
@@ -408,9 +458,14 @@ PIPE_SCENARIOS = [
     ("pipe_aac_6", ["aac"], info(6), MKV),
     ("pipe_aac_8_441", ["aac"], info(8, rate=44100), MKV),
     ("pipe_aac_target", ["aac", "--loudness-target", "-24"], info(2), MKV),
+    ("pipe_measure_6", ["measure"], info(6), MKV),
+    ("pipe_measure_5_441", ["measure"], info(5, rate=44100), MKV),
+    ("pipe_measure_always", ["measure", "--pipe", "always"], info(1), MKV),
+    ("pipe_measure_never", ["measure", "--pipe", "never"], info(2), MKV),
     # these keep their WAV or DAMF
     ("pipe_ac4_6", ["ac4-ims"], info(6), MKV),
     ("pipe_atmos_thd", ["ddp-atmos"], info(8, thd=True), MKV),
+    ("pipe_measure_thd", ["measure"], info(8, thd=True), MKV),
 ]
 ALL_SCENARIOS = [(*s, None) for s in SCENARIOS] + [
     (*s, PIPE_NAME) for s in PIPE_SCENARIOS
@@ -511,16 +566,24 @@ def dee_entry(step: DeeStep) -> dict:
 
 def planned(parser, config, args, probed, source, pipe_name=None) -> dict:
     """The scenario's plan as the golden file records it."""
-    ns = parser.parse_args(["--no-progress-bars", "encode", *args, str(source)])
-    apply_default_bitrate(ns, config)
-    apply_config_defaults_to_args(ns, config)
-    payload = BUILDERS[ns.format_command](ns, source, FFMPEG, TRUEHDD, DEE)
+    measuring = args[0] == "measure"
+    command = [] if measuring else ["encode"]
+    ns = parser.parse_args(["--no-progress-bars", *command, *args, str(source)])
+    if measuring:
+        apply_config_defaults_to_args(ns, config)
+        payload = PayloadBuilder.build_measure_payload(ns, source, FFMPEG, TRUEHDD, DEE)
+        planner = plan_measure
+    else:
+        apply_default_bitrate(ns, config)
+        apply_config_defaults_to_args(ns, config)
+        payload = BUILDERS[ns.format_command](ns, source, FFMPEG, TRUEHDD, DEE)
+        planner = plan_job
     track = AudioTrackInfo(mi_track=cast("Track", None), **probed)
     ctx = PlanContext(
         namer=FakeNamer(source), temp_dir=TEMP, config=config, pipe_name=pipe_name
     )
     try:
-        plan = plan_job(payload, track, ctx)
+        plan = planner(payload, track, ctx)
     except Exception as e:
         return {"error": f"{type(e).__name__}: {norm(e)}"}
 

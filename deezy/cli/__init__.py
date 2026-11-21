@@ -44,6 +44,7 @@ from deezy.enums.shared import (
 )
 from deezy.exceptions import OutputExistsError
 from deezy.pipeline.encode import encode
+from deezy.pipeline.measure import measure, summary
 from deezy.pipeline.run import init_phase_limits
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.batch_results import BatchResultsManager
@@ -98,29 +99,32 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "input", nargs="+", help="Input file paths or directories", metavar="INPUT"
     )
 
-    # common Encode Args
-    encode_group = argparse.ArgumentParser(add_help=False)
-    encode_group.add_argument(
+    # the tools and the source track (encode and measure)
+    tools_group = argparse.ArgumentParser(add_help=False)
+    tools_group.add_argument(
         "--ffmpeg",
         type=str,
         help="Path to FFMPEG executable.",
     )
-    encode_group.add_argument(
+    tools_group.add_argument(
         "--truehdd",
         type=str,
         help="Path to Truehdd executable.",
     )
-    encode_group.add_argument(
+    tools_group.add_argument(
         "--dee",
         type=str,
         help="Path to Dolby Encoding Engine executable.",
     )
-    encode_group.add_argument(
+    tools_group.add_argument(
         "--track-index",
         type=validate_track_index,
         default=TrackIndex(TrackType.AUDIO, 0),
-        help="Track to use for encoding. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).",
+        help="The source track. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).",
     )
+
+    # common Encode Args
+    encode_group = argparse.ArgumentParser(add_help=False, parents=[tools_group])
     encode_group.add_argument(
         "--delay",
         type=str,
@@ -663,7 +667,52 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
-    # how FFmpeg's PCM reaches DEE (DD, DD+, DD+ Blu-ray, AC-4 and AAC)
+    # deezy measure
+    measure_group = argparse.ArgumentParser(add_help=False)
+    measure_output = measure_group.add_mutually_exclusive_group()
+    measure_output.add_argument(
+        "--output",
+        type=str,
+        help="Save DEE's loudness manifest (JSON) to this file. One input only.",
+    )
+    measure_output.add_argument(
+        "--output-dir",
+        type=str,
+        help=(
+            "Save each input's loudness manifest (JSON) in this directory, as "
+            "<input name>.loudness.json."
+        ),
+    )
+    measure_group.add_argument(
+        "--temp-dir",
+        type=str,
+        help="Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.",
+    )
+    measure_group.add_argument(
+        "--keep-temp",
+        action="store_true",
+        help="Keeps the temp files after finishing.",
+    )
+    measure_group.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite an existing saved manifest instead of failing.",
+    )
+    measure_group.add_argument(
+        "--print-commands",
+        action="store_true",
+        help="Print each FFmpeg, truehdd and DEE command line as it starts.",
+    )
+    measure_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Probe the input and print the FFmpeg, truehdd and DEE command lines "
+            "the measurement would run, without running them or writing any file."
+        ),
+    )
+
+    # how FFmpeg's PCM reaches DEE (DD, DD+, DD+ Blu-ray, AC-4, AAC and measure)
     pcm_transport_group = argparse.ArgumentParser(add_help=False)
     pcm_transport_group.add_argument(
         "--pipe",
@@ -709,6 +758,8 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "truehdd_options_group": truehdd_options_group,
         "ac4_basic_options_group": ac4_basic_options_group,
         "ac4_drc_group": ac4_drc_group,
+        "tools_group": tools_group,
+        "measure_group": measure_group,
         "ac4_ims_drc_group": ac4_ims_drc_group,
         "ac4_channels_group": ac4_channels_group,
         "aac_options_group": aac_options_group,
@@ -943,6 +994,28 @@ def create_other_parsers(
         "info", parents=[argument_groups["input_group"]], help="Info management"
     )
 
+    # measure command parser
+    _measure_parser = subparsers.add_parser(
+        "measure",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["tools_group"],
+            argument_groups["measure_group"],
+            argument_groups["loudness_group"],
+            argument_groups["pcm_transport_group"],
+            argument_groups["truehdd_options_group"],
+        ),
+        help=(
+            "Measure loudness with DEE (1.0, 2.0, 5.1 and Atmos; 3 to 5 channels "
+            "as 5.1)"
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
     # config command parser
     config_parser = subparsers.add_parser("config", help="Configuration management")
     config_subparsers = config_parser.add_subparsers(
@@ -1067,6 +1140,10 @@ def execute_command(
         if dependencies is None:
             exit_application("Dependencies not found for encoding.", EXIT_FAIL)
         execute_encode_command(args, file_inputs, dependencies, config_manager)
+    elif args.sub_command == "measure":
+        if dependencies is None:
+            exit_application("Dependencies not found for measuring.", EXIT_FAIL)
+        execute_measure_command(args, file_inputs, dependencies, config_manager)
     elif args.sub_command == "find":
         execute_find_command(args, file_inputs)
     elif args.sub_command == "info":
@@ -1712,6 +1789,51 @@ def execute_config_command(
 
         except Exception as e:
             exit_application(f"Failed to list presets: {e}", EXIT_FAIL)
+
+
+def execute_measure_command(
+    args: argparse.Namespace,
+    file_inputs: list[Path],
+    dependencies: dict[str, Path | None],
+    config_manager: ConfigManager | None,
+) -> None:
+    """Measure each input's loudness and print it, one input at a time."""
+    ffmpeg_path = dependencies["ffmpeg_path"]
+    dee_path = dependencies["dee_path"]
+    if ffmpeg_path is None or dee_path is None:
+        exit_application("Measuring needs FFmpeg and DEE.", EXIT_FAIL)
+    if args.output and len(file_inputs) > 1:
+        exit_application(
+            "--output saves one input's manifest; use --output-dir for several.",
+            EXIT_FAIL,
+        )
+    apply_config_defaults_to_args(args, config_manager)
+    if not args.temp_dir and config_manager is not None:
+        config_temp_dir = config_manager.get_config_default("temp_dir")
+        if config_temp_dir:
+            args.temp_dir = str(config_temp_dir)
+    init_phase_limits(max_parallel=1)
+
+    failed = []
+    for input_file in file_inputs:
+        payload = PayloadBuilder.build_measure_payload(
+            args, input_file, ffmpeg_path, dependencies["truehdd_path"], dee_path
+        )
+        try:
+            manifest = measure(payload)
+        except Exception as e:
+            logger.error(f"Failed to measure {input_file}: {e}")
+            logger.debug(traceback.format_exc())
+            failed.append(input_file)
+            continue
+        if manifest is not None:
+            print(f"{input_file.name} (track {payload.track_index})", flush=True)
+            print("\n".join(summary(manifest)), flush=True)
+
+    if failed:
+        exit_application(
+            f"{len(failed)} of {len(file_inputs)} measurements failed.", EXIT_FAIL
+        )
 
 
 def execute_temp_command(args: argparse.Namespace) -> None:

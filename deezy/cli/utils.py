@@ -405,7 +405,7 @@ def handle_file_inputs(args: argparse.Namespace) -> list[Path]:
             exit_application("", EXIT_FAIL)
         return []
 
-    if args.sub_command not in ("find", "info", "encode"):
+    if args.sub_command not in ("find", "info", "encode", "measure"):
         return []
 
     try:
@@ -414,7 +414,7 @@ def handle_file_inputs(args: argparse.Namespace) -> list[Path]:
         # a mistyped path is a user error, not something to hand back a traceback for
         exit_application(str(e), EXIT_FAIL)
 
-    if not file_inputs and args.sub_command in ("find", "info", "encode"):
+    if not file_inputs and args.sub_command in ("find", "info", "encode", "measure"):
         exit_application("No input files were found.", EXIT_FAIL)
 
     return file_inputs

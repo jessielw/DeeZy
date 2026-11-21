@@ -21,6 +21,7 @@ from deezy.dee.commands import (
     ac4ims_command,
     ddp_command,
     ddpjoc_command,
+    measure_command,
 )
 from deezy.dee.spec import FormatSpec, get_format
 from deezy.delay import Delay, compensation
@@ -52,6 +53,7 @@ from deezy.payloads.ac4 import Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
+from deezy.payloads.measure import MeasurePayload
 from deezy.payloads.shared import ChannelBitrates, CorePayload
 from deezy.pipeline.transport import NamedPipe, Transport, WavFile, expected_samples
 from deezy.track_info.audio_track_info import AudioTrackInfo
@@ -532,7 +534,7 @@ def _tools(payload: CorePayload, ctx: PlanContext) -> DeeTools:
 
 
 def _truehdd_step(
-    payload: AtmosPayload | Ac4Payload,
+    payload: AtmosPayload | Ac4Payload | MeasurePayload,
     info: AudioTrackInfo,
     ctx: PlanContext,
     reuse_id: str,
@@ -876,7 +878,7 @@ def require_supported_atmos_mode(atmos_mode: AtmosMode) -> None:
 
 
 def _atmos_input(
-    payload: AtmosPayload | Ac4Payload,
+    payload: AtmosPayload | Ac4Payload | MeasurePayload,
     info: AudioTrackInfo,
     ctx: PlanContext,
     reuse_id: str,
@@ -1167,4 +1169,88 @@ def _plan_aac(payload: AacPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         steps=_pcm_steps(payload, filters, transport, str(CodecFormat.AAC), info, dee),
         free_space_needed=info.recommended_free_space,
         preview=preview,
+    )
+
+
+# --- loudness measurement
+
+# the layouts dee_measure_loudness reads; FFmpeg pads 3 to 5 channels to 5.1
+MEASURE_INPUT_CHANNELS = (1, 2, 6)
+MEASURE = "measure"
+
+
+def measure_output(payload: MeasurePayload) -> Path | None:
+    """Where the manifest is saved: --output, a file in --output-dir, or nowhere."""
+    if payload.file_output:
+        return payload.file_output
+    if payload.output_dir is None:
+        return None
+    source = Path(payload.file_input)
+    track = payload.track_index
+    label = (
+        ""
+        if track == TrackIndex(TrackType.AUDIO, 0)
+        else f".{track.track_type.value}{track.index}"
+    )
+    return payload.output_dir / f"{source.stem}{label}.loudness.json"
+
+
+def plan_measure(
+    payload: MeasurePayload, info: AudioTrackInfo, ctx: PlanContext
+) -> JobPlan:
+    """
+    The plan for one loudness measurement.
+
+    Its output is where the manifest ends up: the saved file, or DEE's own in
+    the temp directory when it isn't kept.
+    """
+    manifest = ctx.temp_dir / "loudness.json"
+    tools = _tools(payload, ctx)
+    steps: tuple[Step, ...]
+    if info.thd_atmos or info.adm_atmos_wav:
+        logger.info(
+            "Measuring the Atmos program: DEE reports its binaural and 5.1 renders."
+        )
+        truehdd, dee_input = _atmos_input(payload, info, ctx, MEASURE)
+        if dee_input is None:
+            raise InvalidAtmosInputError("Cannot process input, not a valid Atmos format")
+        files = DeeFiles(input=dee_input, output=manifest, temp_dir=ctx.temp_dir)
+        dee = DeeStep(
+            tuple(measure_command(tools, payload, files, input_format="atmos_mezz")),
+            manifest,
+        )
+        steps = (truehdd, dee) if truehdd else (dee,)
+    else:
+        channels = info.channels
+        if channels > max(MEASURE_INPUT_CHANNELS):
+            raise UnsupportedDeeFeatureError(
+                f"DEE measures 1.0, 2.0 and 5.1 (and Atmos), not {channels} "
+                "channels. A downmix to 5.1 would change the loudness, so DeeZy "
+                "doesn't measure one."
+            )
+        dee_channels = channels if channels in MEASURE_INPUT_CHANNELS else 6
+        transport = choose_transport(
+            payload, ctx, ctx.temp_dir / "measure.wav", dee_channels, info.duration
+        )
+        resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
+        filters = _filter_args(None, resample)
+        if dee_channels != channels:
+            logger.info(
+                f"DEE measures 1.0, 2.0 and 5.1, so the {channels}-channel source "
+                "is measured as 5.1 with silent channels added, which leave its "
+                "loudness as it is."
+            )
+            filters += ["-ac", str(dee_channels)]
+        files = replace(_dee_files(ctx, transport, manifest), output=manifest)
+        dee = DeeStep(
+            tuple(measure_command(tools, payload, files, input_format="wav")), manifest
+        )
+        steps = _pcm_steps(payload, filters, transport, MEASURE, info, dee)
+    return JobPlan(
+        format=MEASURE,
+        source=Path(payload.file_input),
+        output=measure_output(payload) or manifest,
+        temp_dir=ctx.temp_dir,
+        steps=steps,
+        free_space_needed=info.recommended_free_space,
     )

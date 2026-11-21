@@ -428,6 +428,69 @@ def finalize_output(dee_output: Path, output: Path) -> None:
     logger.debug(f"Moved encode to output path {output}.")
 
 
+def dee_output(plan: JobPlan) -> Path:
+    """What the plan's last DEE step writes into the temp directory."""
+    for step in reversed(plan.steps):
+        if isinstance(step, PipeStep):
+            return step.dee.output
+        if isinstance(step, DeeStep):
+            return step.output
+    raise OutputFileNotFoundError("The plan has no DEE step.")
+
+
+def run_steps(plan: JobPlan, payload: CorePayload) -> Path:
+    """Run every step of ``plan`` and return what its DEE step wrote."""
+    for step in plan.steps:
+        if isinstance(step, FfmpegStep):
+            logger.debug(f"ffmpeg_cmd={list(step.argv)}.")
+            run_ffmpeg(step, plan, payload)
+        elif isinstance(step, TruehddStep):
+            run_truehdd(step, plan, payload)
+        elif isinstance(step, PipeStep):
+            logger.debug(f"dee_cmd={list(step.dee.argv)}.")
+            logger.debug(f"ffmpeg_cmd={list(step.ffmpeg_argv)}.")
+            run_pipe(step, payload.no_progress_bars, payload.print_commands)
+        else:
+            logger.debug(f"dee_cmd={list(step.argv)}.")
+            run_dee(step, payload.no_progress_bars, payload.print_commands)
+    return dee_output(plan)
+
+
+def run_measure(plan: JobPlan, payload: CorePayload) -> dict:
+    """
+    Run a measurement plan and return DEE's loudness manifest, saved at the
+    plan's output unless that is DEE's own copy in the temp directory.
+    """
+    manifest_path = dee_output(plan)
+    save = plan.output != manifest_path
+    keep_temp = bool(getattr(payload, "keep_temp", False))
+    plan.temp_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        check_disk_space(plan.source, plan.temp_dir, plan.free_space_needed)
+        if save and plan.output.exists() and not payload.overwrite:
+            raise OutputExistsError(f"Output already exists: {plan.output}")
+        run_steps(plan, payload)
+        try:
+            text = Path(long_path_str(manifest_path)).read_text(encoding="utf-8")
+            manifest = json.loads(text)
+        except (OSError, ValueError) as e:
+            raise OutputFileNotFoundError(
+                f"DEE reported success but left no readable loudness manifest ({e})"
+            ) from e
+        # DEE names each track after what it read: DeeZy's temp WAV, pipe or DAMF
+        for track in manifest.get("loudness_manifest", {}).get("tracks", []):
+            track["id"] = str(plan.source)
+        if save:
+            plan.output.parent.mkdir(parents=True, exist_ok=True)
+            Path(long_path_str(plan.output)).write_text(
+                json.dumps(manifest, indent=4) + "\n", encoding="utf-8"
+            )
+            logger.info(f"Loudness manifest saved: {plan.output}")
+        return manifest
+    finally:
+        clean_temp(plan.temp_dir, keep_temp)
+
+
 def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
     """Run every step of ``plan`` and return the finished output."""
     if plan.preview:
@@ -446,25 +509,7 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
                 f"Output already exists and will be overwritten: {plan.output}"
             )
 
-        dee_output = None
-        for step in plan.steps:
-            if isinstance(step, FfmpegStep):
-                logger.debug(f"ffmpeg_cmd={list(step.argv)}.")
-                run_ffmpeg(step, plan, payload)
-            elif isinstance(step, TruehddStep):
-                run_truehdd(step, plan, payload)
-            elif isinstance(step, PipeStep):
-                logger.debug(f"dee_cmd={list(step.dee.argv)}.")
-                logger.debug(f"ffmpeg_cmd={list(step.ffmpeg_argv)}.")
-                run_pipe(step, payload.no_progress_bars, payload.print_commands)
-                dee_output = step.dee.output
-            else:
-                logger.debug(f"dee_cmd={list(step.argv)}.")
-                run_dee(step, payload.no_progress_bars, payload.print_commands)
-                dee_output = step.output
-        if dee_output is None:
-            raise OutputFileNotFoundError("The plan has no DEE step.")
-
+        dee_output = run_steps(plan, payload)
         finalize_output(dee_output, plan.output)
         if not plan.output.is_file():
             raise OutputFileNotFoundError(f"{plan.output.name} output not found")

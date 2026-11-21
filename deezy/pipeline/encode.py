@@ -10,6 +10,7 @@ from deezy.payloads.shared import CorePayload
 from deezy.pipeline.plan import JobPlan, PlanContext, plan_job
 from deezy.pipeline.run import check_input_file, run_plan, temp_dir_path
 from deezy.pipeline.show import command_lines
+from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.mediainfo import MediainfoParser
 from deezy.utils.logger import logger
 
@@ -34,8 +35,11 @@ def pipe_name(temp_dir: Path) -> str | None:
     return f"deezy-{os.getpid()}-{temp_dir.name}"
 
 
-def plan(payload: CorePayload) -> JobPlan:
-    """Probe the source and plan its encode. Creates nothing."""
+def probe(payload: CorePayload, label: str) -> tuple[AudioTrackInfo, PlanContext]:
+    """
+    Probe the source track, and set out what its plan may use. ``label`` names
+    the job's temp directory with the track. Creates nothing.
+    """
     file_input = Path(payload.file_input)
     check_input_file(file_input)
     namer = MediainfoParser(file_input, payload.track_index)
@@ -43,7 +47,7 @@ def plan(payload: CorePayload) -> JobPlan:
     temp_dir = temp_dir_path(
         file_input,
         payload.temp_dir,
-        track_label=f"t{payload.track_index.index}",
+        track_label=f"{label}{payload.track_index.index}",
         keep_temp=payload.keep_temp,
     )
     ctx = PlanContext(
@@ -53,7 +57,12 @@ def plan(payload: CorePayload) -> JobPlan:
         config=_config(),
         pipe_name=pipe_name(temp_dir),
     )
-    return plan_job(payload, info, ctx)
+    return info, ctx
+
+
+def plan(payload: CorePayload) -> JobPlan:
+    """Probe the source and plan its encode. Creates nothing."""
+    return plan_job(payload, *probe(payload, "t"))
 
 
 def encode(payload: CorePayload) -> Path:
