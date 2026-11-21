@@ -52,3 +52,7 @@ class UnsupportedDeeFeatureError(DeeZyError):
 
 class InvalidAtmosInputError(DeeZyError):
     """Raised when input file is an incompatible Atmos input."""
+
+
+class PipeError(DeeZyError):
+    """Raised when FFmpeg's PCM can't be piped into DEE as asked."""

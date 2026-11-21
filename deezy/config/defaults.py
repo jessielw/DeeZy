@@ -66,6 +66,10 @@ overwrite = false
 jitter_ms = 0
 # Allow automatic system sleep during encoding. By default DeeZy keeps the system awake.
 allow_sleep = false
+# How FFmpeg's audio reaches DEE for dd, ddp and ddp-bluray: "auto" pipes it on
+# Windows (a temp WAV elsewhere or with --reuse-temp-files), "always" pipes it or
+# refuses the job, "never" always writes the temp WAV.
+pipe = "auto"
 # Per-phase concurrency limits. Set to 0 to inherit the value of `max_parallel`.
 # These allow fine-grained tuning when some phases are more/less intensive.
 limit_ffmpeg = 0

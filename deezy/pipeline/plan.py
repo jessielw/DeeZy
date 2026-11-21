@@ -29,13 +29,20 @@ from deezy.enums.codec_format import CodecFormat
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
 from deezy.enums.ddp_bluray import DolbyDigitalPlusBlurayChannels
-from deezy.enums.shared import DDEncodingMode, DeeFPS, StereoDownmix, TrackType
+from deezy.enums.shared import (
+    DDEncodingMode,
+    DeeFPS,
+    PipeMode,
+    StereoDownmix,
+    TrackType,
+)
 from deezy.exceptions import (
     AutoChannelDetectionError,
     ChannelMixError,
     DependencyNotFoundError,
     InvalidAtmosInputError,
     InvalidExtensionError,
+    PipeError,
     UnsupportedDeeFeatureError,
 )
 from deezy.payloads.ac4 import Ac4Payload
@@ -43,7 +50,7 @@ from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
 from deezy.payloads.shared import ChannelBitrates, CorePayload
-from deezy.pipeline.transport import WavFile
+from deezy.pipeline.transport import NamedPipe, Transport, WavFile
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.track_info.track_index import TrackIndex
 from deezy.track_info.utils import parse_delay_from_file
@@ -104,7 +111,20 @@ class DeeStep:
     custom_dialnorm: int = 0
 
 
-Step = FfmpegStep | TruehddStep | DeeStep
+@dataclass(frozen=True, slots=True)
+class PipeStep:
+    """
+    FFmpeg streaming PCM into DEE through a named pipe. DEE starts first, since
+    it creates the pipe, and the two then run at once.
+    """
+
+    ffmpeg_argv: tuple[str, ...]
+    dee: DeeStep
+    pipe: NamedPipe
+    duration: float | None = None
+
+
+Step = FfmpegStep | TruehddStep | DeeStep | PipeStep
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,6 +171,8 @@ class PlanContext:
     # passed to DEE when the tools won't find their own
     license: Path | None = None
     config: ConfigManager | None = None
+    # the job's named pipe, on a platform where DeeZy can pipe PCM into DEE
+    pipe_name: str | None = None
 
 
 def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> JobPlan:
@@ -368,7 +390,7 @@ def ffmpeg_argv(
     file_input: Path,
     track_index: TrackIndex,
     filters: list[str],
-    wav: WavFile,
+    transport: Transport,
 ) -> tuple[str, ...]:
     """FFmpeg decoding the track to 32-bit PCM for DEE. AC-3 DRC is off."""
     return (
@@ -386,11 +408,11 @@ def ffmpeg_argv(
         if track_index.track_type is TrackType.AUDIO
         else f"0:{track_index.index}",
         "-c",
-        "pcm_s32le",
+        transport.ffmpeg_codec,
         *filters,
         "-map_metadata",
         "-1",
-        *wav.ffmpeg_output(),
+        *transport.ffmpeg_output(),
     )
 
 
@@ -403,25 +425,55 @@ def _filter_args(mix: str | None, resample: bool) -> list[str]:
     return args
 
 
-def _ffmpeg_step(
+def _pcm_steps(
     payload: CorePayload,
     filters: list[str],
-    wav: WavFile,
+    transport: Transport,
     reuse_id: str,
     info: AudioTrackInfo,
-) -> FfmpegStep:
-    return FfmpegStep(
-        argv=ffmpeg_argv(
-            payload.ffmpeg_path,
-            Path(payload.file_input),
-            payload.track_index,
-            filters,
-            wav,
-        ),
-        output=wav.path,
-        reuse_id=reuse_id,
-        duration=info.duration,
+    dee: DeeStep,
+) -> tuple[Step, ...]:
+    """FFmpeg's step and DEE's, or the one step that pipes one into the other."""
+    argv = ffmpeg_argv(
+        payload.ffmpeg_path,
+        Path(payload.file_input),
+        payload.track_index,
+        filters,
+        transport,
     )
+    if isinstance(transport, NamedPipe):
+        return (PipeStep(argv, dee, transport, duration=info.duration),)
+    return (
+        FfmpegStep(
+            argv=argv, output=transport.path, reuse_id=reuse_id, duration=info.duration
+        ),
+        dee,
+    )
+
+
+def choose_transport(
+    payload: CorePayload, ctx: PlanContext, wav: Path, channels: int
+) -> Transport:
+    """
+    A named pipe for ``--pipe auto`` or ``always``, else the WAV at ``wav``.
+
+    ``channels`` is what FFmpeg writes. ``auto`` falls back to the WAV where a
+    pipe can't be used; ``always`` refuses there instead.
+    """
+    mode = getattr(payload, "pipe", PipeMode.NEVER)
+    if mode is PipeMode.NEVER:
+        return WavFile(wav)
+    reason = None
+    if ctx.pipe_name is None:
+        reason = "DeeZy pipes PCM into DEE only on Windows"
+    elif payload.reuse_temp_files:
+        reason = "--reuse-temp-files needs the temp WAV, which a pipe doesn't write"
+    if reason is None:
+        return NamedPipe(str(ctx.pipe_name), channels)
+    if mode is PipeMode.ALWAYS:
+        raise PipeError(f"--pipe always: {reason}. Use --pipe auto or never.")
+    logger.debug(f"Writing a temp WAV for DEE: {reason}.")
+    return WavFile(wav)
 
 
 def dee_output_path(temp_dir: Path, output: Path) -> Path:
@@ -434,7 +486,17 @@ def dee_output_path(temp_dir: Path, output: Path) -> Path:
     return temp_dir / f"{artifact_stem(output)}{output.suffix}"
 
 
-def _dee_files(ctx: PlanContext, dee_input: Path, output: Path) -> DeeFiles:
+def _dee_files(ctx: PlanContext, dee_input: Path | Transport, output: Path) -> DeeFiles:
+    """DEE's files. A transport also sets the input format, unless it's a WAV."""
+    if isinstance(dee_input, NamedPipe):
+        return DeeFiles(
+            input=dee_input.dee_input,
+            output=dee_output_path(ctx.temp_dir, output),
+            temp_dir=ctx.temp_dir,
+            input_format=dee_input.dee_input_format,
+        )
+    if isinstance(dee_input, WavFile):
+        dee_input = dee_input.dee_input
     return DeeFiles(
         input=dee_input,
         output=dee_output_path(ctx.temp_dir, output),
@@ -539,9 +601,16 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
         )
     ):
         ffmpeg_down_mix = channels.value
-    delay = _compensate(delay, spec, ffmpeg_down_mix or source_channels, channels.value)
+    # what FFmpeg hands DEE
+    dee_input_channels = ffmpeg_down_mix or source_channels
+    delay = _compensate(delay, spec, dee_input_channels, channels.value)
 
-    wav = WavFile(ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.DD}.wav")
+    transport = choose_transport(
+        payload,
+        ctx,
+        ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.DD}.wav",
+        dee_input_channels,
+    )
     resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
     if dplii:
         filters = _filter_args(_DPLII, resample)
@@ -552,9 +621,8 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
         filters = _filter_args(None, resample)
     if (ffmpeg_down_mix and not upmix_50) or stereo_mix is StereoDownmix.DPLII:
         filters += ["-ac", f"{ffmpeg_down_mix}"]
-    ffmpeg = _ffmpeg_step(payload, filters, wav, str(CodecFormat.DD), info)
 
-    files = _dee_files(ctx, wav.dee_input, output)
+    files = _dee_files(ctx, transport, output)
     dee_argv = ddp_command(
         _tools(payload, ctx),
         replace(payload, channels=channels),
@@ -566,12 +634,13 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
         delay=delay,
         dd_mode=DDEncodingMode.DD,
     )
+    dee = DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm)
     return JobPlan(
         format=spec.name,
         source=Path(payload.file_input),
         output=output,
         temp_dir=ctx.temp_dir,
-        steps=(ffmpeg, DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm)),
+        steps=_pcm_steps(payload, filters, transport, str(CodecFormat.DD), info, dee),
         free_space_needed=info.recommended_free_space,
         preview=preview,
     )
@@ -708,11 +777,16 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     if (downmix_off and not dee_allowed_input) or upmix_50:
         ffmpeg_down_mix = channels.value
     output_channels = 8 if bluray else channels.value
-    delay = _compensate(
-        delay, spec, ffmpeg_down_mix or source_channels, output_channels
-    )
+    # what FFmpeg hands DEE
+    dee_input_channels = ffmpeg_down_mix or source_channels
+    delay = _compensate(delay, spec, dee_input_channels, output_channels)
 
-    wav = WavFile(ctx.temp_dir / f"{artifact_stem(output)}.{format_command}.wav")
+    transport = choose_transport(
+        payload,
+        ctx,
+        ctx.temp_dir / f"{artifact_stem(output)}.{format_command}.wav",
+        dee_input_channels,
+    )
     resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
     if bluray or channels == DolbyDigitalPlusChannels.SURROUNDEX:
         filters = _filter_args(_PAN_7_1, resample)
@@ -723,13 +797,12 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         filters = _filter_args(None, resample)
     if ffmpeg_down_mix and not upmix_50:
         filters += ["-ac", f"{ffmpeg_down_mix}"]
-    ffmpeg = _ffmpeg_step(payload, filters, wav, str(format_command), info)
 
     # refuses a secondary layout other than 2.0 or 5.1
     dd_mode = _ddp_mode(channels, payload.bluray_secondary)
     if payload.bluray_secondary:
         bitrate = secondary_bitrate(payload.bitrate, str(channels))
-    files = _dee_files(ctx, wav.dee_input, output)
+    files = _dee_files(ctx, transport, output)
     dee_argv = ddp_command(
         _tools(payload, ctx),
         replace(payload, channels=channels),
@@ -740,12 +813,13 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         delay=delay,
         dd_mode=dd_mode,
     )
+    dee = DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm)
     return JobPlan(
         format=spec.name,
         source=Path(payload.file_input),
         output=output,
         temp_dir=ctx.temp_dir,
-        steps=(ffmpeg, DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm)),
+        steps=_pcm_steps(payload, filters, transport, str(format_command), info, dee),
         free_space_needed=info.recommended_free_space,
         preview=preview,
     )
@@ -861,7 +935,9 @@ def _plan_ac4_ims(
     truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.AC4_IMS))
     steps: list[Step] = [truehdd] if truehdd else []
     if dee_input is None:
-        # channel-based input, at least 6 channels (checked above)
+        # channel-based input, at least 6 channels (checked above). It keeps
+        # the WAV: dee_ac4ims_encoder has no --temp-dir and no skip mode, so
+        # it would buffer piped PCM somewhere DeeZy doesn't choose
         wav = WavFile(
             ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.AC4_IMS}.wav"
         )
@@ -870,8 +946,15 @@ def _plan_ac4_ims(
         # dee_ac4ims_encoder takes 5.1
         if info.channels != 6:
             filters += ["-ac", "6"]
+        argv = ffmpeg_argv(
+            payload.ffmpeg_path,
+            Path(payload.file_input),
+            payload.track_index,
+            filters,
+            wav,
+        )
         steps.append(
-            _ffmpeg_step(payload, filters, wav, str(CodecFormat.AC4_IMS), info)
+            FfmpegStep(argv, wav.path, str(CodecFormat.AC4_IMS), info.duration)
         )
         dee_input = wav.dee_input
 

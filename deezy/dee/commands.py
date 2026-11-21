@@ -46,10 +46,13 @@ class DeeTools:
 class DeeFiles:
     """The files one DEE run reads and writes."""
 
-    input: Path
+    # a file, or DEE's name for a stream it reads (such as a named pipe)
+    input: Path | str
     # where DEE encodes to, inside the job's temp directory
     output: Path
     temp_dir: Path
+    # replaces the encoder's usual --input-format (raw PCM from a pipe)
+    input_format: str | None = None
 
 
 def _flag(value: bool) -> str:
@@ -244,9 +247,9 @@ def _common_args(
         "1",
         *(["--temp-dir", long_path_str(files.temp_dir)] if temp_dir else []),
         "--input-format",
-        input_format,
+        files.input_format or input_format,
         "-i",
-        long_path_str(files.input),
+        long_path_str(files.input) if isinstance(files.input, Path) else files.input,
         "-o",
         long_path_str(files.output),
         "--timecode-frame-rate",

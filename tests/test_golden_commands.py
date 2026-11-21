@@ -23,11 +23,11 @@ from deezy.audio_processors import ffmpeg
 from deezy.audio_processors.truehdd import truehd_extract_command, truehdd_command
 import deezy.cli as cli
 from deezy.cli.payload_factory import PayloadBuilder
-from deezy.cli.utils import apply_default_bitrate
+from deezy.cli.utils import apply_config_defaults_to_args, apply_default_bitrate
 from deezy.config.defaults import CONF_DEFAULT
 from deezy.config.manager import ConfigManager
 from deezy.dee.tools import get_executable_extension
-from deezy.pipeline.plan import DeeStep, FfmpegStep, PlanContext, plan_job
+from deezy.pipeline.plan import DeeStep, FfmpegStep, PipeStep, PlanContext, plan_job
 from deezy.track_info.audio_track_info import AudioTrackInfo
 from deezy.utils.logger import logger
 
@@ -277,6 +277,47 @@ SCENARIOS = [
     ("ac4_bitrate", ["ac4-ims", "--bitrate", "100"], info(6), MKV),
     ("ac4_delay", ["ac4-ims", "--delay=-5ms"], info(6), MKV),
     ("ac4_output_bad", ["ac4-ims", "--output", str(OUT / "x.ec3")], info(6), MKV),
+    # --- --pipe where DeeZy doesn't pipe (anything but Windows)
+    ("nopipe_auto", ["ddp", "--pipe", "auto"], info(6), MKV),
+    ("nopipe_always", ["ddp", "--pipe", "always"], info(6), MKV),
+]
+
+# planned as on Windows, where each job gets a named pipe
+PIPE_NAME = "deezy-PID-JOB"
+PIPE_SCENARIOS = [
+    ("pipe_dd_auto_6", ["dd"], info(6), MKV),
+    ("pipe_dd_stereo_from6", ["dd", "--channels", "2"], info(6), MKV),
+    (
+        "pipe_dd_dpl2",
+        ["dd", "--channels", "2", "--stereo-down-mix", "dpl2"],
+        info(6),
+        MKV,
+    ),
+    ("pipe_dd_upmix50", ["dd", "--channels", "6", "--upmix-50-to-51"], info(5), MKV),
+    ("pipe_dd_auto_3", ["dd"], info(3), MKV),
+    ("pipe_ddp_auto_8", ["ddp"], info(8), MKV),
+    ("pipe_ddp_1_from2", ["ddp", "--channels", "1"], info(2), MKV),
+    ("pipe_ddp_441", ["ddp"], info(2, rate=44100), MKV),
+    ("pipe_ddp_dialnorm", ["ddp", "--custom-dialnorm", "-31"], info(6), MKV),
+    ("pipe_ddp_delay", ["ddp", "--delay=100ms"], info(6), MKV),
+    ("pipe_ddp_secondary", ["ddp", "--bluray-secondary"], info(6), MKV),
+    ("pipe_ddp_never", ["ddp", "--pipe", "never"], info(6), MKV),
+    ("pipe_ddp_always", ["ddp", "--pipe", "always"], info(6), MKV),
+    ("pipe_ddp_reuse", ["ddp", "--reuse-temp-files"], info(6), MKV),
+    (
+        "pipe_ddp_reuse_always",
+        ["ddp", "--reuse-temp-files", "--pipe", "always"],
+        info(6),
+        MKV,
+    ),
+    ("pipe_bluray_8", ["ddp-bluray"], info(8), MKV),
+    ("pipe_bluray_10", ["ddp-bluray"], info(10), MKV),
+    # these keep their WAV or DAMF
+    ("pipe_ac4_6", ["ac4-ims"], info(6), MKV),
+    ("pipe_atmos_thd", ["ddp-atmos"], info(8, thd=True), MKV),
+]
+ALL_SCENARIOS = [(*s, None) for s in SCENARIOS] + [
+    (*s, PIPE_NAME) for s in PIPE_SCENARIOS
 ]
 
 BUILDERS = {
@@ -363,13 +404,23 @@ def info_level() -> Iterator[None]:
     logger.setLevel(level)
 
 
-def planned(parser, config, args, probed, source) -> dict:
+def dee_entry(step: DeeStep) -> dict:
+    entry: dict = {"dee": norm_argv(step.argv)}
+    if step.custom_dialnorm:
+        entry["custom_dialnorm"] = step.custom_dialnorm
+    return entry
+
+
+def planned(parser, config, args, probed, source, pipe_name=None) -> dict:
     """The scenario's plan as the golden file records it."""
     ns = parser.parse_args(["--no-progress-bars", "encode", *args, str(source)])
     apply_default_bitrate(ns, config)
+    apply_config_defaults_to_args(ns, config)
     payload = BUILDERS[ns.format_command](ns, source, FFMPEG, TRUEHDD, DEE)
     track = AudioTrackInfo(mi_track=cast("Track", None), **probed)
-    ctx = PlanContext(namer=FakeNamer(source), temp_dir=TEMP, config=config)
+    ctx = PlanContext(
+        namer=FakeNamer(source), temp_dir=TEMP, config=config, pipe_name=pipe_name
+    )
     try:
         plan = plan_job(payload, track, ctx)
     except Exception as e:
@@ -380,10 +431,18 @@ def planned(parser, config, args, probed, source) -> dict:
         if isinstance(step, FfmpegStep):
             steps.append({"ffmpeg": norm_argv(ffmpeg.with_loglevel(list(step.argv)))})
         elif isinstance(step, DeeStep):
-            entry: dict = {"dee": norm_argv(step.argv)}
-            if step.custom_dialnorm:
-                entry["custom_dialnorm"] = step.custom_dialnorm
-            steps.append(entry)
+            steps.append(dee_entry(step))
+        elif isinstance(step, PipeStep):
+            steps.append(
+                {
+                    "pipe": {
+                        **dee_entry(step.dee),
+                        "ffmpeg": norm_argv(
+                            ffmpeg.with_loglevel(list(step.ffmpeg_argv))
+                        ),
+                    }
+                }
+            )
         else:
             extract = truehd_extract_command(
                 step.ffmpeg, step.file_input, step.track_index
@@ -401,7 +460,7 @@ def test_golden_file_lists_every_scenario():
     if os.environ.get("DEEZY_UPDATE_GOLDEN"):
         pytest.skip("regenerating the golden file")
     golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
-    assert sorted(golden) == sorted(sid for sid, *_ in SCENARIOS)
+    assert sorted(golden) == sorted(sid for sid, *_ in ALL_SCENARIOS)
 
 
 def test_regenerate(parser, config, info_level):
@@ -411,25 +470,25 @@ def test_regenerate(parser, config, info_level):
             "set DEEZY_UPDATE_GOLDEN=1 to regenerate tests/golden/commands.json"
         )
     results = {
-        sid: planned(parser, config, args, probed, source)
-        for sid, args, probed, source in SCENARIOS
+        sid: planned(parser, config, args, probed, source, pipe_name)
+        for sid, args, probed, source, pipe_name in ALL_SCENARIOS
     }
     GOLDEN.parent.mkdir(exist_ok=True)
     GOLDEN.write_text(json.dumps(results, indent=1) + "\n", encoding="utf-8")
 
 
 @pytest.mark.parametrize(
-    ("args", "probed", "source"),
+    ("args", "probed", "source", "pipe_name"),
     [
-        pytest.param(args, probed, source, id=sid)
-        for sid, args, probed, source in SCENARIOS
+        pytest.param(args, probed, source, pipe_name, id=sid)
+        for sid, args, probed, source, pipe_name in ALL_SCENARIOS
     ],
 )
 def test_planned_commands_match_golden(
-    request, parser, config, info_level, args, probed, source
+    request, parser, config, info_level, args, probed, source, pipe_name
 ):
     if os.environ.get("DEEZY_UPDATE_GOLDEN"):
         pytest.skip("regenerating the golden file")
     golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
     sid = request.node.callspec.id
-    assert planned(parser, config, args, probed, source) == golden[sid]
+    assert planned(parser, config, args, probed, source, pipe_name) == golden[sid]

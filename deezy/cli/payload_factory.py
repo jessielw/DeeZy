@@ -5,7 +5,13 @@ from typing import Any
 
 from deezy.enums.ac4 import Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode
-from deezy.enums.shared import DeeDRC, LoudnessPreset, MeteringMode, StereoDownmix
+from deezy.enums.shared import (
+    DeeDRC,
+    LoudnessPreset,
+    MeteringMode,
+    PipeMode,
+    StereoDownmix,
+)
 from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
@@ -50,6 +56,7 @@ class PayloadBuilder:
             "output_preview": cls.safe_get(args, "output_preview", False),
             "print_commands": cls.safe_get(args, "print_commands", False),
             "dry_run": cls.safe_get(args, "dry_run", False),
+            "pipe": cls.safe_get(args, "pipe") or PipeMode.AUTO,
             "worker_id": cls.safe_get(args, "worker_id"),
             "batch_output_dir": Path(cls.safe_get(args, "batch_output_dir"))
             if cls.safe_get(args, "batch_output_dir")

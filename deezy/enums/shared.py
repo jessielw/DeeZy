@@ -151,3 +151,15 @@ class TrackType(CaseInsensitiveEnum):
     @override
     def __str__(self) -> str:
         return self.value
+
+
+class PipeMode(CaseInsensitiveEnum):
+    """How FFmpeg's PCM reaches DEE: through a pipe, or a temp WAV file."""
+
+    AUTO = "auto"
+    ALWAYS = "always"
+    NEVER = "never"
+
+    @override
+    def __str__(self) -> str:
+        return self.value

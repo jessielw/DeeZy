@@ -21,6 +21,7 @@ import platformdirs
 
 from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
+from deezy.audio_processors.pipe import process_pipe_job
 from deezy.audio_processors.truehdd import damf_warp_mode, decode_truehd_to_atmos
 from deezy.exceptions import (
     InputFileNotFoundError,
@@ -30,7 +31,14 @@ from deezy.exceptions import (
     PathTooLongError,
 )
 from deezy.payloads.shared import CorePayload
-from deezy.pipeline.plan import DeeStep, FfmpegStep, JobPlan, Step, TruehddStep
+from deezy.pipeline.plan import (
+    DeeStep,
+    FfmpegStep,
+    JobPlan,
+    PipeStep,
+    Step,
+    TruehddStep,
+)
 from deezy.pipeline.show import step_line
 from deezy.utils.logger import logger
 from deezy.utils.paths import (
@@ -339,6 +347,37 @@ def run_dee(
     logger.debug(f"Dee job: {dee_job}.")
 
 
+def run_pipe(
+    step: PipeStep, no_progress_bars: bool, print_commands: bool = False
+) -> None:
+    """
+    Run FFmpeg into DEE through the step's named pipe, holding a DEE and an
+    FFmpeg slot.
+
+    Only a pipe step holds two slots, and every one takes DEE's first, so jobs
+    waiting on each other's slots can't block each other for good. A failed
+    run's partial output is deleted, as in `run_dee`.
+    """
+    jitter()
+    with slot("dee"), slot("ffmpeg"):
+        announce(step, print_commands)
+        try:
+            process_pipe_job(
+                dee_cmd=list(step.dee.argv),
+                ffmpeg_cmd=list(step.ffmpeg_argv),
+                pipe_name=step.pipe.name,
+                step_info={"current": 1, "total": 2, "name": "DEE measure"},
+                no_progress_bars=no_progress_bars,
+                custom_dialnorm=step.dee.custom_dialnorm,
+            )
+        except BaseException:
+            try:
+                Path(long_path_str(step.dee.output)).unlink(missing_ok=True)
+            except OSError:
+                logger.debug(f"Could not delete the partial encode {step.dee.output}.")
+            raise
+
+
 def finalize_output(dee_output: Path, output: Path) -> None:
     """Move DEE's finished encode from the temp directory to its destination."""
     if not dee_output.is_file():
@@ -383,6 +422,11 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
                 run_ffmpeg(step, plan, payload)
             elif isinstance(step, TruehddStep):
                 run_truehdd(step, plan, payload)
+            elif isinstance(step, PipeStep):
+                logger.debug(f"dee_cmd={list(step.dee.argv)}.")
+                logger.debug(f"ffmpeg_cmd={list(step.ffmpeg_argv)}.")
+                run_pipe(step, payload.no_progress_bars, payload.print_commands)
+                dee_output = step.dee.output
             else:
                 logger.debug(f"dee_cmd={list(step.argv)}.")
                 run_dee(step, payload.no_progress_bars, payload.print_commands)

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from deezy.enums.shared import DeeDRC, MeteringMode, StereoDownmix
+from deezy.enums.shared import DeeDRC, MeteringMode, PipeMode, StereoDownmix
 from deezy.payloads.shared import CorePayload
 from deezy.track_info.track_index import TrackIndex
 
@@ -42,6 +42,7 @@ def make_core_fields(tmp_path: Path, keep_temp: bool) -> dict:
         "output_preview": False,
         "print_commands": False,
         "dry_run": False,
+        "pipe": PipeMode.AUTO,
         # Loudness fields
         "metering_mode": MeteringMode.MODE_1770_3,
         "dialogue_intelligence": True,

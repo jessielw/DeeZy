@@ -9,6 +9,7 @@ from typing import Any
 
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.dee.tools import DependencyNotFoundError, FindDependencies
+from deezy.enums.shared import PipeMode
 from deezy.info import parse_audio_streams
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
@@ -231,6 +232,18 @@ def apply_config_defaults_to_args(
                 args.output_template = str(cfg_ot)
     except Exception:
         logger.debug("Best-effort operation failed; continuing.")
+
+    # only the formats with a --pipe option take the config's value
+    if hasattr(args, "pipe") and args.pipe is None:
+        cfg_pipe = _cfg_get("pipe")
+        if cfg_pipe not in (None, ""):
+            try:
+                args.pipe = PipeMode(str(cfg_pipe))
+            except ValueError:
+                logger.warning(
+                    f"Config pipe = '{cfg_pipe}' is not auto, always or never; "
+                    "using auto."
+                )
 
     bool_keys = (
         "allow_sleep",

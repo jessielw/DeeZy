@@ -1,6 +1,8 @@
 """One encode: probe the source, plan the job, run the plan."""
 
+import os
 from pathlib import Path
+import sys
 
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.dee.tools import find_license
@@ -20,22 +22,36 @@ def _config() -> ConfigManager | None:
         return None
 
 
+def pipe_name(temp_dir: Path) -> str | None:
+    """
+    The job's named pipe, or None where DeeZy doesn't pipe PCM into DEE.
+
+    The process ID keeps two DeeZy runs apart; the temp directory's name, which
+    is unique to the input and track, keeps a batch's jobs apart.
+    """
+    if sys.platform != "win32":
+        return None
+    return f"deezy-{os.getpid()}-{temp_dir.name}"
+
+
 def plan(payload: CorePayload) -> JobPlan:
     """Probe the source and plan its encode. Creates nothing."""
     file_input = Path(payload.file_input)
     check_input_file(file_input)
     namer = MediainfoParser(file_input, payload.track_index)
     info = namer.get_audio_track_info()
+    temp_dir = temp_dir_path(
+        file_input,
+        payload.temp_dir,
+        track_label=f"t{payload.track_index.index}",
+        keep_temp=payload.keep_temp,
+    )
     ctx = PlanContext(
         namer=namer,
-        temp_dir=temp_dir_path(
-            file_input,
-            payload.temp_dir,
-            track_label=f"t{payload.track_index.index}",
-            keep_temp=payload.keep_temp,
-        ),
+        temp_dir=temp_dir,
         license=find_license(Path(payload.dee_path)),
         config=_config(),
+        pipe_name=pipe_name(temp_dir),
     )
     return plan_job(payload, info, ctx)
 

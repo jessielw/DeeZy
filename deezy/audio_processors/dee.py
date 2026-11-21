@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import logging
 from subprocess import PIPE, STDOUT, Popen
 
@@ -146,6 +147,7 @@ def process_dee_job(
     step_info: dict | None = None,
     no_progress_bars: bool = False,
     custom_dialnorm: int = 0,
+    on_start: Callable[[Popen], None] | None = None,
 ) -> bool:
     """Processes file with DEE while generating progress and enhanced error reporting.
 
@@ -154,6 +156,8 @@ def process_dee_job(
         step_info (dict | None): Optional step context with 'current', 'total', 'name' keys.
         no_progress_bars (bool): Disable progress bars.
         custom_dialnorm (int): If user supplies custom dialnorm (0 is off).
+        on_start: Called with the DEE process as soon as it has started, before
+            its output is read (a pipe's writer starts from here).
     """
     cmd = with_loglevel(cmd)
     logger_level = logger.getEffectiveLevel()
@@ -181,6 +185,8 @@ def process_dee_job(
         encoding="utf-8",
         errors="replace",
     ) as proc:
+        if on_start:
+            on_start(proc)
         progress_state = {
             "measure_done": False,
             "last_measure": 0.0,

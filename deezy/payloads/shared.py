@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from deezy.enums.shared import DeeDRC, MeteringMode, StereoDownmix
+from deezy.enums.shared import DeeDRC, MeteringMode, PipeMode, StereoDownmix
 from deezy.track_info.track_index import TrackIndex
 
 
@@ -30,6 +30,8 @@ class CorePayload:
     print_commands: bool
     # plan and print the commands, but run nothing
     dry_run: bool
+    # how FFmpeg's PCM reaches DEE, for the formats that can pipe it
+    pipe: PipeMode
 
 
 @dataclass(slots=True)

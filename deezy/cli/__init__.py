@@ -37,6 +37,7 @@ from deezy.enums.shared import (
     LogLevel,
     LoudnessPreset,
     MeteringMode,
+    PipeMode,
     StereoDownmix,
     TrackType,
 )
@@ -620,6 +621,22 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
+    # how FFmpeg's PCM reaches DEE (DD, DD+ and DD+ Blu-ray)
+    pcm_transport_group = argparse.ArgumentParser(add_help=False)
+    pcm_transport_group.add_argument(
+        "--pipe",
+        type=case_insensitive_enum(PipeMode),
+        choices=PipeMode,
+        default=None,
+        metavar=enum_choices(PipeMode),
+        help=(
+            "How FFmpeg's audio reaches DEE. 'auto' (the default) pipes it straight "
+            "into DEE on Windows and writes a temp WAV elsewhere or with "
+            "--reuse-temp-files; 'always' pipes it or refuses the job; 'never' "
+            "always writes the temp WAV."
+        ),
+    )
+
     # preset override channels (flexible string type)
     preset_channels_group = argparse.ArgumentParser(add_help=False)
     preset_channels_group.add_argument(
@@ -651,6 +668,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "ac4_basic_options_group": ac4_basic_options_group,
         "ac4_drc_group": ac4_drc_group,
         "preset_channels_group": preset_channels_group,
+        "pcm_transport_group": pcm_transport_group,
     }
 
 
@@ -680,6 +698,7 @@ def create_encode_parsers(
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["dd_channels_group"],
+            argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -704,6 +723,7 @@ def create_encode_parsers(
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["ddp_channels_group"],
+            argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -726,6 +746,7 @@ def create_encode_parsers(
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["ddp_bluray_channels_group"],
+            argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -794,6 +815,7 @@ def create_encode_parsers(
             argument_groups["truehdd_options_group"],
             argument_groups["ac4_basic_options_group"],
             argument_groups["ac4_drc_group"],
+            argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
