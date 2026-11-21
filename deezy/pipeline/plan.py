@@ -185,6 +185,12 @@ class PlanContext:
 
 def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> JobPlan:
     """The plan for one encode. ``info`` is the probed source track."""
+    if info.atmos_master and not isinstance(payload, AtmosPayload | Ac4Payload):
+        raise InvalidAtmosInputError(
+            f"{_format_name(payload)} can't encode an Atmos master yet: FFmpeg would "
+            "mix its objects without their positions. Encode it with ddp-atmos or "
+            "ac4-ims, or measure it with 'deezy measure'."
+        )
     if isinstance(payload, DDPayload):
         return _plan_dd(payload, info, ctx)
     if isinstance(payload, DDPPayload):
@@ -200,6 +206,17 @@ def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     if isinstance(payload, TrueHDPayload):
         return _plan_thd(payload, info, ctx)
     raise TypeError(f"no plan for {type(payload).__name__}")
+
+
+def _format_name(payload: CorePayload) -> str:
+    names = {
+        DDPayload: "dd",
+        DDPPayload: "ddp",
+        AacPayload: "aac",
+        Ac4ChannelPayload: "ac4",
+        TrueHDPayload: "thd",
+    }
+    return names.get(type(payload), type(payload).__name__)
 
 
 # --- shared decisions
@@ -890,12 +907,18 @@ def _atmos_input(
     ctx: PlanContext,
     reuse_id: str,
 ) -> tuple[TruehddStep | None, Path | None]:
-    """The truehdd step and the DAMF it writes, or the ADM BWF as it is."""
+    """The truehdd step and the DAMF it writes, or the master as it is."""
     if info.thd_atmos:
         step = _truehdd_step(payload, info, ctx, reuse_id)
         return step, step.output
-    if info.adm_atmos_wav:
-        logger.info("Using ADM BWF input")
+    if info.atmos_master:
+        kind = "DAMF" if info.damf_atmos else "ADM BWF"
+        logger.info(f"Using the {kind} master as it is")
+        if payload.thd_warp_mode is not None:
+            logger.warning(
+                "--thd-warp-mode applies to TrueHD Atmos only; DEE renders the "
+                "master with the warp mode it was authored with."
+            )
         return None, Path(payload.file_input)
     return None, None
 
@@ -916,7 +939,8 @@ def _plan_ddp_atmos(
         None,
         lambda _source: payload.atmos_mode,
     )
-    check_for_up_mixing(info.channels, payload.atmos_mode.get_channels())
+    if not info.atmos_master:
+        check_for_up_mixing(info.channels, payload.atmos_mode.get_channels())
 
     delay = get_delay(payload).compensated(compensation(spec))
     fps = get_fps(info.fps)
@@ -1049,8 +1073,8 @@ def _plan_ac4_ims(
     payload: Ac4Payload, info: AudioTrackInfo, ctx: PlanContext
 ) -> JobPlan:
     spec = get_format("ac4-ims")
-    if info.thd_atmos:
-        logger.debug("Input track is TrueHD Atmos")
+    if info.atmos:
+        logger.debug("Input track is Atmos")
     elif info.channels < 6:
         raise ChannelMixError(
             "AC-4 needs a source of at least 6 channels or TrueHD Atmos (the track "
@@ -1106,7 +1130,7 @@ def _plan_ac4_ims(
         bitrate=bitrate,
         fps=fps,
         delay=delay,
-        atmos_input=bool(info.adm_atmos_wav or info.thd_atmos),
+        atmos_input=info.atmos,
     )
     steps.append(DeeStep(tuple(dee_argv), files.output))
     return JobPlan(
@@ -1319,7 +1343,7 @@ def plan_measure(
     manifest = ctx.temp_dir / "loudness.json"
     tools = _tools(payload, ctx)
     steps: tuple[Step, ...]
-    if info.thd_atmos or info.adm_atmos_wav:
+    if info.atmos:
         logger.info(
             "Measuring the Atmos program: DEE reports its binaural and 5.1 renders."
         )

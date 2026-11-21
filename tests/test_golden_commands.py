@@ -47,10 +47,12 @@ TEMP = Path("/temp/job")
 OUT = Path("/out")
 MKV = Path("/media/in.mkv")
 WAV = Path("/media/in.wav")
+# a DAMF master: the header, which names its audio and metadata
+DAMF = Path("/media/in.atmos")
 DELAYED = Path("/media/Movie DELAY -10.5ms.mkv")
 
 
-def info(ch, rate=48000, fps=23.976, thd=False, adm=False, rel=0) -> dict:
+def info(ch, rate=48000, fps=23.976, thd=False, adm=False, damf=False, rel=0) -> dict:
     return {
         "channels": ch,
         "delay_relative_to_video": rel,
@@ -61,6 +63,7 @@ def info(ch, rate=48000, fps=23.976, thd=False, adm=False, rel=0) -> dict:
         "bit_depth": 24,
         "thd_atmos": thd,
         "adm_atmos_wav": adm,
+        "damf_atmos": damf,
     }
 
 
@@ -417,6 +420,42 @@ THD_SCENARIOS = [
 ]
 SCENARIOS += THD_SCENARIOS
 
+# --- Atmos masters (DAMF and ADM BWF go to DEE as they are)
+MASTER_SCENARIOS = [
+    # a probed DAMF has a channel per bed channel and object, and no video
+    ("atmos_damf", ["ddp-atmos"], info(16, fps=None, damf=True), DAMF),
+    ("atmos_damf_delay", ["ddp-atmos", "--delay=-20ms"], info(16, damf=True), DAMF),
+    ("atmos_damf_pos", ["ddp-atmos", "--delay=100ms"], info(16, damf=True), DAMF),
+    ("atmos_damf_768", ["ddp-atmos", "--bitrate", "768"], info(16, damf=True), DAMF),
+    (
+        "atmos_damf_warp",
+        ["ddp-atmos", "--thd-warp-mode", "normal"],
+        info(16, damf=True),
+        DAMF,
+    ),
+    # objects aren't channels: a master of few elements still renders to 5.1
+    ("atmos_damf_few", ["ddp-atmos"], info(4, damf=True), DAMF),
+    ("atmos_adm_few", ["ddp-atmos"], info(4, adm=True), WAV),
+    (
+        "atmos_damf_bluray",
+        ["ddp-atmos", "--atmos-mode", "bluray"],
+        info(16, damf=True),
+        DAMF,
+    ),
+    ("ac4_damf", ["ac4-ims"], info(16, damf=True), DAMF),
+    ("ac4_damf_few", ["ac4-ims"], info(4, damf=True), DAMF),
+    ("ac4_damf_delay", ["ac4-ims", "--delay=-20ms"], info(16, damf=True), DAMF),
+    # channel-based formats refuse a master
+    ("dd_damf", ["dd"], info(16, damf=True), DAMF),
+    ("ddp_damf", ["ddp"], info(16, damf=True), DAMF),
+    ("ddp_adm", ["ddp"], info(16, adm=True), WAV),
+    ("ac4ch_damf", ["ac4"], info(16, damf=True), DAMF),
+    ("aac_damf", ["aac"], info(16, damf=True), DAMF),
+    ("thd_damf", ["thd"], info(16, damf=True), DAMF),
+    ("thd_adm", ["thd"], info(16, adm=True), WAV),
+]
+SCENARIOS += MASTER_SCENARIOS
+
 # --- measure (arguments start with 'measure', which replaces 'encode')
 MEASURE_SCENARIOS = [
     ("measure_6", ["measure"], info(6), MKV),
@@ -436,6 +475,7 @@ MEASURE_SCENARIOS = [
         MKV,
     ),
     ("measure_adm", ["measure"], info(8, adm=True), WAV),
+    ("measure_damf", ["measure"], info(16, damf=True), DAMF),
     ("measure_preset", ["measure", "--loudness-preset", "ebu_r128"], info(6), MKV),
     (
         "measure_manual",

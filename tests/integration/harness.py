@@ -400,11 +400,14 @@ SYNTHETIC_OBJECTS = [
 ]
 
 
-def synthetic_damf(out_dir: Path, seconds: float = 2.0) -> Path:
+def synthetic_damf(
+    out_dir: Path, seconds: float = 2.0, impulse_at: int | None = None
+) -> Path:
     """A short DAMF master of noise: an LFE bed and 15 objects that never move.
 
     DEE encodes it to the same TrueHD bytes every run, unlike the sample, so
-    file hashes can compare its TrueHD Atmos encodes.
+    file hashes can compare its TrueHD Atmos encodes. With ``impulse_at``, the
+    master is silent except for an impulse at that frame in every element.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     bed_id, bed_name = SYNTHETIC_BED
@@ -446,7 +449,16 @@ def synthetic_damf(out_dir: Path, seconds: float = 2.0) -> Path:
 
     # CAF: 24-bit big-endian PCM, one frame per packet
     channels = 1 + len(SYNTHETIC_OBJECTS)
-    pcm = noise_samples(int(SR * seconds) * channels, 0.2, "big")
+    frames = int(SR * seconds)
+    if impulse_at is None:
+        pcm = noise_samples(frames * channels, 0.2, "big")
+    else:
+        silent = bytearray(frames * channels * 3)
+        value = int(0.5 * (2**23 - 1)).to_bytes(3, "big", signed=True)
+        for c in range(channels):
+            at = (impulse_at * channels + c) * 3
+            silent[at : at + 3] = value
+        pcm = bytes(silent)
     desc = struct.pack(">dIIIIII", SR, 0x6C70636D, 0, 3 * channels, 1, channels, 24)
     caf = b"caff" + struct.pack(">HH", 1, 0)
     caf += b"desc" + struct.pack(">q", len(desc)) + desc

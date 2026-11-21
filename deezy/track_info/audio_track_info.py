@@ -20,3 +20,14 @@ class AudioTrackInfo:
     bit_depth: int | None = None
     thd_atmos: bool = False
     adm_atmos_wav: bool = False
+    damf_atmos: bool = False
+
+    @property
+    def atmos_master(self) -> bool:
+        """An Atmos master DEE reads as it is: a DAMF or an ADM BWF."""
+        return self.adm_atmos_wav or self.damf_atmos
+
+    @property
+    def atmos(self) -> bool:
+        """Atmos DEE encodes as Atmos: TrueHD Atmos (via truehdd) or a master."""
+        return self.thd_atmos or self.atmos_master

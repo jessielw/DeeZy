@@ -8,8 +8,9 @@ if TYPE_CHECKING:
     from pymediainfo import MediaInfo, Track
 
 from deezy.enums.shared import TrackType
-from deezy.exceptions import MediaInfoError
+from deezy.exceptions import InvalidAtmosInputError, MediaInfoError
 from deezy.track_info.audio_track_info import AudioTrackInfo
+from deezy.track_info.damf import Damf, damf_header_of, is_damf, read_damf
 from deezy.track_info.track_index import TrackIndex
 from deezy.track_info.utils import (
     clean_title,
@@ -19,15 +20,32 @@ from deezy.track_info.utils import (
 
 
 class MediainfoParser:
-    __slots__ = ("file_input", "track_index", "mi_obj", "mi_audio_obj", "guess")
+    __slots__ = (
+        "file_input",
+        "track_index",
+        "damf",
+        "mi_obj",
+        "mi_audio_obj",
+        "guess",
+    )
 
     def __init__(self, file_input: Path, track_index: TrackIndex) -> None:
         # parse file with mediainfo
         self.file_input = file_input
         self.track_index = track_index
+        header = damf_header_of(file_input)
+        if header:
+            raise InvalidAtmosInputError(
+                f"{file_input.name} is part of a DAMF master; give its header, "
+                f"{header.name}."
+            )
+        # a DAMF master's audio is its one track
+        self.damf: Damf | None = read_damf(file_input) if is_damf(file_input) else None
         from pymediainfo import MediaInfo
 
-        self.mi_obj = MediaInfo.parse(file_input, legacy_stream_display=True)
+        self.mi_obj = MediaInfo.parse(
+            self.damf.audio if self.damf else file_input, legacy_stream_display=True
+        )
         self.mi_audio_obj = self._verify_audio_track(track_index)
         from guessit import guessit
 
@@ -51,6 +69,14 @@ class MediainfoParser:
             thd_atmos=self._is_thd_atmos(),
             adm_atmos_wav=self._is_adm_atmos_wav(),
         )
+        if self.damf:
+            # MediaInfo misreads a CAF file's length
+            audio_info.channels = self.damf.channels
+            audio_info.duration = self.damf.duration_ms
+            audio_info.sample_rate = self.damf.sample_rate
+            audio_info.bit_depth = self.damf.bit_depth
+            audio_info.recommended_free_space = self.damf.size
+            audio_info.damf_atmos = True
 
         # return object
         return audio_info
