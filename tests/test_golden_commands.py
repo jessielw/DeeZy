@@ -186,6 +186,25 @@ SCENARIOS = [
         MKV,
     ),
     ("ddp_secondary_auto", ["ddp", "--bluray-secondary"], info(6), MKV),
+    (
+        "ddp_secondary_2_default",
+        ["ddp", "--bluray-secondary", "--channels", "2"],
+        info(2),
+        MKV,
+    ),
+    (
+        "ddp_secondary_2_96",
+        ["ddp", "--bluray-secondary", "--channels", "2", "--bitrate", "96"],
+        info(2),
+        MKV,
+    ),
+    (
+        "ddp_secondary_6_128",
+        ["ddp", "--bluray-secondary", "--channels", "6", "--bitrate", "128"],
+        info(6),
+        MKV,
+    ),
+    ("ddp_secondary_auto_8", ["ddp", "--bluray-secondary"], info(8), MKV),
     ("ddp_secondary_1", ["ddp", "--bluray-secondary", "--channels", "1"], info(1), MKV),
     (
         "ddp_secondary_user_data",

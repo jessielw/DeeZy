@@ -3,6 +3,7 @@
 import pytest
 
 from deezy.dee import spec
+from deezy.pipeline.plan import secondary_bitrate
 
 # DeeZy's default rates, which 2.0 keeps instead of Dolby's lower automatic ones
 DEFAULTS = {
@@ -106,3 +107,20 @@ def test_extensions():
     assert spec.get_format("dd").extension == ".ac3"
     assert spec.get_format("ddp").extensions == (".ec3", ".eac3")
     assert spec.get_format("ac4-ims").extension == ".ac4"
+
+
+@pytest.mark.parametrize(
+    ("layout", "requested", "rate"),
+    [
+        ("2.0", None, 192),
+        ("5.1", None, 192),
+        ("2.0", 96, 96),
+        ("2.0", 128, 128),
+        ("2.0", 100, 128),
+        ("5.1", 128, 160),
+        ("5.1", 200, 224),
+        ("5.1", 320, 256),
+    ],
+)
+def test_bluray_secondary_takes_dee_rates(layout, requested, rate):
+    assert secondary_bitrate(requested, layout) == rate

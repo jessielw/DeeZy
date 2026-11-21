@@ -45,6 +45,17 @@ def test_apply_default_bitrate_dd_channels():
     assert args.bitrate == 192
 
 
+def test_apply_default_bitrate_leaves_bluray_secondary_alone():
+    """The plain DD+ stereo rate (128) must not replace secondary's 192 default."""
+    args = argparse.Namespace(
+        format_command="ddp", bitrate=None, channels="2.0", bluray_secondary=True
+    )
+    cfg = DummyConfigManager(bitrate_map={("ddp", "2.0"): 128})
+
+    utils.apply_default_bitrate(args, cast(Any, cfg))
+    assert args.bitrate is None
+
+
 def test_handle_preset_injection_calls_inject(monkeypatch):
     saved_argv = sys.argv[:]  # preserve
     sys.argv = ["prog", "encode", "preset", "--name", "mypreset"]

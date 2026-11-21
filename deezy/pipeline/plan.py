@@ -50,8 +50,6 @@ from deezy.track_info.utils import parse_delay_from_file
 from deezy.utils.logger import logger
 from deezy.utils.paths import artifact_stem
 
-# Blu-ray secondary audio data rates (kbps)
-SECONDARY_BITRATES = (192, 256)
 # the source layouts DEE takes as they are
 DEE_INPUT_CHANNELS = (1, 2, 6, 8)
 
@@ -608,17 +606,22 @@ def ddp_channel_resolver(source_channels: int) -> DolbyDigitalPlusChannels:
     return DolbyDigitalPlusChannels.SURROUNDEX
 
 
-def secondary_bitrate(requested: int | None) -> int:
-    """Blu-ray secondary audio only allows 192 or 256 kbps."""
-    choices = SECONDARY_BITRATES
+def secondary_bitrate(requested: int | None, layout: str) -> int:
+    """
+    The Blu-ray secondary audio rate: the requested one if DEE takes it for
+    ``layout`` ('2.0' or '5.1'), else the next allowed one up. DeeZy's default
+    is 192 kbps.
+    """
+    rates = get_format("ddp-bluray").rates(layout, mode="bluray_secondary")
     if requested is None:
-        return choices[0]
-    closest = min(choices, key=lambda rate: abs(rate - requested))
-    if closest != requested:
-        logger.warning(
-            f"Blu-ray secondary audio only allows {choices[0]} or {choices[1]} "
-            f"kbps, using {closest}."
-        )
+        return rates.default
+    if rates.is_valid_bitrate(requested):
+        return requested
+    closest = rates.get_closest_bitrate(requested)
+    logger.warning(
+        f"Blu-ray secondary audio {layout} takes "
+        f"{', '.join(str(rate) for rate in rates.choices)} kbps, using {closest}."
+    )
     return closest
 
 
@@ -722,18 +725,20 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         filters += ["-ac", f"{ffmpeg_down_mix}"]
     ffmpeg = _ffmpeg_step(payload, filters, wav, str(format_command), info)
 
+    # refuses a secondary layout other than 2.0 or 5.1
+    dd_mode = _ddp_mode(channels, payload.bluray_secondary)
+    if payload.bluray_secondary:
+        bitrate = secondary_bitrate(payload.bitrate, str(channels))
     files = _dee_files(ctx, wav.dee_input, output)
     dee_argv = ddp_command(
         _tools(payload, ctx),
         replace(payload, channels=channels),
         files,
         downmix_mode_off=False,
-        bitrate=secondary_bitrate(payload.bitrate)
-        if payload.bluray_secondary
-        else bitrate,
+        bitrate=bitrate,
         fps=fps,
         delay=delay,
-        dd_mode=_ddp_mode(channels, payload.bluray_secondary),
+        dd_mode=dd_mode,
     )
     return JobPlan(
         format=spec.name,

@@ -414,7 +414,8 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "--bluray-secondary",
         action="store_true",
         help=(
-            "Encode Blu-ray secondary audio (2.0 or 5.1 at 192 or 256 kbps). "
+            "Encode Blu-ray secondary audio: 2.0 at 96 to 256 kbps or 5.1 at 160 to "
+            "256 kbps (default 192). "
             "Split DEE encoders only."
         ),
     )

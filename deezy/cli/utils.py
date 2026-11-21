@@ -259,6 +259,10 @@ def apply_default_bitrate(
     args: argparse.Namespace, config_manager: ConfigManager | None
 ) -> None:
     """Apply default bitrate based on format and channels/mode if none specified."""
+    # Blu-ray secondary audio has its own rates and default (192 kbps); the
+    # plain DD+ rates configured for its layout would override them
+    if getattr(args, "bluray_secondary", False):
+        return
     if not hasattr(args, "bitrate") or args.bitrate is None:
         channels_or_mode = None
         if args.format_command == "ddp-atmos":
