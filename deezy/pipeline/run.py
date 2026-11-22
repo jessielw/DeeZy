@@ -250,6 +250,28 @@ def write_signature_metadata(
         logger.debug("Failed to write metadata.json for reuse.")
 
 
+# what a file being written beside its destination is called until it is whole
+PARTIAL_SUFFIX = ".deezy-partial"
+
+
+def discard(*paths: Path) -> None:
+    """Delete what a failed or interrupted step left behind. Never raises."""
+    for path in paths:
+        try:
+            Path(long_path_str(path)).unlink(missing_ok=True)
+        except OSError:
+            logger.debug(f"Could not delete the partial file {path}.")
+
+
+def damf_files(atmos: Path) -> tuple[Path, Path, Path]:
+    """A DAMF's three files: the .atmos header, its audio and its metadata."""
+    return (
+        atmos,
+        atmos.with_name(f"{atmos.name}.audio"),
+        atmos.with_name(f"{atmos.name}.metadata"),
+    )
+
+
 def announce(step: Step, print_commands: bool) -> None:
     """Print the step's command line (``--print-commands``) as it starts."""
     if print_commands:
@@ -260,7 +282,9 @@ def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
     """
     Write the job's WAV with FFmpeg, or reuse the one an earlier run made.
 
-    FFmpeg errors propagate: without the WAV, DEE has nothing to encode.
+    FFmpeg errors propagate: without the WAV, DEE has nothing to encode. A
+    failed or interrupted run deletes its cut-off WAV, so that a later
+    --reuse-temp-files run can't take it for a finished one.
     """
     signature = " ".join(step.argv)
     meta = metadata_path(plan.temp_dir, plan.output)
@@ -274,13 +298,17 @@ def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
     jitter()
     with slot("ffmpeg"):
         announce(step, payload.print_commands)
-        ffmpeg_job = process_ffmpeg_job(
-            cmd=list(step.argv),
-            steps=True,
-            duration=step.duration,
-            step_info={"current": 1, "total": 3, "name": "FFMPEG"},
-            no_progress_bars=payload.no_progress_bars,
-        )
+        try:
+            ffmpeg_job = process_ffmpeg_job(
+                cmd=list(step.argv),
+                steps=True,
+                duration=step.duration,
+                step_info={"current": 1, "total": 3, "name": "FFMPEG"},
+                no_progress_bars=payload.no_progress_bars,
+            )
+        except BaseException:
+            discard(step.output)
+            raise
     logger.debug(f"FFMPEG job: {ffmpeg_job}.")
     if reuse:
         write_signature_metadata(
@@ -289,7 +317,10 @@ def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
 
 
 def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
-    """Decode the TrueHD Atmos stream to a DAMF, or reuse an earlier decode."""
+    """
+    Decode the TrueHD Atmos stream to a DAMF, or reuse an earlier decode. A
+    failed or interrupted decode deletes its cut-off DAMF, as in `run_ffmpeg`.
+    """
     meta = metadata_path(plan.temp_dir, plan.output)
     reuse = bool(getattr(payload, "reuse_temp_files", False))
     jitter()
@@ -300,17 +331,21 @@ def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
             logger.info("Reusing decoded atmos from temp folder")
             return
         announce(step, payload.print_commands)
-        decode_truehd_to_atmos(
-            output_dir=step.output_dir,
-            file_input=step.file_input,
-            track_index=step.track_index,
-            ffmpeg_path=step.ffmpeg,
-            truehdd_path=step.truehdd,
-            warp_mode=step.warp_mode,
-            duration=step.duration,
-            step_info={"current": 1, "total": 3, "name": "truehdd"},
-            no_progress_bars=payload.no_progress_bars,
-        )
+        try:
+            decode_truehd_to_atmos(
+                output_dir=step.output_dir,
+                file_input=step.file_input,
+                track_index=step.track_index,
+                ffmpeg_path=step.ffmpeg,
+                truehdd_path=step.truehdd,
+                warp_mode=step.warp_mode,
+                duration=step.duration,
+                step_info={"current": 1, "total": 3, "name": "truehdd"},
+                no_progress_bars=payload.no_progress_bars,
+            )
+        except BaseException:
+            discard(*damf_files(step.output))
+            raise
         if step.warp_mode is None and damf_warp_mode(step.output) is None:
             logger.info(
                 "The TrueHD Atmos stream has no warp mode, so DEE renders it as "
@@ -359,10 +394,7 @@ def run_dee(
                 raise
             raise missing_tool(tool) from e
         except BaseException:
-            try:
-                Path(long_path_str(step.output)).unlink(missing_ok=True)
-            except OSError:
-                logger.debug(f"Could not delete the partial encode {step.output}.")
+            discard(step.output)
             raise
     logger.debug(f"Dee job: {dee_job}.")
 
@@ -421,18 +453,26 @@ def run_pipe(
                 )
                 encode(_without_sample_count(step))
         except BaseException:
-            try:
-                Path(long_path_str(step.dee.output)).unlink(missing_ok=True)
-            except OSError:
-                logger.debug(f"Could not delete the partial encode {step.dee.output}.")
+            discard(step.dee.output)
             raise
 
 
 def finalize_output(dee_output: Path, output: Path) -> None:
-    """Move DEE's finished encode from the temp directory to its destination."""
+    """
+    Move DEE's finished encode from the temp directory to its destination.
+
+    The output appears whole or not at all. Across volumes the encode is
+    copied beside the output first and renamed into place, so a failure or
+    Ctrl-C mid-copy leaves no cut-off output, and with --overwrite the old
+    output stays until the new one is whole. An empty encode is refused.
+    """
     if not dee_output.is_file():
         raise OutputFileNotFoundError(
             f"DEE reported success but left no output at {dee_output.name}"
+        )
+    if dee_output.stat().st_size == 0:
+        raise OutputFileNotFoundError(
+            f"DEE reported success but its output {dee_output.name} is empty"
         )
     output.parent.mkdir(parents=True, exist_ok=True)
     # the destination may be longer than the host can open unescaped, and
@@ -442,8 +482,15 @@ def finalize_output(dee_output: Path, output: Path) -> None:
         # atomic, and a cheap rename when temp shares a volume with the output
         os.replace(src, dst)
     except OSError:
-        # different volumes; copy across and drop the temp copy
-        shutil.move(src, dst)
+        # different volumes: copy beside the output, then rename into place
+        partial = output.with_name(f"{output.name}{PARTIAL_SUFFIX}")
+        try:
+            shutil.copyfile(src, long_path_str(partial))
+            os.replace(long_path_str(partial), dst)
+        except BaseException:
+            discard(partial)
+            raise
+        discard(dee_output)
     logger.debug(f"Moved encode to output path {output}.")
 
 
@@ -501,9 +548,15 @@ def run_measure(plan: JobPlan, payload: CorePayload) -> dict:
             track["id"] = str(plan.source)
         if save:
             plan.output.parent.mkdir(parents=True, exist_ok=True)
-            Path(long_path_str(plan.output)).write_text(
-                json.dumps(manifest, indent=4) + "\n", encoding="utf-8"
-            )
+            partial = plan.output.with_name(f"{plan.output.name}{PARTIAL_SUFFIX}")
+            try:
+                Path(long_path_str(partial)).write_text(
+                    json.dumps(manifest, indent=4) + "\n", encoding="utf-8"
+                )
+                os.replace(long_path_str(partial), long_path_str(plan.output))
+            except BaseException:
+                discard(partial)
+                raise
             logger.info(f"Loudness manifest saved: {plan.output}")
         return manifest
     finally:
