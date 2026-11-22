@@ -41,6 +41,7 @@ def make_core_fields(tmp_path: Path, keep_temp: bool) -> dict:
         "output_template": "",
         "output_preview": False,
         "print_commands": False,
+        "keep_logs": False,
         "dry_run": False,
         "pipe": PipeMode.AUTO,
         "dee_shim": None,

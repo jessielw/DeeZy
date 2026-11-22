@@ -42,7 +42,7 @@ from deezy.pipeline.plan import (
     Step,
     TruehddStep,
 )
-from deezy.pipeline.show import step_line
+from deezy.pipeline.show import step_line, step_lines
 from deezy.utils.logger import logger
 from deezy.utils.paths import (
     MAX_ARTIFACT_NAME,
@@ -50,6 +50,7 @@ from deezy.utils.paths import (
     artifact_stem,
     long_path_str,
 )
+from deezy.utils.tool_log import ToolLog, log_path
 
 
 class _Limits:
@@ -272,13 +273,22 @@ def damf_files(atmos: Path) -> tuple[Path, Path, Path]:
     )
 
 
-def announce(step: Step, print_commands: bool) -> None:
-    """Print the step's command line (``--print-commands``) as it starts."""
+def announce(step: Step, print_commands: bool, log: ToolLog | None = None) -> None:
+    """
+    Print the step's command line (``--print-commands``) as it starts, and
+    put it in the job's kept log.
+    """
+    keep_logs = log is not None
     if print_commands:
-        print(step_line(step), flush=True)
+        print(step_line(step, keep_logs), flush=True)
+    if log is not None:
+        for line in step_lines(step, keep_logs):
+            log.command(line)
 
 
-def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
+def run_ffmpeg(
+    step: FfmpegStep, plan: JobPlan, payload: CorePayload, log: ToolLog | None = None
+) -> None:
     """
     Write the job's WAV with FFmpeg, or reuse the one an earlier run made.
 
@@ -297,7 +307,7 @@ def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
 
     jitter()
     with slot("ffmpeg"):
-        announce(step, payload.print_commands)
+        announce(step, payload.print_commands, log)
         try:
             ffmpeg_job = process_ffmpeg_job(
                 cmd=list(step.argv),
@@ -305,6 +315,7 @@ def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
                 duration=step.duration,
                 step_info={"current": 1, "total": 3, "name": "FFMPEG"},
                 no_progress_bars=payload.no_progress_bars,
+                log=log,
             )
         except BaseException:
             discard(step.output)
@@ -316,7 +327,9 @@ def run_ffmpeg(step: FfmpegStep, plan: JobPlan, payload: CorePayload) -> None:
         )
 
 
-def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
+def run_truehdd(
+    step: TruehddStep, plan: JobPlan, payload: CorePayload, log: ToolLog | None = None
+) -> None:
     """
     Decode the TrueHD Atmos stream to a DAMF, or reuse an earlier decode. A
     failed or interrupted decode deletes its cut-off DAMF, as in `run_ffmpeg`.
@@ -330,7 +343,7 @@ def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
         ):
             logger.info("Reusing decoded atmos from temp folder")
             return
-        announce(step, payload.print_commands)
+        announce(step, payload.print_commands, log)
         try:
             decode_truehd_to_atmos(
                 output_dir=step.output_dir,
@@ -342,6 +355,7 @@ def run_truehdd(step: TruehddStep, plan: JobPlan, payload: CorePayload) -> None:
                 duration=step.duration,
                 step_info={"current": 1, "total": 3, "name": "truehdd"},
                 no_progress_bars=payload.no_progress_bars,
+                log=log,
             )
         except BaseException:
             discard(*damf_files(step.output))
@@ -366,7 +380,10 @@ def missing_tool(tool: Path) -> DependencyNotFoundError:
 
 
 def run_dee(
-    step: DeeStep, no_progress_bars: bool, print_commands: bool = False
+    step: DeeStep,
+    no_progress_bars: bool,
+    print_commands: bool = False,
+    log: ToolLog | None = None,
 ) -> None:
     """
     Run DEE in one of the batch's DEE slots.
@@ -380,13 +397,14 @@ def run_dee(
         raise missing_tool(binary)
     jitter()
     with slot("dee"):
-        announce(step, print_commands)
+        announce(step, print_commands, log)
         try:
             dee_job = process_dee_job(
                 cmd=list(step.argv),
                 step_info={"current": 2, "total": 3, "name": "DEE measure"},
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.custom_dialnorm,
+                log=log,
             )
         except FileNotFoundError as e:
             tool = Path(step.argv[0])
@@ -418,7 +436,10 @@ def _without_sample_count(step: PipeStep) -> tuple[str, ...]:
 
 
 def run_pipe(
-    step: PipeStep, no_progress_bars: bool, print_commands: bool = False
+    step: PipeStep,
+    no_progress_bars: bool,
+    print_commands: bool = False,
+    log: ToolLog | None = None,
 ) -> None:
     """
     Run FFmpeg into DEE through the step's named pipe, holding a DEE and an
@@ -432,7 +453,7 @@ def run_pipe(
     """
     jitter()
     with slot("dee"), slot("ffmpeg"):
-        announce(step, print_commands)
+        announce(step, print_commands, log)
 
         def encode(dee_argv: tuple[str, ...]) -> int | None:
             return process_pipe_job(
@@ -442,6 +463,7 @@ def run_pipe(
                 step_info={"current": 1, "total": 2, "name": "DEE measure"},
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.dee.custom_dialnorm,
+                log=log,
             )
 
         try:
@@ -504,21 +526,21 @@ def dee_output(plan: JobPlan) -> Path:
     raise OutputFileNotFoundError("The plan has no DEE step.")
 
 
-def run_steps(plan: JobPlan, payload: CorePayload) -> Path:
+def run_steps(plan: JobPlan, payload: CorePayload, log: ToolLog | None = None) -> Path:
     """Run every step of ``plan`` and return what its DEE step wrote."""
     for step in plan.steps:
         if isinstance(step, FfmpegStep):
             logger.debug(f"ffmpeg_cmd={list(step.argv)}.")
-            run_ffmpeg(step, plan, payload)
+            run_ffmpeg(step, plan, payload, log)
         elif isinstance(step, TruehddStep):
-            run_truehdd(step, plan, payload)
+            run_truehdd(step, plan, payload, log)
         elif isinstance(step, PipeStep):
             logger.debug(f"dee_cmd={list(step.dee.argv)}.")
             logger.debug(f"ffmpeg_cmd={list(step.ffmpeg_argv)}.")
-            run_pipe(step, payload.no_progress_bars, payload.print_commands)
+            run_pipe(step, payload.no_progress_bars, payload.print_commands, log)
         else:
             logger.debug(f"dee_cmd={list(step.argv)}.")
-            run_dee(step, payload.no_progress_bars, payload.print_commands)
+            run_dee(step, payload.no_progress_bars, payload.print_commands, log)
     return dee_output(plan)
 
 
@@ -570,24 +592,46 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
         return plan.output
 
     keep_temp = bool(getattr(payload, "keep_temp", False))
+    log = ToolLog() if getattr(payload, "keep_logs", False) else None
     plan.temp_dir.mkdir(parents=True, exist_ok=True)
     try:
         logger.debug(f"Temp directory {plan.temp_dir}.")
         check_disk_space(plan.source, plan.temp_dir, plan.free_space_needed)
         if plan.output.exists():
             if not payload.overwrite:
+                # a skipped job keeps the log of the run that wrote its output
+                log = None
                 raise OutputExistsError(f"Output already exists: {plan.output}")
             logger.debug(
                 f"Output already exists and will be overwritten: {plan.output}"
             )
 
-        dee_output = run_steps(plan, payload)
+        if log is not None:
+            log.add("deezy", f"{plan.format}: {plan.source} -> {plan.output}")
+        dee_output = run_steps(plan, payload, log)
         finalize_output(dee_output, plan.output)
         if not plan.output.is_file():
             raise OutputFileNotFoundError(f"{plan.output.name} output not found")
         return plan.output
+    except BaseException as e:
+        if log is not None:
+            log.add("deezy", f"failed: {type(e).__name__}: {e}")
+        raise
     finally:
         clean_temp(plan.temp_dir, keep_temp)
+        if log is not None:
+            save_log(log, plan.output)
+
+
+def save_log(log: ToolLog, output: Path) -> None:
+    """Write a job's kept log beside its output. Never raises."""
+    path = log_path(output)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        log.write(path)
+        logger.info(f"Log saved: {path}")
+    except OSError as e:
+        logger.warning(f"Could not save the job's log at {path}: {e}")
 
 
 def clean_temp(temp_dir: Path, keep_temp: bool) -> None:

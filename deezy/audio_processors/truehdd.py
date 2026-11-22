@@ -9,8 +9,11 @@ from deezy.enums.shared import TrackType
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.logger import logger
 from deezy.utils.progress import ProgressHandler, create_ffmpeg_parser
+from deezy.utils.tool_log import ToolLog
 
 BASE_ATMOS_FILE_NAME = "atmos_meta"
+# a line of FFmpeg's -stats report, a progress tick a kept log leaves out
+_FFMPEG_STATS = re.compile(r"size=\s*\S+\s+time=")
 
 # a failing decode can be very chatty; keep enough of the tail to diagnose it
 MAX_CAPTURED_LINES = 100
@@ -21,11 +24,16 @@ STREAM_DRAIN_TIMEOUT = 5.0
 
 
 def truehd_extract_command(
-    ffmpeg_path: Path, file_input: Path, track_index: TrackIndex
+    ffmpeg_path: Path,
+    file_input: Path,
+    track_index: TrackIndex,
+    keep_logs: bool = False,
 ) -> list[str]:
     """FFmpeg copying the TrueHD track to stdout, for truehdd to read."""
-    # even in debug, FFmpeg's file info would only be noise here
-    level = "warning" if logger.getEffectiveLevel() == logging.DEBUG else "quiet"
+    # even in debug, or with the job's log kept, FFmpeg's file info would only
+    # be noise here
+    verbose = keep_logs or logger.getEffectiveLevel() == logging.DEBUG
+    level = "warning" if verbose else "quiet"
     return [
         str(ffmpeg_path),
         "-hide_banner",
@@ -89,6 +97,7 @@ def decode_truehd_to_atmos(
     duration: float | None = None,
     step_info: dict | None = None,
     no_progress_bars: bool = False,
+    log: ToolLog | None = None,
 ) -> Path:
     """
     Extract the TrueHD track and run truehdd decode to produce .atmos files.
@@ -104,7 +113,9 @@ def decode_truehd_to_atmos(
     Returns list of paths to the generated .atmos files (raises on failure).
     """
     # pipe mode: stream TrueHD from ffmpeg to truehdd stdin
-    ffmpeg_cmd = truehd_extract_command(ffmpeg_path, file_input, track_index)
+    ffmpeg_cmd = truehd_extract_command(
+        ffmpeg_path, file_input, track_index, keep_logs=log is not None
+    )
     logger_level = logger.getEffectiveLevel()
     truehdd_cmd = truehdd_command(truehdd_path, output_dir, warp_mode)
 
@@ -173,6 +184,9 @@ def decode_truehd_to_atmos(
                         # progress ticks are not diagnostics; keeping them grew
                         # unboundedly and buried the real error in the message
                         continue
+
+                if log is not None and not _FFMPEG_STATS.match(line):
+                    log.add("truehdd" if prefix.startswith("truehdd") else prefix, line)
 
                 # filter out ffmpeg metadata spam even in debug mode
                 if prefix == "ffmpeg":

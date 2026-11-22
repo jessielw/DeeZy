@@ -77,7 +77,7 @@ def encode(payload: CorePayload) -> Path:
     job = plan(payload)
     check_output(job.output, job.source)
     if payload.dry_run and not job.preview:
-        for line in command_lines(job):
+        for line in command_lines(job, keep_logs=bool(payload.keep_logs)):
             print(line, flush=True)
         logger.info(f"Dry run: nothing was run. The output would be {job.output}")
         if job.output.exists() and not payload.overwrite:

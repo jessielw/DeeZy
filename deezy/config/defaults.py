@@ -81,6 +81,8 @@ limit_truehdd = 0
 parse_elementary_delay = false
 # Write logs to file by default for each job
 log_to_file = false
+# Keep each job's tool output (DEE, FFmpeg, truehdd) as <output>.log beside the output
+keep_logs = false
 # Disable progress bars by default
 no_progress_bars = false
 # Don't use dee_shim, even when it is found

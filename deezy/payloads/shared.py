@@ -31,6 +31,8 @@ class CorePayload:
     print_commands: bool
     # plan and print the commands, but run nothing
     dry_run: bool
+    # keep every command line and line of tool output beside the output
+    keep_logs: bool
     # how FFmpeg's PCM reaches DEE, for the formats that can pipe it
     pipe: PipeMode
     # dee_shim, when it is found and not turned off

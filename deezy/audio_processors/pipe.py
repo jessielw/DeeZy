@@ -22,6 +22,7 @@ from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import MAX_CAPTURED_LINES, with_loglevel
 from deezy.exceptions import PipeError
 from deezy.utils.logger import logger
+from deezy.utils.tool_log import ToolLog
 
 # the Windows namespace named pipes live in
 PIPE_ROOT = "\\\\.\\pipe\\"
@@ -46,9 +47,12 @@ def pipe_exists(name: str) -> bool:
 class _Feeder:
     """FFmpeg writing into DEE's pipe, on a thread of its own."""
 
-    def __init__(self, cmd: list[str], pipe_name: str) -> None:
+    def __init__(
+        self, cmd: list[str], pipe_name: str, log: ToolLog | None = None
+    ) -> None:
         self.cmd = cmd
         self.pipe_name = pipe_name
+        self.log = log
         self.dee: Popen | None = None
         self.proc: Popen | None = None
         self.returncode: int | None = None
@@ -98,6 +102,8 @@ class _Feeder:
         logger.debug(line)
         self.tail.append(line)
         del self.tail[:-MAX_CAPTURED_LINES]
+        if self.log is not None:
+            self.log.add("ffmpeg", line)
 
     def _wait_for_pipe(self, dee: Popen) -> bool:
         """True once DEE's pipe exists; False if DEE exits first or we stop."""
@@ -137,9 +143,9 @@ class _Feeder:
         )
 
 
-def with_progress_report(cmd: list[str]) -> list[str]:
+def with_progress_report(cmd: list[str], keep_logs: bool = False) -> list[str]:
     """A planned FFmpeg command with its log level, reporting to stdout."""
-    cmd = with_loglevel(cmd)
+    cmd = with_loglevel(cmd, keep_logs)
     at = cmd.index("-i")
     return [*cmd[:at], "-progress", "pipe:1", "-nostats", *cmd[at:]]
 
@@ -151,6 +157,7 @@ def process_pipe_job(
     step_info: dict | None = None,
     no_progress_bars: bool = False,
     custom_dialnorm: int = 0,
+    log: ToolLog | None = None,
 ) -> int | None:
     """
     Run DEE reading the named pipe ``pipe_name``, and FFmpeg writing into it.
@@ -159,7 +166,9 @@ def process_pipe_job(
     Raises DEE's error when DEE fails on its own, and FFmpeg's when FFmpeg
     fails, including when DEE then finished the short stream it was given.
     """
-    feeder = _Feeder(with_progress_report(ffmpeg_cmd), pipe_name)
+    feeder = _Feeder(
+        with_progress_report(ffmpeg_cmd, keep_logs=log is not None), pipe_name, log
+    )
     dee_error: Exception | None = None
     try:
         process_dee_job(
@@ -168,6 +177,7 @@ def process_pipe_job(
             no_progress_bars=no_progress_bars,
             custom_dialnorm=custom_dialnorm,
             on_start=feeder.start,
+            log=log,
         )
     except Exception as e:
         dee_error = e

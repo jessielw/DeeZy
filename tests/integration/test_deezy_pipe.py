@@ -280,3 +280,42 @@ def test_writer_dying_partway_fails_the_job(tools, work):
             [sys.executable, "-c", writer, NamedPipe(name, 6).path, "-v", "-i", "x"],
             name,
         )
+
+
+@pytest.mark.parametrize("mode", ["always", "never"])
+def test_a_kept_log_holds_every_tool_and_leaves_the_encode_alone(
+    tools, work, parser, config, mode
+):
+    run.init_phase_limits(max_parallel=1)
+    src = noise_source(work, 6)
+    out = work / "pipe_logs"
+    plain = encode(tools, parser, config, ["ddp"], src, out / f"plain_{mode}.ec3", mode)
+    kept = encode(
+        tools,
+        parser,
+        config,
+        ["ddp", "--keep-logs"],
+        src,
+        out / f"kept_{mode}.ec3",
+        mode,
+    )
+    # FFmpeg runs at its info level for the log; the encode is the same
+    assert md5(kept) == md5(plain)
+    assert not (out / f"plain_{mode}.ec3.log").exists()
+
+    lines = (out / f"kept_{mode}.ec3.log").read_text(encoding="utf-8").splitlines()
+    assert lines[0].startswith("[deezy] ddp: ")
+    commands = [line for line in lines if line.startswith("$ ")]
+    order = (
+        ["dee_ddp_encoder", "ffmpeg"]
+        if mode == "always"
+        else ["ffmpeg", "dee_ddp_encoder"]
+    )
+    assert [next(t for t in order if t in c) for c in commands] == order
+    assert any(" -v info " in c for c in commands)
+    assert "[ffmpeg] Stream mapping:" in lines
+    assert "[dee] Exit code: 0" in lines
+    # DEE's progress bar is left out
+    assert not [
+        line for line in lines if line.startswith("[dee] [") and line.endswith("%")
+    ]

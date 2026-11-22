@@ -270,6 +270,13 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help=("Overwrite existing output files instead of failing."),
     )
     encode_group.add_argument(
+        "--keep-logs",
+        action="store_true",
+        help="Writes the job's command lines and everything DEE, FFmpeg and "
+        "truehdd print to '<output>.log' beside the output, when the job "
+        "fails too. FFmpeg then runs at its info level.",
+    )
+    encode_group.add_argument(
         "--print-commands",
         action="store_true",
         help="Print each FFmpeg, truehdd and DEE command line as it starts.",

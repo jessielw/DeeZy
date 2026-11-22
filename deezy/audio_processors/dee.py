@@ -1,10 +1,12 @@
 from collections.abc import Callable
 import logging
+import re
 from subprocess import PIPE, STDOUT, Popen
 
 from deezy.dee.shim import clean_env, is_shim_command, shim_failure
 from deezy.utils.logger import logger
 from deezy.utils.progress import DEEProgressHandler
+from deezy.utils.tool_log import ToolLog
 
 _SUMMARY_START_MARKERS = (
     "--- Execution summary starts here ---",
@@ -143,12 +145,22 @@ def with_loglevel(cmd: list) -> list:
     return cmd
 
 
+# a redraw of the split encoders' --progress bar, such as '[==>     ] 6 %'
+_PROGRESS_BAR = re.compile(r"\[[=> ]*\]\s*\d+(?:\.\d+)?\s*%")
+
+
+def _is_progress(line: str) -> bool:
+    """Whether ``line`` is only a progress bar, which a kept log leaves out."""
+    return _PROGRESS_BAR.fullmatch(line) is not None
+
+
 def process_dee_job(
     cmd: list,
     step_info: dict | None = None,
     no_progress_bars: bool = False,
     custom_dialnorm: int = 0,
     on_start: Callable[[Popen], None] | None = None,
+    log: ToolLog | None = None,
 ) -> bool:
     """Processes file with DEE while generating progress and enhanced error reporting.
 
@@ -159,6 +171,8 @@ def process_dee_job(
         custom_dialnorm (int): If user supplies custom dialnorm (0 is off).
         on_start: Called with the DEE process as soon as it has started, before
             its output is read (a pipe's writer starts from here).
+        log: The job's kept log, for --keep-logs; gets every line but the
+            progress percentages.
     """
     cmd = with_loglevel(cmd)
     logger_level = logger.getEffectiveLevel()
@@ -209,6 +223,8 @@ def process_dee_job(
                     line_stripped = line.strip()
                     output_lines.append(line_stripped)
                     logger.debug(line_stripped)
+                    if log is not None and not _is_progress(line_stripped):
+                        log.add("dee", line_stripped)
 
                     # process progress information
                     _process_dee_progress_line(line_stripped, handler, progress_state)

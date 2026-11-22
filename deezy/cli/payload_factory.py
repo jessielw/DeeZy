@@ -60,6 +60,7 @@ class PayloadBuilder:
             "output_preview": cls.safe_get(args, "output_preview", False),
             "print_commands": cls.safe_get(args, "print_commands", False),
             "dry_run": cls.safe_get(args, "dry_run", False),
+            "keep_logs": cls.safe_get(args, "keep_logs", False),
             "pipe": cls.safe_get(args, "pipe") or PipeMode.AUTO,
             "worker_id": cls.safe_get(args, "worker_id"),
             "batch_output_dir": Path(cls.safe_get(args, "batch_output_dir"))

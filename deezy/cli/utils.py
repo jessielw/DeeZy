@@ -251,6 +251,7 @@ def apply_config_defaults_to_args(
         "overwrite",
         "parse_elementary_delay",
         "log_to_file",
+        "keep_logs",
         "no_progress_bars",
     )
     for b in bool_keys:

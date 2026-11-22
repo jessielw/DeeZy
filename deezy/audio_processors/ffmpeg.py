@@ -4,27 +4,35 @@ from subprocess import PIPE, STDOUT, Popen
 
 from deezy.utils.logger import logger
 from deezy.utils.progress import ProgressData, ProgressHandler
+from deezy.utils.tool_log import ToolLog
 
 # FFMPEG only ever explains a failure in the output it already streamed past, so
 # a bounded tail of it is kept to put a reason in the raised error
 MAX_CAPTURED_LINES = 50
 
 
-def ffmpeg_loglevel() -> str:
-    """The level that goes after a planned FFmpeg command's ``-v``."""
-    return "info" if logger.getEffectiveLevel() == logging.DEBUG else "quiet"
+def ffmpeg_loglevel(keep_logs: bool = False) -> str:
+    """
+    The level that goes after a planned FFmpeg command's ``-v``: info in
+    debug mode or when the job's log is kept, else quiet.
+    """
+    if keep_logs or logger.getEffectiveLevel() == logging.DEBUG:
+        return "info"
+    return "quiet"
 
 
-def with_loglevel(cmd: list) -> list:
+def with_loglevel(cmd: list, keep_logs: bool = False) -> list:
     """A copy of a planned FFmpeg command with its ``-v`` level filled in."""
     cmd = cmd.copy()
-    cmd.insert(cmd.index("-v") + 1, ffmpeg_loglevel())
+    cmd.insert(cmd.index("-v") + 1, ffmpeg_loglevel(keep_logs))
     return cmd
 
 
-def _prepare_ffmpeg_command(cmd: list, duration: float | None) -> list:
+def _prepare_ffmpeg_command(
+    cmd: list, duration: float | None, keep_logs: bool = False
+) -> list:
     """Prepare FFMPEG command with appropriate options for progress tracking."""
-    cmd = with_loglevel(cmd)
+    cmd = with_loglevel(cmd, keep_logs)
 
     # add progress options before input if we have duration for accurate tracking
     if duration:
@@ -66,7 +74,12 @@ def _create_progress_parser(duration: float) -> Callable:
 
 
 def _process_with_progress_bar(
-    proc: Popen, handler: ProgressHandler, step_label: str, duration: float, sink: list
+    proc: Popen,
+    handler: ProgressHandler,
+    step_label: str,
+    duration: float,
+    sink: list,
+    log: ToolLog | None = None,
 ) -> None:
     """Handle FFMPEG process with progress bar when duration is known."""
     parser = _create_progress_parser(duration)
@@ -87,21 +100,27 @@ def _process_with_progress_bar(
                     logger.debug("FFMPEG progress completed")
                 else:
                     logger.debug(line)
-                    _capture(sink, line)
+                    _capture(sink, line, log)
 
         # ensure completion
         handler.ensure_completion(last_percent, step_label, progress, task_id)
 
 
-def _capture(sink: list, line: str) -> None:
-    """Keep a bounded tail of FFMPEG output for error reporting."""
+def _capture(sink: list, line: str, log: ToolLog | None = None) -> None:
+    """Keep a bounded tail of FFMPEG output for error reporting, and log it."""
     if line:
         sink.append(line)
         del sink[:-MAX_CAPTURED_LINES]
+        if log is not None:
+            log.add("ffmpeg", line)
 
 
 def _process_with_spinner(
-    proc: Popen, handler: ProgressHandler, step_label: str, sink: list
+    proc: Popen,
+    handler: ProgressHandler,
+    step_label: str,
+    sink: list,
+    log: ToolLog | None = None,
 ) -> None:
     """Handle FFMPEG process with loading spinner when duration is unknown."""
 
@@ -119,7 +138,7 @@ def _process_with_spinner(
                 for line in proc.stdout:
                     line = line.strip()
                     logger.debug(line)
-                    _capture(sink, line)
+                    _capture(sink, line, log)
 
         # show completion message
         console.print(f"✓ {step_label} completed")
@@ -131,7 +150,7 @@ def _process_with_spinner(
             for line in proc.stdout:
                 line = line.strip()
                 logger.debug(line)
-                _capture(sink, line)
+                _capture(sink, line, log)
 
         logger.info(f"{step_label} completed")
 
@@ -142,6 +161,7 @@ def process_ffmpeg_job(
     duration: float | None,
     step_info: dict | None = None,
     no_progress_bars: bool = False,
+    log: ToolLog | None = None,
 ) -> bool:
     """Processes file with FFMPEG while generating progress based on available information.
 
@@ -155,9 +175,10 @@ def process_ffmpeg_job(
             If None, spinner loading indicator is used instead.
         step_info (dict | None): Optional step context with 'current', 'total', 'name' keys.
         no_progress_bars (bool): Disable progress bars.
+        log: The job's kept log, for --keep-logs.
     """
     # prepare command with appropriate options
-    prepared_cmd = _prepare_ffmpeg_command(cmd, duration)
+    prepared_cmd = _prepare_ffmpeg_command(cmd, duration, keep_logs=log is not None)
 
     # setup progress handler
     handler = ProgressHandler(logger.getEffectiveLevel(), no_progress_bars, step_info)
@@ -174,9 +195,11 @@ def process_ffmpeg_job(
     output_tail: list[str] = []
     with Popen(prepared_cmd, stdout=PIPE, stderr=STDOUT, text=True) as proc:
         if duration:
-            _process_with_progress_bar(proc, handler, step_label, duration, output_tail)
+            _process_with_progress_bar(
+                proc, handler, step_label, duration, output_tail, log
+            )
         else:
-            _process_with_spinner(proc, handler, step_label, output_tail)
+            _process_with_spinner(proc, handler, step_label, output_tail, log)
 
         # check return code
         return_code = proc.poll()
