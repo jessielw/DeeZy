@@ -6,7 +6,10 @@ from deezy.payloads.shared import ChannelBitrates
 
 
 class AtmosMode(CaseInsensitiveEnum):
+    # a 5.1 backbone, which DEE encodes alone
     STREAMING = "streaming"
+    # 7.1 backbones, through dee_shim: E-AC-3 only, or an AC-3 core for Blu-ray
+    STANDARD = "standard"
     BLURAY = "bluray"
 
     @override

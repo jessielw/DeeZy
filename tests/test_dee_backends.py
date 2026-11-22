@@ -7,6 +7,7 @@ from deezy.dee.commands import (
     DeeFiles,
     DeeTools,
     ac4ims_command,
+    check_atmos_options,
     ddp_command,
     ddpjoc_command,
 )
@@ -31,11 +32,7 @@ from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
-from deezy.pipeline.plan import (
-    ddp_auto_layouts,
-    ddp_channel_resolver,
-    require_supported_atmos_mode,
-)
+from deezy.pipeline.plan import ddp_auto_layouts, ddp_channel_resolver
 from tests.utils.payload_helpers import make_core_fields, make_dolby_fields
 
 EXE = get_executable_extension()
@@ -82,13 +79,13 @@ def make_atmos_payload(tmp_path: Path, **overrides) -> AtmosPayload:
         "ltrt_surround_mix_level",
         "preferred_downmix_mode",
     }
-    return AtmosPayload(
-        atmos_mode=AtmosMode.STREAMING,
-        thd_warp_mode=WarpMode.NORMAL,
+    fields = {
+        "atmos_mode": AtmosMode.STREAMING,
+        "thd_warp_mode": WarpMode.NORMAL,
         **make_core_fields(tmp_path, keep_temp=False),
         **{k: v for k, v in dolby.items() if k in keys},
-        **overrides,
-    )
+    }
+    return AtmosPayload(**{**fields, **overrides})
 
 
 def make_ac4_payload(tmp_path: Path, **overrides) -> Ac4Payload:
@@ -485,10 +482,75 @@ class TestSplitAtmos:
         assert encoder_options(cmd)["drc_profile_line"] == "film_light"
         assert encoder_options(cmd)["preferred_downmix_mode"] == "not_indicated"
 
-    def test_bluray_needs_dee_shim(self):
-        # DEE's own Blu-ray mode gives a 5.1.2 bed, not 7.1
-        with pytest.raises(UnsupportedDeeFeatureError, match="dee_shim"):
-            require_supported_atmos_mode(AtmosMode.BLURAY)
+    def build(self, tmp_path, split_dir, files, shim=None, bitrate=448, **payload):
+        return ddpjoc_command(
+            DeeTools(split_dir, shim=shim),
+            make_atmos_payload(tmp_path, **payload),
+            files,
+            bitrate=bitrate,
+            fps=DeeFPS.FPS_24,
+            delay=Delay(),
+        )
+
+    @pytest.mark.parametrize("mode", [AtmosMode.BLURAY, AtmosMode.STANDARD])
+    def test_7_1_backbones_need_dee_shim(self, tmp_path, split_dir, files, mode):
+        # DEE's own Blu-ray mode gives a 5.1.2 backbone, not 7.1
+        with pytest.raises(UnsupportedDeeFeatureError, match="7.1 backbone.*dee_shim"):
+            self.build(tmp_path, split_dir, files, atmos_mode=mode)
+
+    def test_phase_shift_off_needs_dee_shim(self, tmp_path, split_dir, files):
+        with pytest.raises(UnsupportedDeeFeatureError, match="phase-shift.*dee_shim"):
+            self.build(tmp_path, split_dir, files, surround_90_degree_phase_shift=False)
+
+    def test_oamd_as_is_off_is_fine_without_the_shim(self, tmp_path, split_dir, files):
+        # DEE alone always smooths, so there is nothing to turn off
+        cmd = self.build(tmp_path, split_dir, files, oamd_as_is=False)
+        assert cmd[0] == str(split_dir / f"dee_ddpjoc_encoder{EXE}")
+        assert "--" not in cmd
+
+    def test_refusals_pass_with_the_shim(self, tmp_path):
+        payload = make_atmos_payload(
+            tmp_path,
+            atmos_mode=AtmosMode.STANDARD,
+            surround_90_degree_phase_shift=False,
+        )
+        check_atmos_options(payload, shim=True)
+
+    @pytest.mark.parametrize(
+        ("mode", "layout"),
+        [
+            (AtmosMode.STREAMING, []),
+            (AtmosMode.BLURAY, ["--layout", "7.1"]),
+            (AtmosMode.STANDARD, ["--layout", "7.1/eac3"]),
+        ],
+    )
+    def test_shim_options_by_mode(self, tmp_path, split_dir, files, mode, layout):
+        shim = DeeShim(Path("dee_shim"), "0.2.1")
+        cmd = self.build(tmp_path, split_dir, files, shim=shim, atmos_mode=mode)
+        tool = str(split_dir / f"dee_ddpjoc_encoder{EXE}")
+        # the object metadata is coded as the master has it by default
+        assert cmd[: cmd.index("--")] == [
+            "dee_shim", "ddpjoc_encoder", *layout, "--oamd-as-is", "on",
+            "--binary", tool,
+        ]  # fmt: skip
+        native = cmd[cmd.index("--") + 1 :]
+        # DeeZy's -e names no mode; the shim adds the one its layout runs
+        assert option(native, "-e").startswith("preferred_downmix_mode=")
+        assert option(native, "--data-rate") == "448"
+
+    def test_shim_phase_shift_off_and_oamd_smoothed(self, tmp_path, split_dir, files):
+        shim = DeeShim(Path("dee_shim"), "0.2.1")
+        cmd = self.build(
+            tmp_path,
+            split_dir,
+            files,
+            shim=shim,
+            surround_90_degree_phase_shift=False,
+            oamd_as_is=False,
+        )
+        assert cmd[: cmd.index("--binary")] == [
+            "dee_shim", "ddpjoc_encoder", "--phase90", "off",
+        ]  # fmt: skip
 
     def test_custom_dialnorm(self, tmp_path, split_dir, files):
         cmd = ddpjoc_command(

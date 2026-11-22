@@ -4780,7 +4780,75 @@
   ]
  },
  "atmos_bluray": {
-  "error": "UnsupportedDeeFeatureError: DD+ Atmos for Blu-ray needs a 7.1 bed, which DEE 6.7 only encodes through dee_shim. This DeeZy version doesn't drive dee_shim yet; use '--atmos-mode streaming'."
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode bluray' codes a 7.1 backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
+ },
+ "atmos_standard": {
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode standard' codes a 7.1 backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
+ },
+ "atmos_p90_off": {
+  "error": "UnsupportedDeeFeatureError: --no-surround-90-deg-phase-shift for DD+ Atmos needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and DEE's DD+ Atmos encoder always shifts the surrounds. Give the shim's path with --dee-shim, or drop the option."
+ },
+ "atmos_no_oamd": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
  },
  "atmos_plain": {
   "error": "InvalidAtmosInputError: Cannot process input, not a valid Atmos format"
@@ -12006,7 +12074,7 @@
   ]
  },
  "atmos_damf_bluray": {
-  "error": "UnsupportedDeeFeatureError: DD+ Atmos for Blu-ray needs a 7.1 bed, which DEE 6.7 only encodes through dee_shim. This DeeZy version doesn't drive dee_shim yet; use '--atmos-mode streaming'."
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode bluray' codes a 7.1 backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
  },
  "ac4_damf": {
   "output": "/out/in [2.0] s0 r0 wNone.ac4",
@@ -13939,6 +14007,8 @@
     "dee": [
      "/tools/dee_shim",
      "ddpjoc_encoder",
+     "--oamd-as-is",
+     "on",
      "--binary",
      "/tools/dee/dee_ddpjoc_encoder",
      "--",
@@ -13976,6 +14046,8 @@
     "dee": [
      "/tools/dee_shim",
      "ddpjoc_encoder",
+     "--oamd-as-is",
+     "on",
      "--binary",
      "/tools/dee/dee_ddpjoc_encoder",
      "--",
@@ -14013,6 +14085,8 @@
     "dee": [
      "/tools/dee_shim",
      "ddpjoc_encoder",
+     "--oamd-as-is",
+     "on",
      "--binary",
      "/tools/dee/dee_ddpjoc_encoder",
      "--",
@@ -14043,7 +14117,534 @@
   ]
  },
  "shim_atmos_bluray": {
-  "error": "UnsupportedDeeFeatureError: DD+ Atmos for Blu-ray needs a 7.1 bed, which DEE 6.7 only encodes through dee_shim. This DeeZy version doesn't drive dee_shim yet; use '--atmos-mode streaming'."
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--layout",
+     "7.1",
+     "--oamd-as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1280",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "shim_atmos_bluray_damf": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--layout",
+     "7.1",
+     "--oamd-as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1280",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "shim_atmos_bluray_rate_up": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--layout",
+     "7.1",
+     "--oamd-as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1408",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "shim_atmos_standard": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--oamd-as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1152",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "shim_atmos_standard_rate": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--oamd-as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1000",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "shim_atmos_standard_low": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--oamd-as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "shim_atmos_standard_off": {
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode standard' codes a 7.1 backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
+ },
+ "shim_atmos_p90_off": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--phase90",
+     "off",
+     "--oamd-as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
+ "shim_atmos_no_oamd": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "448",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
  },
  "shim_thd_8": {
   "output": "/out/in [7.1] s0 r0 wNone.thd",

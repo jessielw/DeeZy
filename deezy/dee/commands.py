@@ -13,6 +13,7 @@ from deezy.dee.shim import DeeShim
 from deezy.dee.tools import dee_tool
 from deezy.delay import Delay
 from deezy.enums.ac4 import Ac4EncodingProfile
+from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import (
     DDEncodingMode,
     DeeDRC,
@@ -44,6 +45,13 @@ THD_TOOL = "dee_dthd_encoder"
 # dee_shim's DD+ 7.1: an E-AC-3 5.1 independent substream plus a dependent one
 # for the backs
 DDP_71_SHIM_ARGS = ("--layout", "7.1/eac3")
+# dee_shim's DD+ Atmos 7.1 backbones (DEE's own Blu-ray mode gives a 5.1.2
+# one): an AC-3 core plus an E-AC-3 dependent substream, or E-AC-3 only.
+# Streaming keeps DEE's 5.1
+DDPJOC_SHIM_LAYOUTS = {
+    AtmosMode.BLURAY: ("--layout", "7.1"),
+    AtmosMode.STANDARD: ("--layout", "7.1/eac3"),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,7 +177,12 @@ def ddpjoc_command(
     fps: DeeFPS,
     delay: Delay,
 ) -> list[str]:
-    """A Dolby Digital Plus Atmos (JOC) encode with dee_ddpjoc_encoder."""
+    """
+    A Dolby Digital Plus Atmos (JOC) encode with dee_ddpjoc_encoder. With
+    dee_shim it codes the object metadata as the master has it, and it is the
+    only way to a 7.1 backbone or to turn the surround phase shift off.
+    """
+    check_atmos_options(payload, shim=tools.shim is not None)
     encoder = {
         "preferred_downmix_mode": payload.preferred_downmix_mode.to_dee_cmd(),
         "loro_cmix": payload.loro_center_mix_level,
@@ -193,7 +206,47 @@ def ddpjoc_command(
         "-e",
         _options(encoder),
     ]
-    return _through_shim(tools, argv)
+    # the shim names DEE's mode in -e itself (bluray for both 7.1 layouts,
+    # ddpjoc once it is given any option in streaming) and checks --data-rate
+    # against the layout's list
+    return _through_shim(tools, argv, *ddpjoc_shim_args(payload))
+
+
+def ddpjoc_shim_args(payload: AtmosPayload) -> tuple[str, ...]:
+    """dee_shim's options for a DD+ Atmos encode."""
+    args = list(DDPJOC_SHIM_LAYOUTS.get(payload.atmos_mode, ()))
+    if not payload.surround_90_degree_phase_shift:
+        args += ["--phase90", "off"]
+    if payload.oamd_as_is:
+        # DEE smooths the object positions it reads; a TrueHD Atmos decode
+        # has been smoothed once already
+        args += ["--oamd-as-is", "on"]
+    return tuple(args)
+
+
+def check_atmos_options(payload: AtmosPayload, *, shim: bool) -> None:
+    """
+    Refuse DD+ Atmos options that need dee_shim when DeeZy doesn't have it.
+    ``--no-oamd-as-is`` is fine either way: DEE alone always smooths.
+    """
+    if shim:
+        return
+    if payload.atmos_mode in DDPJOC_SHIM_LAYOUTS:
+        # DEE alone would hand back a 5.1.2 backbone for a 7.1 request
+        raise UnsupportedDeeFeatureError(
+            f"DD+ Atmos '--atmos-mode {payload.atmos_mode.value}' codes a 7.1 "
+            "backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find "
+            "it or was told not to use it (--no-shim). DEE's own Blu-ray mode "
+            "gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or "
+            "use '--atmos-mode streaming'."
+        )
+    if not payload.surround_90_degree_phase_shift:
+        raise UnsupportedDeeFeatureError(
+            "--no-surround-90-deg-phase-shift for DD+ Atmos needs dee_shim (0.2.1 "
+            "or newer); DeeZy didn't find it or was told not to use it "
+            "(--no-shim), and DEE's DD+ Atmos encoder always shifts the "
+            "surrounds. Give the shim's path with --dee-shim, or drop the option."
+        )
 
 
 def ac4ims_command(

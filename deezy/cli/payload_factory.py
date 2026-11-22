@@ -215,6 +215,10 @@ class PayloadBuilder:
             {
                 "atmos_mode": cls.safe_get(args, "atmos_mode", AtmosMode.STREAMING),
                 "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
+                "surround_90_degree_phase_shift": cls.safe_get(
+                    args, "no_surround_90_deg_phase_shift", True
+                ),
+                "oamd_as_is": not cls.safe_get(args, "no_oamd_as_is", False),
             }
         )
 

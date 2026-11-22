@@ -20,6 +20,7 @@ from deezy.dee.commands import (
     ac4_command,
     ac4ajoc_command,
     ac4ims_command,
+    check_atmos_options,
     ddp_command,
     ddpjoc_command,
     measure_command,
@@ -29,7 +30,7 @@ from deezy.dee.commands import (
 from deezy.dee.spec import FormatSpec, get_format
 from deezy.delay import Delay, compensation
 from deezy.enums.ac4 import Ac4ChannelBasedChannels, Ac4Channels
-from deezy.enums.atmos import AtmosMode, WarpMode
+from deezy.enums.atmos import WarpMode
 from deezy.enums.channel_count import ChannelCount
 from deezy.enums.codec_format import CodecFormat
 from deezy.enums.dd import DolbyDigitalChannels
@@ -1021,18 +1022,6 @@ def _plan_dd_render(
 # --- Dolby Digital Plus Atmos
 
 
-def require_supported_atmos_mode(atmos_mode: AtmosMode) -> None:
-    """Refuse an Atmos mode DeeZy can't encode yet, before any work starts."""
-    if get_format("ddp-atmos").layout("atmos", mode=atmos_mode.value).needs_shim:
-        # dee_ddpjoc_encoder's own Blu-ray mode gives a 5.1.2 bed; the 7.1 bed
-        # needs dee_shim (--layout 7.1)
-        raise UnsupportedDeeFeatureError(
-            "DD+ Atmos for Blu-ray needs a 7.1 bed, which DEE 6.7 only encodes "
-            "through dee_shim. This DeeZy version doesn't drive dee_shim yet; use "
-            "'--atmos-mode streaming'."
-        )
-
-
 def _atmos_input(
     payload: AtmosInputPayload,
     info: AudioTrackInfo,
@@ -1059,7 +1048,8 @@ def _plan_ddp_atmos(
     payload: AtmosPayload, info: AudioTrackInfo, ctx: PlanContext
 ) -> JobPlan:
     spec = get_format("ddp-atmos")
-    require_supported_atmos_mode(payload.atmos_mode)
+    # before any work, and before the rate lookup warns about a rate
+    check_atmos_options(payload, shim=payload.dee_shim is not None)
     bitrate = resolve_bitrate(
         ctx.config,
         CodecFormat.DDP_ATMOS,

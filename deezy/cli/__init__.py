@@ -577,7 +577,24 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         choices=AtmosMode,
         default=AtmosMode.STREAMING,
         metavar=enum_choices(AtmosMode),
-        help="Atmos encoding mode.",
+        help="Atmos encoding mode: streaming (5.1 backbone), standard (7.1 "
+        "backbone as E-AC-3) or bluray (7.1 backbone with an AC-3 core). "
+        "standard and bluray need dee_shim.",
+    )
+    atmos_options_group.add_argument(
+        "--no-oamd-as-is",
+        action="store_true",
+        help="Lets DEE smooth the object metadata again, as it does without "
+        "dee_shim. By default dee_shim codes it as the master has it. Without "
+        "dee_shim this changes nothing.",
+    )
+    # DD+ Atmos processing (the preset parser takes the DD/DDP group's option)
+    atmos_processing_group = argparse.ArgumentParser(add_help=False)
+    atmos_processing_group.add_argument(
+        "--no-surround-90-deg-phase-shift",
+        action="store_false",
+        help="Disables the surround 90 degree phase shift DEE applies to the "
+        "backbone (needs dee_shim).",
     )
 
     # trueHDD options (shared by Atmos and AC4)
@@ -812,6 +829,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "ddp_channels_group": ddp_channels_group,
         "ddp_bluray_channels_group": ddp_bluray_channels_group,
         "atmos_options_group": atmos_options_group,
+        "atmos_processing_group": atmos_processing_group,
         "truehdd_options_group": truehdd_options_group,
         "ac4_basic_options_group": ac4_basic_options_group,
         "ac4_drc_group": ac4_drc_group,
@@ -924,6 +942,7 @@ def create_encode_parsers(
             argument_groups["downmix_metadata_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["atmos_options_group"],
+            argument_groups["atmos_processing_group"],
             argument_groups["truehdd_options_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(

@@ -169,7 +169,8 @@ surroundex = 1280 # DDP Bluray 7.1
 # Default bitrates for Dolby Digital Plus Atmos
 [default_bitrates.ddp-atmos]
 streaming = 448 # Atmos Streaming
-bluray = 1280    # Atmos Bluray
+standard = 1152 # Atmos 7.1 as E-AC-3 (needs dee_shim)
+bluray = 1280    # Atmos Bluray (needs dee_shim)
 
 # Default bitrates for channel-based AC-4
 [default_bitrates.ac4]

@@ -262,6 +262,20 @@ SCENARIOS = [
     ("atmos_thd_512", ["ddp-atmos", "--bitrate", "512"], info(8, thd=True), MKV),
     ("atmos_adm", ["ddp-atmos"], info(8, adm=True), WAV),
     ("atmos_bluray", ["ddp-atmos", "--atmos-mode", "bluray"], info(8, thd=True), MKV),
+    (
+        "atmos_standard",
+        ["ddp-atmos", "--atmos-mode", "standard"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "atmos_p90_off",
+        ["ddp-atmos", "--no-surround-90-deg-phase-shift"],
+        info(8, thd=True),
+        MKV,
+    ),
+    # DEE alone always smooths the object metadata: nothing to turn off
+    ("atmos_no_oamd", ["ddp-atmos", "--no-oamd-as-is"], info(8, thd=True), MKV),
     ("atmos_plain", ["ddp-atmos"], info(6), MKV),
     ("atmos_upmix", ["ddp-atmos"], info(2, thd=True), MKV),
     (
@@ -747,9 +761,59 @@ SHIM_SCENARIOS = [
         info(16, fps=None, adm=True),
         WAV,
     ),
+    # DD+ Atmos codes the object metadata as authored (--oamd-as-is on), and
+    # the 7.1 backbones and the phase shift off come from the shim
     (
         "shim_atmos_bluray",
         ["ddp-atmos", *WITH_SHIM, "--atmos-mode", "bluray"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "shim_atmos_bluray_damf",
+        ["ddp-atmos", *WITH_SHIM, "--atmos-mode", "bluray"],
+        D16,
+        DAMF,
+    ),
+    (
+        "shim_atmos_bluray_rate_up",
+        ["ddp-atmos", *WITH_SHIM, "--atmos-mode", "bluray", "--bitrate", "1300"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "shim_atmos_standard",
+        ["ddp-atmos", *WITH_SHIM, "--atmos-mode", "standard"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "shim_atmos_standard_rate",
+        ["ddp-atmos", *WITH_SHIM, "--atmos-mode", "standard", "--bitrate", "1000"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "shim_atmos_standard_low",
+        ["ddp-atmos", *WITH_SHIM, "--atmos-mode", "standard", "--bitrate", "300"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "shim_atmos_standard_off",
+        ["ddp-atmos", *WITH_SHIM, "--no-shim", "--atmos-mode", "standard"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "shim_atmos_p90_off",
+        ["ddp-atmos", *WITH_SHIM, "--no-surround-90-deg-phase-shift"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "shim_atmos_no_oamd",
+        ["ddp-atmos", *WITH_SHIM, "--no-oamd-as-is"],
         info(8, thd=True),
         MKV,
     ),

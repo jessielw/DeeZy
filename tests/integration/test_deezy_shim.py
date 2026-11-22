@@ -2,8 +2,11 @@
 DeeZy finding and running the real dee_shim, and reading its failures.
 
 With no options of its own the shim encodes what DEE does, byte for byte, so
-DeeZy runs every DD+ Atmos and TrueHD encode through it when it has it. It also
-runs DD+ 7.1 as E-AC-3 through the shim, which DEE alone can't encode.
+DeeZy runs every DD+ Atmos and TrueHD encode through it when it has it. DD+
+Atmos also gets `--oamd-as-is on` (the object metadata coded as the master has
+it), so it matches plain DEE only with `--no-oamd-as-is`. The shim also gives
+what DEE alone can't encode: DD+ 7.1 as E-AC-3, and DD+ Atmos on a 7.1
+backbone.
 
 The planner and runner run in-process with the shipped default config, so the
 tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
@@ -103,7 +106,8 @@ def test_the_shims_environment_is_kept_out(shim, work, wav, dee_shim, monkeypatc
     assert not any("dee_shim DEBUG" in line for line in lines)
 
 
-# --- DeeZy's encodes through dee_shim: the same bytes as plain DEE
+# --- DeeZy's encodes through dee_shim: the same bytes as plain DEE (DD+ Atmos
+# with the object metadata smoothed as DEE does)
 
 BUILDERS = {
     "ddp": PayloadBuilder.build_ddp_payload,
@@ -135,7 +139,8 @@ def encode(
     tools, work, parser, config, fmt, args, src: Path, shim: DeeShim | None, pipe=False
 ):
     """DeeZy's plan for ``fmt``, run with or without dee_shim."""
-    tag = f"{src.stem}_{fmt}_{'shim' if shim else 'plain'}_" + "_".join(args)
+    tag = f"{src.parent.name}_{src.stem}_{fmt}_{'shim' if shim else 'plain'}_"
+    tag += "_".join(args)
     tag += "_pipe" if pipe else ""
     out = work / "shim_out" / f"{tag.replace('-', '').replace('=', '')}{SUFFIX[fmt]}"
     transport = ["--pipe", "always" if pipe else "never"] if fmt == "ddp" else []
@@ -179,8 +184,8 @@ def master(work) -> Path:
 @pytest.mark.parametrize(
     ("fmt", "args"),
     [
-        ("ddp-atmos", []),
-        ("ddp-atmos", ["--delay=-20ms"]),
+        ("ddp-atmos", ["--no-oamd-as-is"]),
+        ("ddp-atmos", ["--no-oamd-as-is", "--delay=-20ms"]),
         ("thd-atmos", []),
         ("thd-atmos", ["--legacy-authoring"]),
     ],
@@ -206,6 +211,88 @@ def test_thd_through_the_shim_is_byte_identical(
     plain = encode(shim, work, parser, config, "thd", args, src, None)
     shimmed = encode(shim, work, parser, config, "thd", args, src, dee_shim)
     assert md5(shimmed) == md5(plain)
+
+
+# --- DD+ Atmos options only the shim has
+
+
+@pytest.mark.parametrize(
+    "args",
+    [[], ["--no-oamd-as-is", "--no-surround-90-deg-phase-shift"]],
+    ids=["oamd_as_is", "phase90_off"],
+)
+def test_a_shim_option_changes_the_ddp_atmos_bytes(
+    shim, work, parser, config, dee_shim, master, args
+):
+    # against the shim with neither: DEE's smoothing and its phase shift
+    base = encode(
+        shim, work, parser, config, "ddp-atmos", ["--no-oamd-as-is"], master, dee_shim
+    )
+    out = encode(shim, work, parser, config, "ddp-atmos", args, master, dee_shim)
+    assert md5(out) != md5(base)
+
+
+@pytest.mark.parametrize(
+    ("args", "rate"),
+    [
+        (["--atmos-mode", "bluray"], 1280),
+        (["--atmos-mode", "standard"], 1152),
+        (["--atmos-mode", "standard", "--bitrate", "1000"], 1000),
+    ],
+    ids=["bluray", "standard", "standard_1000"],
+)
+def test_ddp_atmos_on_a_7_1_backbone(
+    shim, work, parser, config, dee_shim, damf, args, rate
+):
+    # the sample's master: the synthetic one (15 static noise objects) comes
+    # out of a 7.1 backbone without its JOC once DEE trims the start
+    out = encode(shim, work, parser, config, "ddp-atmos", args, damf, dee_shim)
+    info = mediainfo(out)
+    assert "Atmos" in info["commercial_name"]
+    assert info["channel_layout"] == "L R C LFE Ls Rs Lb Rb"
+    assert int(info["bit_rate"]) == rate * 1000
+
+
+@pytest.fixture(scope="module")
+def impulse_master(work) -> Path:
+    # silent but for an impulse one second in, in every element
+    return synthetic_damf(work / "shim_impulse_master", seconds=3.0, impulse_at=SR)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [[], ["--atmos-mode", "bluray"], ["--atmos-mode", "standard"]],
+    ids=["streaming", "bluray", "standard"],
+)
+def test_ddp_atmos_through_the_shim_lands_on_the_source_sample(
+    shim, work, parser, config, dee_shim, impulse_master, args
+):
+    out = encode(
+        shim, work, parser, config, "ddp-atmos", args, impulse_master, dee_shim
+    )
+    pcm = decode(shim, out)
+    assert pcm.channels == (6 if not args else 8)
+    frames = [pcm.peak(c)[0] for c in range(pcm.channels) if pcm.peak(c)[1] > 0.02]
+    assert frames, "the impulse is missing from every channel"
+    # DeeZy trims DEE's 256 samples in every mode; lossy coding may move a
+    # transient's peak by a sample
+    assert all(abs(frame - SR) <= 1 for frame in frames), frames
+
+
+@pytest.mark.parametrize(
+    ("args", "match"),
+    [
+        (["--atmos-mode", "bluray"], "7.1 backbone"),
+        (["--atmos-mode", "standard"], "7.1 backbone"),
+        (["--no-surround-90-deg-phase-shift"], "phase-shift"),
+    ],
+    ids=["bluray", "standard", "phase90_off"],
+)
+def test_ddp_atmos_shim_options_are_refused_without_it(
+    shim, work, parser, config, master, args, match
+):
+    with pytest.raises(UnsupportedDeeFeatureError, match=f"{match}.*dee_shim"):
+        encode(shim, work, parser, config, "ddp-atmos", args, master, None)
 
 
 # --- DD+ 7.1 as E-AC-3, which DEE alone can't encode

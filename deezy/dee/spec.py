@@ -31,6 +31,11 @@ _SHIM_DDP_71_RATES = (
     *(384, 448, 504, 576, 640, 704, 768, 832, 896, 960, 1008, 1024),
     *(1152, 1280, 1408, 1512, 1536, 1664, 1792),
 )
+# dee_shim's DD+ Atmos 7.1/eac3 takes any whole kbps total from 64 to 2048 and
+# splits it between the two substreams, but DEE fails some totals below 432
+# (`ddpi_enc_process Error: 214`, depending on the content), so DeeZy starts at
+# 448
+_SHIM_JOC_EAC3_RATES = tuple(range(448, 2049))
 
 # dee_aac_encoder's own default rates, from its --help (the probe records only
 # the ranges)
@@ -249,11 +254,24 @@ def formats() -> Mapping[str, FormatSpec]:
                     {"atmos": _probed(448, "dee_ddpjoc_encoder", "ddpjoc")},
                 ),
                 # DEE's own Blu-ray mode gives a 5.1.2 bed; dee_shim gives 7.1
+                # (`--layout 7.1`: an AC-3 core plus an E-AC-3 dependent)
                 "bluray": ModeSpec(
                     "bluray",
                     {
                         "atmos": LayoutSpec(
                             _probed(1280, "dee_ddpjoc_encoder", "bluray").rates,
+                            needs_shim=True,
+                        )
+                    },
+                ),
+                # dee_shim's 7.1 with an E-AC-3 independent substream in place
+                # of the AC-3 core (`--layout 7.1/eac3`), which it runs in
+                # DEE's Blu-ray mode
+                "standard": ModeSpec(
+                    "bluray",
+                    {
+                        "atmos": LayoutSpec(
+                            ChannelBitrates(default=1152, choices=_SHIM_JOC_EAC3_RATES),
                             needs_shim=True,
                         )
                     },

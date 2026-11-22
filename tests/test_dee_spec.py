@@ -19,6 +19,7 @@ DEFAULTS = {
     ("ddp-bluray", "bluray_secondary", "5.1"): 192,
     ("ddp-atmos", "streaming", "atmos"): 448,
     ("ddp-atmos", "bluray", "atmos"): 1280,
+    ("ddp-atmos", "standard", "atmos"): 1152,
     ("ac4-ims", "ims", "2.0"): 256,
     # DeeZy's AC-4 defaults sit above Dolby's 64 and 128
     ("ac4", "ac4", "2.0"): 96,
@@ -66,7 +67,11 @@ def test_probed_rates_come_from_the_fixture():
 
 def test_only_shim_layouts_need_the_shim():
     needs = {key for key, layout in all_layouts() if layout.needs_shim}
-    assert needs == {("ddp", "ddp", "7.1"), ("ddp-atmos", "bluray", "atmos")}
+    assert needs == {
+        ("ddp", "ddp", "7.1"),
+        ("ddp-atmos", "bluray", "atmos"),
+        ("ddp-atmos", "standard", "atmos"),
+    }
 
 
 def test_mode_defaults_to_the_first():
