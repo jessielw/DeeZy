@@ -10,6 +10,7 @@ from deezy.dee.commands import (
     ddp_command,
     ddpjoc_command,
 )
+from deezy.dee.shim import DeeShim
 from deezy.dee.spec import get_format
 from deezy.dee.tools import get_executable_extension
 from deezy.delay import Delay, compensation
@@ -30,7 +31,11 @@ from deezy.payloads.ac4 import Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
-from deezy.pipeline.plan import require_supported_atmos_mode
+from deezy.pipeline.plan import (
+    ddp_auto_layouts,
+    ddp_channel_resolver,
+    require_supported_atmos_mode,
+)
 from tests.utils.payload_helpers import make_core_fields, make_dolby_fields
 
 EXE = get_executable_extension()
@@ -117,7 +122,7 @@ def encoder_options(cmd: list[str]) -> dict[str, str]:
 
 
 class TestSplitDD:
-    def build(self, tmp_path, split_dir, files, payload=None, **kwargs):
+    def build(self, tmp_path, split_dir, files, payload=None, shim=None, **kwargs):
         options = {
             "downmix_mode_off": False,
             "bitrate": 640,
@@ -127,7 +132,10 @@ class TestSplitDD:
             **kwargs,
         }
         return ddp_command(
-            DeeTools(split_dir), payload or make_dd_payload(tmp_path), files, **options
+            DeeTools(split_dir, shim=shim),
+            payload or make_dd_payload(tmp_path),
+            files,
+            **options,
         )
 
     def test_ddp_command(self, tmp_path, split_dir, files):
@@ -188,10 +196,41 @@ class TestSplitDD:
             "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
         )
 
-    def test_online_7_1_is_refused(self, tmp_path, split_dir, files):
+    def test_online_7_1_is_refused_without_the_shim(self, tmp_path, split_dir, files):
         """The plain DD+ mode has no 7.1 layout and would silently return 5.1."""
-        with pytest.raises(UnsupportedDeeFeatureError, match="7.1"):
+        with pytest.raises(UnsupportedDeeFeatureError, match="7.1 .*needs dee_shim"):
             self.build(tmp_path, split_dir, files, dd_mode=DDEncodingMode.DDP71)
+
+    def test_online_7_1_runs_through_the_shim(self, tmp_path, split_dir, files):
+        shim = DeeShim(Path("dee_shim"), "0.2.1")
+        cmd = self.build(
+            tmp_path, split_dir, files, shim=shim, dd_mode=DDEncodingMode.DDP71
+        )
+        tool = str(split_dir / f"dee_ddp_encoder{EXE}")
+        assert cmd[:6] == [
+            "dee_shim", "ddp_encoder", "--layout", "7.1/eac3", "--binary", tool,
+        ]  # fmt: skip
+        native = cmd[cmd.index("--") + 1 :]
+        # the layout keeps DEE's own -e ddp options and --data-rate
+        assert option(native, "-e").startswith("ddp:drc_profile_line=")
+        assert option(native, "--data-rate") == "640"
+
+    @pytest.mark.parametrize(
+        "dd_mode",
+        [
+            DDEncodingMode.DD,
+            DDEncodingMode.DDP,
+            DDEncodingMode.BLURAY,
+            DDEncodingMode.BLURAY_SECONDARY,
+        ],
+    )
+    def test_other_modes_run_dee_alone_with_the_shim(
+        self, tmp_path, split_dir, files, dd_mode
+    ):
+        shim = DeeShim(Path("dee_shim"), "0.2.1")
+        cmd = self.build(tmp_path, split_dir, files, shim=shim, dd_mode=dd_mode)
+        assert cmd[0] == str(split_dir / f"dee_ddp_encoder{EXE}")
+        assert "--" not in cmd
 
     def test_bluray_uses_bluray_mode_without_output_layout(
         self, tmp_path, split_dir, files
@@ -538,3 +577,19 @@ def test_non_1770_4_metering_is_measured_as_1770_4(tmp_path, split_dir, files):
         dd_mode=DDEncodingMode.DDP,
     )
     assert option(cmd, "--loudness-management").startswith("measure_only:")
+
+
+@pytest.mark.parametrize(("shim", "has_71"), [(False, False), (True, True)])
+def test_ddp_auto_picks_7_1_only_with_the_shim(shim, has_71):
+    assert ddp_auto_layouts(shim) == ([1, 2, 6, 8] if has_71 else [1, 2, 6])
+    expected = (
+        DolbyDigitalPlusChannels.SURROUNDEX
+        if has_71
+        else DolbyDigitalPlusChannels.SURROUND
+    )
+    assert ddp_channel_resolver(8, shim) is expected
+
+
+@pytest.mark.parametrize("shim", [False, True])
+def test_ddp_auto_keeps_a_6_1_source_at_5_1(shim):
+    assert ddp_channel_resolver(7, shim) is DolbyDigitalPlusChannels.SURROUND

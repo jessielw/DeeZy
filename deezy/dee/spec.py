@@ -25,9 +25,12 @@ DDP_DELAY_SAMPLES = 256
 # and this many more when DEE changes the channel count (7.1 to 5.1, 2.0 to 1.0)
 CHANNEL_CHANGE_SAMPLES = 32
 
-# dee_shim's DD+ 7.1 as E-AC-3; DEE alone has no such mode, so the probe has no
-# list for it
-_SHIM_DDP_71_RATES = (384, 448, 504, 576, 640, 704, 768, 832, 896, 960, 1008, 1024)
+# dee_shim's DD+ 7.1 as E-AC-3 (`ddp_encoder --layout 7.1/eac3`, its 8 channel
+# /eac3 list); DEE alone has no such mode, so the probe has no list for it
+_SHIM_DDP_71_RATES = (
+    *(384, 448, 504, 576, 640, 704, 768, 832, 896, 960, 1008, 1024),
+    *(1152, 1280, 1408, 1512, 1536, 1664, 1792),
+)
 
 # dee_aac_encoder's own default rates, from its --help (the probe records only
 # the ranges)

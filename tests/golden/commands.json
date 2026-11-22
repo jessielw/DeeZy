@@ -2814,7 +2814,7 @@
   ]
  },
  "ddp_8": {
-  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim, which this DeeZy version doesn't drive yet. Use 'ddp-bluray' for 7.1, or '--channels 6' for 5.1."
+  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim (0.2.1 or newer), which DeeZy didn't find or was told not to use (--no-shim). Give its path with --dee-shim, or use 'ddp-bluray' for 7.1 or '--channels 6' for 5.1."
  },
  "ddp_6_from8": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
@@ -14404,8 +14404,8 @@
    }
   ]
  },
- "shim_ddp_6": {
-  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+ "shim_ddp_auto_8": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
   "preview": false,
   "steps": [
    {
@@ -14423,16 +14423,24 @@
      "0:a:0",
      "-c",
      "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
      "-map_metadata",
      "-1",
      "-rf64",
      "always",
-     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav"
     ]
    },
    {
     "dee": [
+     "/tools/dee_shim",
+     "ddp_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--binary",
      "/tools/dee/dee_ddp_encoder",
+     "--",
      "--loglevel",
      "info",
      "--progress",
@@ -14444,26 +14452,364 @@
      "--input-format",
      "wav",
      "-i",
-     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav",
      "-o",
-     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
      "--timecode-frame-rate",
      "23.976",
      "--start",
      "0.005333",
      "--data-rate",
-     "192",
+     "384",
      "--loudness-management",
      "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
      "-c",
-     "5.1",
+     "auto",
      "-e",
      "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
     ]
    }
   ]
  },
- "shim_ddp_auto_8": {
+ "shim_ddp_71": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddp_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--binary",
+     "/tools/dee/dee_ddp_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "384",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "auto",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "shim_ddp_71_1792": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddp_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--binary",
+     "/tools/dee/dee_ddp_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1792",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "auto",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "shim_ddp_71_rate_up": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddp_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--binary",
+     "/tools/dee/dee_ddp_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "1008",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "auto",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "shim_ddp_71_delay": {
+  "output": "/out/in [7.1] s1 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s1r0wNone_1eba38fc477b0805.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddp_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--binary",
+     "/tools/dee/dee_ddp_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s1r0wNone_1eba38fc477b0805.ddp.wav",
+     "-o",
+     "/temp/job/in71s1r0wNone_1eba38fc477b0805.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.025333",
+     "--data-rate",
+     "384",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "auto",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "shim_ddp_71_target": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddp_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--binary",
+     "/tools/dee/dee_ddp_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ddp.wav",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "384",
+     "--loudness-management",
+     "measure_and_correct:preset=manual:dialogue_intelligence=1:speech_threshold=15:loudness_target=-24",
+     "-c",
+     "auto",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "shim_ddp_71_off": {
+  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim (0.2.1 or newer), which DeeZy didn't find or was told not to use (--no-shim). Give its path with --dee-shim, or use 'ddp-bluray' for 7.1 or '--channels 6' for 5.1."
+ },
+ "shim_ddp_auto_8_off": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
   "preview": false,
   "steps": [
@@ -14522,8 +14868,184 @@
    }
   ]
  },
- "shim_ddp_71": {
-  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim, which this DeeZy version doesn't drive yet. Use 'ddp-bluray' for 7.1, or '--channels 6' for 5.1."
+ "shim_ddp_auto_7": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "6",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "shim_ddp_secondary_auto_8": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.006000",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "bluray_secondary:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
+ },
+ "shim_ddp_6": {
+  "output": "/out/in [5.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_ddp_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ddp.wav",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--data-rate",
+     "192",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-c",
+     "5.1",
+     "-e",
+     "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+    ]
+   }
+  ]
  },
  "shim_ddp_damf": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
@@ -16635,6 +17157,73 @@
      "--loudness-management",
      "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
     ]
+   }
+  ]
+ },
+ "pipe_shim_ddp_auto_8": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "pipe": {
+     "dee": [
+      "/tools/dee_shim",
+      "ddp_encoder",
+      "--layout",
+      "7.1/eac3",
+      "--binary",
+      "/tools/dee/dee_ddp_encoder",
+      "--",
+      "--loglevel",
+      "info",
+      "--progress",
+      "1",
+      "--overwrite",
+      "1",
+      "--temp-dir",
+      "/temp/job",
+      "--input-format",
+      "pcm_s24le:sample_rate=48000:channels=8:sample_count=2956800:streaming=1",
+      "-i",
+      "named_pipe:////./pipe/deezy-PID-JOB",
+      "-o",
+      "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+      "--timecode-frame-rate",
+      "23.976",
+      "--start",
+      "0.005333",
+      "--data-rate",
+      "384",
+      "--loudness-management",
+      "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+      "-c",
+      "auto",
+      "-e",
+      "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=1:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+     ],
+     "ffmpeg": [
+      "/tools/ffmpeg",
+      "-y",
+      "-drc_scale",
+      "0",
+      "-hide_banner",
+      "-v",
+      "quiet",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "pcm_s24le",
+      "-af",
+      "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+      "-map_metadata",
+      "-1",
+      "-f",
+      "s24le",
+      "//./pipe/deezy-PID-JOB"
+     ]
+    }
    }
   ]
  }

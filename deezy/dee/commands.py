@@ -41,6 +41,9 @@ AC4_ATMOS_TOOL = "dee_ac4ajoc_encoder"
 AAC_TOOL = "dee_aac_encoder"
 MEASURE_TOOL = "dee_measure_loudness"
 THD_TOOL = "dee_dthd_encoder"
+# dee_shim's DD+ 7.1: an E-AC-3 5.1 independent substream plus a dependent one
+# for the backs
+DDP_71_SHIM_ARGS = ("--layout", "7.1/eac3")
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +52,7 @@ class DeeTools:
 
     dee_dir: Path
     license: Path | None = None
-    # runs the DD+ Atmos and TrueHD encoders when DeeZy has it
+    # runs the DD+ Atmos and TrueHD encoders, and DD+ 7.1, when DeeZy has it
     shim: DeeShim | None = None
 
 
@@ -95,8 +98,12 @@ def ddp_command(
     delay: Delay,
     dd_mode: DDEncodingMode,
 ) -> list[str]:
-    """A Dolby Digital or Dolby Digital Plus encode with dee_ddp_encoder."""
-    check_dd_options(payload, dd_mode)
+    """
+    A Dolby Digital or Dolby Digital Plus encode with dee_ddp_encoder. DD+ 7.1
+    as E-AC-3 runs through dee_shim, which codes the 7.1 layout DEE's plain DD+
+    mode doesn't have; everything else runs DEE as it is.
+    """
+    check_dd_options(payload, dd_mode, shim=tools.shim is not None)
     encoder = {
         "drc_profile_line": payload.drc_line_mode.to_dee_cmd(),
         "drc_profile_rf": payload.drc_rf_mode.to_dee_cmd(),
@@ -130,7 +137,7 @@ def ddp_command(
     if channels == "off":
         channels = "auto"
 
-    return [
+    argv = [
         *_common_args(
             tools,
             DDP_TOOL,
@@ -146,6 +153,11 @@ def ddp_command(
         "-e",
         f"{mode}:{_options(encoder)}",
     ]
+    if dd_mode is DDEncodingMode.DDP71:
+        # the layout keeps -e ddp and its options, and the shim checks
+        # --data-rate against its 7.1 list
+        return _through_shim(tools, argv, *DDP_71_SHIM_ARGS)
+    return argv
 
 
 def ddpjoc_command(
@@ -633,8 +645,13 @@ def _common_args(
     ]
 
 
-def check_dd_options(payload: DDPayload | DDPPayload, dd_mode: DDEncodingMode) -> None:
-    """Refuse option combinations dee_ddp_encoder cannot honor."""
+def check_dd_options(
+    payload: DDPayload | DDPPayload, dd_mode: DDEncodingMode, *, shim: bool = False
+) -> None:
+    """
+    Refuse option combinations dee_ddp_encoder cannot honor. ``shim`` is
+    whether DeeZy has dee_shim, which DD+ 7.1 as E-AC-3 needs.
+    """
     target = getattr(payload, "loudness_target", None)
     peak = getattr(payload, "peak_limit", None)
     if peak is not None and target is None:
@@ -663,13 +680,14 @@ def check_dd_options(payload: DDPayload | DDPPayload, dd_mode: DDEncodingMode) -
         raise UnsupportedDeeFeatureError(
             "--user-data is only available for plain Dolby Digital Plus."
         )
-    if dd_mode is DDEncodingMode.DDP71:
-        # only the Blu-ray encoder mode takes 7.1; the plain DD+ one would
+    if dd_mode is DDEncodingMode.DDP71 and not shim:
+        # DEE alone takes 7.1 only in its Blu-ray mode; the plain DD+ one would
         # quietly hand back a 5.1 stream for a 7.1 request
         raise UnsupportedDeeFeatureError(
-            "Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim, which this DeeZy "
-            "version doesn't drive yet. Use 'ddp-bluray' for 7.1, or "
-            "'--channels 6' for 5.1."
+            "Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim (0.2.1 or newer), "
+            "which DeeZy didn't find or was told not to use (--no-shim). Give its "
+            "path with --dee-shim, or use 'ddp-bluray' for 7.1 or '--channels 6' "
+            "for 5.1."
         )
 
 

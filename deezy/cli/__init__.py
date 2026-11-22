@@ -130,8 +130,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "--dee-shim",
         type=str,
         help="Path to dee_shim (0.2.1 or newer). DeeZy runs DD+ Atmos and TrueHD "
-        "encodes through it, with the same output (faster on AMD CPUs). Found "
-        "beside the DEE tools, in apps/dee_shim or on PATH when not given.",
+        "encodes through it, with the same output (faster on AMD CPUs), and DD+ "
+        "7.1, which DEE can't encode alone. Found beside the DEE tools, in "
+        "apps/dee_shim or on PATH when not given.",
     )
     encode_group.add_argument(
         "--no-shim",

@@ -2,7 +2,8 @@
 DeeZy finding and running the real dee_shim, and reading its failures.
 
 With no options of its own the shim encodes what DEE does, byte for byte, so
-DeeZy runs every DD+ Atmos and TrueHD encode through it when it has it.
+DeeZy runs every DD+ Atmos and TrueHD encode through it when it has it. It also
+runs DD+ 7.1 as E-AC-3 through the shim, which DEE alone can't encode.
 
 The planner and runner run in-process with the shipped default config, so the
 tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
@@ -10,6 +11,7 @@ tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
 
 from collections.abc import Iterator
 from pathlib import Path
+import sys
 
 import pytest
 import tomlkit
@@ -21,11 +23,13 @@ from deezy.cli.utils import apply_config_defaults_to_args, apply_default_bitrate
 from deezy.config.defaults import CONF_DEFAULT
 from deezy.config.manager import ConfigManager
 from deezy.dee.shim import DeeShim, is_shim_command, resolve_shim
+from deezy.exceptions import UnsupportedDeeFeatureError
 from deezy.pipeline import run
-from deezy.pipeline.plan import DeeStep, PlanContext, plan_job
+from deezy.pipeline.encode import pipe_name
+from deezy.pipeline.plan import DeeStep, PipeStep, PlanContext, plan_job
 from deezy.track_info.mediainfo import MediainfoParser
 
-from .harness import md5, noise_wav, synthetic_damf
+from .harness import SR, decode, impulse_wav, md5, mediainfo, noise_wav, synthetic_damf
 
 
 @pytest.fixture(scope="module")
@@ -102,11 +106,12 @@ def test_the_shims_environment_is_kept_out(shim, work, wav, dee_shim, monkeypatc
 # --- DeeZy's encodes through dee_shim: the same bytes as plain DEE
 
 BUILDERS = {
+    "ddp": PayloadBuilder.build_ddp_payload,
     "ddp-atmos": PayloadBuilder.build_atmos_payload,
     "thd": PayloadBuilder.build_thd_payload,
     "thd-atmos": PayloadBuilder.build_thd_atmos_payload,
 }
-SUFFIX = {"ddp-atmos": ".ec3", "thd": ".thd", "thd-atmos": ".thd"}
+SUFFIX = {"ddp": ".ec3", "ddp-atmos": ".ec3", "thd": ".thd", "thd-atmos": ".thd"}
 
 
 @pytest.fixture(scope="module")
@@ -126,12 +131,17 @@ def config() -> Iterator[ConfigManager]:
     ConfigManager.reset_instance()
 
 
-def encode(tools, work, parser, config, fmt, args, src: Path, shim: DeeShim | None):
+def encode(
+    tools, work, parser, config, fmt, args, src: Path, shim: DeeShim | None, pipe=False
+):
     """DeeZy's plan for ``fmt``, run with or without dee_shim."""
     tag = f"{src.stem}_{fmt}_{'shim' if shim else 'plain'}_" + "_".join(args)
-    out = work / "shim_out" / f"{tag.replace('-', '')}{SUFFIX[fmt]}"
+    tag += "_pipe" if pipe else ""
+    out = work / "shim_out" / f"{tag.replace('-', '').replace('=', '')}{SUFFIX[fmt]}"
+    transport = ["--pipe", "always" if pipe else "never"] if fmt == "ddp" else []
     ns = parser.parse_args(
-        ["--no-progress-bars", "encode", fmt, *args, "--overwrite", "--output", str(out), str(src)]
+        ["--no-progress-bars", "encode", fmt, *args, *transport, "--overwrite",
+         "--output", str(out), str(src)]
     )  # fmt: skip
     apply_default_bitrate(ns, config)
     apply_config_defaults_to_args(ns, config)
@@ -140,10 +150,21 @@ def encode(tools, work, parser, config, fmt, args, src: Path, shim: DeeShim | No
     payload.dee_shim = shim
     namer = MediainfoParser(src, payload.track_index)
     temp = run.temp_dir_path(src, work / "shim_temp", track_label=tag)
-    ctx = PlanContext(namer=namer, temp_dir=temp, license=tools.license, config=config)
+    ctx = PlanContext(
+        namer=namer,
+        temp_dir=temp,
+        license=tools.license,
+        config=config,
+        pipe_name=pipe_name(temp) if pipe else None,
+    )
     plan = plan_job(payload, namer.get_audio_track_info(), ctx)
-    dee_steps = [step for step in plan.steps if isinstance(step, DeeStep)]
+    dee_steps = [
+        step.dee if isinstance(step, PipeStep) else step
+        for step in plan.steps
+        if isinstance(step, DeeStep | PipeStep)
+    ]
     assert len(dee_steps) == 1
+    assert any(isinstance(step, PipeStep) for step in plan.steps) is pipe
     assert is_shim_command(dee_steps[0].argv) == (shim is not None)
     run.init_phase_limits(max_parallel=1)
     return run.run_plan(plan, payload)
@@ -185,3 +206,53 @@ def test_thd_through_the_shim_is_byte_identical(
     plain = encode(shim, work, parser, config, "thd", args, src, None)
     shimmed = encode(shim, work, parser, config, "thd", args, src, dee_shim)
     assert md5(shimmed) == md5(plain)
+
+
+# --- DD+ 7.1 as E-AC-3, which DEE alone can't encode
+
+
+@pytest.fixture(scope="module")
+def impulse71(work) -> Path:
+    """One impulse in every channel, one second in."""
+    return impulse_wav(work / "shim_impulse71.wav", 8, at=SR, seconds=3.0)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [[], ["--channels", "8", "--bitrate", "1792"], ["--delay=-20ms"]],
+    ids=["auto", "1792", "delay"],
+)
+def test_ddp_71_through_the_shim_lands_on_the_source_sample(
+    shim, work, parser, config, dee_shim, impulse71, args
+):
+    out = encode(shim, work, parser, config, "ddp", args, impulse71, dee_shim)
+    info = mediainfo(out)
+    assert info["format"] == "E-AC-3"
+    assert info["channel_layout"] == "L R C LFE Ls Rs Lb Rb"
+    rate = 1792 if "1792" in args else 384
+    assert int(info["bit_rate"]) == rate * 1000
+    pcm = decode(shim, out)
+    assert pcm.channels == 8
+    # DeeZy trims DEE's 256 samples (and cuts 20 ms for the negative delay)
+    expected = SR - (960 if "--delay=-20ms" in args else 0)
+    assert pcm.peak(0)[0] == expected
+    # the backs come from the dependent substream; a lossy transient may peak a
+    # sample off, a substream out of step would be hundreds off. The LFE's
+    # low-pass smears the impulse too much to time it.
+    peaks = {c: pcm.peak(c)[0] for c in range(8) if c != 3}
+    assert all(abs(at - expected) <= 1 for at in peaks.values()), peaks
+
+
+def test_ddp_71_without_the_shim_is_refused(shim, work, parser, config, impulse71):
+    with pytest.raises(UnsupportedDeeFeatureError, match="needs dee_shim"):
+        encode(shim, work, parser, config, "ddp", ["--channels", "8"], impulse71, None)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="DeeZy pipes only on Windows")
+def test_ddp_71_piped_through_the_shim_matches_the_wav(
+    shim, work, parser, config, dee_shim
+):
+    src = noise_wav(work / "shim_ddp71_noise.wav", 8, seconds=2.0)
+    wav = encode(shim, work, parser, config, "ddp", [], src, dee_shim)
+    piped = encode(shim, work, parser, config, "ddp", [], src, dee_shim, pipe=True)
+    assert md5(piped) == md5(wav)

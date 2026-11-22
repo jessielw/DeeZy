@@ -726,28 +726,30 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
 # --- Dolby Digital Plus and DD+ Blu-ray
 
 
-def ddp_auto_layouts() -> list[int]:
+def ddp_auto_layouts(shim: bool = False) -> list[int]:
     """
-    The DD+ layouts AUTO may pick: those DEE encodes without dee_shim.
+    The DD+ layouts AUTO may pick: those DEE encodes alone, and with ``shim``
+    (DeeZy has dee_shim) also those that need it, which is 7.1.
 
-    DD+ 7.1 needs dee_shim, which DeeZy doesn't drive yet, so AUTO encodes a
-    7.1 source as 5.1 rather than refusing it.
+    Without dee_shim, AUTO encodes a 7.1 source as 5.1 rather than refusing it.
     """
     spec = get_format("ddp")
     return [
         value
         for value in DolbyDigitalPlusChannels.get_values_list()
-        if not spec.layout(str(DolbyDigitalPlusChannels(value))).needs_shim
+        if shim or not spec.layout(str(DolbyDigitalPlusChannels(value))).needs_shim
     ]
 
 
-def ddp_channel_resolver(source_channels: int) -> DolbyDigitalPlusChannels:
+def ddp_channel_resolver(
+    source_channels: int, shim: bool = False
+) -> DolbyDigitalPlusChannels:
     """The DD+ layout AUTO picks, also for the config lookup."""
     if source_channels == 1:
         return DolbyDigitalPlusChannels.MONO
     if 1 < source_channels < 6:
         return DolbyDigitalPlusChannels.STEREO
-    if source_channels == 6 or 8 not in ddp_auto_layouts():
+    if source_channels < 8 or 8 not in ddp_auto_layouts(shim):
         return DolbyDigitalPlusChannels.SURROUND
     return DolbyDigitalPlusChannels.SURROUNDEX
 
@@ -797,6 +799,11 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     spec = get_format(str(format_command))
     source_channels = info.channels
     channels = payload.channels
+    # AUTO may pick 7.1 with dee_shim; Blu-ray secondary audio stops at 5.1
+    shim_71 = payload.dee_shim is not None and not payload.bluray_secondary
+
+    def resolver(count: int) -> DolbyDigitalPlusChannels:
+        return ddp_channel_resolver(count, shim_71)
 
     # a 5.0 source the user wants up-mixed to 5.1
     upmix_50 = (
@@ -807,7 +814,7 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     if isinstance(channels, DolbyDigitalPlusBlurayChannels):
         bitrate_obj = DolbyDigitalPlusBlurayChannels.SURROUNDEX.get_bitrate_obj()
     elif channels is DolbyDigitalPlusChannels.AUTO:
-        bitrate_obj = ddp_channel_resolver(source_channels).get_bitrate_obj()
+        bitrate_obj = resolver(source_channels).get_bitrate_obj()
     else:
         bitrate_obj = channels.get_bitrate_obj()
     bitrate = resolve_bitrate(
@@ -819,19 +826,19 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         bitrate_obj,
         source_channels,
         DolbyDigitalPlusChannels.AUTO,
-        ddp_channel_resolver,
+        resolver,
     )
 
     if channels != DolbyDigitalPlusChannels.AUTO and not upmix_50:
         check_for_up_mixing(source_channels, channels.value)
     elif channels is DolbyDigitalPlusChannels.AUTO:
-        accepted = ddp_auto_layouts()
+        accepted = ddp_auto_layouts(shim_71)
         channels = DolbyDigitalPlusChannels(auto_channels(source_channels, accepted))
         logger.info(f"No supplied channels, defaulting to {channels}.")
-        if source_channels == 8 and 8 not in accepted:
+        if source_channels == 8 and 8 not in accepted and not payload.bluray_secondary:
             logger.info(
-                "Dolby Digital Plus 7.1 needs dee_shim, which this DeeZy version "
-                "doesn't drive yet, so the 7.1 source is encoded as 5.1."
+                "Dolby Digital Plus 7.1 needs dee_shim, which DeeZy didn't find or "
+                "was told not to use (--no-shim), so the 7.1 source is encoded as 5.1."
             )
 
     delay = get_delay(payload)

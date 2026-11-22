@@ -764,10 +764,45 @@ SHIM_SCENARIOS = [
         DAMF,
     ),
     ("shim_off", ["thd", *WITH_SHIM, "--no-shim"], info(6), MKV),
-    # these never run through it
-    ("shim_ddp_6", ["ddp", *WITH_SHIM], info(6), MKV),
+    # DD+ 7.1 as E-AC-3 runs through it (--layout 7.1/eac3), and AUTO picks it
     ("shim_ddp_auto_8", ["ddp", *WITH_SHIM], info(8), MKV),
     ("shim_ddp_71", ["ddp", *WITH_SHIM, "--channels", "8"], info(8), MKV),
+    (
+        "shim_ddp_71_1792",
+        ["ddp", *WITH_SHIM, "--channels", "8", "--bitrate", "1792"],
+        info(8),
+        MKV,
+    ),
+    (
+        "shim_ddp_71_rate_up",
+        ["ddp", *WITH_SHIM, "--channels", "8", "--bitrate", "1000"],
+        info(8),
+        MKV,
+    ),
+    ("shim_ddp_71_delay", ["ddp", *WITH_SHIM, "--delay=-20ms"], info(8), MKV),
+    (
+        "shim_ddp_71_target",
+        ["ddp", *WITH_SHIM, "--channels", "8", "--loudness-target", "-24"],
+        info(8),
+        MKV,
+    ),
+    (
+        "shim_ddp_71_off",
+        ["ddp", *WITH_SHIM, "--no-shim", "--channels", "8"],
+        info(8),
+        MKV,
+    ),
+    ("shim_ddp_auto_8_off", ["ddp", *WITH_SHIM, "--no-shim"], info(8), MKV),
+    # AUTO keeps a 6.1 source at 5.1, and Blu-ray secondary audio stops at 5.1
+    ("shim_ddp_auto_7", ["ddp", *WITH_SHIM], info(7), MKV),
+    (
+        "shim_ddp_secondary_auto_8",
+        ["ddp", *WITH_SHIM, "--bluray-secondary"],
+        info(8),
+        MKV,
+    ),
+    # these never run through it
+    ("shim_ddp_6", ["ddp", *WITH_SHIM], info(6), MKV),
     ("shim_ddp_damf", ["ddp", *WITH_SHIM], D16, DAMF),
     ("shim_bluray", ["ddp-bluray", *WITH_SHIM], info(8), MKV),
     ("shim_dd", ["dd", *WITH_SHIM], info(6), MKV),
@@ -777,6 +812,7 @@ SHIM_SCENARIOS = [
     ("shim_aac", ["aac", *WITH_SHIM], info(6), MKV),
 ]
 SCENARIOS += SHIM_SCENARIOS
+PIPE_SCENARIOS.append(("pipe_shim_ddp_auto_8", ["ddp", *WITH_SHIM], info(8), MKV))
 
 ALL_SCENARIOS = [(*s, None) for s in SCENARIOS] + [
     (*s, PIPE_NAME) for s in PIPE_SCENARIOS
