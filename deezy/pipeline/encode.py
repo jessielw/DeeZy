@@ -7,6 +7,7 @@ import sys
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.dee.tools import find_license
 from deezy.payloads.shared import CorePayload
+from deezy.pipeline.outputs import check_output
 from deezy.pipeline.plan import JobPlan, PlanContext, plan_job
 from deezy.pipeline.run import check_input_file, run_plan, temp_dir_path
 from deezy.pipeline.show import command_lines
@@ -69,12 +70,19 @@ def encode(payload: CorePayload) -> Path:
     """
     Encode one source track and return the output path.
 
-    A dry run prints the plan's command lines instead and runs nothing.
+    A dry run prints the plan's command lines instead and runs nothing. An
+    output that would overwrite a source or another job's output is refused
+    first, in a dry run too.
     """
     job = plan(payload)
+    check_output(job.output, job.source)
     if payload.dry_run and not job.preview:
         for line in command_lines(job):
             print(line, flush=True)
         logger.info(f"Dry run: nothing was run. The output would be {job.output}")
+        if job.output.exists() and not payload.overwrite:
+            logger.info(
+                "It exists already, so without --overwrite the job would be skipped."
+            )
         return job.output
     return run_plan(job, payload)

@@ -46,6 +46,10 @@ class OutputExistsError(DeeZyError):
     """Raised when the intended output file already exists and overwrite was not enabled."""
 
 
+class OutputCollisionError(DeeZyError):
+    """Raised when an output would overwrite a source or another job's output in the run."""
+
+
 class UnsupportedDeeFeatureError(DeeZyError):
     """Raised when the installed DEE cannot honour a requested option."""
 

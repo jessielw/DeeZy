@@ -46,6 +46,7 @@ from deezy.enums.thd import TrueHDChannels
 from deezy.exceptions import OutputExistsError
 from deezy.pipeline.encode import encode
 from deezy.pipeline.measure import measure, summary
+from deezy.pipeline.outputs import begin_run, end_run
 from deezy.pipeline.run import init_phase_limits
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.batch_results import BatchResultsManager
@@ -1396,6 +1397,12 @@ def execute_encode_command(
     config_manager: ConfigManager | None,
 ) -> None:
     """Execute encoding commands."""
+    if getattr(args, "output", None) and len(file_inputs) > 1:
+        exit_application(
+            "--output names one input's output; for several inputs use "
+            "--output-template or --batch-output-dir.",
+            EXIT_FAIL,
+        )
     max_parallel = getattr(args, "max_parallel", 1)
     batch_output_enabled = getattr(args, "batch_summary_output", False)
 
@@ -1592,6 +1599,8 @@ def execute_encode_command(
     if file_inputs and not getattr(args, "allow_sleep", False):
         sleep_inhibitor.acquire()
 
+    # each job claims its output, so none overwrites a source or another's output
+    begin_run(file_inputs)
     try:
         if max_parallel == 1 or len(file_inputs) == 1:
             # sequential processing
@@ -1806,6 +1815,7 @@ def execute_encode_command(
         logger.debug(traceback.format_exc())
         exit_application(f"Unexpected error: {e}", EXIT_FAIL)
     finally:
+        end_run()
         sleep_inhibitor.release()
 
 
