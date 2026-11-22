@@ -9,11 +9,16 @@ from deezy.payloads.shared import ChannelBitrates
 
 # the option that picks a mode, for the formats that have several
 _MODE_OPTIONS = {
-    "ddp-bluray": {"bluray_secondary": "--bluray-secondary"},
     "ddp-atmos": {
         mode: f"--atmos-mode {mode}" for mode in ("streaming", "standard", "bluray")
     },
     "aac": {mode: f"--aac-profile {mode}" for mode in ("aaclc", "heaac", "heaacv2")},
+}
+# modes another format's command encodes: Blu-ray secondary audio is ddp's
+_MODE_TITLES = {
+    ("ddp-bluray", "bluray_secondary"): (
+        "ddp --bluray-secondary (Blu-ray secondary audio)"
+    ),
 }
 # the [default_bitrates.<format>] key of a channel layout
 _LAYOUT_KEYS = {"1.0": "mono", "2.0": "stereo", "5.1": "surround", "7.1": "surroundex"}
@@ -89,8 +94,11 @@ def bitrate_lines(
             lines.append("")
         for index, (mode_name, mode) in enumerate(spec.modes.items()):
             option = _MODE_OPTIONS.get(name, {}).get(mode_name)
-            title = name if option is None else f"{name} {option}"
-            if len(spec.modes) > 1 and index == 0:
+            title = _MODE_TITLES.get(
+                (name, mode_name), name if option is None else f"{name} {option}"
+            )
+            # the mode a format's own command picks when not told
+            if len(spec.modes) > 1 and index == 0 and option is not None:
                 title += " (default)"
             if all(layout.rates is None for layout in mode.layouts.values()):
                 lines.append(f"{title}: lossless, no data rate")

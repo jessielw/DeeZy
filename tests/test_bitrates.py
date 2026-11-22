@@ -100,7 +100,9 @@ def test_a_configured_rate_dee_doesnt_take_shows_the_one_it_becomes(config):
 def test_blu_ray_secondary_audio_keeps_its_own_default(config):
     assert config_key("ddp-bluray", "bluray_secondary", "2.0") is None
     lines = bitrate_lines(["ddp-bluray"], config)
-    secondary = lines[lines.index("ddp-bluray --bluray-secondary") + 1]
+    title = "ddp --bluray-secondary (Blu-ray secondary audio)"
+    assert "ddp-bluray" in lines
+    secondary = lines[lines.index(title) + 1]
     assert secondary.startswith("  2.0   default 192:")
 
 
