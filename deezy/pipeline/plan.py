@@ -242,6 +242,46 @@ def _format_name(payload: CorePayload) -> str:
 # --- shared decisions
 
 
+def source_lfe(info: AudioTrackInfo) -> bool:
+    """
+    Whether the source has an LFE channel: as MediaInfo's layout says, else
+    FFmpeg's guess from the channel count, which gives 6 channels or more one
+    (5 channels are 5.0, 7 are 6.1).
+    """
+    if info.lfe is not None:
+        return info.lfe
+    return info.channels >= 6
+
+
+def lfe_label(channels: str, lfe: bool) -> str:
+    """The layout for an output name: '5.1' coded without its LFE is '5.0'."""
+    if not lfe and channels.endswith(".1"):
+        return channels[:-1] + "0"
+    return channels
+
+
+# FFmpeg's layouts whose 4th channel is the LFE, by channel count; DEE's 5.1
+# and 7.1 slot orders have it 4th too
+_LFE_FOURTH = {5: "4.1", 6: "5.1", 7: "6.1", 8: "7.1"}
+
+
+def _silent_lfe(mix: str | None, channels: int) -> str:
+    """
+    ``mix`` followed by a pan that silences the LFE, the 4th of ``channels``,
+    and keeps every other channel as it is.
+    """
+    if channels not in _LFE_FOURTH:
+        raise ChannelMixError(
+            f"DeeZy can't silence the LFE of a {channels}-channel source; it "
+            "knows where the LFE is in 4.1, 5.1, 6.1 and 7.1."
+        )
+    gains = "|".join(
+        f"c{i}=0*c{i}" if i == 3 else f"c{i}=c{i}" for i in range(channels)
+    )
+    silence = f"pan={_LFE_FOURTH[channels]}|{gains}"
+    return f"{mix},{silence}" if mix else silence
+
+
 def check_for_up_mixing(source_channels: int, desired_channels: int) -> None:
     if source_channels < desired_channels:
         raise ChannelMixError("Up-mixing is not supported.")
@@ -611,21 +651,47 @@ def dd_channel_resolver(source_channels: int) -> DolbyDigitalChannels:
     return DolbyDigitalChannels.SURROUND
 
 
+def _log_lfe(
+    asked: bool, has_slot: bool, has_lfe: bool, layout: str, *, keeps: bool = False
+) -> None:
+    """
+    Say why a stream has no LFE (or, where the layout ``keeps`` one, a silent
+    one), or that --disable-lfe had nothing to drop.
+    """
+    if asked and not has_slot:
+        logger.info(f"--disable-lfe: {layout} has no LFE channel.")
+    elif has_slot and not has_lfe and not asked:
+        logger.info(
+            f"The source has no LFE channel, so the {layout} stream's is silent."
+            if keeps
+            else f"The source has no LFE channel, so it is encoded as {layout}."
+        )
+
+
 def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobPlan:
     spec = get_format("dd")
     source_channels = info.channels
     channels = payload.channels
     stereo_mix = payload.stereo_mix
 
-    # a 5.0 source the user wants up-mixed to 5.1
-    upmix_50 = (
-        payload.upmix_50_to_51
+    has_lfe = source_lfe(info)
+    # a 5.0 source fills DEE's 5.1 slots with a silent LFE: DEE codes it as
+    # 5.0 (lfe_on=0), or as 5.1 when it is to be up-mixed
+    pad_50 = (
+        source_channels == 5
+        and not has_lfe
         and channels in (DolbyDigitalChannels.AUTO, DolbyDigitalChannels.SURROUND)
-        and source_channels == 5
     )
-    desired = DolbyDigitalChannels.SURROUND if upmix_50 else channels
+    upmix_50 = pad_50 and payload.upmix_50_to_51
+
+    def resolver(count: int) -> DolbyDigitalChannels:
+        if pad_50:
+            return DolbyDigitalChannels.SURROUND
+        return dd_channel_resolver(count)
+
+    desired = DolbyDigitalChannels.SURROUND if pad_50 else channels
     if desired is DolbyDigitalChannels.AUTO:
-        desired = dd_channel_resolver(source_channels)
+        desired = resolver(source_channels)
     bitrate = resolve_bitrate(
         ctx.config,
         CodecFormat.DD,
@@ -635,20 +701,30 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
         desired.get_bitrate_obj(),
         source_channels,
         DolbyDigitalChannels.AUTO,
-        dd_channel_resolver,
+        resolver,
     )
 
-    if channels is not DolbyDigitalChannels.AUTO and not upmix_50:
-        check_for_up_mixing(source_channels, channels.value)
-    elif channels is DolbyDigitalChannels.AUTO:
-        channels = DolbyDigitalChannels(
-            auto_channels(source_channels, DolbyDigitalChannels.get_values_list())
+    auto = channels is DolbyDigitalChannels.AUTO
+    if auto:
+        channels = (
+            DolbyDigitalChannels.SURROUND
+            if pad_50
+            else DolbyDigitalChannels(
+                auto_channels(source_channels, DolbyDigitalChannels.get_values_list())
+            )
         )
-        logger.info(f"No supplied channels, defaulting to {channels}.")
+    elif not pad_50:
+        check_for_up_mixing(source_channels, channels.value)
+    surround = channels is DolbyDigitalChannels.SURROUND
+    lfe = not surround or ((has_lfe or upmix_50) and not payload.disable_lfe)
+    layout = lfe_label(str(channels), lfe)
+    if auto:
+        logger.info(f"No supplied channels, defaulting to {layout}.")
+    _log_lfe(payload.disable_lfe, surround, has_lfe or upmix_50, layout)
 
     delay = get_delay(payload)
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "DD", str(channels), delay)
+    output, preview = _output(payload, info, ctx, spec, "DD", layout, delay)
 
     # DEE takes the source's own layout, not the AUTO choice made from it
     dee_allowed_input = source_channels in DEE_INPUT_CHANNELS
@@ -668,16 +744,7 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
     # makes the DPL II mix (DD has none), or when DEE can't take the source
     downmix_off = channels.value == source_channels or dplii or not dee_allowed_input
     ffmpeg_down_mix = None
-    if (
-        (downmix_off and not dee_allowed_input)
-        or (downmix_off and dplii)
-        or (
-            upmix_50
-            and source_channels == 5
-            and channels is DolbyDigitalChannels.SURROUND
-            and payload.upmix_50_to_51
-        )
-    ):
+    if (downmix_off and not dee_allowed_input) or (downmix_off and dplii) or pad_50:
         ffmpeg_down_mix = channels.value
     # what FFmpeg hands DEE
     dee_input_channels = ffmpeg_down_mix or source_channels
@@ -693,13 +760,13 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
     resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
     if dplii:
         filters = _filter_args(_DPLII, resample)
-    elif upmix_50:
+    elif pad_50:
         # the pan writes the 5.1 layout itself, so no -ac
         filters = _filter_args(_PAN_50_TO_51, resample)
     else:
         filters = _filter_args(None, resample)
     # a DPL II request on a non-stereo output has no FFmpeg mix, so no -ac
-    if ffmpeg_down_mix and not upmix_50:
+    if ffmpeg_down_mix and not pad_50:
         filters += ["-ac", f"{ffmpeg_down_mix}"]
 
     files = _dee_files(ctx, transport, output)
@@ -713,6 +780,7 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
         fps=fps,
         delay=delay,
         dd_mode=DDEncodingMode.DD,
+        lfe=lfe,
     )
     dee = DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm)
     return JobPlan(
@@ -802,18 +870,38 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     spec = get_format(str(format_command))
     source_channels = info.channels
     channels = payload.channels
+    shim = payload.dee_shim is not None
     # AUTO may pick 7.1 with dee_shim; Blu-ray secondary audio stops at 5.1
-    shim_71 = payload.dee_shim is not None and not payload.bluray_secondary
+    shim_71 = shim and not payload.bluray_secondary
+    has_lfe = source_lfe(info)
+    # a 5.0 source fills DEE's 5.1 slots with a silent LFE: DEE codes it as
+    # 5.0 (lfe_on=0), or as 5.1 when it is to be up-mixed
+    pad_50 = (
+        source_channels == 5
+        and not has_lfe
+        and channels
+        in (DolbyDigitalPlusChannels.AUTO, DolbyDigitalPlusChannels.SURROUND)
+    )
+    upmix_50 = pad_50 and payload.upmix_50_to_51
+    # a 7.0 source fills DEE's 7.1 slots with a silent LFE: dee_shim codes it
+    # as 7.0; DEE's Blu-ray mode alone codes 7.1
+    pad_70 = (
+        source_channels == 7
+        and not has_lfe
+        and (
+            bluray
+            or channels is DolbyDigitalPlusChannels.SURROUNDEX
+            or (channels is DolbyDigitalPlusChannels.AUTO and shim_71)
+        )
+    )
 
     def resolver(count: int) -> DolbyDigitalPlusChannels:
+        if pad_50:
+            return DolbyDigitalPlusChannels.SURROUND
+        if pad_70:
+            return DolbyDigitalPlusChannels.SURROUNDEX
         return ddp_channel_resolver(count, shim_71)
 
-    # a 5.0 source the user wants up-mixed to 5.1
-    upmix_50 = (
-        payload.upmix_50_to_51
-        and channels is DolbyDigitalPlusChannels.SURROUND
-        and source_channels == 5
-    )
     if isinstance(channels, DolbyDigitalPlusBlurayChannels):
         bitrate_obj = DolbyDigitalPlusBlurayChannels.SURROUNDEX.get_bitrate_obj()
     elif channels is DolbyDigitalPlusChannels.AUTO:
@@ -832,21 +920,57 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         resolver,
     )
 
-    if channels != DolbyDigitalPlusChannels.AUTO and not upmix_50:
-        check_for_up_mixing(source_channels, channels.value)
-    elif channels is DolbyDigitalPlusChannels.AUTO:
+    auto = channels is DolbyDigitalPlusChannels.AUTO
+    if auto:
         accepted = ddp_auto_layouts(shim_71)
-        channels = DolbyDigitalPlusChannels(auto_channels(source_channels, accepted))
-        logger.info(f"No supplied channels, defaulting to {channels}.")
-        if source_channels == 8 and 8 not in accepted and not payload.bluray_secondary:
-            logger.info(
-                "Dolby Digital Plus 7.1 needs dee_shim, which DeeZy didn't find or "
-                "was told not to use (--no-shim), so the 7.1 source is encoded as 5.1."
+        if pad_50 or pad_70:
+            channels = resolver(source_channels)
+        else:
+            channels = DolbyDigitalPlusChannels(
+                auto_channels(source_channels, accepted)
             )
+    elif not (pad_50 or pad_70):
+        check_for_up_mixing(source_channels, channels.value)
+
+    # whether the stream has an LFE channel, and whether DeeZy silences it
+    # where the stream keeps one
+    output_channels = 8 if bluray else channels.value
+    has_slot = output_channels in (6, 8)
+    wanted = (has_lfe or upmix_50) and not payload.disable_lfe
+    keeps = payload.bluray_secondary or (bluray and not shim)
+    # DEE keeps the LFE where lfe_on doesn't change the mode (secondary) or
+    # 7.0 needs dee_shim (Blu-ray)
+    lfe = keeps or not has_slot or wanted
+    silence = keeps and has_slot and has_lfe and not wanted
+    layout = lfe_label(str(channels), lfe)
+    if auto:
+        logger.info(f"No supplied channels, defaulting to {layout}.")
+        if (
+            source_channels in (7, 8)
+            and 8 not in accepted
+            and not payload.bluray_secondary
+            and (source_channels == 8 or not has_lfe)
+        ):
+            source_layout = lfe_label("7.1", has_lfe)
+            logger.info(
+                f"Dolby Digital Plus {source_layout} needs dee_shim, which DeeZy "
+                "didn't find or was told not to use (--no-shim), so the "
+                f"{source_layout} source is encoded as {layout}."
+            )
+    if keeps and has_slot and not wanted:
+        logger.info(
+            "Blu-ray secondary audio keeps its LFE channel, so it is silent."
+            if payload.bluray_secondary
+            else "Dolby Digital Plus Blu-ray 7.0 needs dee_shim, which DeeZy "
+            "didn't find or was told not to use (--no-shim), so the stream is "
+            "7.1 with a silent LFE."
+        )
+    else:
+        _log_lfe(payload.disable_lfe, has_slot, has_lfe or upmix_50, layout)
 
     delay = get_delay(payload)
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "DDP", str(channels), delay)
+    output, preview = _output(payload, info, ctx, spec, "DDP", layout, delay)
 
     # DEE takes the source's own layout, not the AUTO choice made from it
     dee_allowed_input = source_channels in DEE_INPUT_CHANNELS
@@ -861,9 +985,8 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
             or channels is DolbyDigitalPlusChannels.SURROUNDEX
         )
     ffmpeg_down_mix = None
-    if (downmix_off and not dee_allowed_input) or upmix_50:
+    if (downmix_off and not dee_allowed_input) or pad_50:
         ffmpeg_down_mix = channels.value
-    output_channels = 8 if bluray else channels.value
     # what FFmpeg hands DEE
     dee_input_channels = ffmpeg_down_mix or source_channels
     delay = _compensate(delay, spec, dee_input_channels, output_channels)
@@ -876,14 +999,19 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         info.duration,
     )
     resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
+    # the pans write the layout themselves, so no -ac
     if bluray or channels == DolbyDigitalPlusChannels.SURROUNDEX:
-        filters = _filter_args(_PAN_7_1, resample)
-    elif upmix_50:
-        # the pan writes the 5.1 layout itself, so no -ac
-        filters = _filter_args(_PAN_50_TO_51, resample)
+        # a 7-channel source gets its 7.1 slots first (a silent LFE for 7.0)
+        pans = source_channels == 7
+        mix = f"{_PAD_TO_71},{_PAN_7_1}" if pans else _PAN_7_1
+    elif pad_50:
+        mix, pans = _PAN_50_TO_51, True
     else:
-        filters = _filter_args(None, resample)
-    if ffmpeg_down_mix and not upmix_50:
+        mix, pans = None, False
+    if silence:
+        mix = _silent_lfe(mix, 8 if bluray else source_channels)
+    filters = _filter_args(mix, resample)
+    if ffmpeg_down_mix and not pans:
         filters += ["-ac", f"{ffmpeg_down_mix}"]
 
     # refuses a secondary layout other than 2.0 or 5.1
@@ -900,6 +1028,7 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         fps=fps,
         delay=delay,
         dd_mode=dd_mode,
+        lfe=lfe,
     )
     dee = DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm)
     return JobPlan(
@@ -991,10 +1120,20 @@ def _plan_dd_render(
             lambda _source: surround,
         )
 
+    has_slot = channels is surround
+    if payload.disable_lfe and has_slot and bluray_secondary:
+        raise UnsupportedDeeFeatureError(
+            "Blu-ray secondary audio keeps its LFE channel, and DEE renders the "
+            "master itself, so DeeZy can't silence it. Leave out --disable-lfe."
+        )
+    lfe = not (payload.disable_lfe and has_slot)
+    layout = lfe_label(str(channels), lfe)
+    _log_lfe(payload.disable_lfe, has_slot, True, layout)
+
     delay = get_delay(payload)
     fps = get_fps(info.fps)
     label = "DD" if dd else "DDP"
-    output, preview = _output(payload, info, ctx, spec, label, str(channels), delay)
+    output, preview = _output(payload, info, ctx, spec, label, layout, delay)
     delay = _compensate(delay, spec, MASTER_RENDER_CHANNELS, channels.value)
 
     files = replace(
@@ -1009,6 +1148,7 @@ def _plan_dd_render(
         fps=fps,
         delay=delay,
         dd_mode=dd_mode,
+        lfe=lfe,
     )
     return JobPlan(
         format=spec.name,
@@ -1101,8 +1241,11 @@ AC4_INPUT_CHANNELS = (2, 6, 8)
 
 
 def ac4_channel_resolver(source_channels: int) -> Ac4ChannelBasedChannels:
-    """The AC-4 layout AUTO picks, also for the config lookup."""
-    if source_channels < 6:
+    """
+    The AC-4 layout AUTO picks, also for the config lookup: 5.1 from 5
+    channels or more (a 5.0 source gets a silent LFE).
+    """
+    if source_channels < 5:
         return Ac4ChannelBasedChannels.STEREO
     return Ac4ChannelBasedChannels.SURROUND
 
@@ -1138,7 +1281,8 @@ def _plan_ac4(
     if channels is Ac4ChannelBasedChannels.AUTO:
         channels = ac4_channel_resolver(source_channels)
         logger.info(f"No supplied channels, defaulting to {channels}.")
-    elif source_channels != 1:
+    elif source_channels not in (1, 5):
+        # 5 channels fill the 5.1 slots
         check_for_up_mixing(source_channels, channels.value)
     if source_channels == 1:
         if channels is not Ac4ChannelBasedChannels.STEREO:
@@ -1164,7 +1308,14 @@ def _plan_ac4(
         info.duration,
     )
     resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
-    filters = _filter_args(_PAN_7_1 if source_channels == 8 else None, resample)
+    mix = _PAN_7_1 if source_channels == 8 else None
+    surround = channels is Ac4ChannelBasedChannels.SURROUND
+    has_lfe = source_lfe(info)
+    _log_lfe(payload.disable_lfe, surround, has_lfe, str(channels), keeps=True)
+    if payload.disable_lfe and surround and has_lfe:
+        logger.info("AC-4 5.1 keeps its LFE channel, so it is silent.")
+        mix = _silent_lfe(mix, source_channels)
+    filters = _filter_args(mix, resample)
     if ffmpeg_down_mix:
         filters += ["-ac", str(ffmpeg_down_mix)]
 
@@ -1468,6 +1619,16 @@ def _plan_thd(
     # dee_dthd_encoder reads WAV only
     wav = WavFile(ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.THD}.wav")
     mix, down_mix = _thd_mix(source_channels, channels)
+    has_slot = channels is not TrueHDChannels.STEREO
+    has_lfe = source_lfe(info)
+    # a source with fewer channels is already said to get silent ones
+    _log_lfe(payload.disable_lfe, has_slot, True, str(channels))
+    if payload.disable_lfe and has_slot and has_lfe:
+        logger.info(f"TrueHD {channels} keeps its LFE channel, so it is silent.")
+        # after the mix the channels are the layout's; before a downmix, the source's
+        mix = _silent_lfe(
+            mix, source_channels if down_mix or not mix else channels.value
+        )
     filters = _filter_args(mix, info.sample_rate != rate, rate)
     if down_mix:
         filters += ["-ac", str(down_mix)]

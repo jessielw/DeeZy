@@ -24,6 +24,8 @@ class AudioTrackInfo:
     # the elements a TrueHD Atmos stream codes (bed channels and objects), when
     # MediaInfo says
     atmos_elements: int | None = None
+    # whether the track has an LFE channel, when MediaInfo gives its layout
+    lfe: bool | None = None
 
     @property
     def atmos_master(self) -> bool:

@@ -63,6 +63,7 @@ def info(
     damf=False,
     rel=0,
     elements=None,
+    lfe=None,
 ) -> dict:
     return {
         "channels": ch,
@@ -76,6 +77,7 @@ def info(
         "adm_atmos_wav": adm,
         "damf_atmos": damf,
         "atmos_elements": elements,
+        "lfe": lfe,
     }
 
 
@@ -989,6 +991,88 @@ SHIM_SCENARIOS = [
     ("shim_aac", ["aac", *WITH_SHIM], info(6), MKV),
 ]
 SCENARIOS += SHIM_SCENARIOS
+
+
+# --- LFE: sources without one (5.0, 7.0) and --disable-lfe
+NO_LFE_5 = info(5, lfe=False)
+NO_LFE_7 = info(7, lfe=False)
+LFE_SCENARIOS = [
+    # dd: a real 5.0 (lfe_on=0), a 4.1 or 6.1 source as before
+    ("lfe_dd_50", ["dd"], NO_LFE_5, MKV),
+    ("lfe_dd_50_channels_6", ["dd", "--channels", "6"], NO_LFE_5, MKV),
+    ("lfe_dd_41", ["dd"], info(5, lfe=True), MKV),
+    ("lfe_dd_70", ["dd"], NO_LFE_7, MKV),
+    ("lfe_dd_61", ["dd"], info(7, lfe=True), MKV),
+    ("lfe_dd_disable", ["dd", "--disable-lfe"], info(6), MKV),
+    ("lfe_dd_disable_8", ["dd", "--disable-lfe"], info(8), MKV),
+    ("lfe_dd_disable_2", ["dd", "--disable-lfe", "--channels", "2"], info(6), MKV),
+    ("lfe_dd_render_disable", ["dd", "--disable-lfe"], D16, DAMF),
+    # ddp: 7.0 needs dee_shim, so without it a 7.0 source is 5.0
+    ("lfe_ddp_50", ["ddp"], NO_LFE_5, MKV),
+    ("lfe_ddp_upmix50_auto", ["ddp", "--upmix-50-to-51"], NO_LFE_5, MKV),
+    ("lfe_ddp_70", ["ddp"], NO_LFE_7, MKV),
+    ("lfe_ddp_disable", ["ddp", "--disable-lfe"], info(6), MKV),
+    ("lfe_ddp_disable_8", ["ddp", "--disable-lfe"], info(8), MKV),
+    ("lfe_ddp_render_disable", ["ddp", "--disable-lfe"], D16, DAMF),
+    # Blu-ray secondary keeps its LFE whatever lfe_on says: a silent one
+    ("lfe_secondary_50", ["ddp", "--bluray-secondary"], NO_LFE_5, MKV),
+    (
+        "lfe_secondary_disable",
+        ["ddp", "--bluray-secondary", "--disable-lfe"],
+        info(6),
+        MKV,
+    ),
+    (
+        "lfe_secondary_disable_8",
+        ["ddp", "--bluray-secondary", "--disable-lfe", "--channels", "6"],
+        info(8),
+        MKV,
+    ),
+    (
+        "lfe_secondary_render_disable",
+        ["ddp", "--bluray-secondary", "--disable-lfe", "--channels", "6"],
+        D16,
+        DAMF,
+    ),
+    # ddp-bluray: 7.0 through dee_shim, else 7.1 with a silent LFE
+    ("lfe_bluray_70", ["ddp-bluray"], NO_LFE_7, MKV),
+    ("lfe_bluray_61", ["ddp-bluray"], info(7, lfe=True), MKV),
+    ("lfe_bluray_disable", ["ddp-bluray", "--disable-lfe"], info(8), MKV),
+    ("lfe_shim_ddp_70", ["ddp", *WITH_SHIM], NO_LFE_7, MKV),
+    (
+        "lfe_shim_ddp_70_channels_8",
+        ["ddp", *WITH_SHIM, "--channels", "8"],
+        NO_LFE_7,
+        MKV,
+    ),
+    ("lfe_shim_ddp_61", ["ddp", *WITH_SHIM], info(7, lfe=True), MKV),
+    ("lfe_shim_ddp_disable_8", ["ddp", *WITH_SHIM, "--disable-lfe"], info(8), MKV),
+    ("lfe_shim_bluray_70", ["ddp-bluray", *WITH_SHIM], NO_LFE_7, MKV),
+    (
+        "lfe_shim_bluray_disable",
+        ["ddp-bluray", *WITH_SHIM, "--disable-lfe"],
+        info(8),
+        MKV,
+    ),
+    # TrueHD and AC-4 keep the LFE channel, silent
+    ("lfe_thd_disable_6", ["thd", "--disable-lfe"], info(6), MKV),
+    ("lfe_thd_disable_8", ["thd", "--disable-lfe"], info(8), MKV),
+    ("lfe_thd_disable_7", ["thd", "--disable-lfe"], info(7, lfe=True), MKV),
+    (
+        "lfe_thd_disable_8_to_6",
+        ["thd", "--disable-lfe", "--channels", "6"],
+        info(8),
+        MKV,
+    ),
+    ("lfe_thd_disable_50", ["thd", "--disable-lfe"], NO_LFE_5, MKV),
+    ("lfe_thd_disable_2", ["thd", "--disable-lfe", "--channels", "2"], info(6), MKV),
+    ("lfe_ac4_50", ["ac4"], NO_LFE_5, MKV),
+    ("lfe_ac4_50_channels_6", ["ac4", "--channels", "6"], NO_LFE_5, MKV),
+    ("lfe_ac4_disable_6", ["ac4", "--disable-lfe"], info(6), MKV),
+    ("lfe_ac4_disable_8", ["ac4", "--disable-lfe"], info(8), MKV),
+    ("lfe_ac4_disable_7", ["ac4", "--disable-lfe"], info(7, lfe=True), MKV),
+]
+SCENARIOS += LFE_SCENARIOS
 PIPE_SCENARIOS.append(("pipe_shim_ddp_auto_8", ["ddp", *WITH_SHIM], info(8), MKV))
 
 ALL_SCENARIOS = [(*s, None) for s in SCENARIOS] + [

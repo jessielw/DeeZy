@@ -482,7 +482,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     dd_ddp_processing_group.add_argument(
         "--upmix-50-to-51",
         action="store_true",
-        help="Up-mix rare 5.0 layouts into 5.1 layouts by adding a silent LFE channel.",
+        help=(
+            "Encode a 5.0 source as 5.1 with a silent LFE channel, rather than as 5.0."
+        ),
     )
 
     # DDP BluRay processing group: same as DD/DDP processing but without the
@@ -557,6 +559,14 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         metavar=enum_choices(DolbyDigitalChannels),
         help="The number of channels.",
     )
+    dd_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help=(
+            "Code 5.1 as 5.0, without the LFE channel. A source with no LFE "
+            "(5.0, 7.0) is coded as 5.0 anyway, unless --upmix-50-to-51."
+        ),
+    )
 
     # DDP channels group
     ddp_channels_group = argparse.ArgumentParser(add_help=False)
@@ -568,6 +578,16 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         metavar=enum_choices(DolbyDigitalPlusChannels),
         help="The number of channels.",
     )
+    ddp_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help=(
+            "Code 5.1 as 5.0 and 7.1 as 7.0 (7.0 through dee_shim), without the "
+            "LFE channel. A source with no LFE (5.0, 7.0) is coded that way "
+            "anyway, unless --upmix-50-to-51. Blu-ray secondary audio keeps the "
+            "LFE, silenced."
+        ),
+    )
 
     # DDP BluRay channels group
     ddp_bluray_channels_group = argparse.ArgumentParser(add_help=False)
@@ -578,6 +598,15 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         default=DolbyDigitalPlusBlurayChannels.SURROUNDEX,
         metavar=enum_choices(DolbyDigitalPlusBlurayChannels),
         help="The number of channels.",
+    )
+    ddp_bluray_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help=(
+            "Code 7.0, without the LFE channel, through dee_shim (a 7.0 source "
+            "is coded as 7.0 anyway). Without dee_shim the stream keeps the "
+            "LFE, silenced."
+        ),
     )
 
     # atmos specific options
@@ -672,9 +701,15 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         default=Ac4ChannelBasedChannels.AUTO,
         metavar=enum_choices(Ac4ChannelBasedChannels),
         help=(
-            "The number of channels: 2.0 or 5.1. Auto takes 5.1 from 6 channels "
-            "or more (DEE downmixes 7.1) and 2.0 below that."
+            "The number of channels: 2.0 or 5.1. Auto takes 5.1 from 5 channels "
+            "or more (a 5.0 source gets a silent LFE; DEE downmixes 7.1) and 2.0 "
+            "below that."
         ),
+    )
+    ac4_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help="Silence the LFE channel. AC-4 5.1 keeps it, silent.",
     )
 
     # channel-based TrueHD channels
@@ -689,6 +724,11 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             "The number of channels: 2.0, 5.1 or 7.1. Auto takes the smallest that "
             "holds every source channel, filling the rest with silence."
         ),
+    )
+    thd_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help="Silence the LFE channel. TrueHD 5.1 and 7.1 keep it, silent.",
     )
     # TrueHD and TrueHD Atmos DRC and dialnorm
     thd_options_group = argparse.ArgumentParser(add_help=False)

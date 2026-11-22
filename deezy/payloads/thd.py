@@ -17,6 +17,8 @@ class TrueHDPayload(LoudnessPayload):
     # dee_shim turns DEE's apodizing filter off at 96 kHz, so the stream
     # decodes sample for sample
     as_is: bool = True
+    # TrueHD keeps the LFE channel, silenced
+    disable_lfe: bool = False
 
 
 @dataclass(slots=True)

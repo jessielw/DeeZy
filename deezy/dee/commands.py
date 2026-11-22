@@ -45,6 +45,10 @@ THD_TOOL = "dee_dthd_encoder"
 # dee_shim's DD+ 7.1: an E-AC-3 5.1 independent substream plus a dependent one
 # for the backs
 DDP_71_SHIM_ARGS = ("--layout", "7.1/eac3")
+# 7.0: dee_shim codes the 7.1 slots without the LFE, as E-AC-3 or (Blu-ray)
+# an AC-3 core plus an E-AC-3 dependent substream. DEE has neither
+DDP_70_SHIM_ARGS = ("--layout", "7.0/eac3")
+BLURAY_70_SHIM_ARGS = ("--layout", "7.0")
 # dee_shim's DD+ Atmos 7.1 backbones (DEE's own Blu-ray mode gives a 5.1.2
 # one): an AC-3 core plus an E-AC-3 dependent substream, or E-AC-3 only.
 # Streaming keeps DEE's 5.1
@@ -105,11 +109,16 @@ def ddp_command(
     fps: DeeFPS,
     delay: Delay,
     dd_mode: DDEncodingMode,
+    lfe: bool = True,
 ) -> list[str]:
     """
     A Dolby Digital or Dolby Digital Plus encode with dee_ddp_encoder. DD+ 7.1
     as E-AC-3 runs through dee_shim, which codes the 7.1 layout DEE's plain DD+
     mode doesn't have; everything else runs DEE as it is.
+
+    Without ``lfe`` a 5.1 layout is coded as 5.0 (DEE's lfe_on=0), and 7.1 as
+    7.0 through dee_shim. DEE's Blu-ray secondary mode keeps the LFE whatever
+    lfe_on says, so it is not asked.
     """
     check_dd_options(payload, dd_mode, shim=tools.shim is not None)
     encoder = {
@@ -139,6 +148,8 @@ def ddp_command(
     user_data = int(getattr(payload, "user_data", -1))
     if user_data != -1:
         encoder["user_data"] = str(user_data)
+    if not lfe and dd_mode in (DDEncodingMode.DD, DDEncodingMode.DDP):
+        encoder["lfe_on"] = "0"
 
     # DeeZy's channel enums call "no downmix" 'off'; DEE calls it 'auto'
     channels = "off" if downmix_mode_off else payload.channels.to_dee_cmd()
@@ -163,8 +174,18 @@ def ddp_command(
     ]
     if dd_mode is DDEncodingMode.DDP71:
         # the layout keeps -e ddp and its options, and the shim checks
-        # --data-rate against its 7.1 list
-        return _through_shim(tools, argv, *DDP_71_SHIM_ARGS)
+        # --data-rate against its 7.1 list (7.0 takes the same rates)
+        return _through_shim(
+            tools, argv, *(DDP_71_SHIM_ARGS if lfe else DDP_70_SHIM_ARGS)
+        )
+    if is_bluray and not lfe:
+        if tools.shim is None:
+            raise UnsupportedDeeFeatureError(
+                "Dolby Digital Plus Blu-ray 7.0 needs dee_shim (0.2.1 or newer); "
+                "DEE alone codes 7.1 only."
+            )
+        # the layout keeps -e bluray and its options
+        return _through_shim(tools, argv, *BLURAY_70_SHIM_ARGS)
     return argv
 
 

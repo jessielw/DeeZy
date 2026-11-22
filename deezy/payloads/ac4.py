@@ -52,3 +52,5 @@ class Ac4ChannelPayload(LoudnessPayload):
     loudness_target: int | None = None
     peak_limit: float | None = None
     loudness_preset: LoudnessPreset = LoudnessPreset.MANUAL
+    # AC-4 keeps the LFE channel, silenced
+    disable_lfe: bool = False

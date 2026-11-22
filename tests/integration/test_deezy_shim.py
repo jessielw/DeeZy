@@ -48,6 +48,7 @@ from .harness import (
     mediainfo,
     noise_samples,
     noise_wav,
+    run as run_tool,
     synthetic_damf,
 )
 
@@ -127,12 +128,21 @@ def test_the_shims_environment_is_kept_out(shim, work, wav, dee_shim, monkeypatc
 # with the object metadata smoothed as DEE does)
 
 BUILDERS = {
+    "dd": PayloadBuilder.build_dd_payload,
     "ddp": PayloadBuilder.build_ddp_payload,
+    "ddp-bluray": PayloadBuilder.build_ddp_payload,
     "ddp-atmos": PayloadBuilder.build_atmos_payload,
     "thd": PayloadBuilder.build_thd_payload,
     "thd-atmos": PayloadBuilder.build_thd_atmos_payload,
 }
-SUFFIX = {"ddp": ".ec3", "ddp-atmos": ".ec3", "thd": ".thd", "thd-atmos": ".thd"}
+SUFFIX = {
+    "dd": ".ac3",
+    "ddp": ".ec3",
+    "ddp-bluray": ".ec3",
+    "ddp-atmos": ".ec3",
+    "thd": ".thd",
+    "thd-atmos": ".thd",
+}
 
 
 @pytest.fixture(scope="module")
@@ -500,3 +510,105 @@ def test_ddp_71_piped_through_the_shim_matches_the_wav(
     wav = encode(shim, work, parser, config, "ddp", [], src, dee_shim)
     piped = encode(shim, work, parser, config, "ddp", [], src, dee_shim, pipe=True)
     assert md5(piped) == md5(wav)
+
+
+# --- sources without an LFE (5.0, 7.0) and --disable-lfe
+
+LAYOUT_CHANNELS = {"5.0(side)": 5, "5.1(side)": 6, "7.0": 7, "7.1": 8}
+
+
+def layout_wav(tools, work: Path, layout: str, kind: str = "impulse") -> Path:
+    """An impulse (or noise) WAV whose channels FFmpeg names ``layout``."""
+    channels = LAYOUT_CHANNELS[layout]
+    name = layout.replace("(", "").replace(")", "")
+    out = work / "lfe_src" / f"{kind}_{name}.wav"
+    if out.exists():
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    plain = out.with_name(f"plain_{out.name}")
+    if kind == "impulse":
+        impulse_wav(plain, channels)
+    else:
+        noise_wav(plain, channels, seconds=2.0)
+    mapping = "|".join(str(c) for c in range(channels))
+    result = run_tool(
+        [
+            tools.ffmpeg, "-hide_banner", "-v", "error", "-y", "-i", plain,
+            "-af", f"channelmap=map={mapping}:channel_layout={layout}",
+            "-c:a", "pcm_s24le", out,
+        ]
+    )  # fmt: skip
+    assert result.ok, result.out
+    return out
+
+
+@pytest.mark.parametrize(
+    ("fmt", "args", "layout", "with_shim", "want"),
+    [
+        ("dd", [], "5.0(side)", False, "L R C Ls Rs"),
+        ("dd", ["--disable-lfe"], "5.1(side)", False, "L R C Ls Rs"),
+        ("ddp", [], "7.0", False, "L R C Ls Rs"),
+        # DEE downmixes 7.1 to 5.0 here, 32 samples later
+        ("ddp", ["--disable-lfe"], "7.1", False, "L R C Ls Rs"),
+        ("ddp", [], "7.0", True, "L R C Ls Rs Lb Rb"),
+        ("ddp", ["--disable-lfe"], "7.1", True, "L R C Ls Rs Lb Rb"),
+        ("ddp-bluray", [], "7.0", True, "L R C Ls Rs Lb Rb"),
+        ("ddp-bluray", ["--disable-lfe"], "7.1", True, "L R C Ls Rs Lb Rb"),
+    ],
+    ids=[
+        "dd_50",
+        "dd_disable",
+        "ddp_70_plain",
+        "ddp_disable_71_plain",
+        "ddp_70_shim",
+        "ddp_disable_71_shim",
+        "bluray_70_shim",
+        "bluray_disable_71_shim",
+    ],
+)
+def test_a_stream_without_its_lfe_lands_on_the_source_sample(
+    shim, work, parser, config, dee_shim, fmt, args, layout, with_shim, want
+):
+    src = layout_wav(shim, work, layout)
+    out = encode(
+        shim, work, parser, config, fmt, args, src, dee_shim if with_shim else None
+    )
+    assert mediainfo(out)["channel_layout"] == want
+    pcm = decode(shim, out)
+    assert pcm.channels == len(want.split())
+    # DeeZy trims DEE's delay; a lossy transient may peak a sample off
+    assert abs(pcm.peak(0)[0] - SR) <= 1
+
+
+@pytest.mark.parametrize(
+    ("fmt", "args", "layout", "lfe_at"),
+    [
+        # DEE's Blu-ray mode alone codes 7.1: the LFE is silent
+        ("ddp-bluray", [], "7.0", 3),
+        ("ddp-bluray", ["--disable-lfe"], "7.1", 3),
+        # the secondary mode keeps the LFE whatever lfe_on says
+        ("ddp", ["--bluray-secondary"], "5.0(side)", 3),
+        ("ddp", ["--bluray-secondary", "--disable-lfe"], "5.1(side)", 3),
+    ],
+    ids=["bluray_70", "bluray_disable", "secondary_50", "secondary_disable"],
+)
+def test_a_kept_lfe_is_silent(shim, work, parser, config, fmt, args, layout, lfe_at):
+    src = layout_wav(shim, work, layout)
+    out = encode(shim, work, parser, config, fmt, args, src, None)
+    assert "LFE" in mediainfo(out)["channel_layout"].split()
+    pcm = decode(shim, out)
+    assert pcm.peak(lfe_at)[1] < 1e-4
+    assert abs(pcm.peak(0)[0] - SR) <= 1
+
+
+def test_truehd_silences_the_lfe_and_keeps_every_other_channel(
+    shim, work, parser, config
+):
+    src = layout_wav(shim, work, "5.1(side)", kind="noise")
+    out = decode(
+        shim, encode(shim, work, parser, config, "thd", ["--disable-lfe"], src, None)
+    )
+    ref = decode(shim, src)
+    assert out.frames == ref.frames
+    assert not any(out.channel(3))
+    assert all(out.channel(c) == ref.channel(c) for c in (0, 1, 2, 4, 5))

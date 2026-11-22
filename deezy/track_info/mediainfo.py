@@ -71,6 +71,7 @@ class MediainfoParser:
             bit_depth=self.mi_audio_obj.bit_depth,
             thd_atmos=self._is_thd_atmos(),
             adm_atmos_wav=self._is_adm_atmos_wav(),
+            lfe=self._has_lfe(),
         )
         if audio_info.thd_atmos:
             audio_info.atmos_elements = self._thd_atmos_elements()
@@ -165,6 +166,21 @@ class MediainfoParser:
         if self.mi_audio_obj.commercial_name == "Dolby TrueHD with Dolby Atmos":
             return True
         return False
+
+    def _has_lfe(self) -> bool | None:
+        """
+        Whether the track has an LFE channel, from MediaInfo's channel layout
+        ('L R C Ls Rs' has none) or its channel positions; None when it gives
+        neither.
+        """
+        track = self.mi_audio_obj
+        layout = str(getattr(track, "channel_layout", None) or "").split()
+        if layout:
+            return any(name.upper().startswith("LFE") for name in layout)
+        positions = str(getattr(track, "channel_positions", None) or "")
+        if positions.strip():
+            return "LFE" in positions.upper()
+        return None
 
     def _thd_atmos_elements(self) -> int | None:
         """

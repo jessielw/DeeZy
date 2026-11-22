@@ -159,6 +159,7 @@ class PayloadBuilder:
         payload_data.update(cls._build_dolby_fields(args))
         payload_data.update(cls._build_stereo_mix_fields(args))
         payload_data["channels"] = cls.safe_get(args, "channels")
+        payload_data["disable_lfe"] = bool(cls.safe_get(args, "disable_lfe", False))
         payload_data.update(cls._build_loudness_correction_fields(args))
 
         return DDPayload(**payload_data)
@@ -188,6 +189,7 @@ class PayloadBuilder:
         payload_data["bluray_secondary"] = bool(
             cls.safe_get(args, "bluray_secondary", False)
         )
+        payload_data["disable_lfe"] = bool(cls.safe_get(args, "disable_lfe", False))
 
         return DDPPayload(**payload_data)
 
@@ -370,6 +372,7 @@ class PayloadBuilder:
                 "loro_surround_mix_level": cls.safe_get(args, "lo_ro_surround", "-3"),
                 "ltrt_center_mix_level": cls.safe_get(args, "lt_rt_center", "-3"),
                 "ltrt_surround_mix_level": cls.safe_get(args, "lt_rt_surround", "-3"),
+                "disable_lfe": bool(cls.safe_get(args, "disable_lfe", False)),
             }
         )
         return Ac4ChannelPayload(**payload_data)
@@ -425,6 +428,7 @@ class PayloadBuilder:
                 "drc": cls.safe_get(args, "drc", DeeDRC.FILM_LIGHT),
                 "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
                 "as_is": not cls.safe_get(args, "no_as_is", False),
+                "disable_lfe": bool(cls.safe_get(args, "disable_lfe", False)),
             }
         )
         return TrueHDPayload(**payload_data)
