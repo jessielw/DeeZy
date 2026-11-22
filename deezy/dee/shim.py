@@ -121,7 +121,8 @@ def find_shim(base_wd: Path, dee_dir: Path | None) -> Path | None:
     return Path(on_path) if on_path else None
 
 
-def _override(user_value: str) -> Path:
+def user_shim_path(user_value: str) -> Path:
+    """The dee_shim a path or command name the user gave names."""
     candidate = Path(user_value.strip()).expanduser()
     if candidate.is_file():
         return candidate
@@ -150,7 +151,7 @@ def resolve_shim(
         logger.debug(f"{SHIM_NAME} is turned off.")
         return None
     explicit = bool(user_value and user_value.strip())
-    path = _override(user_value) if explicit else find_shim(base_wd, dee_dir)  # pyright: ignore[reportArgumentType]
+    path = user_shim_path(user_value) if explicit else find_shim(base_wd, dee_dir)  # pyright: ignore[reportArgumentType]
     if path is None:
         logger.debug(f"{SHIM_NAME} not found.")
         return None

@@ -95,15 +95,9 @@ class FindDependencies:
         user_dee: str | None = None,
         require_truehdd: bool = True,
     ) -> Dependencies:
-        ffmpeg, truehdd, dee = self._locate_beside_program(base_wd)
-        ffmpeg, truehdd, dee = self._locate_on_path(ffmpeg, truehdd, dee)
-
-        # user overrides, reported here rather than as an opaque OSError from
-        # the first subprocess launch several steps into an encode
-        bad: list[str] = []
-        ffmpeg = self._resolve_override("ffmpeg", user_ffmpeg, ffmpeg, bad)
-        truehdd = self._resolve_override("truehdd", user_truehdd, truehdd, bad)
-        dee = self._resolve_dee_override(user_dee, dee, bad)
+        ffmpeg, truehdd, dee, bad = self.locate(
+            base_wd, user_ffmpeg, user_truehdd, user_dee
+        )
         if bad:
             raise DependencyNotFoundError(
                 f"Configured dependency path does not exist: {', '.join(bad)}."
@@ -121,6 +115,28 @@ class FindDependencies:
                 f"Failed to detect required dependencies: {', '.join(missing)}."
             )
         return Dependencies(ffmpeg=ffmpeg, truehdd=truehdd, dee=dee)  # pyright: ignore[reportArgumentType]
+
+    def locate(
+        self,
+        base_wd: Path,
+        user_ffmpeg: str | None = None,
+        user_truehdd: str | None = None,
+        user_dee: str | None = None,
+    ) -> tuple[Path | None, Path | None, Path | None, list[str]]:
+        """
+        FFmpeg, truehdd and the DEE folder (None for one not found), and the
+        paths given for them that don't exist, as "name ('path')".
+        """
+        ffmpeg, truehdd, dee = self._locate_beside_program(base_wd)
+        ffmpeg, truehdd, dee = self._locate_on_path(ffmpeg, truehdd, dee)
+
+        # user overrides, reported here rather than as an opaque OSError from
+        # the first subprocess launch several steps into an encode
+        bad: list[str] = []
+        ffmpeg = self._resolve_override("ffmpeg", user_ffmpeg, ffmpeg, bad)
+        truehdd = self._resolve_override("truehdd", user_truehdd, truehdd, bad)
+        dee = self._resolve_dee_override(user_dee, dee, bad)
+        return ffmpeg, truehdd, dee, bad
 
     @staticmethod
     def check_dee_version(dee_dir: Path) -> str:

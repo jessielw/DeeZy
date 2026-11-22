@@ -8,6 +8,7 @@ import traceback
 
 from deezy.cli.bitrates import bitrate_lines
 from deezy.cli.payload_factory import PayloadBuilder
+from deezy.cli.tools_report import tool_lines, tool_rows
 from deezy.cli.utils import (
     CustomHelpFormatter,
     apply_config_defaults_to_args,
@@ -1274,6 +1275,28 @@ def create_other_parsers(
         help="The formats to list (default: every format): " + ", ".join(formats()),
     )
 
+    # the tools DeeZy finds
+    tools_parser = subparsers.add_parser(
+        "tools",
+        help="List the tools DeeZy finds, where they are and their versions",
+        description=(
+            "Lists FFmpeg, truehdd, the DEE tools (and their license) and "
+            "dee_shim as an encode finds them: the paths given here or in the "
+            "config's [dependencies], else beside DeeZy (apps/...), else on "
+            "PATH. Exits with 1 when an encode couldn't run: no FFmpeg, no DEE "
+            "6.7, or a path given that doesn't work."
+        ),
+    )
+    tools_parser.add_argument("--ffmpeg", type=str, help="Path to FFmpeg.")
+    tools_parser.add_argument("--truehdd", type=str, help="Path to truehdd.")
+    tools_parser.add_argument(
+        "--dee", type=str, help="The folder of the DEE tools, or one of them."
+    )
+    tools_parser.add_argument("--dee-shim", type=str, help="Path to dee_shim.")
+    tools_parser.add_argument(
+        "--no-shim", action="store_true", help="Report dee_shim as turned off."
+    )
+
     # temp management command parser
     temp_parser = subparsers.add_parser("temp", help="Temporary folder management")
     temp_subparsers = temp_parser.add_subparsers(dest="temp_command", required=True)
@@ -1367,6 +1390,30 @@ def execute_command(
         execute_temp_command(args)
     elif args.sub_command == "bitrates":
         execute_bitrates_command(args, config_manager)
+    elif args.sub_command == "tools":
+        execute_tools_command(args, config_manager)
+
+
+def execute_tools_command(
+    args: argparse.Namespace, config_manager: ConfigManager | None
+) -> None:
+    """Print the tools DeeZy finds; exit 1 when an encode couldn't run."""
+    config = config_manager.config if config_manager else {}
+    deps = config.get("dependencies", {})
+    rows = tool_rows(
+        WORKING_DIRECTORY,
+        ffmpeg=args.ffmpeg or deps.get("ffmpeg"),
+        truehdd=args.truehdd or deps.get("truehdd"),
+        dee=args.dee or deps.get("dee"),
+        dee_shim=args.dee_shim or deps.get("dee_shim"),
+        no_shim=args.no_shim
+        or bool(config.get("global_defaults", {}).get("no_shim", False)),
+    )
+    for line in tool_lines(rows):
+        print(line)
+    if not all(row.ok for row in rows):
+        # each problem is on its tool's line
+        sys.exit(EXIT_FAIL)
 
 
 def execute_bitrates_command(
