@@ -45,19 +45,24 @@ def parser():
     return main
 
 
-def test_drc_none_is_not_offered(parser):
-    with pytest.raises(SystemExit):
-        parser.parse_args(["encode", "thd", "--drc", "none", "x.mkv"])
-
-
-def test_drc_none_is_refused_before_any_work(parser):
-    args = parser.parse_args(["encode", "thd", "x.mkv"])
+def test_drc_none_and_no_as_is_are_offered(parser):
+    args = parser.parse_args(["encode", "thd", "--drc", "none", "--no-as-is", "x.mkv"])
     payload = cli.PayloadBuilder.build_thd_payload(
         args, Path("x.mkv"), Path("ffmpeg"), None, Path("dee")
     )
-    payload.drc = DeeDRC.NONE
-    with pytest.raises(UnsupportedDeeFeatureError, match="dee_shim"):
+    assert payload.drc is DeeDRC.NONE
+    assert payload.as_is is False
+
+
+def test_drc_none_needs_dee_shim(parser):
+    args = parser.parse_args(["encode", "thd", "--drc", "none", "x.mkv"])
+    payload = cli.PayloadBuilder.build_thd_payload(
+        args, Path("x.mkv"), Path("ffmpeg"), None, Path("dee")
+    )
+    assert payload.as_is is True
+    with pytest.raises(UnsupportedDeeFeatureError, match="needs dee_shim"):
         check_thd_options(payload)
+    check_thd_options(payload, shim=True)
 
 
 def test_truehd_takes_no_bitrate(parser):

@@ -76,19 +76,22 @@ def test_the_defaults_follow_d7_and_d6(parser):
     assert payload.legacy_authoring is False
 
 
-@pytest.mark.parametrize(
-    "args", [["--drc", "none"], ["--channels", "8"], ["--bitrate", "640"]]
-)
+@pytest.mark.parametrize("args", [["--channels", "8"], ["--bitrate", "640"]])
 def test_options_truehd_atmos_has_no_value_for_are_not_offered(parser, args):
     with pytest.raises(SystemExit):
         parser.parse_args(["encode", "thd-atmos", *args, "x.mkv"])
 
 
-def test_drc_none_is_refused_before_any_work(parser):
-    payload = payload_for(parser)
-    payload.drc = DeeDRC.NONE
-    with pytest.raises(UnsupportedDeeFeatureError, match="dee_shim"):
+def test_drc_none_needs_dee_shim(parser):
+    payload = payload_for(parser, "--drc", "none")
+    with pytest.raises(UnsupportedDeeFeatureError, match="needs dee_shim"):
         check_thd_options(payload)
+    check_thd_options(payload, shim=True)
+
+
+def test_as_is_is_on_unless_turned_off(parser):
+    assert payload_for(parser).as_is is True
+    assert payload_for(parser, "--no-as-is").as_is is False
 
 
 def test_truehd_atmos_takes_no_bitrate(parser):

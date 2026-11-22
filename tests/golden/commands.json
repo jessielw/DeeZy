@@ -9381,6 +9381,70 @@
    }
   ]
  },
+ "thd_drc_none": {
+  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
+ },
+ "thd_96k_no_as_is": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd.wav",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
  "thd_dialnorm": {
   "output": "/out/in [5.1] s0 r0 wNone.thd",
   "preview": false,
@@ -10451,6 +10515,77 @@
      "6ch:drc_profile=music_light",
      "--presentation",
      "2ch:drc_profile=music_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "thd_atmos_drc_none": {
+  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
+ },
+ "thd_atmos_no_as_is": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_dthd_encoder",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
      "-o",
      "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
      "--timecode-frame-rate",
@@ -14802,6 +14937,8 @@
     "dee": [
      "/tools/dee_shim",
      "dthd_encoder",
+     "--apodise",
+     "off",
      "--binary",
      "/tools/dee/dee_dthd_encoder",
      "--",
@@ -14870,6 +15007,10 @@
     "dee": [
      "/tools/dee_shim",
      "dthd_encoder",
+     "--oamd-as-is",
+     "on",
+     "--as-is",
+     "on",
      "--binary",
      "/tools/dee/dee_dthd_encoder",
      "--",
@@ -14913,6 +15054,10 @@
     "dee": [
      "/tools/dee_shim",
      "dthd_encoder",
+     "--oamd-as-is",
+     "on",
+     "--as-is",
+     "on",
      "--binary",
      "/tools/dee/dee_dthd_encoder",
      "--",
@@ -14995,6 +15140,703 @@
      "2ch:drc_profile=film_light",
      "-o",
      "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_drc_none": {
+  "output": "/out/in [5.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--drc",
+     "none",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd.wav",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_drc_none_off": {
+  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
+ },
+ "shim_thd_192k": {
+  "output": "/out/in [2.0] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "96000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.thd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--apodise",
+     "off",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.thd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_441": {
+  "output": "/out/in [2.0] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.thd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.thd.wav",
+     "-o",
+     "/temp/job/in20s0r0wNone_de377edef4e7af71.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_96k_no_as_is": {
+  "output": "/out/in [5.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd.wav",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_96k_drc_none": {
+  "output": "/out/in [5.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--drc",
+     "none",
+     "--apodise",
+     "off",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd.wav",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in51s0r0wNone_dabcbe251bc92e32.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_atmos_damf": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--oamd-as-is",
+     "on",
+     "--as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_atmos_damf_few": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--oamd-as-is",
+     "on",
+     "--as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_atmos_damf_24": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "not_indicated",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_atmos_adm": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--oamd-as-is",
+     "on",
+     "--as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.wav",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_atmos_adm_24": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/media/in.wav",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_atmos_no_as_is": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "shim_thd_atmos_drc_none": {
+  "output": "/out/in [7.1] s0 r0 wNone.thd",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "dthd_encoder",
+     "--drc",
+     "none",
+     "--oamd-as-is",
+     "on",
+     "--as-is",
+     "on",
+     "--binary",
+     "/tools/dee/dee_dthd_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--temp-dir",
+     "/temp/job",
+     "--presentation",
+     "atmos:drc_profile=film_light:number_of_elements=16:legacy_authoring=0",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--presentation",
+     "8ch:drc_profile=film_light",
+     "--presentation",
+     "6ch:drc_profile=film_light",
+     "--presentation",
+     "2ch:drc_profile=film_light",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.thd",
      "--timecode-frame-rate",
      "23.976",
      "--start",

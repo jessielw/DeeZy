@@ -14,6 +14,9 @@ class TrueHDPayload(LoudnessPayload):
     # 0 measures the dialnorm; any other value is written as it is (skip)
     custom_dialnorm: int = 0
     loudness_preset: LoudnessPreset = LoudnessPreset.MANUAL
+    # dee_shim turns DEE's apodizing filter off at 96 kHz, so the stream
+    # decodes sample for sample
+    as_is: bool = True
 
 
 @dataclass(slots=True)
@@ -28,3 +31,6 @@ class TrueHDAtmosPayload(LoudnessPayload):
     # DEE's legacy_authoring=1, for older disc-authoring tools; the stream then
     # carries no warp mode
     legacy_authoring: bool = False
+    # dee_shim codes a master that fits the elements as it is (object metadata
+    # as authored, no noise shaping), so the stream decodes sample for sample
+    as_is: bool = True

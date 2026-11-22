@@ -689,15 +689,22 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     )
     # TrueHD and TrueHD Atmos DRC and dialnorm
     thd_options_group = argparse.ArgumentParser(add_help=False)
-    # dee_dthd_encoder has no 'none'
-    thd_drc_choices = tuple(drc for drc in DeeDRC if drc is not DeeDRC.NONE)
     thd_options_group.add_argument(
         "--drc",
         type=case_insensitive_enum(DeeDRC),
-        choices=thd_drc_choices,
-        metavar=enum_choices(thd_drc_choices),
+        choices=DeeDRC,
+        metavar=enum_choices(DeeDRC),
         default=DeeDRC.FILM_LIGHT,
-        help="Dynamic range compression profile, for every presentation.",
+        help="Dynamic range compression profile, for every presentation. none "
+        "(only the peak protection) needs dee_shim.",
+    )
+    thd_options_group.add_argument(
+        "--no-as-is",
+        action="store_true",
+        help="Keeps DEE's own processing through dee_shim. By default dee_shim "
+        "turns DEE's apodizing filter off at 96 kHz (thd), and codes an Atmos "
+        "master of 16 elements or fewer as it is (thd-atmos), so the stream "
+        "decodes sample for sample. Without dee_shim this changes nothing.",
     )
     thd_options_group.add_argument(
         "--custom-dialnorm",

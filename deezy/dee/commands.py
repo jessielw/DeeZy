@@ -486,13 +486,20 @@ def measure_command(
     ]
 
 
-def check_thd_options(payload: TrueHDPayload | TrueHDAtmosPayload) -> None:
-    """Refuse what dee_dthd_encoder takes no value for."""
-    if payload.drc is DeeDRC.NONE:
+def check_thd_options(
+    payload: TrueHDPayload | TrueHDAtmosPayload, *, shim: bool = False
+) -> None:
+    """
+    Refuse what dee_dthd_encoder takes no value for. ``shim`` is whether
+    DeeZy has dee_shim, which adds DRC 'none'.
+    """
+    if payload.drc is DeeDRC.NONE and not shim:
         raise UnsupportedDeeFeatureError(
-            "The TrueHD encoder has no 'none' DRC profile; dee_shim adds one, "
-            "which this DeeZy version doesn't drive yet. Use film_light, "
-            "film_standard, music_light, music_standard or speech."
+            "TrueHD DRC 'none' needs dee_shim (0.2.1 or newer); DeeZy didn't "
+            "find it or was told not to use it (--no-shim), and the TrueHD "
+            "encoder has no 'none' profile of its own. Give the shim's path with "
+            "--dee-shim, or use film_light, film_standard, music_light, "
+            "music_standard or speech."
         )
 
 
@@ -507,14 +514,23 @@ def _dthd_command(
     fps: DeeFPS,
     delay: Delay,
     top_options: dict[str, str] | None = None,
+    shim_args: tuple[str, ...] = (),
 ) -> list[str]:
     """
     A dee_dthd_encoder command line. The input feeds the ``top`` presentation;
     each of ``downmixes`` is one DEE derives from it. Each presentation's DRC
     is set on its own, so every one of them is given the payload's.
+    ``shim_args`` are dee_shim's options, used only when DeeZy has it.
     """
-    check_thd_options(payload)
-    drc = {"drc_profile": payload.drc.to_dee_cmd()}
+    check_thd_options(payload, shim=tools.shim is not None)
+    shim_args = tuple(shim_args)
+    native_drc = payload.drc
+    if payload.drc is DeeDRC.NONE:
+        # the shim sets every presentation's DRC to none; DEE still needs one
+        # of its own profiles to parse the command line
+        shim_args = ("--drc", "none", *shim_args)
+        native_drc = DeeDRC.FILM_LIGHT
+    drc = {"drc_profile": native_drc.to_dee_cmd()}
     below = []
     for name in downmixes:
         below += ["--presentation", f"{name}:{_options(drc)}"]
@@ -547,7 +563,12 @@ def _dthd_command(
         "--loudness-management",
         loudness(payload),
     ]
-    return _through_shim(tools, argv)
+    return _through_shim(tools, argv, *shim_args)
+
+
+# DEE apodises 96 kHz input (and no other rate DeeZy encodes), a filter that
+# changes the coded samples
+THD_APODISED_RATE = 96000
 
 
 def thd_command(
@@ -557,13 +578,16 @@ def thd_command(
     *,
     fps: DeeFPS,
     delay: Delay,
+    sample_rate: int = 48000,
 ) -> list[str]:
     """
     A channel-based TrueHD encode with dee_dthd_encoder. ``payload.channels``
     is the input's layout, which is the stream's top presentation; DEE derives
-    the smaller ones from it.
+    the smaller ones from it. ``sample_rate`` is the rate DEE encodes; at
+    96 kHz dee_shim turns DEE's apodizing filter off unless asked not to.
     """
     top = payload.channels.value
+    apodise_off = sample_rate == THD_APODISED_RATE and payload.as_is
     return _dthd_command(
         tools,
         payload,
@@ -573,6 +597,7 @@ def thd_command(
         downmixes=tuple(f"{channels}ch" for channels in (6, 2) if channels < top),
         fps=fps,
         delay=delay,
+        shim_args=("--apodise", "off") if apodise_off else (),
     )
 
 
@@ -587,6 +612,7 @@ def thd_atmos_command(
     *,
     fps: DeeFPS,
     delay: Delay,
+    fits: bool = False,
 ) -> list[str]:
     """
     A TrueHD Atmos encode of a master with dee_dthd_encoder. The stream also
@@ -594,7 +620,13 @@ def thd_atmos_command(
 
     Legacy authoring is off unless asked for (D7). Dolby's default is on, and
     then the stream carries no warp mode.
+
+    ``fits`` is whether the master has no more elements than the stream codes.
+    Then dee_shim codes it as it is, unless asked not to: one element per bed
+    channel or object, the object metadata as authored and the audio without
+    noise shaping, so the stream decodes to the master sample for sample.
     """
+    as_is = fits and payload.as_is
     return _dthd_command(
         tools,
         payload,
@@ -608,6 +640,7 @@ def thd_atmos_command(
         downmixes=("8ch", "6ch", "2ch"),
         fps=fps,
         delay=delay,
+        shim_args=("--oamd-as-is", "on", "--as-is", "on") if as_is else (),
     )
 
 

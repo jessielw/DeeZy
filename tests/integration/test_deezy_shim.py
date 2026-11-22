@@ -4,9 +4,12 @@ DeeZy finding and running the real dee_shim, and reading its failures.
 With no options of its own the shim encodes what DEE does, byte for byte, so
 DeeZy runs every DD+ Atmos and TrueHD encode through it when it has it. DD+
 Atmos also gets `--oamd-as-is on` (the object metadata coded as the master has
-it), so it matches plain DEE only with `--no-oamd-as-is`. The shim also gives
-what DEE alone can't encode: DD+ 7.1 as E-AC-3, and DD+ Atmos on a 7.1
-backbone.
+it), so it matches plain DEE only with `--no-oamd-as-is`. TrueHD Atmos from a
+master that fits the elements gets `--oamd-as-is on --as-is on` and decodes to
+the master sample for sample, as 96 kHz TrueHD does with `--apodise off`; both
+match plain DEE only with `--no-as-is`. The shim also gives what DEE alone
+can't encode: DD+ 7.1 as E-AC-3, DD+ Atmos on a 7.1 backbone and TrueHD DRC
+'none'.
 
 The planner and runner run in-process with the shipped default config, so the
 tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
@@ -15,6 +18,7 @@ tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
 from collections.abc import Iterator
 from pathlib import Path
 import sys
+import wave
 
 import pytest
 import tomlkit
@@ -32,7 +36,18 @@ from deezy.pipeline.encode import pipe_name
 from deezy.pipeline.plan import DeeStep, PipeStep, PlanContext, plan_job
 from deezy.track_info.mediainfo import MediainfoParser
 
-from .harness import SR, decode, impulse_wav, md5, mediainfo, noise_wav, synthetic_damf
+from .harness import (
+    SR,
+    damf_pcm,
+    decode,
+    impulse_wav,
+    make_damf,
+    md5,
+    mediainfo,
+    noise_samples,
+    noise_wav,
+    synthetic_damf,
+)
 
 
 @pytest.fixture(scope="module")
@@ -186,8 +201,8 @@ def master(work) -> Path:
     [
         ("ddp-atmos", ["--no-oamd-as-is"]),
         ("ddp-atmos", ["--no-oamd-as-is", "--delay=-20ms"]),
-        ("thd-atmos", []),
-        ("thd-atmos", ["--legacy-authoring"]),
+        ("thd-atmos", ["--no-as-is"]),
+        ("thd-atmos", ["--no-as-is", "--legacy-authoring"]),
     ],
     ids=["ddp_atmos", "ddp_atmos_delay", "thd_atmos", "thd_atmos_legacy"],
 )
@@ -244,8 +259,11 @@ def test_a_shim_option_changes_the_ddp_atmos_bytes(
 def test_ddp_atmos_on_a_7_1_backbone(
     shim, work, parser, config, dee_shim, damf, args, rate
 ):
-    # the sample's master: the synthetic one (15 static noise objects) comes
-    # out of a 7.1 backbone without its JOC once DEE trims the start
+    # the sample's master. A 7.1 backbone carries JOC in its dependent
+    # substream, where DEE splits an EMDF container longer than one 511 byte
+    # skip field across two (in its own Blu-ray mode too). MediaInfo misses
+    # JOC in a split container, and the synthetic master's are split in
+    # nearly every frame; the sample's mostly fit in one.
     out = encode(shim, work, parser, config, "ddp-atmos", args, damf, dee_shim)
     info = mediainfo(out)
     assert "Atmos" in info["commercial_name"]
@@ -293,6 +311,98 @@ def test_ddp_atmos_shim_options_are_refused_without_it(
 ):
     with pytest.raises(UnsupportedDeeFeatureError, match=f"{match}.*dee_shim"):
         encode(shim, work, parser, config, "ddp-atmos", args, master, None)
+
+
+# --- TrueHD that decodes sample for sample, and DRC none
+
+
+@pytest.mark.parametrize(
+    ("args", "delay"),
+    [
+        ([], 0),
+        (["--legacy-authoring"], 0),
+        (["--delay=-20ms"], -960),
+        (["--delay=100ms"], 4800),
+    ],
+    ids=["default", "legacy", "delay_neg", "delay_pos"],
+)
+def test_truehd_atmos_through_the_shim_decodes_to_the_master(
+    shim, work, parser, config, dee_shim, master, args, delay
+):
+    if not shim.truehdd:
+        pytest.skip("set DEEZY_TRUEHDD to decode TrueHD Atmos")
+    out = encode(shim, work, parser, config, "thd-atmos", args, master, dee_shim)
+    tag = "_".join(args).replace("-", "").replace("=", "") or "default"
+    decoded = make_damf(shim, out, work / "shim_thd_atmos_dec" / tag)
+    elements, bits, got = damf_pcm(decoded)
+    want_elements, want_bits, want = damf_pcm(master)
+    assert (elements, bits) == (want_elements, want_bits)
+    frame = elements * bits // 8
+    if delay >= 0:
+        # the delay is silence ahead of the master, then every sample of it
+        assert got[: delay * frame] == bytes(delay * frame)
+        assert got[delay * frame :] == want
+    else:
+        assert got == want[-delay * frame :]
+
+
+def test_truehd_atmos_from_truehd_atmos_through_the_shim_is_lossless(
+    shim, work, parser, config, dee_shim, thd, damf
+):
+    """The sample's own TrueHD Atmos decode comes back sample for sample."""
+    out = encode(shim, work, parser, config, "thd-atmos", [], thd, dee_shim)
+    decoded = make_damf(shim, out, work / "shim_thd_atmos_from_thd")
+    assert damf_pcm(decoded) == damf_pcm(damf)
+
+
+@pytest.fixture(scope="module")
+def noise96(work) -> Path:
+    path = work / "shim_thd_noise96.wav"
+    with wave.open(str(path), "wb") as out:
+        out.setnchannels(6)
+        out.setsampwidth(3)
+        out.setframerate(96000)
+        out.writeframes(noise_samples(96000 * 2 * 6, 0.2, "little"))
+    return path
+
+
+@pytest.mark.parametrize("as_is", [True, False], ids=["as_is", "no_as_is"])
+def test_96k_truehd_through_the_shim_decodes_to_its_source(
+    shim, work, parser, config, dee_shim, noise96, as_is
+):
+    args = [] if as_is else ["--no-as-is"]
+    out = decode(
+        shim, encode(shim, work, parser, config, "thd", args, noise96, dee_shim)
+    )
+    ref = decode(shim, noise96)
+    assert out.frames == ref.frames
+    # without --apodise off, DEE's apodizing filter changes the audio
+    exact = [out.channel(c) == ref.channel(c) for c in range(6)]
+    assert exact == [as_is] * 6
+
+
+def test_truehd_drc_none_through_the_shim(shim, work, parser, config, dee_shim):
+    # a dialnorm well below the noise puts DEE's DRC profiles to work
+    src = noise_wav(work / "shim_thd_drc_in.wav", 6, seconds=2.0)
+    level = ["--custom-dialnorm", "-31"]
+    light = encode(shim, work, parser, config, "thd", level, src, dee_shim)
+    none = encode(
+        shim, work, parser, config, "thd", [*level, "--drc", "none"], src, dee_shim
+    )
+    assert md5(none) != md5(light)
+    # DRC is metadata: the audio stays lossless
+    ref = decode(shim, src)
+    out = decode(shim, none)
+    assert all(out.channel(c) == ref.channel(c) for c in range(6))
+
+
+@pytest.mark.parametrize("fmt", ["thd", "thd-atmos"])
+def test_truehd_drc_none_without_the_shim_is_refused(
+    shim, work, parser, config, master, fmt
+):
+    src = master if fmt == "thd-atmos" else noise_wav(work / "shim_thd_refused.wav", 6)
+    with pytest.raises(UnsupportedDeeFeatureError, match="DRC 'none' needs dee_shim"):
+        encode(shim, work, parser, config, fmt, ["--drc", "none"], src, None)
 
 
 # --- DD+ 7.1 as E-AC-3, which DEE alone can't encode

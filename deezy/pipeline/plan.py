@@ -14,6 +14,8 @@ from typing import Any, Protocol
 
 from deezy.config.manager import ConfigManager
 from deezy.dee.commands import (
+    THD_APODISED_RATE,
+    THD_ATMOS_ELEMENTS,
     DeeFiles,
     DeeTools,
     aac_command,
@@ -1450,10 +1452,13 @@ def _plan_thd(
         )
 
     rate = thd_sample_rate(info.sample_rate)
-    if rate == 96000:
+    shim = payload.dee_shim is not None
+    if rate == THD_APODISED_RATE and not (shim and payload.as_is):
+        # through dee_shim the filter is off, and the stream decodes exactly
         logger.info(
             "DEE applies its apodizing filter to a 96 kHz TrueHD encode, so the "
-            "audio is filtered, not bit-exact; dee_shim can turn it off."
+            "audio is filtered, not bit-exact"
+            + ("." if shim else "; through dee_shim DeeZy turns it off.")
         )
 
     delay = get_delay(payload).compensated(compensation(spec))
@@ -1474,6 +1479,7 @@ def _plan_thd(
         files,
         fps=fps,
         delay=delay,
+        sample_rate=rate,
     )
     dee = DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm)
     return JobPlan(
@@ -1488,6 +1494,28 @@ def _plan_thd(
 
 
 # --- TrueHD Atmos
+
+
+def thd_atmos_fits(payload: TrueHDAtmosPayload, info: AudioTrackInfo) -> bool:
+    """
+    Whether dee_shim may code the master as it is: it has no more elements
+    than the stream codes. truehdd's decode of TrueHD Atmos always fits; a
+    DAMF master's elements are its CAF channels, an ADM BWF master's its WAV
+    channels.
+    """
+    if info.thd_atmos:
+        return True
+    if not info.atmos_master:
+        return False
+    if info.channels > THD_ATMOS_ELEMENTS:
+        if payload.dee_shim is not None and payload.as_is:
+            logger.info(
+                f"The master has {info.channels} elements, more than the "
+                f"{THD_ATMOS_ELEMENTS} TrueHD Atmos codes, so DEE clusters it as "
+                "usual and the stream doesn't decode to it sample for sample."
+            )
+        return False
+    return True
 
 
 def _plan_thd_atmos(
@@ -1521,7 +1549,12 @@ def _plan_thd_atmos(
 
     files = _dee_files(ctx, dee_input, output)
     dee_argv = thd_atmos_command(
-        _tools(payload, ctx), payload, files, fps=fps, delay=delay
+        _tools(payload, ctx),
+        payload,
+        files,
+        fps=fps,
+        delay=delay,
+        fits=thd_atmos_fits(payload, info),
     )
     steps: tuple[Step, ...] = (
         DeeStep(tuple(dee_argv), files.output, payload.custom_dialnorm),

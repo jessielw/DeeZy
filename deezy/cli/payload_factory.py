@@ -426,6 +426,7 @@ class PayloadBuilder:
                 "channels": cls.safe_get(args, "channels"),
                 "drc": cls.safe_get(args, "drc", DeeDRC.FILM_LIGHT),
                 "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
+                "as_is": not cls.safe_get(args, "no_as_is", False),
             }
         )
         return TrueHDPayload(**payload_data)
@@ -454,6 +455,7 @@ class PayloadBuilder:
                 "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
                 "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
                 "legacy_authoring": bool(cls.safe_get(args, "legacy_authoring", False)),
+                "as_is": not cls.safe_get(args, "no_as_is", False),
             }
         )
         return TrueHDAtmosPayload(**payload_data)

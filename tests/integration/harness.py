@@ -362,6 +362,32 @@ def truehd_content(tools: Tools, thd: Path, out_dir: Path) -> tuple[str, str]:
     return md5(audio), md5(metadata)
 
 
+def damf_pcm(damf: Path) -> tuple[int, int, bytes]:
+    """(elements, bits, big-endian PCM) of a DAMF master's CAF audio."""
+    raw = damf.with_name(damf.name + ".audio").read_bytes()
+    assert raw[:4] == b"caff", f"not a CAF file: {damf}"
+    pos, desc, pcm = 8, None, b""
+    while pos + 12 <= len(raw):
+        kind = raw[pos : pos + 4]
+        size = struct.unpack_from(">q", raw, pos + 4)[0]
+        end = len(raw) if size < 0 else pos + 12 + size
+        if kind == b"desc":
+            desc = struct.unpack_from(">dIIIIII", raw, pos + 12)
+        elif kind == b"data":
+            # the data chunk starts with a 4-byte edit count
+            pcm = raw[pos + 16 : end]
+        pos = end
+    assert desc, f"no desc chunk in {damf}"
+    _rate, fmt, flags, _packet, _frames, channels, bits = desc
+    assert fmt == 0x6C70636D and not flags & 1, "expected integer linear PCM"
+    if flags & 2:  # little-endian: swap each sample to big-endian
+        width = bits // 8
+        pcm = b"".join(
+            pcm[i : i + width][::-1] for i in range(0, len(pcm) - width + 1, width)
+        )
+    return channels, bits, pcm
+
+
 WARP_LINE = re.compile(r"^\s*warpMode:.*\n", re.MULTILINE)
 
 
