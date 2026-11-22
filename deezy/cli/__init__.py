@@ -1617,14 +1617,15 @@ def execute_encode_command(
                     )
 
                 try:
-                    # pass a file-specific id so encode_single_file can include it in output names
-                    file_id = f"f{i + 1}" if len(file_inputs) > 1 else "f1"
+                    # a batch's jobs get an id in their output names (f1, f2, ...)
+                    # that tells them apart; a single file needs none
+                    name_id = f"f{i + 1}" if len(file_inputs) > 1 else None
 
                     # prepare per-job args copy; encoders are authoritative for filename
                     args_for_job = copy.deepcopy(args)
 
                     input_file, result = encode_single_file(
-                        args_for_job, input_file, dependencies, None, None, file_id
+                        args_for_job, input_file, dependencies, None, None, name_id
                     )
                     # When running in output-preview mode we already emit the
                     # previewed path from the encoder; suppress the duplicate

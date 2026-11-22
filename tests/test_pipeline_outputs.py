@@ -162,6 +162,29 @@ def test_output_with_several_inputs_is_refused_before_any_job(tmp_path, monkeypa
         )
 
 
+@pytest.mark.parametrize(
+    ("inputs", "max_parallel", "ids"),
+    [
+        (["a.wav"], 1, [None]),
+        (["a.wav", "b.wav"], 1, ["f1", "f2"]),
+        (["a.wav", "b.wav"], 2, ["f1", "f2"]),
+    ],
+)
+def test_only_a_batch_puts_job_ids_in_its_names(
+    tmp_path, monkeypatch, inputs, max_parallel, ids
+):
+    seen = {}
+
+    def fake_job(_args, input_file, _deps, _worker, _short, file_id):
+        seen[input_file.name] = file_id
+        return input_file, tmp_path / f"{input_file.stem}.ec3"
+
+    monkeypatch.setattr(cli, "encode_single_file", fake_job)
+    args = encode_args(tmp_path, max_parallel=max_parallel, no_progress_bars=True)
+    cli.execute_encode_command(args, [tmp_path / n for n in inputs], {}, None)
+    assert [seen[n] for n in inputs] == ids
+
+
 @pytest.mark.parametrize("max_parallel", [1, 2])
 def test_a_batch_refuses_its_second_job_with_the_same_output(
     tmp_path, monkeypatch, max_parallel
