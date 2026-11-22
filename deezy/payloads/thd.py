@@ -31,6 +31,8 @@ class TrueHDAtmosPayload(LoudnessPayload):
     # DEE's legacy_authoring=1, for older disc-authoring tools; the stream then
     # carries no warp mode
     legacy_authoring: bool = False
+    # DEE's number_of_elements: 12, 14 or 16 (D7: DeeZy's default is 16)
+    atmos_elements: int = 16
     # dee_shim codes a master that fits the elements as it is (object metadata
     # as authored, no noise shaping), so the stream decodes sample for sample
     as_is: bool = True

@@ -1499,19 +1499,35 @@ def _plan_thd(
 def thd_atmos_fits(payload: TrueHDAtmosPayload, info: AudioTrackInfo) -> bool:
     """
     Whether dee_shim may code the master as it is: it has no more elements
-    than the stream codes. truehdd's decode of TrueHD Atmos always fits; a
-    DAMF master's elements are its CAF channels, an ADM BWF master's its WAV
-    channels.
+    than the stream codes (--atmos-elements). A TrueHD Atmos source's
+    elements are its bed channels and objects, as MediaInfo counts them; a
+    DAMF master's are its CAF channels, an ADM BWF master's its WAV channels.
     """
+    chosen = payload.atmos_elements
+    told = payload.dee_shim is not None and payload.as_is
     if info.thd_atmos:
-        return True
-    if not info.atmos_master:
+        elements = info.atmos_elements
+        if elements is None:
+            # truehdd decodes at most THD_ATMOS_ELEMENTS, so that many fit
+            if chosen >= THD_ATMOS_ELEMENTS:
+                return True
+            if told:
+                logger.info(
+                    "MediaInfo doesn't say how many elements the TrueHD Atmos "
+                    f"stream has, so with --atmos-elements {chosen} DEE clusters "
+                    "it as usual and the stream may not decode to it sample for "
+                    "sample."
+                )
+            return False
+    elif info.atmos_master:
+        elements = info.channels
+    else:
         return False
-    if info.channels > THD_ATMOS_ELEMENTS:
-        if payload.dee_shim is not None and payload.as_is:
+    if elements > chosen:
+        if told:
             logger.info(
-                f"The master has {info.channels} elements, more than the "
-                f"{THD_ATMOS_ELEMENTS} TrueHD Atmos codes, so DEE clusters it as "
+                f"The master has {elements} elements, more than the {chosen} "
+                "the stream codes (--atmos-elements), so DEE clusters it as "
                 "usual and the stream doesn't decode to it sample for sample."
             )
         return False

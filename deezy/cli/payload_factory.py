@@ -453,6 +453,7 @@ class PayloadBuilder:
                 "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
                 "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
                 "legacy_authoring": bool(cls.safe_get(args, "legacy_authoring", False)),
+                "atmos_elements": int(cls.safe_get(args, "atmos_elements", 16)),
                 "as_is": not cls.safe_get(args, "no_as_is", False),
             }
         )

@@ -54,7 +54,16 @@ DAMF = Path("/media/in.atmos")
 DELAYED = Path("/media/Movie DELAY -10.5ms.mkv")
 
 
-def info(ch, rate=48000, fps=23.976, thd=False, adm=False, damf=False, rel=0) -> dict:
+def info(
+    ch,
+    rate=48000,
+    fps=23.976,
+    thd=False,
+    adm=False,
+    damf=False,
+    rel=0,
+    elements=None,
+) -> dict:
     return {
         "channels": ch,
         "delay_relative_to_video": rel,
@@ -66,6 +75,7 @@ def info(ch, rate=48000, fps=23.976, thd=False, adm=False, damf=False, rel=0) ->
         "thd_atmos": thd,
         "adm_atmos_wav": adm,
         "damf_atmos": damf,
+        "atmos_elements": elements,
     }
 
 
@@ -466,6 +476,18 @@ THD_ATMOS_SCENARIOS = [
     ("thd_atmos_drc", ["thd-atmos", "--drc", "music_light"], info(8, thd=True), MKV),
     ("thd_atmos_drc_none", ["thd-atmos", "--drc", "none"], info(8, thd=True), MKV),
     ("thd_atmos_no_as_is", ["thd-atmos", "--no-as-is"], info(8, thd=True), MKV),
+    (
+        "thd_atmos_elements_12",
+        ["thd-atmos", "--atmos-elements", "12"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "thd_atmos_elements_14",
+        ["thd-atmos", "--atmos-elements", "14"],
+        info(16, damf=True),
+        DAMF,
+    ),
     (
         "thd_atmos_dialnorm",
         ["thd-atmos", "--custom-dialnorm", "-27"],
@@ -870,6 +892,43 @@ SHIM_SCENARIOS = [
     ),
     ("shim_thd_atmos_adm", ["thd-atmos", *WITH_SHIM], info(16, adm=True), WAV),
     ("shim_thd_atmos_adm_24", ["thd-atmos", *WITH_SHIM], info(24, adm=True), WAV),
+    # --atmos-elements: as it is only when the master has no more than chosen
+    (
+        "shim_thd_atmos_thd_12",
+        ["thd-atmos", *WITH_SHIM, "--atmos-elements", "12"],
+        info(8, thd=True, elements=16),
+        MKV,
+    ),
+    (
+        "shim_thd_atmos_thd_12_fits",
+        ["thd-atmos", *WITH_SHIM, "--atmos-elements", "12"],
+        info(8, thd=True, elements=12),
+        MKV,
+    ),
+    (
+        "shim_thd_atmos_thd_12_unknown",
+        ["thd-atmos", *WITH_SHIM, "--atmos-elements", "12"],
+        info(8, thd=True),
+        MKV,
+    ),
+    (
+        "shim_thd_atmos_thd_16_known",
+        ["thd-atmos", *WITH_SHIM],
+        info(8, thd=True, elements=16),
+        MKV,
+    ),
+    (
+        "shim_thd_atmos_damf_14",
+        ["thd-atmos", *WITH_SHIM, "--atmos-elements", "14"],
+        D16,
+        DAMF,
+    ),
+    (
+        "shim_thd_atmos_damf_few_12",
+        ["thd-atmos", *WITH_SHIM, "--atmos-elements", "12"],
+        info(4, damf=True),
+        DAMF,
+    ),
     (
         "shim_thd_atmos_no_as_is",
         ["thd-atmos", *WITH_SHIM, "--no-as-is"],

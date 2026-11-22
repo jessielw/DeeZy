@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
 from unittest.mock import patch
 
@@ -12,11 +13,19 @@ import deezy.cli as cli
 from deezy.cli.utils import apply_default_bitrate, handle_dependencies
 from deezy.dee import spec
 from deezy.dee.commands import check_thd_options
+from deezy.dee.shim import DeeShim
 from deezy.enums.atmos import WarpMode
 from deezy.enums.shared import DeeDRC
 from deezy.exceptions import InvalidAtmosInputError, UnsupportedDeeFeatureError
-from deezy.pipeline.plan import DeeStep, PlanContext, TruehddStep, plan_job
+from deezy.pipeline.plan import (
+    DeeStep,
+    PlanContext,
+    TruehddStep,
+    plan_job,
+    thd_atmos_fits,
+)
 from deezy.track_info.audio_track_info import AudioTrackInfo
+from deezy.track_info.mediainfo import MediainfoParser
 
 
 @pytest.fixture
@@ -176,3 +185,62 @@ def test_a_warp_mode_for_a_master_warns_once(parser, tmp_path):
     warnings, _ = warnings_and_info(payload, track(damf_atmos=True), tmp_path)
     assert len(warnings) == 1
     assert "TrueHD Atmos only" in warnings[0]
+
+
+def test_the_element_count_is_16_unless_chosen(parser):
+    assert payload_for(parser).atmos_elements == 16
+    assert payload_for(parser, "--atmos-elements", "12").atmos_elements == 12
+    with pytest.raises(SystemExit):
+        payload_for(parser, "--atmos-elements", "13")
+
+
+@pytest.mark.parametrize(
+    ("chosen", "probed", "fits"),
+    [
+        # truehdd decodes at most 16 elements, so 16 always fits
+        (16, {"thd_atmos": True}, True),
+        (12, {"thd_atmos": True}, False),
+        (12, {"thd_atmos": True, "atmos_elements": 12}, True),
+        (14, {"thd_atmos": True, "atmos_elements": 16}, False),
+        (16, {"thd_atmos": True, "atmos_elements": 16}, True),
+        (14, {"damf_atmos": True, "channels": 14}, True),
+        (14, {"damf_atmos": True, "channels": 16}, False),
+        (12, {"adm_atmos_wav": True, "channels": 10}, True),
+    ],
+)
+def test_a_master_fits_when_it_has_no_more_elements_than_chosen(
+    parser, chosen, probed, fits
+):
+    payload = payload_for(parser, "--atmos-elements", str(chosen))
+    assert thd_atmos_fits(payload, track(**probed)) is fits
+
+
+def test_a_master_that_does_not_fit_says_why_through_the_shim(parser):
+    payload = payload_for(parser, "--atmos-elements", "12")
+    payload.dee_shim = cast("DeeShim", object())
+    with patch("deezy.pipeline.plan.logger") as log:
+        thd_atmos_fits(payload, track(thd_atmos=True, atmos_elements=16))
+        thd_atmos_fits(payload, track(thd_atmos=True))
+    said = [call.args[0] for call in log.info.call_args_list]
+    assert "16 elements, more than the 12 the stream codes" in said[0]
+    assert "doesn't say how many elements" in said[1]
+
+
+@pytest.mark.parametrize(
+    ("attrs", "elements"),
+    [
+        ({"bed_channel_count": "1", "number_of_dynamic_objects": "15"}, 16),
+        ({"bed_channel_count": "1", "number_of_dynamic_objects": "11"}, 12),
+        ({"bed_channel_count": "10", "number_of_dynamic_objects": "4"}, 14),
+        # every stream reports 16-ch, whatever its element count
+        ({"format_additionalfeatures": "16-ch"}, None),
+        ({"bed_channel_count": "1"}, None),
+    ],
+)
+def test_mediainfo_counts_a_truehd_atmos_streams_elements(attrs, elements):
+    namer = object.__new__(MediainfoParser)
+    fields = dict.fromkeys(
+        ("bed_channel_count", "number_of_dynamic_objects", "format_additionalfeatures")
+    )
+    namer.mi_audio_obj = cast("Track", SimpleNamespace(**{**fields, **attrs}))
+    assert namer._thd_atmos_elements() == elements

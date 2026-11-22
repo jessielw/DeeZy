@@ -21,6 +21,9 @@ class AudioTrackInfo:
     thd_atmos: bool = False
     adm_atmos_wav: bool = False
     damf_atmos: bool = False
+    # the elements a TrueHD Atmos stream codes (bed channels and objects), when
+    # MediaInfo says
+    atmos_elements: int | None = None
 
     @property
     def atmos_master(self) -> bool:

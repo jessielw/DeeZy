@@ -72,6 +72,8 @@ class MediainfoParser:
             thd_atmos=self._is_thd_atmos(),
             adm_atmos_wav=self._is_adm_atmos_wav(),
         )
+        if audio_info.thd_atmos:
+            audio_info.atmos_elements = self._thd_atmos_elements()
         if self.damf:
             # MediaInfo misreads a CAF file's length
             audio_info.channels = self.damf.channels
@@ -163,6 +165,22 @@ class MediainfoParser:
         if self.mi_audio_obj.commercial_name == "Dolby TrueHD with Dolby Atmos":
             return True
         return False
+
+    def _thd_atmos_elements(self) -> int | None:
+        """
+        The elements a TrueHD Atmos stream codes: its bed channels plus its
+        dynamic objects (an LFE bed and 15 objects are 16), or None when
+        MediaInfo doesn't say. The count follows DEE's number_of_elements, not
+        the master's; the '16-ch' MediaInfo reports as a feature is the same
+        for every stream, so it isn't a count.
+        """
+        track = self.mi_audio_obj
+        try:
+            beds = int(track.bed_channel_count)
+            objects = int(track.number_of_dynamic_objects)
+        except (AttributeError, TypeError, ValueError):
+            return None
+        return beds + objects
 
     def _is_adm_atmos_wav(self) -> bool:
         """Check if track is a ADM BWF file."""

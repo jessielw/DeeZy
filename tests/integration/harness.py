@@ -427,14 +427,19 @@ SYNTHETIC_OBJECTS = [
 
 
 def synthetic_damf(
-    out_dir: Path, seconds: float = 2.0, impulse_at: int | None = None
+    out_dir: Path,
+    seconds: float = 2.0,
+    impulse_at: int | None = None,
+    objects: int = len(SYNTHETIC_OBJECTS),
 ) -> Path:
     """A short DAMF master of noise: an LFE bed and 15 objects that never move.
 
     DEE encodes it to the same TrueHD bytes every run, unlike the sample, so
     file hashes can compare its TrueHD Atmos encodes. With ``impulse_at``, the
     master is silent except for an impulse at that frame in every element.
+    ``objects`` keeps the first that many of the 15 objects.
     """
+    chosen = SYNTHETIC_OBJECTS[:objects]
     out_dir.mkdir(parents=True, exist_ok=True)
     bed_id, bed_name = SYNTHETIC_BED
     header = [
@@ -454,7 +459,7 @@ def synthetic_damf(
         f"          - channel: {bed_name}",
         f"            ID: {bed_id}",
         "    objects:",
-        *(f"      - ID: {oid}" for oid, _ in SYNTHETIC_OBJECTS),
+        *(f"      - ID: {oid}" for oid, _ in chosen),
     ]
     (out_dir / "m.atmos").write_text("\n".join(header) + "\n")
 
@@ -464,7 +469,7 @@ def synthetic_damf(
     events += [f"  - ID: {bed_id}", *(f"    {line}" for line in (
         *shared, *tail, "headTrackMode: undefined", "binauralRenderMode: off",
     ))]  # fmt: skip
-    for oid, pos in SYNTHETIC_OBJECTS:
+    for oid, pos in chosen:
         events += [f"  - ID: {oid}", *(f"    {line}" for line in (
             *shared, f"pos: [{', '.join(str(p) for p in pos)}]", "snap: false",
             "elevation: true", "zones: all", "size: 0.0", *tail, "dialog: -1",
@@ -474,7 +479,7 @@ def synthetic_damf(
     (out_dir / "m.atmos.metadata").write_text("\n".join(events) + "\n")
 
     # CAF: 24-bit big-endian PCM, one frame per packet
-    channels = 1 + len(SYNTHETIC_OBJECTS)
+    channels = 1 + len(chosen)
     frames = int(SR * seconds)
     if impulse_at is None:
         pcm = noise_samples(frames * channels, 0.2, "big")

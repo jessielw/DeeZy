@@ -30,11 +30,13 @@ from deezy.cli.utils import apply_config_defaults_to_args, apply_default_bitrate
 from deezy.config.defaults import CONF_DEFAULT
 from deezy.config.manager import ConfigManager
 from deezy.dee.shim import DeeShim, is_shim_command, resolve_shim
+from deezy.enums.shared import TrackType
 from deezy.exceptions import UnsupportedDeeFeatureError
 from deezy.pipeline import run
 from deezy.pipeline.encode import pipe_name
 from deezy.pipeline.plan import DeeStep, PipeStep, PlanContext, plan_job
 from deezy.track_info.mediainfo import MediainfoParser
+from deezy.track_info.track_index import TrackIndex
 
 from .harness import (
     SR,
@@ -353,6 +355,51 @@ def test_truehd_atmos_from_truehd_atmos_through_the_shim_is_lossless(
     out = encode(shim, work, parser, config, "thd-atmos", [], thd, dee_shim)
     decoded = make_damf(shim, out, work / "shim_thd_atmos_from_thd")
     assert damf_pcm(decoded) == damf_pcm(damf)
+
+
+@pytest.mark.parametrize("elements", [12, 14])
+def test_fewer_elements_cluster_the_master_into_that_many(
+    shim, work, parser, config, dee_shim, master, elements
+):
+    """--atmos-elements is the element count the stream decodes to."""
+    if not shim.truehdd:
+        pytest.skip("set DEEZY_TRUEHDD to decode TrueHD Atmos")
+    args = ["--atmos-elements", str(elements)]
+    out = encode(shim, work, parser, config, "thd-atmos", args, master, dee_shim)
+    decoded = make_damf(shim, out, work / "shim_thd_atmos_elements" / str(elements))
+    assert damf_pcm(decoded)[0] == elements
+
+
+def test_a_master_that_fits_fewer_elements_decodes_to_itself(
+    shim, work, parser, config, dee_shim
+):
+    """A 12-element master coded into 12 elements comes back sample for sample."""
+    if not shim.truehdd:
+        pytest.skip("set DEEZY_TRUEHDD to decode TrueHD Atmos")
+    master12 = synthetic_damf(work / "shim_master_12", seconds=2.0, objects=11)
+    args = ["--atmos-elements", "12"]
+    out = encode(shim, work, parser, config, "thd-atmos", args, master12, dee_shim)
+    decoded = make_damf(shim, out, work / "shim_thd_atmos_elements" / "fits_12")
+    assert damf_pcm(decoded) == damf_pcm(master12)
+
+
+def test_a_truehd_atmos_stream_of_fewer_elements_reencodes_losslessly(
+    shim, work, parser, config, dee_shim
+):
+    """MediaInfo's element count lets a 12-element stream go through as it is."""
+    if not shim.truehdd:
+        pytest.skip("set DEEZY_TRUEHDD to decode TrueHD Atmos")
+    master12 = synthetic_damf(work / "shim_master_12_thd", seconds=2.0, objects=11)
+    args = ["--atmos-elements", "12"]
+    thd12 = encode(shim, work, parser, config, "thd-atmos", args, master12, dee_shim)
+    first_track = TrackIndex(TrackType.AUDIO, 0)
+    assert (
+        MediainfoParser(thd12, first_track).get_audio_track_info().atmos_elements == 12
+    )
+    again = encode(shim, work, parser, config, "thd-atmos", args, thd12, dee_shim)
+    elements = work / "shim_thd_atmos_elements"
+    first = damf_pcm(make_damf(shim, thd12, elements / "thd12"))
+    assert damf_pcm(make_damf(shim, again, elements / "thd12_again")) == first
 
 
 @pytest.fixture(scope="module")

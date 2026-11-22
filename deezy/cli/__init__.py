@@ -27,6 +27,7 @@ from deezy.cli.utils import (
 )
 from deezy.config.defaults import get_default_config_path
 from deezy.config.manager import ConfigManager, get_config_manager
+from deezy.dee.commands import THD_ATMOS_ELEMENT_CHOICES, THD_ATMOS_ELEMENTS
 from deezy.dee.spec import formats
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.aac import AacProfile
@@ -723,6 +724,19 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help=(
             "Make the stream for older disc-authoring tools (DEE's legacy "
             "authoring). The stream then carries no warp mode."
+        ),
+    )
+    thd_atmos_options_group.add_argument(
+        "--atmos-elements",
+        type=int,
+        choices=THD_ATMOS_ELEMENT_CHOICES,
+        default=THD_ATMOS_ELEMENTS,
+        help=(
+            "The elements the stream codes the master's bed and objects into "
+            "(DEE's number_of_elements). More keep more of the master's detail "
+            "and make a bigger stream; Dolby's default is 12. Through dee_shim a "
+            "master with no more elements than this decodes to it sample for "
+            "sample. Default 16."
         ),
     )
 

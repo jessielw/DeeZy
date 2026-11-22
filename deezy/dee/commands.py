@@ -595,8 +595,10 @@ def thd_command(
     )
 
 
-# D7: Dolby's default is 12 elements; more keep more of the master's detail
+# D7: Dolby's default is 12 elements; more keep more of the master's detail.
+# DeeZy's default is the most DEE codes (and the most truehdd decodes)
 THD_ATMOS_ELEMENTS = 16
+THD_ATMOS_ELEMENT_CHOICES = (12, 14, 16)
 
 
 def thd_atmos_command(
@@ -615,7 +617,9 @@ def thd_atmos_command(
     Legacy authoring is off unless asked for (D7). Dolby's default is on, and
     then the stream carries no warp mode.
 
-    ``fits`` is whether the master has no more elements than the stream codes.
+    The stream codes the master into ``payload.atmos_elements`` elements
+    (--atmos-elements). ``fits`` is whether the master has no more elements
+    than that.
     Then dee_shim codes it as it is, unless asked not to: one element per bed
     channel or object, the object metadata as authored and the audio without
     noise shaping, so the stream decodes to the master sample for sample.
@@ -627,7 +631,7 @@ def thd_atmos_command(
         files,
         top="atmos",
         top_options={
-            "number_of_elements": str(THD_ATMOS_ELEMENTS),
+            "number_of_elements": str(payload.atmos_elements),
             "legacy_authoring": _flag(payload.legacy_authoring),
         },
         input_format="atmos_mezz",
