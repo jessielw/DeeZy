@@ -260,12 +260,6 @@ def ac4ims_command(
     atmos_input: bool,
 ) -> list[str]:
     """An immersive stereo AC-4 encode with dee_ac4ims_encoder."""
-    if payload.ims_legacy_presentation:
-        # kept so older commands still run; DEE 6.7 has no such option
-        logger.warning(
-            "--ims-legacy-presentation is not available with the split DEE "
-            "encoders and will be ignored."
-        )
     devices = {
         "drc_profile_flat_panel": payload.flat_panel_drc,
         "drc_profile_home_theatre": payload.home_theatre_drc,

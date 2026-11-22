@@ -612,14 +612,6 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     # AC4 basic options
     ac4_basic_options_group = argparse.ArgumentParser(add_help=False)
     ac4_basic_options_group.add_argument(
-        "--ims-legacy-presentation",
-        action="store_true",
-        help=(
-            "Determines whether the Dolby AC-4 encoder inserts an additional "
-            "presentation for backward compatibility."
-        ),
-    )
-    ac4_basic_options_group.add_argument(
         "--encoding-profile",
         type=case_insensitive_enum(Ac4EncodingProfile),
         choices=Ac4EncodingProfile,

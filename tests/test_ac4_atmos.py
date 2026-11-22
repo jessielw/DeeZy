@@ -130,6 +130,13 @@ def test_options_ac4_atmos_has_no_value_for_are_not_offered(parser, args):
         parser.parse_args(["encode", "ac4-atmos", *args, "x.mkv"])
 
 
+@pytest.mark.parametrize("fmt", ["ac4", "ac4-atmos"])
+def test_ims_legacy_presentation_is_gone(parser, fmt):
+    # DEE 6.7 has no such option; 1.x accepted it and ignored it
+    with pytest.raises(SystemExit):
+        parser.parse_args(["encode", fmt, "--ims-legacy-presentation", "x.mkv"])
+
+
 def test_the_command_has_a_level_and_a_manifest_but_no_input_format(parser, tmp_path):
     argv = dee_argv(plan(payload_for(parser), track(thd_atmos=True), tmp_path))
     assert Path(argv[0]).stem == "dee_ac4ajoc_encoder"

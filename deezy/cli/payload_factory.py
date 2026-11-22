@@ -246,9 +246,6 @@ class PayloadBuilder:
         payload_data.update(
             {
                 "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
-                "ims_legacy_presentation": cls.safe_get(
-                    args, "ims_legacy_presentation", False
-                ),
                 "encoding_profile": cls.safe_get(
                     args, "encoding_profile", Ac4EncodingProfile.IMS
                 ),

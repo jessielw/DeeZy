@@ -18,6 +18,9 @@ from deezy.track_info.utils import (
     strip_delay_from_file_string_and_cleanse,
 )
 
+# a [] or () pair with nothing but whitespace inside
+_EMPTY_BRACKETS = re.compile(r"\[\s*\]|\(\s*\)")
+
 
 class MediainfoParser:
     __slots__ = (
@@ -293,7 +296,7 @@ class MediainfoParser:
             "title": str(title),
             "year": year,
             "stem": stem,
-            "stem_cleaned": stem_cleaned,
+            "stem-cleaned": stem_cleaned,
             "source": str(source),
             "lang": str(lang),
             "channels": str(channels),
@@ -314,15 +317,22 @@ class MediainfoParser:
 
         rendered = template
         for key, val in mapping.items():
-            # ignore stem if stem cleaned is used
-            if key == "stem" and mapping["stem_cleaned"]:
-                rendered.replace(f"{{{key}}}", "")
-            else:
-                rendered = rendered.replace(f"{{{key}}}", val)
+            # {stem-cleaned} stands in for {stem}
+            if key == "stem" and mapping["stem-cleaned"]:
+                val = ""
+            rendered = rendered.replace(f"{{{key}}}", val)
 
-        # sanitize filename: remove problematic characters and collapse whitespace
+        # sanitize filename: remove problematic characters
         rendered = re.sub(r"[<>:\"/\\|?*]", "_", rendered)
+        # drop the brackets a token left empty ("{title} [{lang}]" with no
+        # language), then collapse the whitespace around them
+        previous = None
+        while previous != rendered:
+            previous, rendered = rendered, _EMPTY_BRACKETS.sub("", rendered)
         rendered = re.sub(r"\s{2,}", " ", rendered).strip()
+        # a template that renders to nothing is named after the source
+        if not rendered:
+            rendered = stem
 
         return base_dir / Path(rendered + suffix)
 

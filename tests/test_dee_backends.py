@@ -91,7 +91,6 @@ def make_atmos_payload(tmp_path: Path, **overrides) -> AtmosPayload:
 def make_ac4_payload(tmp_path: Path, **overrides) -> Ac4Payload:
     fields = {
         "thd_warp_mode": WarpMode.NORMAL,
-        "ims_legacy_presentation": False,
         "encoding_profile": Ac4EncodingProfile.IMS,
         "ddp_drc": DeeDRC.FILM_LIGHT,
         "flat_panel_drc": DeeDRC.FILM_LIGHT,
@@ -599,10 +598,6 @@ class TestSplitAC4:
     def test_none_drc_is_passed_through(self, tmp_path, split_dir, files):
         cmd = self.build(tmp_path, split_dir, files, ddp_drc=DeeDRC.NONE)
         assert encoder_options(cmd)["drc_profile_ddp"] == "none"
-
-    def test_legacy_presentation_is_ignored(self, tmp_path, split_dir, files):
-        cmd = self.build(tmp_path, split_dir, files, ims_legacy_presentation=True)
-        assert cmd == self.build(tmp_path, split_dir, files)
 
     def test_general_mode_by_default(self, tmp_path, split_dir, files):
         options = encoder_options(self.build(tmp_path, split_dir, files))
