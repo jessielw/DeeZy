@@ -6,6 +6,7 @@ import sys
 import tempfile
 import traceback
 
+from deezy.cli.bitrates import bitrate_lines
 from deezy.cli.payload_factory import PayloadBuilder
 from deezy.cli.utils import (
     CustomHelpFormatter,
@@ -26,6 +27,7 @@ from deezy.cli.utils import (
 )
 from deezy.config.defaults import get_default_config_path
 from deezy.config.manager import ConfigManager, get_config_manager
+from deezy.dee.spec import formats
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.aac import AacProfile
 from deezy.enums.ac4 import Ac4ChannelBasedChannels, Ac4EncodingProfile
@@ -1200,6 +1202,24 @@ def create_other_parsers(
         "--detailed", action="store_true", help="Show detailed preset information"
     )
 
+    # bitrate listing
+    bitrates_parser = subparsers.add_parser(
+        "bitrates",
+        help="List the data rates each format and mode takes, and the defaults",
+        description=(
+            "Lists, for each format and mode (with the option that picks it), "
+            "each layout's default data rate and every rate DEE takes for it, "
+            "in kbps. A default your config's [default_bitrates] changes is "
+            "shown with DeeZy's own; [default_source_bitrates] can still change "
+            "it per source. A layout marked 'needs dee_shim' is encoded through dee_shim."
+        ),
+    )
+    bitrates_parser.add_argument(
+        "format",
+        nargs="*",
+        help="The formats to list (default: every format): " + ", ".join(formats()),
+    )
+
     # temp management command parser
     temp_parser = subparsers.add_parser("temp", help="Temporary folder management")
     temp_subparsers = temp_parser.add_subparsers(dest="temp_command", required=True)
@@ -1291,6 +1311,24 @@ def execute_command(
         execute_config_command(args, config_manager)
     elif args.sub_command == "temp":
         execute_temp_command(args)
+    elif args.sub_command == "bitrates":
+        execute_bitrates_command(args, config_manager)
+
+
+def execute_bitrates_command(
+    args: argparse.Namespace, config_manager: ConfigManager | None
+) -> None:
+    """Print the data rates of the formats asked for (every format by default)."""
+    unknown = [name for name in args.format if name not in formats()]
+    if unknown:
+        exit_application(
+            f"No format {', '.join(unknown)}; the formats are "
+            + ", ".join(formats())
+            + ".",
+            EXIT_FAIL,
+        )
+    for line in bitrate_lines(args.format, config_manager):
+        print(line)
 
 
 def encode_single_file(

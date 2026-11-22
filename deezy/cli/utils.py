@@ -368,7 +368,7 @@ def handle_dependencies(
     Handle tool dependencies detection.
     CLI > Config.
     """
-    if args.sub_command in ("config", "temp"):
+    if args.sub_command in ("config", "temp", "bitrates"):
         return None
 
     deps = {}
@@ -429,7 +429,7 @@ def _dee_shim(
 def handle_file_inputs(args: argparse.Namespace) -> list[Path]:
     """Parse and validate file inputs."""
     if not hasattr(args, "input") or not args.input:
-        if args.sub_command not in {"config", "temp"}:
+        if args.sub_command not in {"config", "temp", "bitrates"}:
             exit_application("", EXIT_FAIL)
         return []
 
