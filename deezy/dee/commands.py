@@ -9,6 +9,7 @@ Nothing here touches the disk.
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from deezy.dee.shim import DeeShim
 from deezy.dee.tools import dee_tool
 from deezy.delay import Delay
 from deezy.enums.ac4 import Ac4EncodingProfile
@@ -48,6 +49,17 @@ class DeeTools:
 
     dee_dir: Path
     license: Path | None = None
+    # runs the DD+ Atmos and TrueHD encoders when DeeZy has it
+    shim: DeeShim | None = None
+
+
+def _through_shim(tools: DeeTools, argv: list[str], *shim_args: str) -> list[str]:
+    """
+    ``argv`` run through dee_shim, when DeeZy has it. With no options of its
+    own the shim encodes what DEE does, byte for byte, and its DD+ Atmos and
+    TrueHD encoders run faster on AMD Zen CPUs (it replaces a slow zero-fill).
+    """
+    return list(tools.shim.argv(argv, *shim_args)) if tools.shim else argv
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,7 +167,7 @@ def ddpjoc_command(
         "drc_profile_line": payload.drc_line_mode.to_dee_cmd(),
         "drc_profile_rf": payload.drc_rf_mode.to_dee_cmd(),
     }
-    return [
+    argv = [
         *_common_args(
             tools,
             DDP_JOC_TOOL,
@@ -169,6 +181,7 @@ def ddpjoc_command(
         "-e",
         _options(encoder),
     ]
+    return _through_shim(tools, argv)
 
 
 def ac4ims_command(
@@ -440,7 +453,7 @@ def _dthd_command(
     below = []
     for name in downmixes:
         below += ["--presentation", f"{name}:{_options(drc)}"]
-    return [
+    argv = [
         str(dee_tool(tools.dee_dir, THD_TOOL)),
         # replaced with the active log level when the job is run
         "--loglevel",
@@ -469,6 +482,7 @@ def _dthd_command(
         "--loudness-management",
         loudness(payload),
     ]
+    return _through_shim(tools, argv)
 
 
 def thd_command(

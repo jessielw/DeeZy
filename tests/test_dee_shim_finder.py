@@ -235,3 +235,22 @@ def test_no_shim_from_the_cli_or_the_config(monkeypatch, parser):
     config = FakeConfig(global_defaults={"no_shim": True})
     calls = asked_for(monkeypatch, parser, ["encode", "ddp", "in"], config)
     assert calls == [(None, True)]
+
+
+def test_shim_binary():
+    tool = str(Path("dee") / f"dee_dthd_encoder{EXE}")
+    argv = DeeShim(Path("dee_shim"), "0.2.1").argv((tool, "--binary", "x"))
+    assert shim.shim_binary(argv) == Path(tool)
+    assert shim.shim_binary((tool, "--progress", "1")) is None
+
+
+def test_a_missing_dee_tool_is_named_before_the_shim_runs(tmp_path):
+    from deezy.pipeline.plan import DeeStep
+    from deezy.pipeline.run import run_dee
+
+    dee_shim = touch(tmp_path / f"dee_shim{EXE}")
+    tool = str(tmp_path / "dee" / f"dee_dthd_encoder{EXE}")
+    argv = DeeShim(dee_shim, "0.2.1").argv((tool, "--loglevel", "info"))
+    step = DeeStep(argv, tmp_path / "out.thd")
+    with pytest.raises(DependencyNotFoundError, match="dee_dthd_encoder.* is not in"):
+        run_dee(step, no_progress_bars=True)

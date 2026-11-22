@@ -26,6 +26,7 @@ from deezy.cli.payload_factory import PayloadBuilder
 from deezy.cli.utils import apply_config_defaults_to_args, apply_default_bitrate
 from deezy.config.defaults import CONF_DEFAULT
 from deezy.config.manager import ConfigManager
+from deezy.dee.shim import DeeShim
 from deezy.dee.tools import get_executable_extension
 from deezy.pipeline.plan import (
     DeeStep,
@@ -42,6 +43,7 @@ GOLDEN = Path(__file__).parent / "golden" / "commands.json"
 
 FFMPEG = Path("/tools/ffmpeg")
 TRUEHDD = Path("/tools/truehdd")
+SHIM = Path("/tools/dee_shim")
 DEE = Path("/tools/dee")
 TEMP = Path("/temp/job")
 OUT = Path("/out")
@@ -733,6 +735,49 @@ PIPE_SCENARIOS = [
     ("pipe_measure_thd", ["measure"], info(8, thd=True), MKV),
     ("pipe_thd_6", ["thd"], info(6), MKV),
 ]
+# --- dee_shim found: the DD+ Atmos and TrueHD encoders run through it, the
+# others don't (the CLI hands the shim it found to the payload)
+WITH_SHIM = ["--dee-shim", str(SHIM)]
+SHIM_SCENARIOS = [
+    ("shim_atmos_thd", ["ddp-atmos", *WITH_SHIM], info(8, thd=True), MKV),
+    ("shim_atmos_damf", ["ddp-atmos", *WITH_SHIM], D16, DAMF),
+    (
+        "shim_atmos_delay",
+        ["ddp-atmos", *WITH_SHIM, "--delay=-20ms"],
+        info(16, fps=None, adm=True),
+        WAV,
+    ),
+    (
+        "shim_atmos_bluray",
+        ["ddp-atmos", *WITH_SHIM, "--atmos-mode", "bluray"],
+        info(8, thd=True),
+        MKV,
+    ),
+    ("shim_thd_8", ["thd", *WITH_SHIM], info(8), MKV),
+    ("shim_thd_2_delay", ["thd", *WITH_SHIM, "--delay=100ms"], info(2), MKV),
+    ("shim_thd_96k", ["thd", *WITH_SHIM], info(6, rate=96000), MKV),
+    ("shim_thd_atmos_thd", ["thd-atmos", *WITH_SHIM], info(8, thd=True), MKV),
+    (
+        "shim_thd_atmos_legacy",
+        ["thd-atmos", *WITH_SHIM, "--legacy-authoring"],
+        D16,
+        DAMF,
+    ),
+    ("shim_off", ["thd", *WITH_SHIM, "--no-shim"], info(6), MKV),
+    # these never run through it
+    ("shim_ddp_6", ["ddp", *WITH_SHIM], info(6), MKV),
+    ("shim_ddp_auto_8", ["ddp", *WITH_SHIM], info(8), MKV),
+    ("shim_ddp_71", ["ddp", *WITH_SHIM, "--channels", "8"], info(8), MKV),
+    ("shim_ddp_damf", ["ddp", *WITH_SHIM], D16, DAMF),
+    ("shim_bluray", ["ddp-bluray", *WITH_SHIM], info(8), MKV),
+    ("shim_dd", ["dd", *WITH_SHIM], info(6), MKV),
+    ("shim_ac4_atmos", ["ac4-atmos", *WITH_SHIM], D16, DAMF),
+    ("shim_ac4_ims", ["ac4-ims", *WITH_SHIM], info(6), MKV),
+    ("shim_ac4", ["ac4", *WITH_SHIM], info(6), MKV),
+    ("shim_aac", ["aac", *WITH_SHIM], info(6), MKV),
+]
+SCENARIOS += SHIM_SCENARIOS
+
 ALL_SCENARIOS = [(*s, None) for s in SCENARIOS] + [
     (*s, PIPE_NAME) for s in PIPE_SCENARIOS
 ]
@@ -846,6 +891,8 @@ def planned(parser, config, args, probed, source, pipe_name=None) -> dict:
         apply_default_bitrate(ns, config)
         apply_config_defaults_to_args(ns, config)
         payload = BUILDERS[ns.format_command](ns, source, FFMPEG, TRUEHDD, DEE)
+        if ns.dee_shim and not ns.no_shim:
+            payload.dee_shim = DeeShim(Path(ns.dee_shim), "0.2.1+test")
         planner = plan_job
     track = AudioTrackInfo(mi_track=cast("Track", None), **probed)
     ctx = PlanContext(

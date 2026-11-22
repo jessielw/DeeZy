@@ -24,6 +24,7 @@ from deezy.audio_processors.dee import process_dee_job
 from deezy.audio_processors.ffmpeg import process_ffmpeg_job
 from deezy.audio_processors.pipe import process_pipe_job
 from deezy.audio_processors.truehdd import damf_warp_mode, decode_truehd_to_atmos
+from deezy.dee.shim import shim_binary
 from deezy.exceptions import (
     DependencyNotFoundError,
     InputFileNotFoundError,
@@ -338,6 +339,10 @@ def run_dee(
     A failed run leaves a 0-byte or cut-off file at the step's output, so it is
     deleted rather than kept with the temp files.
     """
+    # dee_shim would refuse a missing DEE tool with a less helpful message
+    binary = shim_binary(step.argv)
+    if binary is not None and not binary.is_file():
+        raise missing_tool(binary)
     jitter()
     with slot("dee"):
         announce(step, print_commands)

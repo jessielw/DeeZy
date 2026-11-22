@@ -178,6 +178,14 @@ def is_shim_command(cmd: Sequence[str]) -> bool:
     return len(cmd) > 1 and cmd[1] in SHIM_SUBCOMMANDS.values() and "--" in cmd
 
 
+def shim_binary(cmd: Sequence[str]) -> Path | None:
+    """The DEE tool a dee_shim command runs, or None for a plain DEE command."""
+    if not is_shim_command(cmd):
+        return None
+    own = cmd[: cmd.index("--")]
+    return Path(own[own.index("--binary") + 1]) if "--binary" in own else None
+
+
 def shim_failure(return_code: int, lines: Sequence[str]) -> str | None:
     """
     dee_shim's reason for a failed run, or None when DEE itself failed (its

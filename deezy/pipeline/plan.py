@@ -571,7 +571,7 @@ def _dee_files(ctx: PlanContext, dee_input: Path | Transport, output: Path) -> D
 
 
 def _tools(payload: CorePayload, ctx: PlanContext) -> DeeTools:
-    return DeeTools(Path(payload.dee_path), ctx.license)
+    return DeeTools(Path(payload.dee_path), ctx.license, payload.dee_shim)
 
 
 def _truehdd_step(
