@@ -36,7 +36,9 @@ ffmpeg = ""
 # Path to Dolby Encoding Engine (DEE) executable
 dee = ""     
 # Path to truehdd executable
-truehdd = "" 
+truehdd = ""
+# Path to dee_shim, optional (leave empty for auto-detection)
+dee_shim = ""
 
 [global_defaults]
 # Keep temporary files after processing
@@ -81,6 +83,8 @@ parse_elementary_delay = false
 log_to_file = false
 # Disable progress bars by default
 no_progress_bars = false
+# Don't use dee_shim, even when it is found
+no_shim = false
 # Dynamic range compression for line mode
 drc_line_mode = "film_light"
 # Dynamic range compression for RF mode

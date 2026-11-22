@@ -8,6 +8,7 @@ import time
 from typing import Any
 
 from deezy.config.manager import ConfigManager, get_config_manager
+from deezy.dee.shim import DeeShim, resolve_shim
 from deezy.dee.tools import DependencyNotFoundError, FindDependencies
 from deezy.enums.shared import PipeMode
 from deezy.info import parse_audio_streams
@@ -361,7 +362,7 @@ def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
 
 def handle_dependencies(
     args: argparse.Namespace, config_manager: ConfigManager | None
-) -> dict[str, Path | None] | None:
+) -> dict[str, Path | DeeShim | None] | None:
     """
     Handle tool dependencies detection.
     CLI > Config.
@@ -396,6 +397,7 @@ def handle_dependencies(
             require_truehdd=atmos_required,
         )
         finder.check_dee_version(Path(tools.dee))
+        shim = _dee_shim(args, config_manager, Path(tools.dee))
     except DependencyNotFoundError as e:
         exit_application(str(e), EXIT_FAIL)
 
@@ -403,7 +405,24 @@ def handle_dependencies(
         "ffmpeg_path": Path(tools.ffmpeg),
         "truehdd_path": Path(tools.truehdd) if tools.truehdd else None,
         "dee_path": Path(tools.dee),
+        "dee_shim": shim,
     }
+
+
+def _dee_shim(
+    args: argparse.Namespace, config_manager: ConfigManager | None, dee_dir: Path
+) -> DeeShim | None:
+    """dee_shim for an encode (CLI > config > found), unless it is turned off."""
+    if args.sub_command != "encode":
+        return None
+    config = config_manager.config if config_manager else {}
+    disabled = bool(getattr(args, "no_shim", False)) or bool(
+        config.get("global_defaults", {}).get("no_shim", False)
+    )
+    user_value = getattr(args, "dee_shim", None) or config.get("dependencies", {}).get(
+        "dee_shim"
+    )
+    return resolve_shim(WORKING_DIRECTORY, dee_dir, user_value, disabled)
 
 
 def handle_file_inputs(args: argparse.Namespace) -> list[Path]:

@@ -2,6 +2,7 @@ from collections.abc import Callable
 import logging
 from subprocess import PIPE, STDOUT, Popen
 
+from deezy.dee.shim import clean_env, is_shim_command, shim_failure
 from deezy.utils.logger import logger
 from deezy.utils.progress import DEEProgressHandler
 
@@ -184,6 +185,8 @@ def process_dee_job(
         universal_newlines=True,
         encoding="utf-8",
         errors="replace",
+        # dee_shim reads settings from its environment; keep them out
+        env=clean_env() if is_shim_command(cmd) else None,
     ) as proc:
         if on_start:
             on_start(proc)
@@ -268,6 +271,9 @@ def process_dee_job(
                 )
 
     if return_code != 0:
+        shim_reason = shim_failure(return_code, output_lines)
+        if shim_reason and is_shim_command(cmd):
+            raise ValueError(shim_reason)
         # parse the output for detailed error information
         error_message = _parse_dee_execution_summary(output_lines)
         if error_message:

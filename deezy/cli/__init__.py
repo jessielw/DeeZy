@@ -127,6 +127,17 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     # common Encode Args
     encode_group = argparse.ArgumentParser(add_help=False, parents=[tools_group])
     encode_group.add_argument(
+        "--dee-shim",
+        type=str,
+        help="Path to dee_shim (0.2.1 or newer). Found beside the DEE tools, in "
+        "apps/dee_shim or on PATH when not given.",
+    )
+    encode_group.add_argument(
+        "--no-shim",
+        action="store_true",
+        help="Don't use dee_shim, even when it is found.",
+    )
+    encode_group.add_argument(
         "--delay",
         type=str,
         help="The delay in milliseconds, seconds or frames at a frame rate, decimals allowed. Note '--delay=' is required! (--delay=-10.5ms / --delay=1.25s / --delay=-3@23.976; the rate may also be 24000/1001, ntsc, pal, film or ntsc-film).",
@@ -1341,6 +1352,7 @@ def encode_single_file(
         payload = builders[args.format_command](
             args, input_file, ffmpeg_path, truehdd_path, dee_path
         )
+        payload.dee_shim = dependencies.get("dee_shim")
         result = encode(payload)
     elif args.format_command == "preset":
         # this should not happen since config manager converts "preset" to actual format

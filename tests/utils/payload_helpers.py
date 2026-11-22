@@ -43,6 +43,7 @@ def make_core_fields(tmp_path: Path, keep_temp: bool) -> dict:
         "print_commands": False,
         "dry_run": False,
         "pipe": PipeMode.AUTO,
+        "dee_shim": None,
         # Loudness fields
         "metering_mode": MeteringMode.MODE_1770_3,
         "dialogue_intelligence": True,

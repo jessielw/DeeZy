@@ -66,6 +66,8 @@ class PayloadBuilder:
             if cls.safe_get(args, "batch_output_dir")
             else None,
             "overwrite": cls.safe_get(args, "overwrite", False),
+            # set by the caller, which finds the tools
+            "dee_shim": None,
         }
 
     @classmethod
