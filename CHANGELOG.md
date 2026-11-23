@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - Unreleased
+
+DeeZy 2.0 runs only the DEE 6.7 command-line tools. Commands, presets and configs from 1.x may need changes; the [migration guide](docs/migration.md) lists them.
+
+### Changed
+
+- DEE 6.7 only: DeeZy refuses the single `dee` of DEE 5.2 and any other DEE version. `deezy tools` shows what DeeZy finds.
+- `atmos` is now `ddp-atmos`, and 1.x's `ac4` (immersive stereo) is now `ac4-ims`. `ac4` now makes channel-based AC-4 and logs a notice each time it runs. Config sections under the old names are ignored with a warning.
+- Surround 3 dB attenuation is off by default for `dd`, `ddp` and `ddp-bluray`, as in DEE. `--surround-3db` turns it on; `--no-surround-3db` still parses.
+- A TrueHD Atmos stream with no warp mode is no longer given `normal`, so DEE renders it as `warping`. `--thd-warp-mode normal` gives 1.x's output.
+- `ddp-atmos --atmos-mode bluray` codes a 7.1 backbone with an AC-3 core through dee_shim, and needs it: DEE alone gives a 5.1.2 backbone.
+- When DeeZy finds dee_shim, every `ddp-atmos`, `thd` and `thd-atmos` encode runs through it (several times faster on AMD CPUs). `ddp-atmos` then codes the master's object metadata as it is, `thd` at 96 kHz has no apodizing filter, and `thd-atmos` codes a master of no more elements than `--atmos-elements` as it is. `--no-oamd-as-is` and `--no-as-is` keep plain DEE's processing.
+- A 5.0 source to `dd` or `ddp` is coded as 5.0 (1.x made 2.0). A 7.0 source is coded as 7.0 by `ddp` and `ddp-bluray` through dee_shim; without it `ddp` makes 5.0 and `ddp-bluray` 7.1 with a silent LFE (1.x refused it).
+- Blu-ray secondary audio takes 96 to 256 kbps for 2.0 and 160 to 256 kbps for 5.1, and a rate it doesn't take becomes the closest one.
+- The automatic name of a single input has no `_f1`, and an output template drops an empty `[]` or `()` left by a field with no value.
+- DeeZy refuses an output that is a source of the run or another job's output, even with `--overwrite`, and `--output` with several inputs.
+- On Windows, FFmpeg's audio for `dd`, `ddp`, `ddp-bluray`, `ac4` and `aac` goes into DEE through a pipe by default (`--pipe auto`); `--pipe never` writes the temp WAV.
+- A job's options are checked before anything is extracted or encoded.
+
+### Added
+
+- Formats: `thd`; `thd-atmos` (`--atmos-elements 12|14|16`, default 16; `--legacy-authoring`); channel-based `ac4`; `ac4-atmos` (level 3); `aac` (AAC-LC, HE-AAC, HE-AAC v2).
+- Atmos masters (DAMF and ADM BWF) as sources for `ddp-atmos`, `thd-atmos`, `ac4-atmos` and `ac4-ims`, and for `dd` and `ddp`, which DEE renders.
+- Optional dee_shim (0.2.1 or newer) support: DD+ 7.1 and 7.0 (`ddp --channels 8`, 384 to 1792 kbps), `ddp-atmos --atmos-mode standard` (7.1 as E-AC-3, 448 to 2048 kbps, default 1152) and `bluray`, TrueHD `--drc none`, and `ddp-atmos --no-surround-90-deg-phase-shift`. `--dee-shim` gives its path; `--no-shim` or `no_shim` turns it off.
+- Commands: `deezy measure` (DEE's loudness measurement, with the manifest saved by `--output` or `--output-dir`), `deezy bitrates` (each format's rates and defaults) and `deezy tools` (the tools DeeZy finds, with versions and paths).
+- Options: `--dry-run`, `--print-commands`, `--keep-logs` (`keep_logs`), `--disable-lfe`, `--pipe` and `--surround-3db`.
+- `--delay` takes frames at a frame rate, as in `--delay=-3@23.976`.
+- DRC `none` for `dd`, `ddp`, `ddp-bluray` and `ddp-atmos`.
+- Docs: a CLI reference and per-format rate lists generated from the code (`scripts/cli_docs.py`), a page per format, a dee_shim page and a migration guide.
+
+### Removed
+
+- Support for the single `dee` (DEE 5.2) and its JSON job files.
+- `--bed-conform`: it changed no DEE output.
+- `--metering-mode`: DEE 6.7 measures with ITU-R BS.1770-4 only.
+- `--ims-legacy-presentation`: 1.5.0 already ignored it.
+
+### Fixed
+
+- `--custom-dialnorm` failed on DEE 6.7.
+- `deezy encode ac4` (immersive stereo) always failed on DEE 6.7.
+- `--no-surround-3db` and `--no-surround-90-deg-phase-shift` each turned off the other one's option.
+- A failed FFmpeg step was swallowed, which also raised the batch's FFmpeg limit, and DEE then failed on the missing WAV.
+- Decimal delays were refused, and delays in file names lost their decimals.
+- The 32 samples DEE adds when it changes the channel count (dd and ddp downmixes) weren't compensated.
+- The rate lists offered rates DEE refuses (streaming Atmos 512 kbps, immersive stereo 72 and 112 kbps); they are now DEE 6.7's.
+- `dd --stereo-down-mix dpl2` failed for a 1.0 or 5.1 output.
+- `--upmix-50-to-51` with automatic channels named the output 2.0 and used the 2.0 rate.
+- A 5-channel source with automatic channels reached DEE as 5 channels, which it refuses.
+- `ac4 --encoding-profile ims_music` (now `ac4-ims`) didn't set what DEE requires: `music_light` on the four device DRC profiles and dialogue intelligence off.
+- `{stem-cleaned}` reached file names as it was.
+- `--reuse-temp-files` could keep an FFmpeg slot taken.
+- An interrupted or failed encode could leave a partial output.
+- `--config FILE` also read, and warned about, the config DeeZy finds on its own.
+
+### Not in 2.0
+
+- `ac4-atmos` level 4 (music, podcasts and audiobooks).
+- Single-pass loudness: measured, and no faster.
+- `dd` and `ddp` from a TrueHD Atmos stream through DEE's renderer: FFmpeg's 7.1 decode is used.
+- MXF IAB masters.
+- Channel-based WAV masters (`cbi_wav`), AC-4 in MP4 through `mp4muxer`, and `deezy tools get`.
+- The immersive stereo delay is still unmeasured; 1.5.0's 256 samples are kept.
+
 ## [1.5.0] - 2026-11-07
 
 ### Added
