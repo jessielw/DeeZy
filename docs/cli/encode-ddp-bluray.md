@@ -31,7 +31,7 @@ usage: DeeZy encode ddp-bluray [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                                [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                                [--speech-threshold SPEECH_THRESHOLD]
                                [--metering-mode {1770_1,1770_2,1770_3,leqa}]
-                               [--no-low-pass-filter] [--no-surround-3db]
+                               [--no-low-pass-filter] [--surround-3db]
                                [--no-surround-90-deg-phase-shift]
                                [--stereo-down-mix {auto,loro,ltrt,dpl2}]
                                [--lt-rt-center {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}]
@@ -123,8 +123,8 @@ options:
        Loudness measuring mode according to one of the broadcast standards.
   --no-low-pass-filter
        Disables low pass filter.
-  --no-surround-3db
-       Disables surround 3db attenuation.
+  --surround-3db
+       Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). Off by default, as in DEE.
   --no-surround-90-deg-phase-shift
        Disables surround 90 degree phase shift.
   --stereo-down-mix, {auto,loro,ltrt,dpl2}

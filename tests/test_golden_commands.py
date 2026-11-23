@@ -138,6 +138,8 @@ SCENARIOS = [
         info(6),
         MKV,
     ),
+    ("dd_surround_3db", ["dd", "--surround-3db"], info(6), MKV),
+    ("ddp_bluray_surround_3db", ["ddp-bluray", "--surround-3db"], info(8), MKV),
     (
         "dd_flags",
         [

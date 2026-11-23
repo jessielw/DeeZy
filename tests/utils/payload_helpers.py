@@ -62,7 +62,7 @@ def make_dolby_fields() -> dict:
         "stereo_mix": StereoDownmix.NOT_INDICATED,
         "lfe_lowpass_filter": True,
         "surround_90_degree_phase_shift": True,
-        "surround_3db_attenuation": True,
+        "surround_3db_attenuation": False,
         "loro_center_mix_level": "-3",
         "loro_surround_mix_level": "-3",
         "ltrt_center_mix_level": "-3",

@@ -28,7 +28,7 @@ usage: DeeZy encode ddp [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                         [--loudness-target [-31..-8]]
                         [--peak-limit PEAK_LIMIT] [--user-data [-1..65535]]
                         [--bluray-secondary] [--no-low-pass-filter]
-                        [--no-surround-3db] [--no-surround-90-deg-phase-shift]
+                        [--surround-3db] [--no-surround-90-deg-phase-shift]
                         [--upmix-50-to-51]
                         [--stereo-down-mix {auto,loro,ltrt,dpl2}]
                         [--lt-rt-center {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}]
@@ -128,8 +128,8 @@ options:
        Encode Blu-ray secondary audio: 2.0 at 96 to 256 kbps or 5.1 at 160 to 256 kbps (default 192).
   --no-low-pass-filter
        Disables low pass filter.
-  --no-surround-3db
-       Disables surround 3db attenuation.
+  --surround-3db
+       Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). Off by default, as in DEE.
   --no-surround-90-deg-phase-shift
        Disables surround 90 degree phase shift.
   --upmix-50-to-51

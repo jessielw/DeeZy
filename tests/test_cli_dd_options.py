@@ -18,21 +18,26 @@ def parse(*argv: str) -> argparse.Namespace:
     return parser.parse_args(list(argv))
 
 
+def mix_fields(*argv: str) -> dict:
+    return PayloadBuilder._build_stereo_mix_fields(parse("encode", *argv, "a.wav"))
+
+
 @pytest.mark.parametrize("fmt", ["dd", "ddp", "ddp-bluray"])
-@pytest.mark.parametrize(
-    ("flag", "off"),
-    [
-        ("--no-surround-3db", "surround_3db_attenuation"),
-        ("--no-surround-90-deg-phase-shift", "surround_90_degree_phase_shift"),
-    ],
-)
-def test_each_surround_flag_turns_off_its_own_option(fmt, flag, off):
-    fields = PayloadBuilder._build_stereo_mix_fields(
-        parse("encode", fmt, flag, "a.wav")
-    )
-    on = {"surround_3db_attenuation", "surround_90_degree_phase_shift"} - {off}
-    assert fields[off] is False
-    assert fields[on.pop()] is True
+def test_the_surround_3db_attenuation_is_off_unless_asked_for(fmt):
+    assert mix_fields(fmt)["surround_3db_attenuation"] is False
+    assert mix_fields(fmt, "--surround-3db")["surround_3db_attenuation"] is True
+    # 1.x's flag still parses, and asks for what is now the default
+    assert mix_fields(fmt, "--no-surround-3db")["surround_3db_attenuation"] is False
+
+
+@pytest.mark.parametrize("fmt", ["dd", "ddp", "ddp-bluray"])
+def test_each_surround_flag_sets_its_own_option(fmt):
+    fields = mix_fields(fmt, "--no-surround-90-deg-phase-shift")
+    assert fields["surround_90_degree_phase_shift"] is False
+    assert fields["surround_3db_attenuation"] is False
+    fields = mix_fields(fmt, "--surround-3db")
+    assert fields["surround_90_degree_phase_shift"] is True
+    assert fields["surround_3db_attenuation"] is True
 
 
 @pytest.mark.parametrize("fmt", ["dd", "ddp", "ddp-bluray", "ddp-atmos"])

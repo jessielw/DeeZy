@@ -153,7 +153,7 @@ class TestSplitDD:
             "drc_profile_rf": "film_light",
             "lfe_filter": "1",
             "surround_90deg_phase_shift": "1",
-            "surround_3dB_attenuation": "1",
+            "surround_3dB_attenuation": "0",
             "preferred_downmix_mode": "not_indicated",
             "loro_cmix": "-3",
             "loro_smix": "-3",

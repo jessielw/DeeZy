@@ -115,7 +115,7 @@ class PayloadBuilder:
             "surround_90_degree_phase_shift": cls.safe_get(
                 args, "no_surround_90_deg_phase_shift", True
             ),
-            "surround_3db_attenuation": cls.safe_get(args, "no_surround_3db", True),
+            "surround_3db_attenuation": cls.safe_get(args, "surround_3db", False),
             "loro_center_mix_level": cls.safe_get(args, "lo_ro_center", "-3"),
             "loro_surround_mix_level": cls.safe_get(args, "lo_ro_surround", "-3"),
             "ltrt_center_mix_level": cls.safe_get(args, "lt_rt_center", "-3"),

@@ -28,7 +28,7 @@ usage: DeeZy encode preset [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                            [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                            [--speech-threshold SPEECH_THRESHOLD]
                            [--metering-mode {1770_1,1770_2,1770_3,1770_4,leqa}]
-                           [--no-low-pass-filter] [--no-surround-3db]
+                           [--no-low-pass-filter] [--surround-3db]
                            [--no-surround-90-deg-phase-shift]
                            [--upmix-50-to-51]
                            [--stereo-down-mix {auto,loro,ltrt,dpl2}]
@@ -131,8 +131,8 @@ options:
        Loudness measuring mode according to one of the broadcast standards.
   --no-low-pass-filter
        Disables low pass filter.
-  --no-surround-3db
-       Disables surround 3db attenuation.
+  --surround-3db
+       Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). Off by default, as in DEE.
   --no-surround-90-deg-phase-shift
        Disables surround 90 degree phase shift.
   --upmix-50-to-51
