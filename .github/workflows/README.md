@@ -49,10 +49,10 @@ This directory contains GitHub Actions workflows for automated testing, building
    # Validate version consistency
    python version.py --validate
 
-   # Set new version (updates pyproject.toml - single source of truth)
-   python version.py --set "1.2.0"
+   # Set the version and verify that the CLI matches
+   python version.py --set "1.2.0" --validate
 
-   # Create and push git tag
+   # Commit the version changes before creating and pushing the tag
    python version.py --tag --push
    ```
 
@@ -114,9 +114,9 @@ DeeZy uses **pyproject.toml as the single source of truth** for version informat
 
 - **pyproject.toml**: Contains the authoritative version
 - **deezy/cli/\_\_init\_\_.py**: Holds `__version__`, kept in step with pyproject.toml by `tests/test_version_consistency.py`
-- **version.py**: Helper script for updating versions and creating releases
+- **version.py**: Runs `uv version`, copies the normalized version into the CLI, and creates tags from the project version
 
-This approach eliminates version synchronization issues between multiple files.
+Use `python version.py --set "2.0.0-beta.2" --validate` to record `2.0.0b2` in both files. The tag helper uses `v2.0.0b2` for that version.
 
 ### Version Validation
 

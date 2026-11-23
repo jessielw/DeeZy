@@ -1,7 +1,7 @@
 name: PyPI
 on:
   release:
-    types: [created]
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -15,9 +15,11 @@ on:
 
 jobs:
   publish_to_pypi:
-    # Only run automatically for release events whose tag does NOT contain
-    # 'rc'. Manual runs (workflow_dispatch) are always allowed.
-    if: ${{ github.event_name != 'release' || (github.event_name == 'release' && !contains(github.event.release.tag_name, 'rc')) }}
+    # Skip CI test tags such as 2.0.0-testing-ci1.
+    if: >-
+      (github.ref_type != 'tag' || !contains(github.ref_name, '-test')) &&
+      !contains(inputs.tag, '-test') &&
+      (github.event_name != 'release' || !contains(github.ref_name, 'rc'))
     runs-on: ubuntu-latest
 
     environment:
@@ -31,8 +33,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Automatic releases (non-rc) use main; manual runs accept tag or branch.
-          ref: ${{ github.event_name == 'release' && 'main' || github.event.inputs.tag || github.event.inputs.branch || 'main' }}
+          ref: ${{ github.event_name == 'release' && github.sha || inputs.tag || inputs.branch || 'main' }}
           fetch-depth: 0
 
       - name: Set up Python

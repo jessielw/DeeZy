@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 """
 Version management script for DeeZy releases.
-Updates version in pyproject.toml and creates git tags.
-This maintains pyproject.toml as the single source of truth for version info.
+Updates the project and CLI version together and creates git tags.
 """
 
 import argparse
 from pathlib import Path
 import re
 import subprocess
-import sys
 
-from deezy.cli import __version__
+CLI_INIT = Path("deezy/cli/__init__.py")
 
 
 def get_current_version():
@@ -21,23 +19,29 @@ def get_current_version():
         raise FileNotFoundError("pyproject.toml not found")
 
     content = pyproject_path.read_text(encoding="utf-8")
-    match = re.search(r'version = "([^"]+)"', content)
+    match = re.search(r'^version = "([^"\r\n]+)"', content, re.MULTILINE)
     if not match:
         raise ValueError("Version not found in pyproject.toml")
 
     return match.group(1)
 
 
+def find_cli_version(content: str) -> re.Match[str]:
+    match = re.search(r'^__version__ = "([^"\r\n]+)"', content, re.MULTILINE)
+    if match is None:
+        raise ValueError(f"Version not found in {CLI_INIT.as_posix()}")
+    return match
+
+
 def validate_version_consistency():
-    """Validate that the dynamic version loading works correctly."""
+    """Check that the CLI reports the version declared in pyproject.toml."""
     try:
-        # get version from pyproject.toml
         toml_version = get_current_version()
-        sys.path.insert(0, str(Path.cwd()))
-        if toml_version != __version__:
+        cli_version = find_cli_version(CLI_INIT.read_text(encoding="utf-8"))[1]
+        if toml_version != cli_version:
             print("⚠️  WARNING: Version mismatch!")
             print(f"   pyproject.toml: {toml_version}")
-            print(f"   cli/__init__.py:    {__version__}")
+            print(f"   {CLI_INIT.as_posix()}: {cli_version}")
             return False
         else:
             print(f"✅ Version consistency verified: {toml_version}")
@@ -49,8 +53,20 @@ def validate_version_consistency():
 
 
 def update_version(new_version):
-    """Update version in pyproject.toml."""
-    subprocess.run(("uv", "version", new_version))
+    """Set the version with uv and copy its normalized value into the CLI."""
+    with CLI_INIT.open(encoding="utf-8", newline="") as cli_file:
+        content = cli_file.read()
+    match = find_cli_version(content)
+
+    subprocess.run(("uv", "version", "--", new_version), check=True)
+    normalized_version = get_current_version()
+    if match[1] != normalized_version:
+        start, end = match.span(1)
+        CLI_INIT.write_text(
+            content[:start] + normalized_version + content[end:],
+            encoding="utf-8",
+            newline="",
+        )
 
 
 def create_git_tag(version, push=False):
@@ -107,16 +123,15 @@ def main():
             print(f"Error: {e}")
             return 1
 
-    if args.validate:
-        if not validate_version_consistency():
-            return 1
-
     if args.set:
         try:
             update_version(args.set)
         except Exception as e:
             print(f"Error updating version: {e}")
             return 1
+
+    if args.validate and not validate_version_consistency():
+        return 1
 
     if args.tag:
         try:
