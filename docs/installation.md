@@ -34,7 +34,8 @@ DEE 6.7 is a folder of command-line tools, one per job (`dee_ddp_encoder`,
 `dee_ac4ims_encoder`, `dee_ac4ajoc_encoder`, `dee_aac_encoder`,
 `dee_measure_loudness` and others). Keep the folder whole: the tools need the
 `mediainfo.dll` beside them. DeeZy refuses any other DEE version, including the
-single `dee` executable of DEE 5.2 that DeeZy 1.x used.
+single `dee` executable of DEE 5.2 that DeeZy 1.x used; see
+[Migrating from 1.x](migration.md).
 
 ## Where DeeZy finds the tools
 

@@ -6,6 +6,7 @@ nav:
   - Home: index.md
   - Getting Started:
       - Installation: installation.md
+      - Migrating from 1.x: migration.md
       - dee_shim: dee-shim.md
       - Configuration: configuration.md
       - Usage: usage.md

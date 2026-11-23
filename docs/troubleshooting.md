@@ -14,7 +14,8 @@ exits with 1 when an encode couldn't run.
   line or in the config is wrong.
 - "DeeZy needs the DEE 6.7 command-line tools, but '...' reports ...": the DEE
   DeeZy found is another version, such as the single `dee` of DEE 5.2. Point
-  `--dee` at the DEE 6.7 tools' folder.
+  `--dee` at the DEE 6.7 tools' folder, and see
+  [Migrating from 1.x](migration.md).
 - "License file does not exist" or "Provided license file does not enable this
   tool": the DEE tools found no license that covers them. See
   [DEE license](installation.md#dee-license).
