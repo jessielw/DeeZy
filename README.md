@@ -8,7 +8,7 @@ DeeZy is a compact CLI for encoding and batch-processing audio with the Dolby En
 
 ### Requirements
 
-DeeZy 2.0 needs FFmpeg and the **DEE 6.7** command-line tools. truehdd decodes TrueHD Atmos sources, and the optional dee_shim adds DD+ 7.1 and the 7.1 Atmos modes and speeds up DD+ Atmos and TrueHD encodes. The single `dee` of DEE 5.2, which DeeZy 1.x used, is no longer supported; see [Migrating from 1.x](docs/migration.md).
+DeeZy 2.0 needs FFmpeg and the **DEE 6.7** command-line tools. [truehdd](https://github.com/truehdd/truehdd) decodes TrueHD Atmos sources, and the optional [dee_shim](https://github.com/truehdd/dee-shim) adds DD+ 7.1 and the 7.1 Atmos modes and speeds up DD+ Atmos and TrueHD encodes. The single `dee` of DEE 5.2, which DeeZy 1.x used, is no longer supported; see [Migrating from 1.x](docs/migration.md).
 
 ### Documentation
 

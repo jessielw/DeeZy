@@ -1,8 +1,9 @@
 # dee_shim
 
-dee_shim is an optional tool that runs DEE's encoders with options they don't
-offer on their own. DeeZy works without it, but some encodes need it, and DeeZy
-runs others through it when it is there. DeeZy's executables don't include it.
+[dee_shim](https://github.com/truehdd/dee-shim) is an optional tool that runs DEE's encoders with options
+they don't offer on their own. DeeZy works without it, but some encodes need it,
+and DeeZy runs others through it when it is there. DeeZy's executables don't
+include it.
 
 ## What needs it
 
