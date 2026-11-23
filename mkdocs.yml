@@ -6,6 +6,7 @@ nav:
   - Home: index.md
   - Getting Started:
       - Installation: installation.md
+      - dee_shim: dee-shim.md
       - Configuration: configuration.md
       - Usage: usage.md
       - Examples & Workflows: examples.md
@@ -32,11 +33,16 @@ nav:
       - Config: cli/config.md
       - Temp: cli/temp.md
   - Formats:
-      - Dolby Digital (DD): formats/dd.md
-      - Dolby Digital Plus (DDP): formats/ddp.md
-      - DDP BluRay: formats/ddp-bluray.md
-      - Dolby Atmos: formats/atmos.md
-      - Dolby AC-4: formats/ac4.md
+      - Dolby Digital (dd): formats/dd.md
+      - Dolby Digital Plus (ddp): formats/ddp.md
+      - DD+ Blu-ray (ddp-bluray): formats/ddp-bluray.md
+      - DD+ Atmos (ddp-atmos): formats/ddp-atmos.md
+      - AC-4 (ac4): formats/ac4.md
+      - AC-4 immersive stereo (ac4-ims): formats/ac4-ims.md
+      - AC-4 Atmos (ac4-atmos): formats/ac4-atmos.md
+      - AAC (aac): formats/aac.md
+      - TrueHD (thd): formats/thd.md
+      - TrueHD Atmos (thd-atmos): formats/thd-atmos.md
   - Advanced:
       - Delay: delay.md
       - Track Selection: track-selection.md
