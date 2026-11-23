@@ -336,8 +336,7 @@ def handle_preset_injection() -> None:
             name_idx = sys.argv.index("--name")
             if name_idx + 1 < len(sys.argv):
                 preset_name = sys.argv[name_idx + 1]
-                config_manager = get_config_manager()
-                config_manager.load_config(sniff_config_arg())
+                config_manager = get_config_manager(sniff_config_arg())
                 config_manager.inject_preset_args(preset_name)
         except (ValueError, IndexError):
             pass
@@ -352,12 +351,9 @@ def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
     """Load configuration manager."""
     config_manager = None
     if args.sub_command != "config":
-        config_manager = get_config_manager()
-        # a user-supplied --config wins over whatever was auto-discovered
-        # (or loaded earlier during preset injection)
-        user_config = getattr(args, "config", None)
-        if user_config:
-            config_manager.load_config(user_config)
+        # a user-supplied --config replaces auto-discovery (preset injection
+        # may have loaded it already)
+        config_manager = get_config_manager(getattr(args, "config", None) or None)
     return config_manager
 
 

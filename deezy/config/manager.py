@@ -279,11 +279,18 @@ class ConfigManager:
             }
 
     @classmethod
-    def get_instance(cls) -> "ConfigManager":
-        """Get the singleton instance and ensure it's loaded."""
+    def get_instance(cls, config_path: str | Path | None = None) -> "ConfigManager":
+        """Get the singleton instance and ensure it's loaded.
+
+        With `config_path` (the user's `--config`), that file is loaded instead
+        of the auto-discovered one, which is never read, so a config the run
+        doesn't use logs no warnings. A file already loaded isn't read again.
+        """
         instance = cls()
-        # load config if not already loaded
-        if not instance.config and not instance.config_path:
+        if config_path is not None:
+            if instance.config_path != Path(config_path).expanduser():
+                instance.load_config(config_path)
+        elif not instance.config and not instance.config_path:
             instance.load_config()
         return instance
 
@@ -294,6 +301,6 @@ class ConfigManager:
         cls._initialized = False
 
 
-def get_config_manager() -> ConfigManager:
-    """Get the singleton config manager instance."""
-    return ConfigManager.get_instance()
+def get_config_manager(config_path: str | Path | None = None) -> ConfigManager:
+    """Get the singleton config manager instance (see `get_instance`)."""
+    return ConfigManager.get_instance(config_path)

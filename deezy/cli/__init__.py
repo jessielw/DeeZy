@@ -1972,9 +1972,7 @@ def execute_config_command(
     """Execute config command."""
     # config commands need their own manager instance
     if config_manager is None:
-        config_manager = get_config_manager()
-        if args.config:
-            config_manager.load_config(args.config)
+        config_manager = get_config_manager(args.config or None)
 
     if args.config_command == "generate":
         try:
