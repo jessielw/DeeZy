@@ -29,7 +29,13 @@ from deezy.cli.payload_factory import PayloadBuilder
 from deezy.cli.utils import apply_config_defaults_to_args, apply_default_bitrate
 from deezy.config.defaults import CONF_DEFAULT
 from deezy.config.manager import ConfigManager
-from deezy.dee.shim import DeeShim, is_shim_command, resolve_shim
+from deezy.dee.shim import (
+    MIN_SHIM_VERSION,
+    DeeShim,
+    is_shim_command,
+    parse_version,
+    resolve_shim,
+)
 from deezy.enums.shared import TrackType
 from deezy.exceptions import UnsupportedDeeFeatureError
 from deezy.pipeline import run
@@ -79,7 +85,7 @@ def shim_run(argv, *shim_args, shim: DeeShim):
 
 
 def test_deezy_reads_the_shims_version(dee_shim):
-    assert dee_shim.version.startswith("0.2.1")
+    assert (parse_version(dee_shim.version) or (0, 0, 0)) >= MIN_SHIM_VERSION
 
 
 def test_a_run_through_the_shim(shim, work, wav, dee_shim):

@@ -21,7 +21,7 @@ exits with 1 when an encode couldn't run.
 - "License file does not exist" or "Provided license file does not enable this
   tool": the DEE tools found no license that covers them. See
   [DEE license](installation.md#dee-license).
-- "... needs dee_shim (0.2.1 or newer)": the encode needs
+- "... needs dee_shim (0.3.0 or newer)": the encode needs
   [dee_shim](dee-shim.md) (DD+ 7.1, `ddp-atmos --atmos-mode standard` or
   `bluray`, TrueHD `--drc none`). Give its path with `--dee-shim`, or choose a
   layout or mode DEE encodes alone.

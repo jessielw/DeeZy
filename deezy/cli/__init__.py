@@ -30,6 +30,7 @@ from deezy.cli.utils import (
 from deezy.config.defaults import get_default_config_path
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.dee.commands import THD_ATMOS_ELEMENT_CHOICES, THD_ATMOS_ELEMENTS
+from deezy.dee.shim import MIN_SHIM_TEXT
 from deezy.dee.spec import formats
 from deezy.enums import case_insensitive_enum, enum_choices
 from deezy.enums.aac import AacProfile
@@ -134,8 +135,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     encode_group.add_argument(
         "--dee-shim",
         type=str,
-        help="Path to dee_shim (0.2.1 or newer). DeeZy needs it for DD+ 7.1 and "
-        "7.0, ddp-atmos --atmos-mode standard and bluray, and TrueHD --drc none. "
+        help=f"Path to dee_shim ({MIN_SHIM_TEXT} or newer). DeeZy needs it for "
+        "DD+ 7.1 and 7.0, ddp-atmos --atmos-mode standard and bluray, and TrueHD "
+        "--drc none. "
         "It also runs every ddp-atmos, thd and thd-atmos encode through it, which "
         "is faster on AMD CPUs and keeps more of the source as it is (see "
         "--no-oamd-as-is and --no-as-is). Found beside the DEE tools, in "

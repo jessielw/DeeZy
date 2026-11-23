@@ -1190,7 +1190,7 @@ def planned(parser, config, args, probed, source, pipe_name=None) -> dict:
         apply_config_defaults_to_args(ns, config)
         payload = BUILDERS[ns.format_command](ns, source, FFMPEG, TRUEHDD, DEE)
         if ns.dee_shim and not ns.no_shim:
-            payload.dee_shim = DeeShim(Path(ns.dee_shim), "0.2.1+test")
+            payload.dee_shim = DeeShim(Path(ns.dee_shim), "0.3.0+test")
         planner = plan_job
     track = AudioTrackInfo(mi_track=cast("Track", None), **probed)
     ctx = PlanContext(

@@ -9,7 +9,7 @@ Nothing here touches the disk.
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from deezy.dee.shim import DeeShim
+from deezy.dee.shim import MIN_SHIM_TEXT, DeeShim
 from deezy.dee.tools import dee_tool
 from deezy.delay import Delay
 from deezy.enums.ac4 import Ac4EncodingProfile
@@ -40,6 +40,8 @@ AC4_TOOL = "dee_ac4_encoder"
 AC4_ATMOS_TOOL = "dee_ac4ajoc_encoder"
 AAC_TOOL = "dee_aac_encoder"
 MEASURE_TOOL = "dee_measure_loudness"
+# how a refusal names the dee_shim DeeZy needs
+NEEDS_SHIM = f"dee_shim ({MIN_SHIM_TEXT} or newer)"
 THD_TOOL = "dee_dthd_encoder"
 # dee_shim's DD+ 7.1: an E-AC-3 5.1 independent substream plus a dependent one
 # for the backs
@@ -180,7 +182,7 @@ def ddp_command(
     if is_bluray and not lfe:
         if tools.shim is None:
             raise UnsupportedDeeFeatureError(
-                "Dolby Digital Plus Blu-ray 7.0 needs dee_shim (0.2.1 or newer); "
+                f"Dolby Digital Plus Blu-ray 7.0 needs {NEEDS_SHIM}; "
                 "DEE alone codes 7.1 only."
             )
         # the layout keeps -e bluray and its options
@@ -255,15 +257,15 @@ def check_atmos_options(payload: AtmosPayload, *, shim: bool) -> None:
         # DEE alone would hand back a 5.1.2 backbone for a 7.1 request
         raise UnsupportedDeeFeatureError(
             f"DD+ Atmos '--atmos-mode {payload.atmos_mode.value}' codes a 7.1 "
-            "backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find "
+            f"backbone, which needs {NEEDS_SHIM}; DeeZy didn't find "
             "it or was told not to use it (--no-shim). DEE's own Blu-ray mode "
             "gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or "
             "use '--atmos-mode streaming'."
         )
     if not payload.surround_90_degree_phase_shift:
         raise UnsupportedDeeFeatureError(
-            "--no-surround-90-deg-phase-shift for DD+ Atmos needs dee_shim (0.2.1 "
-            "or newer); DeeZy didn't find it or was told not to use it "
+            f"--no-surround-90-deg-phase-shift for DD+ Atmos needs {NEEDS_SHIM}; "
+            "DeeZy didn't find it or was told not to use it "
             "(--no-shim), and DEE's DD+ Atmos encoder always shifts the "
             "surrounds. Give the shim's path with --dee-shim, or drop the option."
         )
@@ -509,7 +511,7 @@ def check_thd_options(
     """
     if payload.drc is DeeDRC.NONE and not shim:
         raise UnsupportedDeeFeatureError(
-            "TrueHD DRC 'none' needs dee_shim (0.2.1 or newer); DeeZy didn't "
+            f"TrueHD DRC 'none' needs {NEEDS_SHIM}; DeeZy didn't "
             "find it or was told not to use it (--no-shim), and the TrueHD "
             "encoder has no 'none' profile of its own. Give the shim's path with "
             "--dee-shim, or use film_light, film_standard, music_light, "
@@ -788,7 +790,7 @@ def check_dd_options(
         # DEE alone takes 7.1 only in its Blu-ray mode; the plain DD+ one would
         # quietly hand back a 5.1 stream for a 7.1 request
         raise UnsupportedDeeFeatureError(
-            "Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim (0.2.1 or newer), "
+            f"Dolby Digital Plus 7.1 as E-AC-3 needs {NEEDS_SHIM}, "
             "which DeeZy didn't find or was told not to use (--no-shim). Give its "
             "path with --dee-shim, or use 'ddp-bluray' for 7.1 or '--channels 6' "
             "for 5.1."

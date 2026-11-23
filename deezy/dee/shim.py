@@ -21,7 +21,8 @@ from deezy.exceptions import DependencyNotFoundError
 from deezy.utils.logger import logger
 
 SHIM_NAME = "dee_shim"
-MIN_SHIM_VERSION = (0, 2, 1)
+MIN_SHIM_VERSION = (0, 3, 0)
+MIN_SHIM_TEXT = ".".join(str(part) for part in MIN_SHIM_VERSION)
 # dee_shim's subcommand for each DEE tool it runs
 SHIM_SUBCOMMANDS = {
     "dee_ddp_encoder": "ddp_encoder",
@@ -38,7 +39,7 @@ SHIM_BUILD_MISMATCH = 3
 # output or its log behind DeeZy's back
 _SHIM_ENV_PREFIXES = ("DSHIM_", "DEE_SHIM_")
 _SHIM_ENV_NAMES = ("RUST_LOG",)
-# `v0.2.1+gc1141a0` as -V prints it, or `0.2.1+gc1141a0` as DeeZy keeps it
+# `v0.3.0+g2ae7f95` as -V prints it, or `0.3.0+g2ae7f95` as DeeZy keeps it
 _VERSION = re.compile(r"(?<![\w.])v?(\d+)\.(\d+)\.(\d+)(\S*)")
 # dee_shim's own error lines: its option parser's and its runner's
 _ERROR_PREFIXES = ("error: ", "dee_shim ERROR: ")
@@ -48,7 +49,7 @@ _NO_PROFILE = "no optional shim profile"
 @dataclass(frozen=True, slots=True)
 class DeeShim:
     path: Path
-    # as `dee_shim -V` reports it, e.g. `0.2.1+gc1141a0`
+    # as `dee_shim -V` reports it, e.g. `0.3.0+g2ae7f95`
     version: str
 
     def argv(self, dee_argv: Sequence[str], *shim_args: str) -> tuple[str, ...]:
@@ -93,7 +94,7 @@ def clean_env(environ: Mapping[str, str] | None = None) -> dict[str, str]:
 
 
 def shim_version(path: Path) -> str | None:
-    """The version `dee_shim -V` reports, e.g. `0.2.1+gc1141a0`."""
+    """The version `dee_shim -V` reports, e.g. `0.3.0+g2ae7f95`."""
     try:
         proc = subprocess.run(  # noqa: S603
             [str(path), "-V"],
@@ -143,7 +144,7 @@ def resolve_shim(
     """
     The dee_shim DeeZy may run, or None.
 
-    A path the user gives must exist and report 0.2.1 or newer. One DeeZy
+    A path the user gives must exist and report 0.3.0 or newer. One DeeZy
     finds by itself that reports an older version is skipped with a warning,
     since the shim is optional.
     """
@@ -158,7 +159,7 @@ def resolve_shim(
     version = shim_version(path)
     parsed = parse_version(version or "")
     if parsed is None or parsed < MIN_SHIM_VERSION:
-        needed = ".".join(str(part) for part in MIN_SHIM_VERSION)
+        needed = MIN_SHIM_TEXT
         reported = version or "no version"
         if explicit:
             raise DependencyNotFoundError(

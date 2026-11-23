@@ -2873,7 +2873,7 @@
   ]
  },
  "ddp_8": {
-  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim (0.2.1 or newer), which DeeZy didn't find or was told not to use (--no-shim). Give its path with --dee-shim, or use 'ddp-bluray' for 7.1 or '--channels 6' for 5.1."
+  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim (0.3.0 or newer), which DeeZy didn't find or was told not to use (--no-shim). Give its path with --dee-shim, or use 'ddp-bluray' for 7.1 or '--channels 6' for 5.1."
  },
  "ddp_6_from8": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
@@ -4839,13 +4839,13 @@
   ]
  },
  "atmos_bluray": {
-  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode bluray' codes a 7.1 backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode bluray' codes a 7.1 backbone, which needs dee_shim (0.3.0 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
  },
  "atmos_standard": {
-  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode standard' codes a 7.1 backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode standard' codes a 7.1 backbone, which needs dee_shim (0.3.0 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
  },
  "atmos_p90_off": {
-  "error": "UnsupportedDeeFeatureError: --no-surround-90-deg-phase-shift for DD+ Atmos needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and DEE's DD+ Atmos encoder always shifts the surrounds. Give the shim's path with --dee-shim, or drop the option."
+  "error": "UnsupportedDeeFeatureError: --no-surround-90-deg-phase-shift for DD+ Atmos needs dee_shim (0.3.0 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and DEE's DD+ Atmos encoder always shifts the surrounds. Give the shim's path with --dee-shim, or drop the option."
  },
  "atmos_no_oamd": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
@@ -9441,7 +9441,7 @@
   ]
  },
  "thd_drc_none": {
-  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
+  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.3.0 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
  },
  "thd_96k_no_as_is": {
   "output": "/out/in [7.1] s0 r0 wNone.thd",
@@ -10587,7 +10587,7 @@
   ]
  },
  "thd_atmos_drc_none": {
-  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
+  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.3.0 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
  },
  "thd_atmos_no_as_is": {
   "output": "/out/in [7.1] s0 r0 wNone.thd",
@@ -12375,7 +12375,7 @@
   ]
  },
  "atmos_damf_bluray": {
-  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode bluray' codes a 7.1 backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode bluray' codes a 7.1 backbone, which needs dee_shim (0.3.0 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
  },
  "ac4_damf": {
   "output": "/out/in [2.0] s0 r0 wNone.ac4",
@@ -14809,7 +14809,7 @@
   ]
  },
  "shim_atmos_standard_off": {
-  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode standard' codes a 7.1 backbone, which needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
+  "error": "UnsupportedDeeFeatureError: DD+ Atmos '--atmos-mode standard' codes a 7.1 backbone, which needs dee_shim (0.3.0 or newer); DeeZy didn't find it or was told not to use it (--no-shim). DEE's own Blu-ray mode gives a 5.1.2 backbone. Give the shim's path with --dee-shim, or use '--atmos-mode streaming'."
  },
  "shim_atmos_p90_off": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
@@ -15380,7 +15380,7 @@
   ]
  },
  "shim_thd_drc_none_off": {
-  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.2.1 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
+  "error": "UnsupportedDeeFeatureError: TrueHD DRC 'none' needs dee_shim (0.3.0 or newer); DeeZy didn't find it or was told not to use it (--no-shim), and the TrueHD encoder has no 'none' profile of its own. Give the shim's path with --dee-shim, or use film_light, film_standard, music_light, music_standard or speech."
  },
  "shim_thd_192k": {
   "output": "/out/in [2.0] s0 r0 wNone.thd",
@@ -16802,7 +16802,7 @@
   ]
  },
  "shim_ddp_71_off": {
-  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim (0.2.1 or newer), which DeeZy didn't find or was told not to use (--no-shim). Give its path with --dee-shim, or use 'ddp-bluray' for 7.1 or '--channels 6' for 5.1."
+  "error": "UnsupportedDeeFeatureError: Dolby Digital Plus 7.1 as E-AC-3 needs dee_shim (0.3.0 or newer), which DeeZy didn't find or was told not to use (--no-shim). Give its path with --dee-shim, or use 'ddp-bluray' for 7.1 or '--channels 6' for 5.1."
  },
  "shim_ddp_auto_8_off": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",

@@ -197,7 +197,7 @@ class TestSplitDD:
             self.build(tmp_path, split_dir, files, dd_mode=DDEncodingMode.DDP71)
 
     def test_online_7_1_runs_through_the_shim(self, tmp_path, split_dir, files):
-        shim = DeeShim(Path("dee_shim"), "0.2.1")
+        shim = DeeShim(Path("dee_shim"), "0.3.0")
         cmd = self.build(
             tmp_path, split_dir, files, shim=shim, dd_mode=DDEncodingMode.DDP71
         )
@@ -222,7 +222,7 @@ class TestSplitDD:
     def test_other_modes_run_dee_alone_with_the_shim(
         self, tmp_path, split_dir, files, dd_mode
     ):
-        shim = DeeShim(Path("dee_shim"), "0.2.1")
+        shim = DeeShim(Path("dee_shim"), "0.3.0")
         cmd = self.build(tmp_path, split_dir, files, shim=shim, dd_mode=dd_mode)
         assert cmd[0] == str(split_dir / f"dee_ddp_encoder{EXE}")
         assert "--" not in cmd
@@ -523,7 +523,7 @@ class TestSplitAtmos:
         ],
     )
     def test_shim_options_by_mode(self, tmp_path, split_dir, files, mode, layout):
-        shim = DeeShim(Path("dee_shim"), "0.2.1")
+        shim = DeeShim(Path("dee_shim"), "0.3.0")
         cmd = self.build(tmp_path, split_dir, files, shim=shim, atmos_mode=mode)
         tool = str(split_dir / f"dee_ddpjoc_encoder{EXE}")
         # the object metadata is coded as the master has it by default
@@ -537,7 +537,7 @@ class TestSplitAtmos:
         assert option(native, "--data-rate") == "448"
 
     def test_shim_phase_shift_off_and_oamd_smoothed(self, tmp_path, split_dir, files):
-        shim = DeeShim(Path("dee_shim"), "0.2.1")
+        shim = DeeShim(Path("dee_shim"), "0.3.0")
         cmd = self.build(
             tmp_path,
             split_dir,

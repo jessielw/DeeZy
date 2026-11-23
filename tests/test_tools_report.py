@@ -14,7 +14,7 @@ VERSIONS = {
     "ffmpeg": "7.1",
     "truehdd": "0.6.3",
     "dee": "6.7.0+8e353f99",
-    "dee_shim": "0.2.1+gc1141a0",
+    "dee_shim": "0.3.0+g2ae7f95",
 }
 
 
@@ -59,7 +59,7 @@ def test_every_tool_is_listed_with_its_version_and_path(base):
     assert lines[1] == f"          {base / 'apps' / 'ffmpeg' / f'ffmpeg{EXE}'}"
     assert "DEE       6.7.0+8e353f99" in lines
     assert "          license: license.lic beside the tools" in lines
-    assert "dee_shim  0.2.1+gc1141a0" in lines
+    assert "dee_shim  0.3.0+g2ae7f95" in lines
 
 
 def test_a_dee_deezy_cant_use_is_said_and_fails(base, versions):
@@ -94,9 +94,9 @@ def test_only_ffmpeg_and_dee_are_needed(base):
 
 
 def test_an_old_dee_shim_is_skipped_unless_it_was_given(base, versions):
-    versions["dee_shim"] = "0.1.0"
+    versions["dee_shim"] = "0.2.1"
     found = by_name(tool_rows(base))["dee_shim"]
-    assert found.note == "DeeZy needs 0.2.1 or newer, so it isn't used"
+    assert found.note == "DeeZy needs 0.3.0 or newer, so it isn't used"
     assert found.ok
     given = str(base / "apps" / "dee_shim" / f"dee_shim{EXE}")
     assert not by_name(tool_rows(base, dee_shim=given))["dee_shim"].ok

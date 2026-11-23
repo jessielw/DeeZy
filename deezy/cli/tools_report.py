@@ -7,6 +7,7 @@ import re
 import subprocess
 
 from deezy.dee.shim import (
+    MIN_SHIM_TEXT,
     MIN_SHIM_VERSION,
     SHIM_NAME,
     find_shim,
@@ -144,7 +145,7 @@ def _shim_row(
     version = shim_version(path)
     parsed = parse_version(version or "")
     if parsed is None or parsed < MIN_SHIM_VERSION:
-        needed = ".".join(str(part) for part in MIN_SHIM_VERSION)
+        needed = MIN_SHIM_TEXT
         return ToolRow(
             SHIM_NAME,
             path,

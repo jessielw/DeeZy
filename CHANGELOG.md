@@ -29,7 +29,7 @@ DeeZy 2.0 runs only the DEE 6.7 command-line tools. Commands, presets and config
 
 - Formats: `thd`; `thd-atmos` (`--atmos-elements 12|14|16`, default 16; `--legacy-authoring`); channel-based `ac4`; `ac4-atmos` (level 3); `aac` (AAC-LC, HE-AAC, HE-AAC v2).
 - Atmos masters (DAMF and ADM BWF) as sources for `ddp-atmos`, `thd-atmos`, `ac4-atmos` and `ac4-ims`, and for `dd` and `ddp`, which DEE renders.
-- Optional dee_shim (0.2.1 or newer) support: DD+ 7.1 and 7.0 (`ddp --channels 8`, 384 to 1792 kbps), `ddp-atmos --atmos-mode standard` (7.1 as E-AC-3, 448 to 2048 kbps, default 1152) and `bluray`, TrueHD `--drc none`, and `ddp-atmos --no-surround-90-deg-phase-shift`. `--dee-shim` gives its path; `--no-shim` or `no_shim` turns it off.
+- Optional dee_shim (0.3.0 or newer) support: DD+ 7.1 and 7.0 (`ddp --channels 8`, 384 to 1792 kbps), `ddp-atmos --atmos-mode standard` (7.1 as E-AC-3, 448 to 2048 kbps, default 1152) and `bluray`, TrueHD `--drc none`, and `ddp-atmos --no-surround-90-deg-phase-shift`. `--dee-shim` gives its path; `--no-shim` or `no_shim` turns it off.
 - Commands: `deezy measure` (DEE's loudness measurement, with the manifest saved by `--output` or `--output-dir`), `deezy bitrates` (each format's rates and defaults) and `deezy tools` (the tools DeeZy finds, with versions and paths).
 - Options: `--dry-run`, `--print-commands`, `--keep-logs` (`keep_logs`), `--disable-lfe`, `--pipe` and `--surround-3db`.
 - `--delay` takes frames at a frame rate, as in `--delay=-3@23.976`.

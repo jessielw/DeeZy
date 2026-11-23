@@ -52,7 +52,7 @@ options:
   --track-index, TRACK_INDEX
        The source track. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).
   --dee-shim, DEE_SHIM
-       Path to dee_shim (0.2.1 or newer). DeeZy needs it for DD+ 7.1 and 7.0, ddp-atmos --atmos-mode standard and bluray, and TrueHD --drc none. It also runs every ddp-atmos, thd and thd-atmos encode through it, which is faster on AMD CPUs and keeps more of the source as it is (see --no-oamd-as-is and --no-as-is). Found beside the DEE tools, in apps/dee_shim or on PATH when not given.
+       Path to dee_shim (0.3.0 or newer). DeeZy needs it for DD+ 7.1 and 7.0, ddp-atmos --atmos-mode standard and bluray, and TrueHD --drc none. It also runs every ddp-atmos, thd and thd-atmos encode through it, which is faster on AMD CPUs and keeps more of the source as it is (see --no-oamd-as-is and --no-as-is). Found beside the DEE tools, in apps/dee_shim or on PATH when not given.
   --no-shim
        Don't use dee_shim, even when it is found.
   --delay, DELAY

@@ -32,7 +32,7 @@ The other formats don't use dee_shim.
 
 ## How DeeZy finds it
 
-DeeZy needs dee_shim 0.2.1 or newer. It takes, in order:
+DeeZy needs dee_shim 0.3.0 or newer. It takes, in order:
 
 1. `--dee-shim PATH`;
 2. `dee_shim` in the config's `[dependencies]`;

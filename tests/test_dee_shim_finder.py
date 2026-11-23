@@ -86,32 +86,32 @@ def test_found_in_apps_then_on_path(tmp_path, monkeypatch):
 
 
 def test_not_found(tmp_path, no_path, monkeypatch):
-    reports(monkeypatch, "0.2.1")
+    reports(monkeypatch, "0.3.0")
     assert resolve_shim(tmp_path, tmp_path) is None
 
 
 def test_a_found_shim_is_used(tmp_path, no_path, monkeypatch):
     path = touch(tmp_path / f"dee_shim{EXE}")
-    reports(monkeypatch, "0.2.1+gc1141a0")
-    assert resolve_shim(tmp_path / "base", tmp_path) == DeeShim(path, "0.2.1+gc1141a0")
+    reports(monkeypatch, "0.3.0+g2ae7f95")
+    assert resolve_shim(tmp_path / "base", tmp_path) == DeeShim(path, "0.3.0+g2ae7f95")
 
 
 def test_a_given_path_wins(tmp_path, no_path, monkeypatch):
     touch(tmp_path / f"dee_shim{EXE}")
     given = touch(tmp_path / "other" / "shim.exe")
-    asked = reports(monkeypatch, "0.3.0")
+    asked = reports(monkeypatch, "0.3.1")
     found = resolve_shim(tmp_path / "base", tmp_path, str(given))
-    assert found == DeeShim(given, "0.3.0")
+    assert found == DeeShim(given, "0.3.1")
     assert asked == [given]
 
 
 def test_a_missing_given_path_is_an_error(tmp_path, no_path, monkeypatch):
-    reports(monkeypatch, "0.2.1")
+    reports(monkeypatch, "0.3.0")
     with pytest.raises(DependencyNotFoundError, match=r"dee_shim \('nope.exe'\)"):
         resolve_shim(tmp_path, tmp_path, "nope.exe")
 
 
-@pytest.mark.parametrize("version", ["0.2.0+g1", "0.1.0", None])
+@pytest.mark.parametrize("version", ["0.2.1+gc1141a0", "0.2.0", None])
 def test_an_old_found_shim_is_skipped(tmp_path, no_path, monkeypatch, version):
     touch(tmp_path / f"dee_shim{EXE}")
     reports(monkeypatch, version)
@@ -120,26 +120,26 @@ def test_an_old_found_shim_is_skipped(tmp_path, no_path, monkeypatch, version):
         m.setattr(shim.logger, "warning", warnings.append)
         assert resolve_shim(tmp_path / "base", tmp_path) is None
     assert len(warnings) == 1
-    assert "needs 0.2.1 or newer" in warnings[0]
+    assert "needs 0.3.0 or newer" in warnings[0]
 
 
 def test_an_old_given_shim_is_an_error(tmp_path, no_path, monkeypatch):
     given = touch(tmp_path / f"dee_shim{EXE}")
-    reports(monkeypatch, "0.2.0")
-    with pytest.raises(DependencyNotFoundError, match="needs dee_shim 0.2.1 or newer"):
+    reports(monkeypatch, "0.2.1")
+    with pytest.raises(DependencyNotFoundError, match="needs dee_shim 0.3.0 or newer"):
         resolve_shim(tmp_path, tmp_path, str(given))
 
 
 def test_turned_off_is_never_run(tmp_path, no_path, monkeypatch):
     touch(tmp_path / f"dee_shim{EXE}")
-    asked = reports(monkeypatch, "0.2.1")
+    asked = reports(monkeypatch, "0.3.0")
     assert resolve_shim(tmp_path, tmp_path, "nope.exe", disabled=True) is None
     assert asked == []
 
 
 def test_argv_puts_the_shim_options_before_deees():
     tool = str(Path("dee") / f"dee_ddpjoc_encoder{EXE}")
-    argv = DeeShim(Path("dee_shim"), "0.2.1").argv(
+    argv = DeeShim(Path("dee_shim"), "0.3.0").argv(
         (tool, "--progress", "-i", "in.atmos"), "--layout", "7.1"
     )
     assert argv == (
@@ -239,7 +239,7 @@ def test_no_shim_from_the_cli_or_the_config(monkeypatch, parser):
 
 def test_shim_binary():
     tool = str(Path("dee") / f"dee_dthd_encoder{EXE}")
-    argv = DeeShim(Path("dee_shim"), "0.2.1").argv((tool, "--binary", "x"))
+    argv = DeeShim(Path("dee_shim"), "0.3.0").argv((tool, "--binary", "x"))
     assert shim.shim_binary(argv) == Path(tool)
     assert shim.shim_binary((tool, "--progress", "1")) is None
 
@@ -250,7 +250,7 @@ def test_a_missing_dee_tool_is_named_before_the_shim_runs(tmp_path):
 
     dee_shim = touch(tmp_path / f"dee_shim{EXE}")
     tool = str(tmp_path / "dee" / f"dee_dthd_encoder{EXE}")
-    argv = DeeShim(dee_shim, "0.2.1").argv((tool, "--loglevel", "info"))
+    argv = DeeShim(dee_shim, "0.3.0").argv((tool, "--loglevel", "info"))
     step = DeeStep(argv, tmp_path / "out.thd")
     with pytest.raises(DependencyNotFoundError, match="dee_dthd_encoder.* is not in"):
         run_dee(step, no_progress_bars=True)
