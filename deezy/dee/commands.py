@@ -42,6 +42,8 @@ AAC_TOOL = "dee_aac_encoder"
 MEASURE_TOOL = "dee_measure_loudness"
 # how a refusal names the dee_shim DeeZy needs
 NEEDS_SHIM = f"dee_shim ({MIN_SHIM_TEXT} or newer)"
+# dee_shim opens the 7.1 of DEE's meter, which its CLI refuses
+MEASURE_71_SHIM_ARGS = ("--layout", "7.1")
 THD_TOOL = "dee_dthd_encoder"
 # dee_shim's DD+ 7.1: an E-AC-3 5.1 independent substream plus a dependent one
 # for the backs
@@ -474,14 +476,28 @@ def aac_command(
 
 
 def measure_command(
-    tools: DeeTools, payload: MeasurePayload, files: DeeFiles, *, input_format: str
+    tools: DeeTools,
+    payload: MeasurePayload,
+    files: DeeFiles,
+    *,
+    input_format: str,
+    layout_71: bool = False,
 ) -> list[str]:
     """
     A loudness measurement with dee_measure_loudness. ``files.output`` is the
     loudness manifest it writes. The tool has no --temp-dir, and the measured
     audio it could also write isn't needed.
+
+    DEE's CLI takes 1.0, 2.0 and 5.1. With ``layout_71`` the input is 7.1 in
+    DEE's order, measured through dee_shim, which opens the meter's 7.1.
     """
-    return [
+    if layout_71 and tools.shim is None:
+        raise UnsupportedDeeFeatureError(
+            f"Measuring 7.1 needs {NEEDS_SHIM}: DEE's meter has 7.1, but its "
+            "CLI takes 1.0, 2.0 and 5.1 only. DeeZy didn't find dee_shim or "
+            "was told not to use it (--no-shim); give its path with --dee-shim."
+        )
+    argv = [
         str(dee_tool(tools.dee_dir, MEASURE_TOOL)),
         # replaced with the active log level when the job is run
         "--loglevel",
@@ -500,6 +516,9 @@ def measure_command(
         "--loudness-management",
         loudness(payload),
     ]
+    if layout_71 and tools.shim:
+        return list(tools.shim.argv(argv, *MEASURE_71_SHIM_ARGS))
+    return argv
 
 
 def check_thd_options(

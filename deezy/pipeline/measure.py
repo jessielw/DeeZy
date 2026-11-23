@@ -8,7 +8,12 @@ from deezy.pipeline.show import command_lines
 from deezy.utils.logger import logger
 
 # DEE's names for what it measured
-LAYOUTS = {"mono": "1.0", "stereo": "2.0", "multichannel_5_1": "5.1"}
+LAYOUTS = {
+    "mono": "1.0",
+    "stereo": "2.0",
+    "multichannel_5_1": "5.1",
+    "multichannel_7_1": "7.1",
+}
 RENDERS = {"binaural": "Atmos, binaural render", "multichannel": "Atmos, 5.1 render"}
 
 

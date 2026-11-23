@@ -572,8 +572,11 @@ def handle_dependencies(
 def _dee_shim(
     args: argparse.Namespace, config_manager: ConfigManager | None, dee_dir: Path
 ) -> DeeShim | None:
-    """dee_shim for an encode (CLI > config > found), unless it is turned off."""
-    if args.sub_command != "encode":
+    """
+    dee_shim for an encode or a measurement (CLI > config > found), unless it
+    is turned off.
+    """
+    if args.sub_command not in ("encode", "measure"):
         return None
     config = config_manager.config if config_manager else {}
     disabled = bool(getattr(args, "no_shim", False)) or bool(

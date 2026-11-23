@@ -1561,15 +1561,19 @@ def thd_sample_rate(source_rate: int | None) -> int:
     return 96000 if source_rate and source_rate > 48000 else 48000
 
 
+def _dee_71_mix(source_channels: int) -> str:
+    """The filter that gives DEE 7.1 from 7 or 8 channels, sides before backs."""
+    if source_channels == 8:
+        return _PAN_7_1
+    return f"{_PAD_TO_71},{_PAN_7_1}"
+
+
 def _thd_mix(
     source_channels: int, channels: TrueHDChannels
 ) -> tuple[str | None, int | None]:
     """The ``-af`` channel filter and the ``-ac`` count that give DEE ``channels``."""
     if channels is TrueHDChannels.SURROUNDEX:
-        # DEE's 7.1 has the sides before the backs
-        if source_channels == 8:
-            return _PAN_7_1, None
-        return f"{_PAD_TO_71},{_PAN_7_1}", None
+        return _dee_71_mix(source_channels), None
     if source_channels == channels.value:
         return None, None
     if source_channels < channels.value:
@@ -1750,8 +1754,10 @@ def _plan_thd_atmos(
 
 # --- loudness measurement
 
-# the layouts dee_measure_loudness reads; FFmpeg pads 3 to 5 channels to 5.1
+# the layouts dee_measure_loudness reads, and 7.1 through dee_shim. FFmpeg
+# pads 3 to 5 channels to 5.1 and 7 to 7.1
 MEASURE_INPUT_CHANNELS = (1, 2, 6)
+MEASURE_71 = 8
 MEASURE = "measure"
 
 
@@ -1800,19 +1806,28 @@ def plan_measure(
         steps = (truehdd, dee) if truehdd else (dee,)
     else:
         channels = info.channels
-        if channels > max(MEASURE_INPUT_CHANNELS):
+        if channels > MEASURE_71:
             raise UnsupportedDeeFeatureError(
-                f"DEE measures 1.0, 2.0 and 5.1 (and Atmos), not {channels} "
-                "channels. A downmix to 5.1 would change the loudness, so DeeZy "
-                "doesn't measure one."
+                f"DEE measures 1.0, 2.0, 5.1 and, through dee_shim, 7.1 (and "
+                f"Atmos), not {channels} channels. A downmix would change the "
+                "loudness, so DeeZy doesn't measure one."
             )
-        dee_channels = channels if channels in MEASURE_INPUT_CHANNELS else 6
+        layout_71 = channels > max(MEASURE_INPUT_CHANNELS)
+        if layout_71:
+            dee_channels = MEASURE_71
+        else:
+            dee_channels = channels if channels in MEASURE_INPUT_CHANNELS else 6
         transport = choose_transport(
             payload, ctx, ctx.temp_dir / "measure.wav", dee_channels, info.duration
         )
         resample = not info.sample_rate or info.sample_rate != DEE_SAMPLE_RATE
-        filters = _filter_args(None, resample)
-        if dee_channels != channels:
+        filters = _filter_args(_dee_71_mix(channels) if layout_71 else None, resample)
+        if layout_71 and dee_channels != channels:
+            logger.info(
+                f"The {channels}-channel source is measured as 7.1, which leaves "
+                "its loudness as it is."
+            )
+        elif dee_channels != channels:
             logger.info(
                 f"DEE measures 1.0, 2.0 and 5.1, so the {channels}-channel source "
                 "is measured as 5.1 with silent channels added, which leave its "
@@ -1821,7 +1836,12 @@ def plan_measure(
             filters += ["-ac", str(dee_channels)]
         files = replace(_dee_files(ctx, transport, manifest), output=manifest)
         dee = DeeStep(
-            tuple(measure_command(tools, payload, files, input_format="wav")), manifest
+            tuple(
+                measure_command(
+                    tools, payload, files, input_format="wav", layout_71=layout_71
+                )
+            ),
+            manifest,
         )
         steps = _pcm_steps(payload, filters, transport, MEASURE, info, dee)
     return JobPlan(

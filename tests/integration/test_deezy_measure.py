@@ -4,7 +4,9 @@ deezy measure with the real tools.
 DEE's integrated loudness is checked against FFmpeg's EBU R128 meter on the
 source itself, so a layout DeeZy pads to 5.1 must measure as the source does.
 A piped measurement must match the temp-WAV one, and a saved manifest must be
-DEE's, naming the source.
+DEE's, naming the source. 7.1 goes through dee_shim (DEEZY_SHIM), whose meter
+weighs the backs as BS.1770 does (1.0), where FFmpeg's weighs them as the
+sides (1.41).
 
 The planner and runner run in-process with the shipped default config, so the
 tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
@@ -12,6 +14,7 @@ tests use DEEZY_DEE_LICENSE rather than wherever DeeZy would find a license.
 
 from collections.abc import Iterator
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -25,6 +28,7 @@ from deezy.cli.payload_factory import PayloadBuilder
 from deezy.cli.utils import apply_config_defaults_to_args
 from deezy.config.defaults import CONF_DEFAULT
 from deezy.config.manager import ConfigManager
+from deezy.dee.shim import DeeShim, resolve_shim
 from deezy.exceptions import UnsupportedDeeFeatureError
 from deezy.pipeline import run
 from deezy.pipeline.encode import pipe_name
@@ -42,6 +46,15 @@ def measure_tools(tools):
     if not tools.tool("dee_measure_loudness").is_file():
         pytest.skip("DEEZY_DEE_DIR lacks dee_measure_loudness")
     return tools
+
+
+@pytest.fixture(scope="module")
+def measure_shim(measure_tools) -> DeeShim:
+    if not measure_tools.shim:
+        pytest.skip("set DEEZY_SHIM for the 7.1 measurements")
+    found = resolve_shim(Path(), None, measure_tools.shim)
+    assert found is not None
+    return found
 
 
 @pytest.fixture(scope="module")
@@ -63,8 +76,18 @@ def config() -> Iterator[ConfigManager]:
     ConfigManager.reset_instance()
 
 
-def measure(tools, work, parser, config, args, src: Path, pipe="never") -> dict:
+def measure(
+    tools,
+    work,
+    parser,
+    config,
+    args,
+    src: Path,
+    pipe="never",
+    shim: DeeShim | None = None,
+) -> dict:
     tag = "_".join(args).replace("-", "") or "default"
+    tag += "_shim" if shim else ""
     ns = parser.parse_args(
         ["--no-progress-bars", "measure", *args, "--pipe", pipe, "--overwrite"]
         + [str(src)]
@@ -74,6 +97,7 @@ def measure(tools, work, parser, config, args, src: Path, pipe="never") -> dict:
     payload = PayloadBuilder.build_measure_payload(
         ns, src, Path(tools.ffmpeg), truehdd, tools.dee_dir
     )
+    payload.dee_shim = shim
     namer = MediainfoParser(src, payload.track_index)
     temp = run.temp_dir_path(src, work / "measure_temp", track_label=f"{tag}{pipe}")
     ctx = PlanContext(
@@ -125,6 +149,17 @@ LAYOUTS = {
     "5.0(side)": "FL FR FC SL SR",
     "4.1": "FL FR FC LFE BC",
 }
+# 7.1 sources for the shim's meter: FFmpeg's 7.1 has the backs before the
+# sides, DEE's the sides before the backs
+LAYOUTS_71 = {
+    "7.1": "FL FR FC LFE BL BR SL SR",
+    "7.1 fronts": "FL FR",
+    "7.1 sides": "SL SR",
+    "7.1 backs": "BL BR",
+    "7.0": "FL FR FC BL BR SL SR",
+    "7.1 no lfe": "FL FR FC BL BR SL SR",
+    "6.1": "FL FR FC LFE BC SL SR",
+}
 
 
 def layout_wav(tools, work: Path, layout: str, rate: int = 48000) -> Path:
@@ -132,7 +167,10 @@ def layout_wav(tools, work: Path, layout: str, rate: int = 48000) -> Path:
     name = re.sub(r"[^0-9a-z]", "", layout)
     path = work / f"measure_{name}_{rate}.wav"
     if not path.exists():
-        pan = "|".join(f"{channel}=c0" for channel in LAYOUTS[layout].split())
+        channels = (LAYOUTS | LAYOUTS_71)[layout]
+        pan = "|".join(f"{channel}=c0" for channel in channels.split())
+        # a 7.1 source with only some channels sounding
+        layout = layout.split()[0]
         subprocess.run(  # noqa: S603
             [tools.ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i"]
             + ["anoisesrc=d=3:c=pink:a=0.2:seed=1", "-af"]
@@ -167,9 +205,67 @@ def test_a_441_source_is_resampled_first(measure_tools, work, parser, config):
     assert abs(found["integrated_loudness"] - r128(measure_tools, src)) < TOLERANCE
 
 
-def test_71_is_refused(measure_tools, work, parser, config):
-    with pytest.raises(UnsupportedDeeFeatureError, match="not 8 channels"):
+def test_71_without_dee_shim_is_refused(measure_tools, work, parser, config):
+    with pytest.raises(UnsupportedDeeFeatureError, match="7.1 needs dee_shim"):
         measure(measure_tools, work, parser, config, [], noise(work, 8))
+
+
+def test_more_than_71_is_refused(measure_tools, work, parser, config, measure_shim):
+    with pytest.raises(UnsupportedDeeFeatureError, match="not 10 channels"):
+        measure(
+            measure_tools, work, parser, config, [], noise(work, 10), shim=measure_shim
+        )
+
+
+def measure_71(tools, work, parser, config, shim, layout: str, pipe="never"):
+    src = layout_wav(tools, work, layout)
+    measured = measure(tools, work, parser, config, [], src, pipe, shim)
+    assert list(results(measured)) == ["multichannel_7_1"]
+    return src, only(measured)
+
+
+def test_71_goes_through_dee_shim_in_dees_order(
+    measure_tools, work, parser, config, measure_shim
+):
+    def loudness(layout):
+        args = (measure_tools, work, parser, config, measure_shim, layout)
+        src, found = measure_71(*args)
+        return src, found["integrated_loudness"]
+
+    fronts_src, fronts = loudness("7.1 fronts")
+    sides_src, sides = loudness("7.1 sides")
+    _, backs = loudness("7.1 backs")
+    # FFmpeg's meter agrees where it weighs as BS.1770 does
+    assert abs(fronts - r128(measure_tools, fronts_src)) < TOLERANCE
+    assert abs(sides - r128(measure_tools, sides_src)) < TOLERANCE
+    # the sides reach DEE's Ls/Rs (1.41, +1.5 dB), the backs its Lrs/Rrs (1.0)
+    assert abs(sides - fronts - 1.49) < 0.05
+    assert abs(backs - fronts) < 0.05
+
+
+@pytest.mark.parametrize("layout", ["7.0", "6.1"])
+def test_a_7_channel_source_is_padded_to_71(
+    measure_tools, work, parser, config, measure_shim, layout
+):
+    args = (measure_tools, work, parser, config, measure_shim)
+    _, found = measure_71(*args, layout)
+    _, filled = measure_71(*args, "7.1 no lfe")
+    # 7.0 gets a silent LFE, so it measures as the 7.1 it fills. 6.1's back
+    # centre is split over the two backs at -3 dB each, which keeps its
+    # power: weights 3 + 2 * 1.41 + 1.0 against 7.1's 3 + 2 * 1.41 + 2 * 1.0
+    expected = 0.0 if layout == "7.0" else 10 * math.log10(6.82 / 7.82)
+    gap = found["integrated_loudness"] - filled["integrated_loudness"]
+    assert abs(gap - expected) < 0.05
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="DeeZy pipes only on Windows")
+def test_a_piped_71_measurement_matches_the_wav_one(
+    measure_tools, work, parser, config, measure_shim
+):
+    args = (measure_tools, work, parser, config, measure_shim, "7.1")
+    _, wav = measure_71(*args, pipe="never")
+    _, piped = measure_71(*args, pipe="always")
+    assert piped == wav
 
 
 def test_a_regulation_preset_leaves_speech_unmeasured(

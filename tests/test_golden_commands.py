@@ -1076,6 +1076,22 @@ LFE_SCENARIOS = [
 SCENARIOS += LFE_SCENARIOS
 PIPE_SCENARIOS.append(("pipe_shim_ddp_auto_8", ["ddp", *WITH_SHIM], info(8), MKV))
 
+# --- measure with dee_shim found: 7.1 goes through its measure_loudness,
+# in DEE's 7.1 order; every other layout is measured as before
+MEASURE_SHIM_SCENARIOS = [
+    ("measure_shim_8", ["measure", *WITH_SHIM], info(8), MKV),
+    ("measure_shim_7", ["measure", *WITH_SHIM], info(7), MKV),
+    ("measure_shim_7_lfe", ["measure", *WITH_SHIM], info(7, lfe=True), MKV),
+    ("measure_shim_8_441", ["measure", *WITH_SHIM], info(8, rate=44100), MKV),
+    ("measure_shim_6", ["measure", *WITH_SHIM], info(6), MKV),
+    ("measure_shim_5", ["measure", *WITH_SHIM], info(5), MKV),
+    ("measure_shim_10", ["measure", *WITH_SHIM], info(10), MKV),
+    ("measure_shim_thd", ["measure", *WITH_SHIM], info(8, thd=True), MKV),
+    ("measure_shim_off_8", ["measure", *WITH_SHIM, "--no-shim"], info(8), MKV),
+]
+SCENARIOS += MEASURE_SHIM_SCENARIOS
+PIPE_SCENARIOS.append(("pipe_measure_shim_8", ["measure", *WITH_SHIM], info(8), MKV))
+
 ALL_SCENARIOS = [(*s, None) for s in SCENARIOS] + [
     (*s, PIPE_NAME) for s in PIPE_SCENARIOS
 ]
@@ -1185,6 +1201,8 @@ def planned(parser, config, args, probed, source, pipe_name=None) -> dict:
         apply_config_defaults_to_args(ns, config)
         payload = PayloadBuilder.build_measure_payload(ns, source, FFMPEG, TRUEHDD, DEE)
         planner = plan_measure
+        if ns.dee_shim and not ns.no_shim:
+            payload.dee_shim = DeeShim(Path(ns.dee_shim), "0.3.0+test")
     else:
         apply_default_bitrate(ns, config)
         apply_config_defaults_to_args(ns, config)

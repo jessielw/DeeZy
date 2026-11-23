@@ -13720,10 +13720,10 @@
   ]
  },
  "measure_7": {
-  "error": "UnsupportedDeeFeatureError: DEE measures 1.0, 2.0 and 5.1 (and Atmos), not 7 channels. A downmix to 5.1 would change the loudness, so DeeZy doesn't measure one."
+  "error": "UnsupportedDeeFeatureError: Measuring 7.1 needs dee_shim (0.3.0 or newer): DEE's meter has 7.1, but its CLI takes 1.0, 2.0 and 5.1 only. DeeZy didn't find dee_shim or was told not to use it (--no-shim); give its path with --dee-shim."
  },
  "measure_8": {
-  "error": "UnsupportedDeeFeatureError: DEE measures 1.0, 2.0 and 5.1 (and Atmos), not 8 channels. A downmix to 5.1 would change the loudness, so DeeZy doesn't measure one."
+  "error": "UnsupportedDeeFeatureError: Measuring 7.1 needs dee_shim (0.3.0 or newer): DEE's meter has 7.1, but its CLI takes 1.0, 2.0 and 5.1 only. DeeZy didn't find dee_shim or was told not to use it (--no-shim); give its path with --dee-shim."
  },
  "measure_441": {
   "output": "/temp/job/loudness.json",
@@ -19636,6 +19636,384 @@
    }
   ]
  },
+ "measure_shim_8": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "measure_loudness",
+     "--layout",
+     "7.1",
+     "--binary",
+     "/tools/dee/dee_measure_loudness",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_shim_7": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aformat=channel_layouts=7.1,pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "measure_loudness",
+     "--layout",
+     "7.1",
+     "--binary",
+     "/tools/dee/dee_measure_loudness",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_shim_7_lfe": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "aformat=channel_layouts=7.1,pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "measure_loudness",
+     "--layout",
+     "7.1",
+     "--binary",
+     "/tools/dee/dee_measure_loudness",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_shim_8_441": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-af",
+     "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5,aresample=resampler=soxr:precision=28:cutoff=1:dither_scale=0",
+     "-ar",
+     "48000",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "measure_loudness",
+     "--layout",
+     "7.1",
+     "--binary",
+     "/tools/dee/dee_measure_loudness",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_shim_6": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_shim_5": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "ffmpeg": [
+     "/tools/ffmpeg",
+     "-y",
+     "-drc_scale",
+     "0",
+     "-hide_banner",
+     "-v",
+     "quiet",
+     "-i",
+     "/media/in.mkv",
+     "-map",
+     "0:a:0",
+     "-c",
+     "pcm_s32le",
+     "-ac",
+     "6",
+     "-map_metadata",
+     "-1",
+     "-rf64",
+     "always",
+     "/temp/job/measure.wav"
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "wav",
+     "-i",
+     "/temp/job/measure.wav",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_shim_10": {
+  "error": "UnsupportedDeeFeatureError: DEE measures 1.0, 2.0, 5.1 and, through dee_shim, 7.1 (and Atmos), not 10 channels. A downmix would change the loudness, so DeeZy doesn't measure one."
+ },
+ "measure_shim_thd": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "quiet",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee/dee_measure_loudness",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "--output-manifest",
+     "/temp/job/loudness.json",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
+    ]
+   }
+  ]
+ },
+ "measure_shim_off_8": {
+  "error": "UnsupportedDeeFeatureError: Measuring 7.1 needs dee_shim (0.3.0 or newer): DEE's meter has 7.1, but its CLI takes 1.0, 2.0 and 5.1 only. DeeZy didn't find dee_shim or was told not to use it (--no-shim); give its path with --dee-shim."
+ },
  "pipe_dd_auto_6": {
   "output": "/out/in [5.1] s0 r0 wNone.ac3",
   "preview": false,
@@ -21426,6 +21804,61 @@
       "auto",
       "-e",
       "ddp:drc_profile_line=film_light:drc_profile_rf=film_light:lfe_filter=1:surround_90deg_phase_shift=1:surround_3dB_attenuation=0:preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3"
+     ],
+     "ffmpeg": [
+      "/tools/ffmpeg",
+      "-y",
+      "-drc_scale",
+      "0",
+      "-hide_banner",
+      "-v",
+      "quiet",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "pcm_s24le",
+      "-af",
+      "pan=7.1|c0=c0|c1=c1|c2=c2|c3=c3|c4=c6|c5=c7|c6=c4|c7=c5",
+      "-map_metadata",
+      "-1",
+      "-f",
+      "s24le",
+      "//./pipe/deezy-PID-JOB"
+     ]
+    }
+   }
+  ]
+ },
+ "pipe_measure_shim_8": {
+  "output": "/temp/job/loudness.json",
+  "preview": false,
+  "steps": [
+   {
+    "pipe": {
+     "dee": [
+      "/tools/dee_shim",
+      "measure_loudness",
+      "--layout",
+      "7.1",
+      "--binary",
+      "/tools/dee/dee_measure_loudness",
+      "--",
+      "--loglevel",
+      "info",
+      "--progress",
+      "1",
+      "--overwrite",
+      "1",
+      "--input-format",
+      "pcm_s24le:sample_rate=48000:channels=8:sample_count=2956800:streaming=1",
+      "-i",
+      "named_pipe:////./pipe/deezy-PID-JOB",
+      "--output-manifest",
+      "/temp/job/loudness.json",
+      "--loudness-management",
+      "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15"
      ],
      "ffmpeg": [
       "/tools/ffmpeg",

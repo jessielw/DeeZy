@@ -46,6 +46,13 @@ def test_a_channel_based_measurement_reads_as_one_block():
     ]
 
 
+def test_a_71_measurement_reads_as_71():
+    lines = summary(
+        manifest({"channel_based_loudness": {"multichannel_7_1": result()}})
+    )
+    assert lines[0] == "  7.1"
+
+
 def test_speech_dee_did_not_measure_says_so():
     track = {
         "channel_based_loudness": {"stereo": result(integrated_speech_percentage=-1.0)}
@@ -221,6 +228,19 @@ def test_each_input_is_reported_and_failures_set_the_exit_code(
     assert out.splitlines()[0] == "a.mkv (track a:0)"
     assert out.count("Integrated loudness") == 2
     assert "1 of 3 measurements failed." in err
+
+
+def test_the_shim_found_reaches_the_payload(parser, monkeypatch):
+    shim = object()
+    seen = []
+
+    def fake_measure(p):
+        seen.append(p.dee_shim)
+
+    monkeypatch.setattr(cli, "measure", fake_measure)
+    args = parser.parse_args(["measure", "x.mkv"])
+    cli.execute_measure_command(args, [Path("x.mkv")], {**DEPS, "dee_shim": shim}, None)
+    assert seen == [shim]
 
 
 def test_the_payload_takes_the_measure_options(parser):

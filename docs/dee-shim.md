@@ -14,6 +14,7 @@ include it.
 | `ddp-atmos --atmos-mode standard` or `bluray` | refused |
 | `ddp-atmos --no-surround-90-deg-phase-shift` | refused |
 | `thd` or `thd-atmos` with `--drc none` | refused |
+| `deezy measure` of a 7.1 or 7-channel source | refused |
 
 ## What runs through it
 
@@ -28,7 +29,8 @@ changes in three places, each with an option that keeps plain DEE's:
 - `thd-atmos` codes a master of no more elements than `--atmos-elements` as it
   is, so it decodes to it sample for sample. `--no-as-is` keeps DEE's processing.
 
-The other formats don't use dee_shim.
+The other formats don't use dee_shim. `deezy measure` uses it only for 7.1:
+DEE's meter has 7.1, but its command line takes 1.0, 2.0 and 5.1 only.
 
 ## How DeeZy finds it
 

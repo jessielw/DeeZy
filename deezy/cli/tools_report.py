@@ -139,8 +139,8 @@ def _shim_row(
             SHIM_NAME,
             None,
             None,
-            "not found (DD+ 7.1 and 7.0, DD+ Atmos Blu-ray and standard, and "
-            "TrueHD that decodes to its source need it)",
+            "not found (DD+ 7.1 and 7.0, DD+ Atmos Blu-ray and standard, "
+            "TrueHD that decodes to its source, and measuring 7.1 need it)",
         )
     version = shim_version(path)
     parsed = parse_version(version or "")

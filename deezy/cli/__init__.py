@@ -130,23 +130,28 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="The source track. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).",
     )
 
-    # common Encode Args
-    encode_group = argparse.ArgumentParser(add_help=False, parents=[tools_group])
-    encode_group.add_argument(
+    # dee_shim (encode and measure)
+    shim_group = argparse.ArgumentParser(add_help=False)
+    shim_group.add_argument(
         "--dee-shim",
         type=str,
         help=f"Path to dee_shim ({MIN_SHIM_TEXT} or newer). DeeZy needs it for "
-        "DD+ 7.1 and 7.0, ddp-atmos --atmos-mode standard and bluray, and TrueHD "
-        "--drc none. "
+        "DD+ 7.1 and 7.0, ddp-atmos --atmos-mode standard and bluray, TrueHD "
+        "--drc none, and to measure 7.1. "
         "It also runs every ddp-atmos, thd and thd-atmos encode through it, which "
         "is faster on AMD CPUs and keeps more of the source as it is (see "
         "--no-oamd-as-is and --no-as-is). Found beside the DEE tools, in "
         "apps/dee_shim or on PATH when not given.",
     )
-    encode_group.add_argument(
+    shim_group.add_argument(
         "--no-shim",
         action="store_true",
         help="Don't use dee_shim, even when it is found.",
+    )
+
+    # common Encode Args
+    encode_group = argparse.ArgumentParser(
+        add_help=False, parents=[tools_group, shim_group]
     )
     encode_group.add_argument(
         "--delay",
@@ -887,6 +892,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "ac4_drc_group": ac4_drc_group,
         "tools_group": tools_group,
         "measure_group": measure_group,
+        "shim_group": shim_group,
         "ac4_ims_drc_group": ac4_ims_drc_group,
         "ac4_channels_group": ac4_channels_group,
         "aac_options_group": aac_options_group,
@@ -1188,14 +1194,15 @@ def create_other_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["tools_group"],
+            argument_groups["shim_group"],
             argument_groups["measure_group"],
             argument_groups["loudness_group"],
             argument_groups["pcm_transport_group"],
             argument_groups["truehdd_options_group"],
         ),
         help=(
-            "Measure loudness with DEE (1.0, 2.0, 5.1 and Atmos; 3 to 5 channels "
-            "as 5.1)"
+            "Measure loudness with DEE (1.0, 2.0, 5.1, 7.1 through dee_shim, and "
+            "Atmos; 3 to 5 channels as 5.1, 7 as 7.1)"
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -2106,6 +2113,7 @@ def execute_measure_command(
         payload = PayloadBuilder.build_measure_payload(
             args, input_file, ffmpeg_path, dependencies["truehdd_path"], dee_path
         )
+        payload.dee_shim = dependencies.get("dee_shim")
         try:
             manifest = measure(payload)
         except Exception as e:

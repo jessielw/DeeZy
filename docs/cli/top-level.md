@@ -15,8 +15,8 @@ positional arguments:
     encode              Encode management
     find                Find management
     info                Info management
-    measure             Measure loudness with DEE (1.0, 2.0, 5.1 and Atmos; 3
-                        to 5 channels as 5.1)
+    measure             Measure loudness with DEE (1.0, 2.0, 5.1, 7.1 through
+                        dee_shim, and Atmos; 3 to 5 channels as 5.1, 7 as 7.1)
     config              Configuration management
     bitrates            List the data rates each format and mode takes, and
                         the defaults

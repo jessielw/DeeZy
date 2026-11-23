@@ -1,6 +1,6 @@
 """
-dee_shim: an optional runner for three of the DEE tools (DD+, DD+ Atmos and
-TrueHD).
+dee_shim: an optional runner for four of the DEE tools (DD+, DD+ Atmos,
+TrueHD and the loudness meter).
 
 dee_shim runs the DEE tool inside its own process, with DEE's own arguments
 after ``--``. DeeZy finds it, checks its version and keeps the shim's own
@@ -28,6 +28,7 @@ SHIM_SUBCOMMANDS = {
     "dee_ddp_encoder": "ddp_encoder",
     "dee_ddpjoc_encoder": "ddpjoc_encoder",
     "dee_dthd_encoder": "dthd_encoder",
+    "dee_measure_loudness": "measure_loudness",
 }
 # a job dee_shim refuses: one of its own options, or a DEE build it has no
 # profile for. DEE's own failures pass through with DEE's exit code.

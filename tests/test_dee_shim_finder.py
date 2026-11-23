@@ -187,7 +187,9 @@ def parser():
 
     main = cli.create_main_parser()
     sub = main.add_subparsers(dest="sub_command")
-    cli.create_encode_parsers(sub, cli.create_common_argument_groups())
+    groups = cli.create_common_argument_groups()
+    cli.create_encode_parsers(sub, groups)
+    cli.create_other_parsers(sub, groups)
     return main
 
 
@@ -217,6 +219,13 @@ def asked_for(monkeypatch, parser, argv, config=None):
 def test_every_encode_takes_the_shim_options(parser, fmt):
     args = parser.parse_args(["encode", fmt, "--dee-shim", "s.exe", "--no-shim", "in"])
     assert (args.dee_shim, args.no_shim) == ("s.exe", True)
+
+
+def test_measure_takes_the_shim_options(monkeypatch, parser):
+    args = parser.parse_args(["measure", "--dee-shim", "s.exe", "--no-shim", "in"])
+    assert (args.dee_shim, args.no_shim) == ("s.exe", True)
+    calls = asked_for(monkeypatch, parser, ["measure", "--dee-shim", "s.exe", "in"])
+    assert calls == [("s.exe", False)]
 
 
 def test_the_cli_path_wins_over_the_config(monkeypatch, parser):
