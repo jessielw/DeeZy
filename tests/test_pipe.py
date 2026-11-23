@@ -20,7 +20,7 @@ from deezy.pipeline.plan import (
     PlanContext,
     choose_transport,
 )
-from deezy.pipeline.show import command_lines, step_lines
+from deezy.pipeline.show import command_lines, shell_line, step_lines
 from deezy.pipeline.transport import NamedPipe, WavFile, expected_samples
 from tests.utils.payload_helpers import generate_dummy_core_payload
 
@@ -164,7 +164,8 @@ def test_dee_line_comes_before_ffmpeg_line(tmp_path):
     dee_line, ffmpeg_line = step_lines(pipe_step(tmp_path))
     assert dee_line.startswith("dee_ddp_encoder")
     assert ffmpeg_line.startswith("ffmpeg")
-    assert ffmpeg_line.endswith("\\\\.\\pipe\\deezy-1-job")
+    # the pipe path as this platform's shell quotes it
+    assert ffmpeg_line.endswith(shell_line([NamedPipe("deezy-1-job", 6).path]))
 
 
 def test_dry_run_lists_both_lines(tmp_path):
