@@ -57,6 +57,16 @@ DEE's automatic ones. What changed:
 It changed no DEE output. Remove it from commands and presets; DeeZy refuses
 it.
 
+## 6. `[global_defaults]` keys now apply
+
+DeeZy 1.x ignored the option keys under `[global_defaults]`, such as
+`speech_threshold`, `drc_line_mode`, `stereo_down_mix`, `track_index` and
+`keep_temp`. DeeZy 2.0 makes each the default of its option (see
+[Configuration](configuration.md#global-defaults)). A config made by 1.x's
+`deezy config generate` has `speech_threshold = 20`, which now applies: DeeZy's
+own default is 15. Delete the line or set it to 15 to keep 1.x's output. A key
+that names no option, such as `metering_mode`, is ignored with a warning.
+
 ## Other removed options
 
 - `--ims-legacy-presentation` (1.5.0 already ignored it).

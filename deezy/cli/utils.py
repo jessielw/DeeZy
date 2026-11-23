@@ -270,6 +270,174 @@ def apply_config_defaults_to_args(
     )
 
 
+# [global_defaults] keys DeeZy reads itself, so they aren't option defaults
+OWN_CONFIG_KEYS = frozenset(
+    {
+        "temp_dir",
+        "working_dir",
+        "max_logs",
+        "max_batch_results",
+        "batch_output_dir",
+        "limit_ffmpeg",
+        "limit_dee",
+        "limit_truehdd",
+        "jitter_ms",
+        "output_template",
+        "pipe",
+        "allow_sleep",
+        "overwrite",
+        "parse_elementary_delay",
+        "log_to_file",
+        "keep_logs",
+        "no_progress_bars",
+        "no_shim",
+    }
+)
+
+# options [global_defaults] can't set, and where their value goes instead
+NOT_CONFIG_DEFAULTS = {
+    "output": "use output_template or batch_output_dir",
+    "config": "give it on the command line",
+    "name": "presets are run with 'encode preset --name'",
+    "bitrate": "set default rates under [default_bitrates]",
+    "ffmpeg": "set the path under [dependencies]",
+    "dee": "set the path under [dependencies]",
+    "truehdd": "set the path under [dependencies]",
+    "dee_shim": "set the path under [dependencies]",
+}
+
+
+def _command_parsers(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> list[argparse.ArgumentParser]:
+    """The parsers args went through: deezy's, then each subcommand's."""
+    chain = [parser]
+    while True:
+        sub = next(
+            (
+                a
+                for a in chain[-1]._actions
+                if isinstance(a, argparse._SubParsersAction)
+            ),
+            None,
+        )
+        name = getattr(args, sub.dest, None) if sub else None
+        if sub is None or name not in sub.choices:
+            return chain
+        chain.append(sub.choices[name])
+
+
+def _all_actions(parser: argparse.ArgumentParser) -> list[argparse.Action]:
+    """The options of every command."""
+    found = []
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            for sub in action.choices.values():
+                found += _all_actions(sub)
+        elif action.option_strings:
+            found.append(action)
+    return found
+
+
+def _config_option(
+    key: str, actions: list[argparse.Action]
+) -> tuple[argparse.Action, bool] | None:
+    """The option a [global_defaults] key names, and whether it is a --no-x
+    switch named by its positive form x."""
+    option = "--" + key.replace("_", "-")
+    by_option = {name: a for a in actions for name in a.option_strings}
+    if option in by_option:
+        return by_option[option], False
+    negated = by_option.get("--no-" + option[2:])
+    if isinstance(negated, argparse._StoreFalseAction):
+        return negated, True
+    return None
+
+
+def _config_value(action: argparse.Action, value: Any, positive: bool) -> Any:
+    """A config value as the option's default, checked as the option checks
+    its command line value. Raises ValueError for one it would refuse."""
+    option = action.option_strings[0]
+    if isinstance(action, argparse._StoreTrueAction | argparse._StoreFalseAction):
+        if not isinstance(value, bool):
+            raise ValueError(f"{option} takes true or false")
+        if isinstance(action, argparse._StoreFalseAction) and not positive:
+            return not value
+        return value
+    if type(action) is not argparse._StoreAction or action.nargs is not None:
+        raise ValueError(f"{option} can't be set in the config")
+    if isinstance(value, bool | list | dict):
+        raise ValueError(f"{option} takes a single value")
+    try:
+        convert = action.type
+        converted = convert(str(value)) if callable(convert) else str(value)
+    except (argparse.ArgumentTypeError, TypeError, ValueError) as e:
+        raise ValueError(str(e) or f"not a {option} value") from e
+    if action.choices is not None and converted not in action.choices:
+        choices = ", ".join(str(getattr(c, "value", c)) for c in action.choices)
+        raise ValueError(f"{option} takes {choices}")
+    return converted
+
+
+def apply_config_option_defaults(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    config_manager: ConfigManager | None,
+) -> bool:
+    """Make the config's [global_defaults] the defaults of the command's options.
+
+    A key is an option's name with '_' for '-' (--speech-threshold is
+    speech_threshold); a --no-x switch may also be named by x, its positive
+    form (dialogue_intelligence = false is --no-dialogue-intelligence). A key
+    applies to the commands that have the option. The caller parses the
+    command line again, so it, and a preset, still win. A key that names no
+    option, or a value the option refuses, is ignored with a warning. Returns
+    whether any default changed.
+    """
+    config = config_manager.config if config_manager else {}
+    defaults = config.get("global_defaults") or {}
+    if not defaults:
+        return False
+    command = [a for p in _command_parsers(parser, args) for a in p._actions]
+    command = [a for a in command if a.option_strings]
+    everything = _all_actions(parser)
+    changed = False
+    for key, value in defaults.items():
+        key = str(key)
+        if key in OWN_CONFIG_KEYS:
+            continue
+        if key in NOT_CONFIG_DEFAULTS:
+            logger.warning(
+                f"Config [global_defaults] {key} is ignored: "
+                f"{NOT_CONFIG_DEFAULTS[key]}."
+            )
+            continue
+        if _config_option(key, everything) is None:
+            logger.warning(
+                f"Config [global_defaults] {key} is ignored: DeeZy has no "
+                f"--{key.replace('_', '-')} option."
+            )
+            continue
+        found = _config_option(key, command)
+        if found is None:
+            continue  # another command's option
+        action, positive = found
+        try:
+            default = _config_value(action, value, positive)
+        except ValueError as e:
+            logger.warning(
+                f"Config [global_defaults] {key} = {value!r} is ignored: {e}."
+            )
+            continue
+        # every option of the destination, so --no-surround-3db's default
+        # doesn't win over --surround-3db's
+        for other in command:
+            if other.dest == action.dest:
+                other.default = default
+        changed = True
+    return changed
+
+
 def apply_default_bitrate(
     args: argparse.Namespace, config_manager: ConfigManager | None
 ) -> None:

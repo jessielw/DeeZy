@@ -59,6 +59,8 @@ DeeZy 2.0 runs only the DEE 6.7 command-line tools. Commands, presets and config
 - `--reuse-temp-files` could keep an FFmpeg slot taken.
 - An interrupted or failed encode could leave a partial output.
 - `--config FILE` also read, and warned about, the config DeeZy finds on its own.
+- The option keys under `[global_defaults]` (`speech_threshold`, `drc_line_mode`, `stereo_down_mix`, `track_index`, `keep_temp`, `max_parallel` and the rest) were ignored. Each is now the default of its option, behind the command line and presets, and a key that names no option, or a value it refuses, is ignored with a warning. The generated config's `speech_threshold` is now 15, DeeZy's default; 1.x wrote 20.
+- The generated config called `dee` an executable (it is the DEE tools' folder) and said channel-based AC-4 gives 5.1 from 6 channels (it is from 5).
 
 ### Not in 2.0
 

@@ -12,6 +12,7 @@ from deezy.cli.tools_report import tool_lines, tool_rows
 from deezy.cli.utils import (
     CustomHelpFormatter,
     apply_config_defaults_to_args,
+    apply_config_option_defaults,
     apply_default_bitrate,
     clean_deezy_temp_folders,
     dialnorm_options,
@@ -1333,6 +1334,11 @@ def cli_parser() -> None:
 
     # handle configuration and dependencies
     config_manager = handle_configuration(args)
+    # the config's [global_defaults] become option defaults; parsing again
+    # keeps the command line (and a preset) ahead of them
+    if apply_config_option_defaults(parser, args, config_manager):
+        args = parser.parse_args()
+        setup_logging(args)
 
     # apply default bitrates for encoding commands
     if args.sub_command == "encode" and hasattr(args, "format_command"):

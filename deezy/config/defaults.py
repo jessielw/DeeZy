@@ -14,10 +14,15 @@ CONF_DEFAULT = """\
 #   --drc-line-mode     becomes     drc_line_mode
 #   --custom-dialnorm   becomes     custom_dialnorm  
 #   --lt-rt-center      becomes     lt_rt_center
+# A --no-x switch may also be given as x: dialogue_intelligence = false is
+# --no-dialogue-intelligence.
+#
+# A [global_defaults] key applies to every command that has the option. A key
+# that names no option, or a value the option refuses, is ignored with a warning.
 #
 # SECTIONS:
-# [dependencies]     - Paths to external tools (ffmpeg, dee, truehd)
-# [global_defaults]  - Default values applied to all encoding commands
+# [dependencies]     - Paths to external tools (ffmpeg, dee, truehdd, dee_shim)
+# [global_defaults]  - Default values for the options of every command
 # [default_bitrates] - Automatic bitrate selection by format and channel layout
 # [presets]          - Named command templates for common encoding scenarios
 #
@@ -33,9 +38,10 @@ CONF_DEFAULT = """\
 [dependencies]
 # Path to FFmpeg executable (leave empty for auto-detection)
 ffmpeg = ""  
-# Path to Dolby Encoding Engine (DEE) executable
+# Folder of the Dolby Encoding Engine (DEE) 6.7 tools, or the path of one of them
+# (leave empty for auto-detection)
 dee = ""     
-# Path to truehdd executable
+# Path to truehdd (leave empty for auto-detection)
 truehdd = ""
 # Path to dee_shim, optional (leave empty for auto-detection)
 dee_shim = ""
@@ -96,7 +102,7 @@ custom_dialnorm = 0
 # Enable dialogue intelligence
 dialogue_intelligence = true
 # Speech detection threshold percentage
-speech_threshold = 20
+speech_threshold = 15
 # Stereo downmix method
 stereo_down_mix = "loro"     
  # Lt/Rt center channel downmix level
@@ -139,7 +145,7 @@ surround = 448 # DD 5.1
 #
 # Supported codecs:
 #  - dd, ddp: support ch_1..ch_8
-#  - ac4: ch_1..ch_8 (2.0 below 6 channels, 5.1 from 6)
+#  - ac4: ch_1..ch_8 (2.0 below 5 channels, 5.1 from 5)
 #  - ac4-ims: meaningful only for channels 6..8 (use ch_6..ch_8)
 #
 
