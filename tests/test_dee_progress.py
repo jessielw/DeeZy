@@ -155,6 +155,30 @@ def test_single_dee_errors_are_still_summarised():
     assert "ERROR: bad job" in (_parse_dee_execution_summary(lines) or "")
 
 
+def test_a_tool_that_only_measures_shows_no_encode_phase(monkeypatch):
+    """dee_measure_loudness has one step; the end of its run used to add an
+    encode line at 100%."""
+    import sys
+
+    from deezy.audio_processors.dee import process_dee_job
+    from deezy.utils.logger import logger
+
+    said: list[str] = []
+    monkeypatch.setattr(logger, "info", said.append)
+    script = (
+        "print('Step 1/1 : Loudness Measurement'); "
+        "print('[=====>     ] 50 %'); print('[==========] 100 %')"
+    )
+    label = {"current": 1, "total": 1, "name": "DEE measure", "encode": False}
+    assert process_dee_job(
+        [sys.executable, "-c", script, "--progress", "1", "--loglevel", "info"],
+        step_info=label,
+        no_progress_bars=True,
+    )
+    assert [line.split()[-1] for line in said] == ["50.0%", "100.0%"]
+    assert all(line.startswith("DEE measure (1 of 1)") for line in said)
+
+
 def test_dee_output_that_is_not_text_does_not_abort_the_job():
     """The split encoders print stray bytes in their license line, which used to
     raise a UnicodeDecodeError on Windows' default codepage."""

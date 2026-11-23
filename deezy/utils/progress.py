@@ -274,6 +274,7 @@ class DEEProgressHandler(ProgressHandler):
     __slots__ = (
         "measure_task_desc",
         "encode_task_desc",
+        "encodes",
         "_measured_dialnorm",
         "_dialnorm_appended",
         "_custom_dialnorm",
@@ -297,6 +298,8 @@ class DEEProgressHandler(ProgressHandler):
                 ``--progress`` output) instead of the single dee's stage lines.
         """
         super().__init__(logger_level, no_progress_bars, step_info)
+        # False for a DEE tool that only measures: no encode phase to show
+        self.encodes: bool = bool((step_info or {}).get("encode", True))
         self._measured_dialnorm: str | None = None
         self._dialnorm_appended: bool = False
         self._percent_progress = percent_progress

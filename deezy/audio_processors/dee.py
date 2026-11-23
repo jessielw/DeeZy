@@ -249,7 +249,13 @@ def process_dee_job(
             # ensure completion for both phases
             if return_code == 0 and progress_state["progress"]:
                 # progress bars handle completion automatically
-                if (
+                if not handler.encodes:
+                    if progress_state["measure_task_id"] is not None:
+                        progress_state["progress"].update(
+                            progress_state["measure_task_id"], completed=100
+                        )
+                        progress_state["progress"].refresh()
+                elif (
                     progress_state["encode_task_id"] is None
                     and progress_state["last_measure"] == 100.0
                 ):
@@ -282,9 +288,10 @@ def process_dee_job(
                     handler.ensure_completion(
                         progress_state["last_measure"], handler.measure_task_desc
                     )
-                handler.ensure_completion(
-                    progress_state["last_encode"], handler.encode_task_desc
-                )
+                if handler.encodes:
+                    handler.ensure_completion(
+                        progress_state["last_encode"], handler.encode_task_desc
+                    )
 
     if return_code != 0:
         shim_reason = shim_failure(return_code, output_lines)

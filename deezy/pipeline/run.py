@@ -35,6 +35,7 @@ from deezy.exceptions import (
 )
 from deezy.payloads.shared import CorePayload
 from deezy.pipeline.plan import (
+    MEASURE,
     DeeStep,
     FfmpegStep,
     JobPlan,
@@ -287,7 +288,11 @@ def announce(step: Step, print_commands: bool, log: ToolLog | None = None) -> No
 
 
 def run_ffmpeg(
-    step: FfmpegStep, plan: JobPlan, payload: CorePayload, log: ToolLog | None = None
+    step: FfmpegStep,
+    plan: JobPlan,
+    payload: CorePayload,
+    log: ToolLog | None = None,
+    step_info: dict | None = None,
 ) -> None:
     """
     Write the job's WAV with FFmpeg, or reuse the one an earlier run made.
@@ -313,7 +318,7 @@ def run_ffmpeg(
                 cmd=list(step.argv),
                 steps=True,
                 duration=step.duration,
-                step_info={"current": 1, "total": 3, "name": "FFMPEG"},
+                step_info=step_info or {"current": 1, "total": 3, "name": "FFMPEG"},
                 no_progress_bars=payload.no_progress_bars,
                 log=log,
             )
@@ -328,7 +333,11 @@ def run_ffmpeg(
 
 
 def run_truehdd(
-    step: TruehddStep, plan: JobPlan, payload: CorePayload, log: ToolLog | None = None
+    step: TruehddStep,
+    plan: JobPlan,
+    payload: CorePayload,
+    log: ToolLog | None = None,
+    step_info: dict | None = None,
 ) -> None:
     """
     Decode the TrueHD Atmos stream to a DAMF, or reuse an earlier decode. A
@@ -353,7 +362,7 @@ def run_truehdd(
                 truehdd_path=step.truehdd,
                 warp_mode=step.warp_mode,
                 duration=step.duration,
-                step_info={"current": 1, "total": 3, "name": "truehdd"},
+                step_info=step_info or {"current": 1, "total": 3, "name": "truehdd"},
                 no_progress_bars=payload.no_progress_bars,
                 log=log,
             )
@@ -384,6 +393,7 @@ def run_dee(
     no_progress_bars: bool,
     print_commands: bool = False,
     log: ToolLog | None = None,
+    step_info: dict | None = None,
 ) -> None:
     """
     Run DEE in one of the batch's DEE slots.
@@ -401,7 +411,8 @@ def run_dee(
         try:
             dee_job = process_dee_job(
                 cmd=list(step.argv),
-                step_info={"current": 2, "total": 3, "name": "DEE measure"},
+                step_info=step_info
+                or {"current": 2, "total": 3, "name": "DEE measure"},
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.custom_dialnorm,
                 log=log,
@@ -440,6 +451,7 @@ def run_pipe(
     no_progress_bars: bool,
     print_commands: bool = False,
     log: ToolLog | None = None,
+    step_info: dict | None = None,
 ) -> None:
     """
     Run FFmpeg into DEE through the step's named pipe, holding a DEE and an
@@ -460,7 +472,8 @@ def run_pipe(
                 dee_cmd=list(dee_argv),
                 ffmpeg_cmd=list(step.ffmpeg_argv),
                 pipe_name=step.pipe.name,
-                step_info={"current": 1, "total": 2, "name": "DEE measure"},
+                step_info=step_info
+                or {"current": 1, "total": 2, "name": "DEE measure"},
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.dee.custom_dialnorm,
                 log=log,
@@ -526,21 +539,45 @@ def dee_output(plan: JobPlan) -> Path:
     raise OutputFileNotFoundError("The plan has no DEE step.")
 
 
+def measure_step_labels(plan: JobPlan) -> list[dict] | None:
+    """
+    The progress labels of a measurement's steps, each counted once, or None
+    for an encode, whose labels count DEE's measuring and encoding apart.
+    DEE only measures here, so its step has no encode phase to show.
+    """
+    if plan.format != MEASURE:
+        return None
+    total = len(plan.steps)
+    labels = []
+    for current, step in enumerate(plan.steps, start=1):
+        label: dict = {"current": current, "total": total}
+        if isinstance(step, FfmpegStep):
+            label["name"] = "FFMPEG"
+        elif isinstance(step, TruehddStep):
+            label["name"] = "truehdd"
+        else:
+            label |= {"name": "DEE measure", "encode": False}
+        labels.append(label)
+    return labels
+
+
 def run_steps(plan: JobPlan, payload: CorePayload, log: ToolLog | None = None) -> Path:
     """Run every step of ``plan`` and return what its DEE step wrote."""
-    for step in plan.steps:
+    labels = measure_step_labels(plan)
+    for index, step in enumerate(plan.steps):
+        label = labels[index] if labels else None
         if isinstance(step, FfmpegStep):
             logger.debug(f"ffmpeg_cmd={list(step.argv)}.")
-            run_ffmpeg(step, plan, payload, log)
+            run_ffmpeg(step, plan, payload, log, label)
         elif isinstance(step, TruehddStep):
-            run_truehdd(step, plan, payload, log)
+            run_truehdd(step, plan, payload, log, label)
         elif isinstance(step, PipeStep):
             logger.debug(f"dee_cmd={list(step.dee.argv)}.")
             logger.debug(f"ffmpeg_cmd={list(step.ffmpeg_argv)}.")
-            run_pipe(step, payload.no_progress_bars, payload.print_commands, log)
+            run_pipe(step, payload.no_progress_bars, payload.print_commands, log, label)
         else:
             logger.debug(f"dee_cmd={list(step.argv)}.")
-            run_dee(step, payload.no_progress_bars, payload.print_commands, log)
+            run_dee(step, payload.no_progress_bars, payload.print_commands, log, label)
     return dee_output(plan)
 
 

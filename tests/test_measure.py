@@ -1,5 +1,6 @@
 """deezy measure: the printed summary, where the manifest is saved, and the CLI."""
 
+from dataclasses import replace
 import json
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from deezy.enums.shared import LoudnessPreset, PipeMode
 from deezy.exceptions import OutputExistsError, OutputFileNotFoundError
 from deezy.pipeline import measure as measure_mod, run
 from deezy.pipeline.measure import summary
-from deezy.pipeline.plan import DeeStep, JobPlan
+from deezy.pipeline.plan import DeeStep, FfmpegStep, JobPlan
 from deezy.pipeline.show import command_lines
 from tests.utils.payload_helpers import generate_dummy_core_payload
 
@@ -103,6 +104,23 @@ def measure_plan(tmp_path: Path, output: Path | None = None) -> JobPlan:
         steps=(dee,),
         free_space_needed=1,
     )
+
+
+def test_a_measurement_counts_its_own_steps_and_none_encodes(tmp_path):
+    alone = measure_plan(tmp_path)
+    assert run.measure_step_labels(alone) == [
+        {"current": 1, "total": 1, "name": "DEE measure", "encode": False}
+    ]
+    wav = FfmpegStep(
+        argv=("ffmpeg",), output=tmp_path / "measure.wav", reuse_id="measure"
+    )
+    with_wav = replace(alone, steps=(wav, *alone.steps))
+    assert run.measure_step_labels(with_wav) == [
+        {"current": 1, "total": 2, "name": "FFMPEG"},
+        {"current": 2, "total": 2, "name": "DEE measure", "encode": False},
+    ]
+    # an encode keeps its own labels
+    assert run.measure_step_labels(replace(with_wav, format="ddp")) is None
 
 
 @pytest.fixture
