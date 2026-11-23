@@ -13,7 +13,7 @@ from deezy.cli.utils import handle_dependencies
 from deezy.dee import spec
 from deezy.enums.atmos import WarpMode
 from deezy.enums.shared import DeeDRC, LoudnessPreset
-from deezy.exceptions import InvalidAtmosInputError
+from deezy.exceptions import DependencyNotFoundError, InvalidAtmosInputError
 from deezy.pipeline.plan import DeeStep, PlanContext, TruehddStep, plan_job
 from deezy.track_info.audio_track_info import AudioTrackInfo
 
@@ -176,15 +176,34 @@ def test_the_rate_comes_from_the_option_then_the_config(
     assert value(dee_argv(job), "--data-rate") == rate
 
 
-def test_truehdd_is_required(parser):
-    args = parser.parse_args(["encode", "ac4-atmos", "x.mkv"])
+@pytest.mark.parametrize("fmt", ["ddp-atmos", "thd-atmos", "ac4-atmos", "ac4-ims"])
+def test_truehdd_isnt_required_before_the_source_is_known(parser, fmt):
+    args = parser.parse_args(["encode", fmt, "x.atmos"])
     assert isinstance(args, argparse.Namespace)
     with patch("deezy.cli.utils.FindDependencies") as finder:
-        finder.return_value.get_dependencies.return_value.truehdd = "truehdd"
+        finder.return_value.get_dependencies.return_value.truehdd = None
         handle_dependencies(args, None)
     assert finder.return_value.get_dependencies.call_args.kwargs == {
-        "require_truehdd": True
+        "require_truehdd": False
     }
+
+
+@pytest.mark.parametrize(
+    ("probed", "source"),
+    [({"damf_atmos": True}, "in.atmos"), ({"adm_atmos_wav": True}, "in.wav")],
+)
+def test_a_master_needs_no_truehdd(parser, tmp_path, probed, source):
+    payload = payload_for(parser, source=source)
+    payload.truehdd_path = None
+    (dee,) = plan(payload, track(**probed), tmp_path).steps
+    assert isinstance(dee, DeeStep)
+
+
+def test_a_truehd_atmos_source_needs_truehdd(parser, tmp_path):
+    payload = payload_for(parser)
+    payload.truehdd_path = None
+    with pytest.raises(DependencyNotFoundError, match="--truehdd"):
+        plan(payload, track(thd_atmos=True), tmp_path)
 
 
 @pytest.mark.parametrize("probed", [{"channels": 8}, {"channels": 2}])

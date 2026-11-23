@@ -1,6 +1,5 @@
 """encode thd-atmos: the options, the inputs it takes and what it logs."""
 
-import argparse
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -10,13 +9,17 @@ from pymediainfo import Track
 import pytest
 
 import deezy.cli as cli
-from deezy.cli.utils import apply_default_bitrate, handle_dependencies
+from deezy.cli.utils import apply_default_bitrate
 from deezy.dee import spec
 from deezy.dee.commands import check_thd_options
 from deezy.dee.shim import DeeShim
 from deezy.enums.atmos import WarpMode
 from deezy.enums.shared import DeeDRC
-from deezy.exceptions import InvalidAtmosInputError, UnsupportedDeeFeatureError
+from deezy.exceptions import (
+    DependencyNotFoundError,
+    InvalidAtmosInputError,
+    UnsupportedDeeFeatureError,
+)
 from deezy.pipeline.plan import (
     DeeStep,
     PlanContext,
@@ -114,15 +117,15 @@ def test_truehd_atmos_takes_no_bitrate(parser):
     assert getattr(args, "bitrate", None) is None
 
 
-def test_truehdd_is_required(parser):
-    args = parser.parse_args(["encode", "thd-atmos", "x.mkv"])
-    assert isinstance(args, argparse.Namespace)
-    with patch("deezy.cli.utils.FindDependencies") as finder:
-        finder.return_value.get_dependencies.return_value.truehdd = "truehdd"
-        handle_dependencies(args, None)
-    assert finder.return_value.get_dependencies.call_args.kwargs == {
-        "require_truehdd": True
-    }
+def test_only_a_truehd_atmos_source_needs_truehdd(parser, tmp_path):
+    master = payload_for(parser, source="in.atmos")
+    master.truehdd_path = None
+    plan(master, track(damf_atmos=True), tmp_path)
+
+    stream = payload_for(parser)
+    stream.truehdd_path = None
+    with pytest.raises(DependencyNotFoundError, match="--truehdd"):
+        plan(stream, track(thd_atmos=True), tmp_path)
 
 
 @pytest.mark.parametrize("probed", [{"channels": 8}, {"channels": 2}])

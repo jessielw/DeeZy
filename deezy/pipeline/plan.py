@@ -625,7 +625,8 @@ def _truehdd_step(
 ) -> TruehddStep:
     if not payload.truehdd_path:
         raise DependencyNotFoundError(
-            "Failed to locate truehdd, this is required for TrueHD Atmos work flows"
+            "truehdd is needed to decode a TrueHD Atmos source, and DeeZy didn't "
+            "find it. Give its path with --truehdd or under [dependencies]."
         )
     return TruehddStep(
         file_input=Path(payload.file_input),

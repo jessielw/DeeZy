@@ -41,7 +41,7 @@ ffmpeg = ""
 # Folder of the Dolby Encoding Engine (DEE) 6.7 tools, or the path of one of them
 # (leave empty for auto-detection)
 dee = ""     
-# Path to truehdd (leave empty for auto-detection)
+# Path to truehdd, which TrueHD Atmos sources need (leave empty for auto-detection)
 truehdd = ""
 # Path to dee_shim, optional (leave empty for auto-detection)
 dee_shim = ""

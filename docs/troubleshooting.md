@@ -7,9 +7,11 @@ exits with 1 when an encode couldn't run.
 ## Common messages
 
 - "Failed to detect required dependencies: ...": DeeZy found no FFmpeg or DEE
-  tools, or no truehdd, which `ddp-atmos`, `thd-atmos`, `ac4-atmos` and `ac4-ims`
-  need. Give the path with `--ffmpeg`, `--dee` or `--truehdd`, or under
-  `[dependencies]` in the config. See [Installation](installation.md).
+  tools. Give the path with `--ffmpeg` or `--dee`, or under `[dependencies]` in
+  the config. See [Installation](installation.md).
+- "truehdd is needed to decode a TrueHD Atmos source, and DeeZy didn't find
+  it": give truehdd's path with `--truehdd` or under `[dependencies]`. Only a
+  TrueHD Atmos source needs it.
 - "Configured dependency path does not exist: ...": a path given on the command
   line or in the config is wrong.
 - "DeeZy needs the DEE 6.7 command-line tools, but '...' reports ...": the DEE

@@ -1,7 +1,7 @@
 # Installation
 
-DeeZy needs FFmpeg and the DEE 6.7 command-line tools. truehdd is needed for the
-Atmos formats, and [dee_shim](dee-shim.md) is optional.
+DeeZy needs FFmpeg and the DEE 6.7 command-line tools. [truehdd](https://github.com/truehdd/truehdd) is
+needed for TrueHD Atmos sources, and [dee_shim](dee-shim.md) is optional.
 
 ## DeeZy
 
@@ -26,8 +26,8 @@ For a development install from a checkout, use `pipx install --editable .`.
 | --- | --- |
 | FFmpeg | every encode |
 | DEE 6.7 command-line tools | every encode |
-| truehdd | `ddp-atmos`, `thd-atmos`, `ac4-atmos` and `ac4-ims`; it decodes TrueHD Atmos sources. DeeZy is tested with truehdd 0.6.3 |
-| dee_shim 0.2.1 or newer | optional; see [dee_shim](dee-shim.md) |
+| [truehdd](https://github.com/truehdd/truehdd) | a TrueHD Atmos source for `ddp-atmos`, `thd-atmos`, `ac4-atmos` or `ac4-ims`, which it decodes; an Atmos master (DAMF or ADM BWF) doesn't need it. DeeZy is tested with truehdd 0.6.3 |
+| [dee_shim](https://github.com/truehdd/dee-shim) 0.2.1 or newer | optional; see [dee_shim](dee-shim.md) |
 
 DEE 6.7 is a folder of command-line tools, one per job (`dee_ddp_encoder`,
 `dee_ddpjoc_encoder`, `dee_dthd_encoder`, `dee_ac4_encoder`,

@@ -23,6 +23,7 @@ DeeZy 2.0 runs only the DEE 6.7 command-line tools. Commands, presets and config
 - DeeZy refuses an output that is a source of the run or another job's output, even with `--overwrite`, and `--output` with several inputs.
 - On Windows, FFmpeg's audio for `dd`, `ddp`, `ddp-bluray`, `ac4` and `aac` goes into DEE through a pipe by default (`--pipe auto`); `--pipe never` writes the temp WAV.
 - A job's options are checked before anything is extracted or encoded.
+- truehdd is needed only for a TrueHD Atmos source: `ddp-atmos`, `thd-atmos`, `ac4-atmos` and `ac4-ims` encode an Atmos master without it.
 
 ### Added
 

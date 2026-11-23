@@ -133,3 +133,5 @@ that names no option, such as `metering_mode`, is ignored with a warning.
   Atmos `--atmos-elements` and `--legacy-authoring`.
 - [dee_shim](dee-shim.md) support: DD+ 7.1, the 7.1 Atmos modes, TrueHD
   `--drc none`, and faster DD+ Atmos and TrueHD encodes on AMD CPUs.
+- truehdd is needed only for a TrueHD Atmos source, not for every Atmos
+  encode.

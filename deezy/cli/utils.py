@@ -545,13 +545,6 @@ def handle_dependencies(
         config_value = config_deps.get(key)
         deps[key] = cli_value or config_value
 
-    atmos_required = getattr(args, "format_command", None) in (
-        "ddp-atmos",
-        "thd-atmos",
-        "ac4-atmos",
-        "ac4-ims",
-    )
-
     finder = FindDependencies()
     try:
         tools = finder.get_dependencies(
@@ -559,7 +552,9 @@ def handle_dependencies(
             deps["ffmpeg"],
             deps["truehdd"],
             deps["dee"],
-            require_truehdd=atmos_required,
+            # only a TrueHD Atmos source needs truehdd; planning its job
+            # refuses it when there is none
+            require_truehdd=False,
         )
         finder.check_dee_version(Path(tools.dee))
         shim = _dee_shim(args, config_manager, Path(tools.dee))
