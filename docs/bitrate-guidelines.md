@@ -1,18 +1,18 @@
-# Bitrate Guidelines
+# Bitrates
 
-Summary of common defaults and accepted ranges (configurable via `deezy-conf.toml`):
+`deezy bitrates` lists, for each format and mode, every layout's default data
+rate and every rate DEE takes for it, in kbps. Each format's page has the same
+list.
 
-| Format | Layout           | Default   | Range     |
-| ------ | ---------------- | --------- | --------- |
-| DD     | 1.0              | 192 kbps  | 96-640    |
-| DD     | 2.0              | 224 kbps  | 96-640    |
-| DD     | 5.1              | 448 kbps  | 224-640   |
-| DDP    | 1.0              | 64 kbps   | 32-1024   |
-| DDP    | 2.0              | 128 kbps  | 96-1024   |
-| DDP    | 5.1              | 192 kbps  | 192-1024  |
-| DDP    | 7.1              | 384 kbps  | 384-1024  |
-| Atmos  | Streaming        | 448 kbps  | 384-1024  |
-| Atmos  | BluRay           | 1280 kbps | 1152-1664 |
-| AC-4   | Immersive stereo | 256 kbps  | 64-320    |
+```bash
+deezy bitrates
+deezy bitrates ddp ddp-atmos
+```
 
-_Note: All defaults are configurable via the configuration system._
+- `--bitrate` picks a rate. One DEE doesn't take becomes the closest one it
+  does, with a warning.
+- `[default_bitrates]` in the [config](configuration.md) changes a default, and
+  `deezy bitrates` shows it beside DeeZy's own.
+  `[default_source_bitrates]` sets a default per source channel count.
+- A layout marked "needs dee_shim" is encoded through [dee_shim](dee-shim.md).
+- TrueHD (`thd`, `thd-atmos`) is lossless and has no data rate.

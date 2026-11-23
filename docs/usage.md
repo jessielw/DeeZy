@@ -2,9 +2,13 @@
 
 ### Core commands
 
-- `deezy encode <format>` — encode to dd, ddp, ddp-bluray, atmos, ac4
-- `deezy info <file>` — analyze audio tracks
+- `deezy encode <format>` — encode to dd, ddp, ddp-bluray, ddp-atmos, ac4,
+  ac4-ims, ac4-atmos, aac, thd or thd-atmos (see [encode](cli/encode.md))
+- `deezy measure <file>` — measure the loudness without encoding
+- `deezy info <file>` — show the audio tracks
 - `deezy find <glob>` — find files using glob patterns
+- `deezy bitrates [format]` — list the data rates and defaults
+- `deezy tools` — show the tools DeeZy finds
 - `deezy config` — manage configuration
 - `deezy temp` — temp folder management
 
@@ -36,7 +40,7 @@ progress. The display can still turn off normally. Pass `--allow-sleep`, or set
 
 ### Track selection
 
-Use `--track-index` with `N`, `a:N` or `s:N` (stream index) to pick which audio to encode. See the `Track Selection` section in the original README for details.
+Use `--track-index` with `N`, `a:N` or `s:N` (stream index) to pick which audio to encode. See [Track Selection](track-selection.md).
 
 Temp management
 

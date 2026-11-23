@@ -4,9 +4,12 @@ DeeZy uses a TOML-based configuration file (`deezy-conf.toml`) to provide sensib
 
 Key sections
 
-- `[dependencies]` — paths to external tools (ffmpeg, dee, truehdd)
-- `[global_defaults]` — global behavior (keep_temp, working_dir, batching)
-- `[default_bitrates]` — per-format default bitrates
+- `[dependencies]` — paths to the tools: `ffmpeg`, `dee` (the DEE 6.7 tools'
+  folder), `truehdd` and `dee_shim`
+- `[global_defaults]` — defaults for every encode (`keep_temp`, `keep_logs`,
+  `no_shim`, `working_dir`, batching, ...)
+- `[default_bitrates]` — default data rates, one section per format, such as
+  `[default_bitrates.ddp-atmos]`
 - `[presets]` — named command strings for common workflows
 
 Quick commands
@@ -24,6 +27,7 @@ Example snippets
 ffmpeg = ""
 dee = ""
 truehdd = ""
+dee_shim = ""
 
 [global_defaults]
 keep_temp = false
@@ -36,3 +40,16 @@ streaming_ddp = "encode ddp --channels surround --bitrate 448"
 ```
 
 Per-source default bitrates are opt-in via `[default_source_bitrates.<codec>]` and allow pick-by-channel-count.
+
+`deezy bitrates` shows the defaults a config changes beside DeeZy's own.
+
+## Sections from DeeZy 1.x
+
+DeeZy 2.0 renamed two formats, so two 1.x sections are ignored, with a warning:
+
+- `[default_bitrates.atmos]` is now `[default_bitrates.ddp-atmos]`.
+- 1.x's `[default_bitrates.ac4]` was immersive stereo, which is now
+  `[default_bitrates.ac4-ims]`; `ac4` is now channel-based AC-4. DeeZy warns
+  when an `ac4` section has immersive stereo keys.
+
+The same goes for `[default_source_bitrates]`.

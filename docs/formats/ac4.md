@@ -32,15 +32,16 @@ ac4
 
 ## Loudness
 
-DEE measures the loudness and writes it into the stream. `--loudness-target` and
-`--peak-limit` correct it, and `--loudness-preset` measures to a regulation, as
-for [Dolby Digital](dd.md#loudness).
+DEE measures the loudness and writes it into the stream. `--loudness-target`
+(-31 to -10 LKFS for AC-4) and `--peak-limit` correct it, and
+`--loudness-preset` measures to a regulation, as for
+[Dolby Digital](dd.md#loudness).
 
 ## DRC
 
 AC-4 has a DRC profile per kind of device: `--flat-panel-drc`,
 `--home-theatre-drc`, `--portable-headphones-drc` and
-`--portable-speakers-drc`.
+`--portable-speakers-drc`. They take every profile but `none`.
 
 ## Sync
 

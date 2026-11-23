@@ -1,75 +1,76 @@
 # Installation
 
-DeeZy is distributed as a portable executable and via PyPI. Pick the option that fits your workflow.
+DeeZy needs FFmpeg and the DEE 6.7 command-line tools. truehdd is needed for the
+Atmos formats, and [dee_shim](dee-shim.md) is optional.
 
-Bundled vs Standalone
+## DeeZy
 
-- Bundled: the executable is accompanied by a `bundle/` folder beside the executable. This reduces repeated unpacking and is ideal for PATH installations or embedding in other programs.
-- Standalone: a single executable that unpacks on demand. Simpler distribution but may unpack each run.
-
-Options
-
-1. System PATH (recommended): Install or place `ffmpeg`, `dee` (Dolby Encoding Engine), and optionally `truehdd` on your system PATH.
-
-2. Portable structure: create an `apps` folder beside the DeeZy executable with the expected tools:
-
-```
-deezy.exe
-└── apps/
-    ├── ffmpeg/ (ffmpeg.exe)
-    ├── dee/ (dee.exe)
-    └── truehdd/ (truehdd.exe)  # only for Atmos/AC-4 decoding
-```
-
-DEE can be either of two layouts, and DeeZy picks the right one from what it finds:
-
-- **Single `dee`** (`dee.exe`): the classic Dolby Encoding Engine. Everything is supported.
-- **Split encoders**: newer releases (including the copy bundled with Dolby Media Encoder) ship one executable per codec (`dee_ddp_encoder`, `dee_ddpjoc_encoder`, `dee_ac4ims_encoder`, ...) in a folder.
-
-For the split layout, point `--dee` (or `dee` under `[dependencies]` in the config) at the **folder**, or put the encoders in `apps/dee/` or on your `PATH`. On Windows an installed Dolby Media Encoder is found automatically. A single `dee` always takes priority when both are present.
-
-### Split encoder license
-
-The split encoders look for a `license.lic` beside themselves. If there isn't one, DeeZy looks for a Dolby Media Encoder license and passes it automatically (`dme_license.lic` beside the encoders, or `license.lic` in `%APPDATA%\Dolby Media Encoder`). Otherwise put your license in the encoder folder as `license.lic`. The encoders also need `libmediainfo.dll` beside them, so copy the whole folder rather than just the executables.
-
-### Split vs. single `dee`
-
-Everything DeeZy offers works with both layouts except the items below. DeeZy never silently drops an option: where the split encoders can't do something it stops with a clear message, or (for the metering mode and `--ims-legacy-presentation`) says so in the log.
-
-| Option | Single `dee` | Split encoders |
-| --- | --- | --- |
-| `--custom-dialnorm` (DD, DD+, Atmos) | Yes | Yes |
-| DD+ 7.1 for Blu-ray (`ddp-bluray`) | Yes | Yes |
-| Blu-ray Atmos (`--atmos-mode bluray`) | Yes | Yes |
-| AC-4 `--encoding-profile ims_music` | Yes | Yes |
-| DD+ 7.1 for online media (`ddp --channels 8`) | Yes | **No**, use `ddp-bluray` (or `--channels 6` for 5.1) |
-| `--metering-mode` other than 1770-4 | Yes | **No**, always measured with ITU-R BS.1770-4 (noted in the log). Use `--loudness-preset` for regulation-based measuring |
-| AC-4 `--ims-legacy-presentation` | Yes | **No**, ignored with a warning |
-| `--loudness-target` / `--peak-limit` (DD, DD+) | No | Yes |
-| `--loudness-preset` (all formats) | No | Yes |
-| `--user-data` (DD+) | No | Yes |
-| `--bluray-secondary` (DD+) | No | Yes |
-
-The options marked "No" for the single `dee` stop with a message when used with it.
-
-Data rates also differ slightly, so DeeZy adjusts a requested rate to the nearest one the split encoder accepts (and says so): AC-4 takes 64, 96, 128, 144, 256 and 320 kbps, and streaming Atmos does not take 512 kbps.
-
-3. Install via pipx (Python-based install to get the `deezy` CLI shim):
+Download an executable from the releases page, or install the Python package:
 
 ```powershell
 pipx install deezy
 ```
 
-Development install (editable):
+The executable comes in two builds:
 
-```powershell
-pipx install --editable .
-# or
-pipx install --spec .
+- Bundled: the executable has a `bundle/` folder beside it, so it unpacks once.
+  Best for a PATH install or for calling DeeZy from other programs.
+- Standalone: a single executable that unpacks on demand, which can mean every
+  run.
+
+For a development install from a checkout, use `pipx install --editable .`.
+
+## Tools
+
+| Tool | Needed for |
+| --- | --- |
+| FFmpeg | every encode |
+| DEE 6.7 command-line tools | every encode |
+| truehdd | `ddp-atmos`, `thd-atmos`, `ac4-atmos` and `ac4-ims`; it decodes TrueHD Atmos sources. DeeZy is tested with truehdd 0.6.3 |
+| dee_shim 0.2.1 or newer | optional; see [dee_shim](dee-shim.md) |
+
+DEE 6.7 is a folder of command-line tools, one per job (`dee_ddp_encoder`,
+`dee_ddpjoc_encoder`, `dee_dthd_encoder`, `dee_ac4_encoder`,
+`dee_ac4ims_encoder`, `dee_ac4ajoc_encoder`, `dee_aac_encoder`,
+`dee_measure_loudness` and others). Keep the folder whole: the tools need the
+`mediainfo.dll` beside them. DeeZy refuses any other DEE version, including the
+single `dee` executable of DEE 5.2 that DeeZy 1.x used.
+
+## Where DeeZy finds the tools
+
+For each tool DeeZy takes, in order:
+
+1. the path given with `--ffmpeg`, `--dee`, `--truehdd` or `--dee-shim`;
+2. the path under `[dependencies]` in the [config](configuration.md);
+3. the `apps` folder beside DeeZy;
+4. PATH.
+
+On Windows DeeZy also finds the DEE tools of an installed Dolby Media Encoder.
+`--dee` takes the tools' folder, or the path of one of them. The portable
+layout is:
+
+```
+deezy.exe
+└── apps/
+    ├── ffmpeg/ffmpeg.exe
+    ├── dee/            # the DEE 6.7 tools, with mediainfo.dll
+    ├── truehdd/truehdd.exe
+    └── dee_shim/dee_shim.exe   # optional
 ```
 
-Dependencies
+## DEE license
 
-- FFmpeg: required for audio extraction and processing
-- DEE: Dolby Encoding Engine required for encoding flows
-- TrueHDD: required only for TrueHD Atmos decoding
+The DEE tools look for a `license.lic` beside themselves. When there isn't one,
+DeeZy passes them a Dolby Media Encoder license: `dme_license.lic` beside the
+tools, or `license.lic` in `%APPDATA%\Dolby Media Encoder`. The license must
+cover DEE 6.7.
+
+## Check the setup
+
+`deezy tools` shows the FFmpeg, DEE tools, truehdd and dee_shim an encode would
+use, with each one's version and path, and the license the DEE tools get. It
+exits with 1 when an encode couldn't run.
+
+```bash
+deezy tools
+```

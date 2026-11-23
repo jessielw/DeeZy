@@ -34,8 +34,8 @@ Notes about reuse
 Path length and Windows UNC tips
 
 - On Windows, very long input/output paths or an explicit `--temp-dir` with a long base
-  can trigger problems when downstream tools (DEE) open JSON or temporary files.
-  If you see errors opening generated JSON (especially with UNC paths like `\\?\UNC\...`),
+  can trigger problems when downstream tools (DEE) open temporary files.
+  If you see errors opening them (especially with UNC paths like `\\?\UNC\...`),
   try one of the following:
   - Use a shorter `--temp-dir` base located on the same machine as the encoder (e.g. a
     short local path) so per-job folders remain under the Windows path length limits.

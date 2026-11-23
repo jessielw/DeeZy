@@ -1,6 +1,6 @@
 # DeeZy
 
-A compact, portable audio encoding tool built around the Dolby Encoding Engine (DEE). This documentation site collects installation instructions, configuration details, usage examples, and troubleshooting help.
+A compact, portable audio encoding tool built around the Dolby Encoding Engine (DEE) 6.7 command-line tools. This documentation site collects installation instructions, configuration details, usage examples, and troubleshooting help.
 
 Quick links
 

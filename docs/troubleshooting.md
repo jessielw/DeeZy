@@ -1,34 +1,66 @@
 # Troubleshooting
 
-Common issues
+Start with `deezy tools`. It shows the FFmpeg, DEE tools (and their license),
+truehdd and dee_shim an encode would use, with each one's version and path, and
+exits with 1 when an encode couldn't run.
 
-- "truehdd decoder not found": install truehdd or add to PATH (only required for Atmos)
-- "Invalid bitrate for channel layout": check bitrate guidelines or let DeeZy pick a smart default
-- "FFmpeg not found": install FFmpeg and add to PATH
-- "DEE executable not found": provide `--dee` or set in config. For the split DEE encoders this is the folder containing `dee_ddp_encoder`
-- "License file does not exist" / "Provided license file does not enable this tool" (split DEE): DeeZy uses a `license.lic` beside the encoders, else a Dolby Media Encoder license (`dme_license.lic` beside them, or `%APPDATA%\Dolby Media Encoder\license.lic`). The license must cover the DEE release in use
-- "... is not available with the split DEE encoders": that option needs the single `dee` executable (see the comparison table in Installation)
-- "... requires the split DEE encoders": `--loudness-target`, `--peak-limit`, `--loudness-preset`, `--user-data` and `--bluray-secondary` only exist in the split encoders
-- "Dolby Digital Plus 7.1 for online media is not available": a 7.1 source with no `--channels` resolves to 7.1. Pass `--channels 6`, or use `ddp-bluray` for 7.1 with the split encoders
+## Common messages
 
-Debug mode
+- "Failed to detect required dependencies: ...": DeeZy found no FFmpeg or DEE
+  tools, or no truehdd, which `ddp-atmos`, `thd-atmos`, `ac4-atmos` and `ac4-ims`
+  need. Give the path with `--ffmpeg`, `--dee` or `--truehdd`, or under
+  `[dependencies]` in the config. See [Installation](installation.md).
+- "Configured dependency path does not exist: ...": a path given on the command
+  line or in the config is wrong.
+- "DeeZy needs the DEE 6.7 command-line tools, but '...' reports ...": the DEE
+  DeeZy found is another version, such as the single `dee` of DEE 5.2. Point
+  `--dee` at the DEE 6.7 tools' folder.
+- "License file does not exist" or "Provided license file does not enable this
+  tool": the DEE tools found no license that covers them. See
+  [DEE license](installation.md#dee-license).
+- "... needs dee_shim (0.2.1 or newer)": the encode needs
+  [dee_shim](dee-shim.md) (DD+ 7.1, `ddp-atmos --atmos-mode standard` or
+  `bluray`, TrueHD `--drc none`). Give its path with `--dee-shim`, or choose a
+  layout or mode DEE encodes alone.
+- "Up-mixing is not supported.": the layout asked for has more channels than the
+  source.
+- "Bitrate ... is invalid for this configuration. Using the next closest allowed
+  bitrate: ...": `deezy bitrates <format>` lists the rates DEE takes.
+- "Output already exists: ...": the job is skipped. `--overwrite` replaces the
+  file.
+- "The output would overwrite its own source" or "... is also the output of ...
+  in this run": give each job its own name with `--output`, or an
+  `--output-template` that tells them apart.
+- MediaInfo shows a 7.1 DD+ Atmos stream as plain Dolby Digital Plus: see
+  [ddp-atmos](formats/ddp-atmos.md#mediainfo).
+
+## Debugging
 
 ```bash
+deezy encode ddp --dry-run input.mkv
+deezy encode ddp --keep-logs input.mkv
 deezy --log-level debug encode ddp input.mkv
-deezy --log-to-file encode ddp --keep-temp --temp-dir "C:\debug\" input.mkv
+deezy --log-to-file encode ddp --keep-temp --temp-dir "C:\debug" input.mkv
 ```
 
-If you continue to have trouble, collect `--log-to-file` output and open an issue with a short reproduction and log snippets.
+- `--dry-run` probes the source and prints the FFmpeg, truehdd and DEE commands
+  without running them. `--print-commands` prints them as they start.
+- `--keep-logs` writes everything the tools print to `<output>.log` beside the
+  output.
+- `--keep-temp` keeps the job's temp files to look at.
 
-Windows long-path / UNC diagnostics
+If it still fails, open an issue with a short reproduction and the
+`--keep-logs` log.
 
-If DEE or other tools fail to open generated JSON or temp files on Windows (especially
-when using UNC paths with `\\?\UNC\...`), check for path-length problems and use a
-short temporary base while debugging. Useful PowerShell checks:
+## Windows long paths and UNC
+
+If DEE or other tools fail to open temp files on Windows (especially with UNC
+paths like `\\?\UNC\...`), check for path-length problems and use a short temp
+base while debugging. Useful PowerShell checks:
 
 ```powershell
 # Check that the path exists (normalize \?\ prefix first if present)
-$p = '\\?\UNC\SHARE\very\long\path\file.ddp.json'
+$p = '\\?\UNC\SHARE\very\long\path\file.wav'
 $norm = if ($p -like '\\?\*') { $p -replace '^\\\\\?\\', '' } else { $p }
 Test-Path $norm
 
@@ -39,7 +71,6 @@ $norm.Length
 deezy --config deezy-conf.toml --log-to-file encode ddp --keep-temp --temp-dir 'C:\short_tmp' input.mkv
 ```
 
-Recommendation: prefer a short local `--temp-dir` base (for example `C:\deezy_tmp`) when
-processing files with long UNC or deep output paths. DeeZy already uses short deterministic
-job folders by default, but an explicit short base reduces the chance of hitting Windows
-path-length limits.
+Prefer a short local `--temp-dir` base (for example `C:\deezy_tmp`) when
+processing files with long UNC or deep output paths. DeeZy already uses short
+job folders, but a short base makes Windows path-length limits less likely.
