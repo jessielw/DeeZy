@@ -1,17 +1,17 @@
 [project]
 name = "deezy"
-version = "1.5.0"
+version = "2.0.0b1"
 description = "Dolby Encoding Engine Wrapper"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "pymediainfo>=7.0.1",
     "tomlkit>=0.15.2",
-    "platformdirs>=4.12.4",
+    "platformdirs>=4.14.8",
     "typing-extensions>=4.16.0",
     "rich>=15.0.0",
     "oslex2>=1.0.0",
-    "guessit>=4.4.0",
+    "guessit>=4.5.5",
     "unidecode>=1.4.0",
 ]
 authors = [{ name = "jessielw" }]

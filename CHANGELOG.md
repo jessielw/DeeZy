@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - Unreleased
+## [2.0.0-beta.1] - 2026-11-23
 
 DeeZy 2.0 runs only the DEE 6.7 command-line tools. Commands, presets and configs from 1.x may need changes; the [migration guide](docs/migration.md) lists them.
 
 ### Changed
 
+- Updated dependencies.
 - DEE 6.7 only: DeeZy refuses the single `dee` of DEE 5.2 and any other DEE version. `deezy tools` shows what DeeZy finds.
 - `atmos` is now `ddp-atmos`, and 1.x's `ac4` (immersive stereo) is now `ac4-ims`. `ac4` now makes channel-based AC-4 and logs a notice each time it runs. Config sections under the old names are ignored with a warning.
 - Surround 3 dB attenuation is off by default for `dd`, `ddp` and `ddp-bluray`, as in DEE. `--surround-3db` turns it on; `--no-surround-3db` still parses.
