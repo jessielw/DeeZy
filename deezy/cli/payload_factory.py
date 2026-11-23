@@ -3,13 +3,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from deezy.enums.aac import AacProfile
 from deezy.enums.ac4 import Ac4EncodingProfile
-from deezy.enums.atmos import AtmosMode, WarpMode
-from deezy.enums.shared import DeeDRC, LoudnessPreset, MeteringMode, StereoDownmix
-from deezy.payloads.ac4 import Ac4Payload
+from deezy.enums.atmos import AtmosMode
+from deezy.enums.shared import (
+    DeeDRC,
+    LoudnessPreset,
+    PipeMode,
+    StereoDownmix,
+)
+from deezy.payloads.aac import AacPayload
+from deezy.payloads.ac4 import Ac4AtmosPayload, Ac4ChannelPayload, Ac4Payload
 from deezy.payloads.atmos import AtmosPayload
 from deezy.payloads.dd import DDPayload
 from deezy.payloads.ddp import DDPPayload
+from deezy.payloads.measure import MeasurePayload
+from deezy.payloads.thd import TrueHDAtmosPayload, TrueHDPayload
 
 
 @dataclass(slots=True)
@@ -48,22 +57,23 @@ class PayloadBuilder:
             "file_output": Path(args.output) if cls.safe_get(args, "output") else None,
             "output_template": cls.safe_get(args, "output_template"),
             "output_preview": cls.safe_get(args, "output_preview", False),
+            "print_commands": cls.safe_get(args, "print_commands", False),
+            "dry_run": cls.safe_get(args, "dry_run", False),
+            "keep_logs": cls.safe_get(args, "keep_logs", False),
+            "pipe": cls.safe_get(args, "pipe") or PipeMode.AUTO,
             "worker_id": cls.safe_get(args, "worker_id"),
             "batch_output_dir": Path(cls.safe_get(args, "batch_output_dir"))
             if cls.safe_get(args, "batch_output_dir")
             else None,
             "overwrite": cls.safe_get(args, "overwrite", False),
+            # set by the caller, which finds the tools
+            "dee_shim": None,
         }
 
     @classmethod
-    def _build_loudness_fields(
-        cls,
-        args: argparse.Namespace,
-        default_metering: MeteringMode = MeteringMode.MODE_1770_3,
-    ) -> dict:
+    def _build_loudness_fields(cls, args: argparse.Namespace) -> dict:
         """Build loudness fields."""
         return {
-            "metering_mode": cls.safe_get(args, "metering_mode", default_metering),
             "dialogue_intelligence": cls.safe_get(
                 args, "no_dialogue_intelligence", True
             ),
@@ -97,11 +107,9 @@ class PayloadBuilder:
             "stereo_mix": cls.safe_get(args, "stereo_down_mix", StereoDownmix.LORO),
             "lfe_lowpass_filter": cls.safe_get(args, "no_low_pass_filter", True),
             "surround_90_degree_phase_shift": cls.safe_get(
-                args, "no_surround_3db", True
-            ),
-            "surround_3db_attenuation": cls.safe_get(
                 args, "no_surround_90_deg_phase_shift", True
             ),
+            "surround_3db_attenuation": cls.safe_get(args, "surround_3db", False),
             "loro_center_mix_level": cls.safe_get(args, "lo_ro_center", "-3"),
             "loro_surround_mix_level": cls.safe_get(args, "lo_ro_surround", "-3"),
             "ltrt_center_mix_level": cls.safe_get(args, "lt_rt_center", "-3"),
@@ -145,6 +153,7 @@ class PayloadBuilder:
         payload_data.update(cls._build_dolby_fields(args))
         payload_data.update(cls._build_stereo_mix_fields(args))
         payload_data["channels"] = cls.safe_get(args, "channels")
+        payload_data["disable_lfe"] = bool(cls.safe_get(args, "disable_lfe", False))
         payload_data.update(cls._build_loudness_correction_fields(args))
 
         return DDPayload(**payload_data)
@@ -174,6 +183,7 @@ class PayloadBuilder:
         payload_data["bluray_secondary"] = bool(
             cls.safe_get(args, "bluray_secondary", False)
         )
+        payload_data["disable_lfe"] = bool(cls.safe_get(args, "disable_lfe", False))
 
         return DDPPayload(**payload_data)
 
@@ -193,7 +203,7 @@ class PayloadBuilder:
                 args, file_input, ffmpeg_path, truehdd_path, dee_path
             )
         )
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
         payload_data.update(cls._build_dolby_fields(args))
         payload_data.update(cls._build_downmix_only_fields(args))
 
@@ -201,8 +211,11 @@ class PayloadBuilder:
         payload_data.update(
             {
                 "atmos_mode": cls.safe_get(args, "atmos_mode", AtmosMode.STREAMING),
-                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", WarpMode.NORMAL),
-                "bed_conform": cls.safe_get(args, "bed_conform", False),
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
+                "surround_90_degree_phase_shift": cls.safe_get(
+                    args, "no_surround_90_deg_phase_shift", True
+                ),
+                "oamd_as_is": not cls.safe_get(args, "no_oamd_as_is", False),
             }
         )
 
@@ -224,16 +237,12 @@ class PayloadBuilder:
                 args, file_input, ffmpeg_path, truehdd_path, dee_path
             )
         )
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
 
         # AC4-specific fields
         payload_data.update(
             {
-                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", WarpMode.NORMAL),
-                "bed_conform": cls.safe_get(args, "bed_conform", False),
-                "ims_legacy_presentation": cls.safe_get(
-                    args, "ims_legacy_presentation", False
-                ),
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
                 "encoding_profile": cls.safe_get(
                     args, "encoding_profile", Ac4EncodingProfile.IMS
                 ),
@@ -254,3 +263,196 @@ class PayloadBuilder:
         )
 
         return Ac4Payload(**payload_data)
+
+    @classmethod
+    def build_ac4_atmos_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> Ac4AtmosPayload:
+        """Build the AC-4 Atmos payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_ac4ajoc_encoder measures to 1770-4 only
+        payload_data.update(cls._build_loudness_fields(args))
+        payload_data.update(
+            {
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
+                "flat_panel_drc": cls.safe_get(
+                    args, "flat_panel_drc", DeeDRC.FILM_LIGHT
+                ),
+                "home_theatre_drc": cls.safe_get(
+                    args, "home_theatre_drc", DeeDRC.FILM_LIGHT
+                ),
+                "portable_headphones_drc": cls.safe_get(
+                    args, "portable_headphones_drc", DeeDRC.FILM_LIGHT
+                ),
+                "portable_speakers_drc": cls.safe_get(
+                    args, "portable_speakers_drc", DeeDRC.FILM_LIGHT
+                ),
+            }
+        )
+        return Ac4AtmosPayload(**payload_data)
+
+    @classmethod
+    def build_aac_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> AacPayload:
+        """Build AAC payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_aac_encoder measures to 1770-4 only, and only when it corrects
+        payload_data.update(cls._build_loudness_fields(args))
+        payload_data.update(cls._build_loudness_correction_fields(args))
+        payload_data["aac_profile"] = cls.safe_get(
+            args, "aac_profile", AacProfile.AAC_LC
+        )
+        return AacPayload(**payload_data)
+
+    @classmethod
+    def build_ac4_channel_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> Ac4ChannelPayload:
+        """Build the channel-based AC-4 payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_ac4_encoder measures to 1770-4 only
+        payload_data.update(cls._build_loudness_fields(args))
+        payload_data.update(cls._build_loudness_correction_fields(args))
+        payload_data.update(
+            {
+                "channels": cls.safe_get(args, "channels"),
+                "flat_panel_drc": cls.safe_get(
+                    args, "flat_panel_drc", DeeDRC.FILM_LIGHT
+                ),
+                "home_theatre_drc": cls.safe_get(
+                    args, "home_theatre_drc", DeeDRC.FILM_LIGHT
+                ),
+                "portable_headphones_drc": cls.safe_get(
+                    args, "portable_headphones_drc", DeeDRC.FILM_LIGHT
+                ),
+                "portable_speakers_drc": cls.safe_get(
+                    args, "portable_speakers_drc", DeeDRC.FILM_LIGHT
+                ),
+                "preferred_downmix_mode": cls.safe_get(
+                    args, "stereo_down_mix", StereoDownmix.LORO
+                ),
+                "loro_center_mix_level": cls.safe_get(args, "lo_ro_center", "-3"),
+                "loro_surround_mix_level": cls.safe_get(args, "lo_ro_surround", "-3"),
+                "ltrt_center_mix_level": cls.safe_get(args, "lt_rt_center", "-3"),
+                "ltrt_surround_mix_level": cls.safe_get(args, "lt_rt_surround", "-3"),
+                "disable_lfe": bool(cls.safe_get(args, "disable_lfe", False)),
+            }
+        )
+        return Ac4ChannelPayload(**payload_data)
+
+    @classmethod
+    def build_measure_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> MeasurePayload:
+        """Build the loudness measurement payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_measure_loudness measures to 1770-4 only
+        payload_data.update(cls._build_loudness_fields(args))
+        output_dir = cls.safe_get(args, "output_dir")
+        payload_data.update(
+            {
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode"),
+                "output_dir": Path(output_dir) if output_dir else None,
+            }
+        )
+        return MeasurePayload(**payload_data)
+
+    @classmethod
+    def build_thd_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> TrueHDPayload:
+        """Build the channel-based TrueHD payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_dthd_encoder measures to 1770-4 only
+        payload_data.update(cls._build_loudness_fields(args))
+        payload_data.update(
+            {
+                "channels": cls.safe_get(args, "channels"),
+                "drc": cls.safe_get(args, "drc", DeeDRC.FILM_LIGHT),
+                "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
+                "as_is": not cls.safe_get(args, "no_as_is", False),
+                "disable_lfe": bool(cls.safe_get(args, "disable_lfe", False)),
+            }
+        )
+        return TrueHDPayload(**payload_data)
+
+    @classmethod
+    def build_thd_atmos_payload(
+        cls,
+        args: argparse.Namespace,
+        file_input: Path,
+        ffmpeg_path: Path,
+        truehdd_path: Path | None,
+        dee_path: Path,
+    ) -> TrueHDAtmosPayload:
+        """Build the TrueHD Atmos payload from args."""
+        payload_data = {}
+        payload_data.update(
+            cls._build_core_fields(
+                args, file_input, ffmpeg_path, truehdd_path, dee_path
+            )
+        )
+        # dee_dthd_encoder measures to 1770-4 only
+        payload_data.update(cls._build_loudness_fields(args))
+        payload_data.update(
+            {
+                "drc": cls.safe_get(args, "drc", DeeDRC.FILM_LIGHT),
+                "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
+                "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
+                "legacy_authoring": bool(cls.safe_get(args, "legacy_authoring", False)),
+                "atmos_elements": int(cls.safe_get(args, "atmos_elements", 16)),
+                "as_is": not cls.safe_get(args, "no_as_is", False),
+            }
+        )
+        return TrueHDAtmosPayload(**payload_data)

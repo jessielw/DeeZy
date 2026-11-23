@@ -1,11 +1,15 @@
 from typing_extensions import override
 
+from deezy.dee.spec import get_format
 from deezy.enums import CaseInsensitiveEnum
 from deezy.payloads.shared import ChannelBitrates
 
 
 class AtmosMode(CaseInsensitiveEnum):
+    # a 5.1 backbone, which DEE encodes alone
     STREAMING = "streaming"
+    # 7.1 backbones, through dee_shim: E-AC-3 only, or an AC-3 core for Blu-ray
+    STANDARD = "standard"
     BLURAY = "bluray"
 
     @override
@@ -13,25 +17,7 @@ class AtmosMode(CaseInsensitiveEnum):
         return self.name
 
     def get_bitrate_obj(self) -> ChannelBitrates:
-        if self is AtmosMode.STREAMING:
-            return ChannelBitrates(
-                default=448,
-                choices=(
-                    384,
-                    448,
-                    512,
-                    576,
-                    640,
-                    768,
-                    1024,
-                ),
-            )
-        # BLURAY
-        else:
-            return ChannelBitrates(
-                default=1280,
-                choices=(1152, 1280, 1408, 1512, 1536, 1664),
-            )
+        return get_format("ddp-atmos").rates("atmos", mode=self.value)
 
     def get_channels(self) -> int:
         if self is AtmosMode.STREAMING:

@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from typing import cast
 
 from pymediainfo import Track
+import pytest
 
 from deezy.track_info.mediainfo import MediainfoParser
 from deezy.track_info.track_index import TrackIndex
@@ -264,3 +265,38 @@ def test_generate_output_filename_ignore_delay_injects_zero(tmp_path: Path):
         worker_id=None,
     )
     assert "DELAY 0ms" in out.name
+
+
+def render(tmp_path: Path, template: str, filename: str = "Some.Movie.mkv", **guess):
+    mi_attrs = {"other_language": None, "delay_relative_to_video": None}
+    p = make_parser(tmp_path, filename, mi_attrs, guess or {"title": "Some Movie"})
+    return p.render_output_template(
+        template,
+        suffix=".ec3",
+        output_channels="5.1",
+        delay_was_stripped=False,
+        delay_relative_to_video=0,
+    ).name
+
+
+@pytest.mark.parametrize(
+    ("template", "name"),
+    [
+        ("{title} [{lang}]", "Some Movie.ec3"),
+        ("{title} [{lang}] ({year}) {opt-delay}", "Some Movie.ec3"),
+        ("{title} [ {lang} ] cut", "Some Movie cut.ec3"),
+        ("{title} [({lang})]", "Some Movie.ec3"),
+        ("{title} [{channels}] ({lang})", "Some Movie [5.1].ec3"),
+    ],
+)
+def test_brackets_a_token_left_empty_are_dropped(tmp_path: Path, template, name):
+    assert render(tmp_path, template) == name
+
+
+def test_a_template_that_renders_to_nothing_takes_the_source_name(tmp_path: Path):
+    assert render(tmp_path, "[{lang}] ({year})") == "Some.Movie.ec3"
+
+
+def test_stem_cleaned_is_filled_in_and_stands_in_for_stem(tmp_path: Path):
+    name = render(tmp_path, "{stem-cleaned}{stem} [{lang}]", "Some.Movie [eng].mkv")
+    assert name == "Some Movie.ec3"

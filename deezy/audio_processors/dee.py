@@ -1,8 +1,12 @@
+from collections.abc import Callable
 import logging
+import re
 from subprocess import PIPE, STDOUT, Popen
 
+from deezy.dee.shim import clean_env, is_shim_command, shim_failure
 from deezy.utils.logger import logger
 from deezy.utils.progress import DEEProgressHandler
+from deezy.utils.tool_log import ToolLog
 
 _SUMMARY_START_MARKERS = (
     "--- Execution summary starts here ---",
@@ -133,11 +137,30 @@ def _process_dee_progress_line(line: str, handler, progress_state: dict) -> None
                 progress_state["measure_done"] = True
 
 
+def with_loglevel(cmd: list) -> list:
+    """A copy of a planned DEE command with ``--loglevel`` set from DeeZy's level."""
+    level = "debug" if logger.getEffectiveLevel() == logging.DEBUG else "info"
+    cmd = cmd.copy()
+    cmd[cmd.index("--loglevel") + 1] = level
+    return cmd
+
+
+# a redraw of the split encoders' --progress bar, such as '[==>     ] 6 %'
+_PROGRESS_BAR = re.compile(r"\[[=> ]*\]\s*\d+(?:\.\d+)?\s*%")
+
+
+def _is_progress(line: str) -> bool:
+    """Whether ``line`` is only a progress bar, which a kept log leaves out."""
+    return _PROGRESS_BAR.fullmatch(line) is not None
+
+
 def process_dee_job(
     cmd: list,
     step_info: dict | None = None,
     no_progress_bars: bool = False,
     custom_dialnorm: int = 0,
+    on_start: Callable[[Popen], None] | None = None,
+    log: ToolLog | None = None,
 ) -> bool:
     """Processes file with DEE while generating progress and enhanced error reporting.
 
@@ -146,16 +169,13 @@ def process_dee_job(
         step_info (dict | None): Optional step context with 'current', 'total', 'name' keys.
         no_progress_bars (bool): Disable progress bars.
         custom_dialnorm (int): If user supplies custom dialnorm (0 is off).
+        on_start: Called with the DEE process as soon as it has started, before
+            its output is read (a pipe's writer starts from here).
+        log: The job's kept log, for --keep-logs; gets every line but the
+            progress percentages.
     """
-    # set the verbosity level in the cmd list depending on logging level
+    cmd = with_loglevel(cmd)
     logger_level = logger.getEffectiveLevel()
-    level = "debug" if logger_level == logging.DEBUG else "info"
-    if "--verbose" in cmd:
-        # the single dee takes its level as the value following the flag
-        cmd.insert(cmd.index("--verbose") + 1, level)
-    else:
-        # the split encoders already carry a level to be replaced
-        cmd[cmd.index("--loglevel") + 1] = level
 
     # setup DEE progress handler; the split encoders report plain percentages
     # (requested with --progress) rather than the single dee's stage lines
@@ -179,7 +199,11 @@ def process_dee_job(
         universal_newlines=True,
         encoding="utf-8",
         errors="replace",
+        # dee_shim reads settings from its environment; keep them out
+        env=clean_env() if is_shim_command(cmd) else None,
     ) as proc:
+        if on_start:
+            on_start(proc)
         progress_state = {
             "measure_done": False,
             "last_measure": 0.0,
@@ -199,6 +223,8 @@ def process_dee_job(
                     line_stripped = line.strip()
                     output_lines.append(line_stripped)
                     logger.debug(line_stripped)
+                    if log is not None and not _is_progress(line_stripped):
+                        log.add("dee", line_stripped)
 
                     # process progress information
                     _process_dee_progress_line(line_stripped, handler, progress_state)
@@ -223,7 +249,13 @@ def process_dee_job(
             # ensure completion for both phases
             if return_code == 0 and progress_state["progress"]:
                 # progress bars handle completion automatically
-                if (
+                if not handler.encodes:
+                    if progress_state["measure_task_id"] is not None:
+                        progress_state["progress"].update(
+                            progress_state["measure_task_id"], completed=100
+                        )
+                        progress_state["progress"].refresh()
+                elif (
                     progress_state["encode_task_id"] is None
                     and progress_state["last_measure"] == 100.0
                 ):
@@ -256,11 +288,15 @@ def process_dee_job(
                     handler.ensure_completion(
                         progress_state["last_measure"], handler.measure_task_desc
                     )
-                handler.ensure_completion(
-                    progress_state["last_encode"], handler.encode_task_desc
-                )
+                if handler.encodes:
+                    handler.ensure_completion(
+                        progress_state["last_encode"], handler.encode_task_desc
+                    )
 
     if return_code != 0:
+        shim_reason = shim_failure(return_code, output_lines)
+        if shim_reason and is_shim_command(cmd):
+            raise ValueError(shim_reason)
         # parse the output for detailed error information
         error_message = _parse_dee_execution_summary(output_lines)
         if error_message:

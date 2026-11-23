@@ -10,4 +10,4 @@ Retention
 
 - `--max-logs` and `--max-batch-results` control how many files are kept in working dir.
 
-A sample file is available at `example_json_flows/sample_batch_results.json` in the repository.
+A sample file is available at `docs/sample_batch_results.json` in the repository.

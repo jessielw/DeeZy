@@ -10,6 +10,12 @@ from deezy.utils.exit import EXIT_FAIL, exit_application
 from deezy.utils.logger import logger
 from deezy.utils.utils import WORKING_DIRECTORY
 
+# formats 2.0 renamed, by their old name
+RENAMED_FORMATS = {"atmos": "ddp-atmos"}
+# 1.x's 'ac4' was immersive stereo; 2.0's is channel-based AC-4, so only the
+# keys that are IMS's own give an old section away
+IMS_ONLY_KEYS = {"default_bitrates": "immersive_stereo"}
+
 
 class ConfigManager:
     """Simple configuration manager that handles presets and config loading."""
@@ -103,6 +109,26 @@ class ConfigManager:
             self.config["default_bitrates"] = {}
         if "dependencies" not in self.config:
             self.config["dependencies"] = {}
+        for section in ("default_bitrates", "default_source_bitrates"):
+            for old, new in RENAMED_FORMATS.items():
+                if old in (self.config.get(section) or {}):
+                    logger.warning(
+                        f"Config section [{section}.{old}] is ignored: the '{old}' "
+                        f"format is now '{new}', so rename it [{section}.{new}]."
+                    )
+            ac4 = (self.config.get(section) or {}).get("ac4") or {}
+            ims_keys = sorted(
+                key
+                for key in ac4
+                if key == IMS_ONLY_KEYS.get(section) or str(key).endswith("_atmos")
+            )
+            if ims_keys:
+                logger.warning(
+                    f"Config [{section}.ac4] has immersive stereo keys "
+                    f"({', '.join(ims_keys)}), which are ignored: 'ac4' is now "
+                    f"channel-based AC-4 and immersive stereo is 'ac4-ims', so "
+                    f"move them to [{section}.ac4-ims]."
+                )
 
     def get_preset_command(self, preset_name: str) -> str:
         """Get the CLI command string for a preset."""
@@ -177,9 +203,11 @@ class ConfigManager:
         if not format_bitrates:
             return None
 
-        # for Atmos, use the mode (streaming/bluray)
-        if format_str == "atmos" and channels_or_mode:
-            return format_bitrates.get(channels_or_mode)
+        # DD+ Atmos is keyed by its mode (streaming/bluray), AAC by its
+        # profile (aaclc/heaac/heaacv2)
+        if format_str in ("ddp-atmos", "aac") and channels_or_mode:
+            key = getattr(channels_or_mode, "value", channels_or_mode)
+            return format_bitrates.get(str(key).lower())
 
         # for DD/DDP, use channel configuration
         if channels_or_mode:
@@ -241,7 +269,7 @@ class ConfigManager:
                 "description": f"preset command: {command}",
             }
             if len(args) >= 2:
-                info["format"] = args[1]  # e.g. 'ddp', 'dd', 'atmos'
+                info["format"] = args[1]  # e.g. 'ddp', 'dd', 'ddp-atmos'
             return info
         except Exception:
             return {
@@ -251,11 +279,18 @@ class ConfigManager:
             }
 
     @classmethod
-    def get_instance(cls) -> "ConfigManager":
-        """Get the singleton instance and ensure it's loaded."""
+    def get_instance(cls, config_path: str | Path | None = None) -> "ConfigManager":
+        """Get the singleton instance and ensure it's loaded.
+
+        With `config_path` (the user's `--config`), that file is loaded instead
+        of the auto-discovered one, which is never read, so a config the run
+        doesn't use logs no warnings. A file already loaded isn't read again.
+        """
         instance = cls()
-        # load config if not already loaded
-        if not instance.config and not instance.config_path:
+        if config_path is not None:
+            if instance.config_path != Path(config_path).expanduser():
+                instance.load_config(config_path)
+        elif not instance.config and not instance.config_path:
             instance.load_config()
         return instance
 
@@ -266,6 +301,6 @@ class ConfigManager:
         cls._initialized = False
 
 
-def get_config_manager() -> ConfigManager:
-    """Get the singleton config manager instance."""
-    return ConfigManager.get_instance()
+def get_config_manager(config_path: str | Path | None = None) -> ConfigManager:
+    """Get the singleton config manager instance (see `get_instance`)."""
+    return ConfigManager.get_instance(config_path)

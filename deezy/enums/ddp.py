@@ -2,6 +2,7 @@ from enum import Enum
 
 from typing_extensions import override
 
+from deezy.dee.spec import get_format
 from deezy.payloads.shared import ChannelBitrates
 
 
@@ -40,154 +41,9 @@ class DolbyDigitalPlusChannels(Enum):
             return "off"
 
     def get_bitrate_obj(self) -> ChannelBitrates:
-        if self is DolbyDigitalPlusChannels.MONO:
-            return ChannelBitrates(
-                default=64,
-                choices=(
-                    32,
-                    40,
-                    48,
-                    56,
-                    64,
-                    72,
-                    80,
-                    88,
-                    96,
-                    104,
-                    112,
-                    120,
-                    128,
-                    144,
-                    160,
-                    176,
-                    192,
-                    200,
-                    208,
-                    216,
-                    224,
-                    232,
-                    240,
-                    248,
-                    256,
-                    272,
-                    288,
-                    304,
-                    320,
-                    336,
-                    352,
-                    368,
-                    384,
-                    400,
-                    448,
-                    512,
-                    576,
-                    640,
-                    704,
-                    768,
-                    832,
-                    896,
-                    960,
-                    1008,
-                    1024,
-                ),
-            )
-        elif self is DolbyDigitalPlusChannels.STEREO:
-            return ChannelBitrates(
-                default=128,
-                choices=(
-                    96,
-                    104,
-                    112,
-                    120,
-                    128,
-                    144,
-                    160,
-                    176,
-                    192,
-                    200,
-                    208,
-                    216,
-                    224,
-                    232,
-                    240,
-                    248,
-                    256,
-                    272,
-                    288,
-                    304,
-                    320,
-                    336,
-                    352,
-                    368,
-                    384,
-                    400,
-                    448,
-                    512,
-                    576,
-                    640,
-                    704,
-                    768,
-                    832,
-                    896,
-                    960,
-                    1008,
-                    1024,
-                ),
-            )
-        elif self is DolbyDigitalPlusChannels.SURROUND:
-            return ChannelBitrates(
-                default=192,
-                choices=(
-                    192,
-                    200,
-                    208,
-                    216,
-                    224,
-                    232,
-                    240,
-                    248,
-                    256,
-                    272,
-                    288,
-                    304,
-                    320,
-                    336,
-                    352,
-                    368,
-                    384,
-                    400,
-                    448,
-                    512,
-                    576,
-                    640,
-                    704,
-                    768,
-                    832,
-                    896,
-                    960,
-                    1008,
-                    1024,
-                ),
-            )
-        # surroundex
-        else:
-            return ChannelBitrates(
-                default=384,
-                choices=(
-                    384,
-                    448,
-                    504,
-                    576,
-                    640,
-                    704,
-                    768,
-                    832,
-                    896,
-                    960,
-                    1008,
-                    1024,
-                ),
-            )
+        # AUTO has no rates of its own and gets 7.1's
+        layout = "7.1" if self is DolbyDigitalPlusChannels.AUTO else str(self)
+        return get_format("ddp").rates(layout)
 
     @staticmethod
     def get_values_list() -> list[int]:

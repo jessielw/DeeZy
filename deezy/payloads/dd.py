@@ -12,3 +12,5 @@ class DDPayload(StereoMixPayload):
     loudness_target: int | None = None
     peak_limit: float | None = None
     loudness_preset: LoudnessPreset = LoudnessPreset.MANUAL
+    # code 5.1 as 5.0 (DEE's lfe_on=0)
+    disable_lfe: bool = False

@@ -1,0 +1,507 @@
+{
+  "dee_version": "6.7.0+8e353f99",
+  "tools": {
+    "dee_ddp_encoder": {
+      "pe_id": "6AE0E857-01131000",
+      "has_temp_dir": true,
+      "has_input_format": true,
+      "start_default": "first_frame_of_action",
+      "loudness_default": "measure_and_correct",
+      "loudness_modes": {
+        "skip": false,
+        "skip:dialnorm=-31": true,
+        "measure_only": true,
+        "measure_and_correct": true
+      }
+    },
+    "dee_ddpjoc_encoder": {
+      "pe_id": "6AE0E85B-010C9000",
+      "has_temp_dir": false,
+      "has_input_format": true,
+      "start_default": "first_frame_of_action",
+      "loudness_default": "measure_only",
+      "loudness_modes": {
+        "skip": false,
+        "skip:dialnorm=-31": true,
+        "measure_only": true,
+        "measure_and_correct": false
+      }
+    },
+    "dee_dthd_encoder": {
+      "pe_id": "6AE0E851-01A70000",
+      "has_temp_dir": true,
+      "has_input_format": true,
+      "start_default": "first_frame_of_action",
+      "loudness_default": "measure_only",
+      "loudness_modes": {
+        "skip": false,
+        "skip:dialnorm=-31": true,
+        "measure_only": true,
+        "measure_and_correct": false
+      }
+    },
+    "dee_ac4_encoder": {
+      "pe_id": "6AE0E861-0141E000",
+      "has_temp_dir": true,
+      "has_input_format": true,
+      "start_default": "first_frame_of_action",
+      "loudness_default": "measure_and_correct",
+      "loudness_modes": {
+        "skip": false,
+        "skip:dialnorm=-31": false,
+        "measure_only": true,
+        "measure_and_correct": true
+      }
+    },
+    "dee_ac4ajoc_encoder": {
+      "pe_id": "6AE0E86C-01C10000",
+      "has_temp_dir": false,
+      "has_input_format": false,
+      "start_default": "first_frame_of_action",
+      "loudness_default": "measure_only",
+      "loudness_modes": {
+        "skip": false,
+        "skip:dialnorm=-31": false,
+        "measure_only": true,
+        "measure_and_correct": false
+      }
+    },
+    "dee_ac4ims_encoder": {
+      "pe_id": "6AE0E862-0154A000",
+      "has_temp_dir": false,
+      "has_input_format": true,
+      "start_default": "first_frame_of_action",
+      "loudness_default": "measure_only",
+      "loudness_modes": {
+        "skip": false,
+        "skip:dialnorm=-31": false,
+        "measure_only": true,
+        "measure_and_correct": false
+      }
+    },
+    "dee_aac_encoder": {
+      "pe_id": "6AE0E84A-007A6000",
+      "has_temp_dir": true,
+      "has_input_format": true,
+      "start_default": "0",
+      "loudness_default": "measure_and_correct",
+      "loudness_modes": {
+        "skip": true,
+        "skip:dialnorm=-31": false,
+        "measure_only": false,
+        "measure_and_correct": true
+      }
+    },
+    "dee_measure_loudness": {
+      "pe_id": "6AE0E86C-00D75000",
+      "has_temp_dir": false,
+      "has_input_format": true,
+      "start_default": "0",
+      "loudness_default": "measure_only",
+      "loudness_modes": {
+        "skip": false,
+        "skip:dialnorm=-31": false,
+        "measure_only": true,
+        "measure_and_correct": false
+      }
+    }
+  },
+  "rates": {
+    "dee_ddp_encoder": {
+      "dd": {
+        "1.0": {
+          "auto": 96,
+          "rates": [
+            96,
+            112,
+            128,
+            160,
+            192,
+            224,
+            256,
+            320,
+            384,
+            448,
+            512,
+            576,
+            640
+          ]
+        },
+        "2.0": {
+          "auto": 128,
+          "rates": [
+            96,
+            112,
+            128,
+            160,
+            192,
+            224,
+            256,
+            320,
+            384,
+            448,
+            512,
+            576,
+            640
+          ]
+        },
+        "5.1": {
+          "auto": 224,
+          "rates": [
+            224,
+            256,
+            320,
+            384,
+            448,
+            512,
+            576,
+            640
+          ]
+        }
+      },
+      "ddp": {
+        "1.0": {
+          "auto": 64,
+          "rates": [
+            32,
+            40,
+            48,
+            56,
+            64,
+            72,
+            80,
+            88,
+            96,
+            104,
+            112,
+            120,
+            128,
+            144,
+            160,
+            176,
+            192,
+            200,
+            208,
+            216,
+            224,
+            232,
+            240,
+            248,
+            256,
+            272,
+            288,
+            304,
+            320,
+            336,
+            352,
+            368,
+            384,
+            400,
+            448,
+            512,
+            576,
+            640,
+            704,
+            768,
+            832,
+            896,
+            960,
+            1008,
+            1024
+          ]
+        },
+        "2.0": {
+          "auto": 128,
+          "rates": [
+            96,
+            104,
+            112,
+            120,
+            128,
+            144,
+            160,
+            176,
+            192,
+            200,
+            208,
+            216,
+            224,
+            232,
+            240,
+            248,
+            256,
+            272,
+            288,
+            304,
+            320,
+            336,
+            352,
+            368,
+            384,
+            400,
+            448,
+            512,
+            576,
+            640,
+            704,
+            768,
+            832,
+            896,
+            960,
+            1008,
+            1024
+          ]
+        },
+        "5.1": {
+          "auto": 192,
+          "rates": [
+            192,
+            200,
+            208,
+            216,
+            224,
+            232,
+            240,
+            248,
+            256,
+            272,
+            288,
+            304,
+            320,
+            336,
+            352,
+            368,
+            384,
+            400,
+            448,
+            512,
+            576,
+            640,
+            704,
+            768,
+            832,
+            896,
+            960,
+            1008,
+            1024
+          ]
+        }
+      },
+      "bluray": {
+        "7.1": {
+          "auto": 768,
+          "rates": [
+            768,
+            1024,
+            1280,
+            1536,
+            1664
+          ]
+        }
+      },
+      "bluray_secondary": {
+        "2.0": {
+          "auto": 192,
+          "rates": [
+            96,
+            128,
+            160,
+            192,
+            224,
+            256
+          ]
+        },
+        "5.1": {
+          "auto": 192,
+          "rates": [
+            160,
+            192,
+            224,
+            256
+          ]
+        }
+      }
+    },
+    "dee_ac4_encoder": {
+      "2.0": {
+        "auto": 64,
+        "rates": [
+          48,
+          64,
+          96,
+          128,
+          144,
+          192,
+          256,
+          288,
+          320,
+          384,
+          448,
+          512,
+          768
+        ]
+      },
+      "5.1": {
+        "auto": 128,
+        "rates": [
+          96,
+          128,
+          144,
+          192,
+          256,
+          288,
+          320,
+          384,
+          448,
+          512,
+          768
+        ]
+      }
+    },
+    "dee_ac4ims_encoder": {
+      "auto": 256,
+      "rates": [
+        64,
+        96,
+        128,
+        144,
+        256,
+        320
+      ]
+    },
+    "dee_aac_encoder": {
+      "aaclc": [
+        56,
+        576
+      ],
+      "heaac": [
+        16,
+        143
+      ],
+      "heaacv2": [
+        14,
+        63
+      ]
+    },
+    "dee_ddpjoc_encoder": {
+      "ddpjoc": {
+        "auto": 448,
+        "rates": [
+          384,
+          448,
+          576,
+          640,
+          768,
+          1024
+        ]
+      },
+      "bluray": {
+        "auto": 1152,
+        "rates": [
+          1152,
+          1280,
+          1408,
+          1512,
+          1536,
+          1664
+        ]
+      }
+    },
+    "dee_ac4ajoc_encoder": {
+      "level3": {
+        "auto": 320,
+        "rates": [
+          256,
+          320,
+          448,
+          768
+        ]
+      },
+      "level4": {
+        "auto": 256,
+        "rates": [
+          128,
+          256,
+          448,
+          768,
+          1500
+        ]
+      }
+    }
+  },
+  "delays": {
+    "aac_codec_delay_bands": {
+      "aaclc": [
+        [
+          56,
+          71,
+          1710
+        ],
+        [
+          72,
+          87,
+          1702
+        ],
+        [
+          88,
+          576,
+          1600
+        ]
+      ],
+      "heaac": [
+        [
+          16,
+          23,
+          4480
+        ],
+        [
+          24,
+          27,
+          4407
+        ],
+        [
+          28,
+          35,
+          4374
+        ],
+        [
+          36,
+          43,
+          4339
+        ],
+        [
+          44,
+          51,
+          4307
+        ],
+        [
+          52,
+          59,
+          4294
+        ],
+        [
+          60,
+          75,
+          4280
+        ],
+        [
+          76,
+          143,
+          4347
+        ]
+      ],
+      "heaacv2": [
+        [
+          14,
+          63,
+          7172
+        ]
+      ]
+    },
+    "ac4_manifest_offset": {
+      "2.0": -2048,
+      "5.1": -2048
+    },
+    "ac4ajoc_manifest_offset": -2048
+  }
+}

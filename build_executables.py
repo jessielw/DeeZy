@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from subprocess import run
 
-from deezy.utils.dependencies import get_executable_extension
+from deezy.dee.tools import get_executable_extension
 
 
 def get_site_packages() -> Path:
@@ -27,6 +27,8 @@ def build_app():
     # define paths before changing directory
     deezy_script = Path(Path.cwd() / "deezy.py")
     icon_path = Path(Path.cwd() / "icon" / "icon.ico")
+    # what the DEE tools accept, read at run time by deezy.dee.spec
+    dee_data = Path(Path.cwd() / "deezy" / "dee" / "data")
 
     # get guessit deps
     site_packages = get_site_packages()
@@ -47,6 +49,7 @@ def build_app():
             "--onefile",
             f"--add-data={babel_fish}:./babelfish",
             f"--add-data={guessit}:./guessit",
+            f"--add-data={dee_data}:./deezy/dee/data",
             f"--icon={str(icon_path)}",
             "-y",
             str(deezy_script),
@@ -67,6 +70,7 @@ def build_app():
             "bundle",
             f"--add-data={babel_fish}:./babelfish",
             f"--add-data={guessit}:./guessit",
+            f"--add-data={dee_data}:./deezy/dee/data",
             f"--icon={str(icon_path)}",
             "-y",
             str(deezy_script),

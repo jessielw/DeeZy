@@ -2,6 +2,7 @@ from enum import Enum
 
 from typing_extensions import override
 
+from deezy.dee.spec import get_format
 from deezy.payloads.shared import ChannelBitrates
 
 
@@ -33,49 +34,9 @@ class DolbyDigitalChannels(Enum):
             return "5.1"
 
     def get_bitrate_obj(self) -> ChannelBitrates:
-        if self is DolbyDigitalChannels.MONO:
-            return ChannelBitrates(
-                default=192,
-                choices=(
-                    96,
-                    112,
-                    128,
-                    160,
-                    192,
-                    224,
-                    256,
-                    320,
-                    384,
-                    448,
-                    512,
-                    576,
-                    640,
-                ),
-            )
-        elif self is DolbyDigitalChannels.STEREO:
-            return ChannelBitrates(
-                default=224,
-                choices=(
-                    96,
-                    112,
-                    128,
-                    160,
-                    192,
-                    224,
-                    256,
-                    320,
-                    384,
-                    448,
-                    512,
-                    576,
-                    640,
-                ),
-            )
-        # 5.1
-        else:
-            return ChannelBitrates(
-                default=448, choices=(224, 256, 320, 384, 448, 512, 576, 640)
-            )
+        # AUTO has no rates of its own and gets 5.1's
+        layout = "5.1" if self is DolbyDigitalChannels.AUTO else str(self)
+        return get_format("dd").rates(layout)
 
     @staticmethod
     def get_values_list():

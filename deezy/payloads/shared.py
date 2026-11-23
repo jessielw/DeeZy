@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from deezy.enums.shared import DeeDRC, MeteringMode, StereoDownmix
+from deezy.dee.shim import DeeShim
+from deezy.enums.shared import DeeDRC, PipeMode, StereoDownmix
 from deezy.track_info.track_index import TrackIndex
 
 
@@ -26,13 +27,22 @@ class CorePayload:
     overwrite: bool
     output_template: str
     output_preview: bool
+    # print each command line as it starts
+    print_commands: bool
+    # plan and print the commands, but run nothing
+    dry_run: bool
+    # keep every command line and line of tool output beside the output
+    keep_logs: bool
+    # how FFmpeg's PCM reaches DEE, for the formats that can pipe it
+    pipe: PipeMode
+    # dee_shim, when it is found and not turned off
+    dee_shim: DeeShim | None
 
 
 @dataclass(slots=True)
 class LoudnessPayload(CorePayload):
-    """Core + loudness/metering fields."""
+    """Core + loudness fields."""
 
-    metering_mode: MeteringMode
     dialogue_intelligence: bool
     speech_threshold: int
 
@@ -77,6 +87,8 @@ class DownmixOnlyPayload(DolbyPayload):
 class ChannelBitrates:
     default: int
     choices: tuple[int, ...]
+    # the rate DEE picks itself when given none (not DeeZy's default)
+    dee_auto: int | None = None
 
     def get_closest_bitrate(self, target: int) -> int:
         """

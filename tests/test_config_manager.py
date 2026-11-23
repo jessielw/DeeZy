@@ -167,6 +167,44 @@ class TestConfigManagerLoading:
         assert "default_bitrates" in cm.config
         assert "dependencies" in cm.config
 
+    def test_sections_under_renamed_formats_warn(self):
+        """A 1.x config's [default_bitrates.atmos] would be ignored silently."""
+        cm = ConfigManager()
+        cm.config = {
+            "default_bitrates": {
+                "atmos": {"streaming": 768},
+                "ddp": {"stereo": 128},
+                "ac4": {"immersive_stereo": 256},
+            },
+            "default_source_bitrates": {"ac4": {"ch_6": 320, "ch_6_atmos": 320}},
+        }
+        with patch("deezy.config.manager.logger") as log:
+            cm._validate_config()
+
+        warnings = [call.args[0] for call in log.warning.call_args_list]
+        assert warnings == [
+            "Config section [default_bitrates.atmos] is ignored: the 'atmos' format "
+            "is now 'ddp-atmos', so rename it [default_bitrates.ddp-atmos].",
+            "Config [default_bitrates.ac4] has immersive stereo keys "
+            "(immersive_stereo), which are ignored: 'ac4' is now channel-based AC-4 "
+            "and immersive stereo is 'ac4-ims', so move them to "
+            "[default_bitrates.ac4-ims].",
+            "Config [default_source_bitrates.ac4] has immersive stereo keys "
+            "(ch_6_atmos), which are ignored: 'ac4' is now channel-based AC-4 and "
+            "immersive stereo is 'ac4-ims', so move them to "
+            "[default_source_bitrates.ac4-ims].",
+        ]
+
+    def test_channel_based_ac4_sections_do_not_warn(self):
+        cm = ConfigManager()
+        cm.config = {
+            "default_bitrates": {"ac4": {"stereo": 96, "surround": 192}},
+            "default_source_bitrates": {"ac4": {"ch_6": 256}},
+        }
+        with patch("deezy.config.manager.logger") as log:
+            cm._validate_config()
+        assert not log.warning.call_args_list
+
 
 class TestConfigManagerGeneration:
     """Test configuration file generation."""
@@ -288,7 +326,7 @@ class TestConfigManagerPresets:
         cm.config = {
             "presets": {
                 "streaming_ddp": "encode ddp --channels surround",
-                "bluray_atmos": "encode atmos --atmos-mode bluray",
+                "bluray_atmos": "encode ddp-atmos --atmos-mode bluray",
                 "quick_stereo": "encode ddp --channels stereo",
             }
         }
@@ -373,6 +411,46 @@ class TestConfigManagerUtilities:
         # Non-existent config path
         cm.config_path = Path("/nonexistent/config.toml")
         assert cm.has_valid_config() is False
+
+
+class TestDefaultBitrates:
+    """Rates keyed by mode or profile rather than by channels."""
+
+    def test_aac_rates_are_keyed_by_profile(self):
+        from deezy.enums.aac import AacProfile
+
+        cm = ConfigManager()
+        cm.config = {"default_bitrates": {"aac": {"aaclc": 160, "heaacv2": 48}}}
+        assert cm.get_default_bitrate("aac", AacProfile.AAC_LC) == 160
+        assert cm.get_default_bitrate("aac", "heaacv2") == 48
+        assert cm.get_default_bitrate("aac", AacProfile.HE_AAC) is None
+
+    def test_atmos_rates_take_the_mode_enum_or_its_name(self):
+        from deezy.enums.atmos import AtmosMode
+
+        cm = ConfigManager()
+        cm.config = {"default_bitrates": {"ddp-atmos": {"streaming": 576}}}
+        assert cm.get_default_bitrate("ddp-atmos", AtmosMode.STREAMING) == 576
+        assert cm.get_default_bitrate("ddp-atmos", "streaming") == 576
+
+    def test_ac4_rates_are_keyed_by_layout(self):
+        from deezy.enums.ac4 import Ac4ChannelBasedChannels
+
+        cm = ConfigManager()
+        cm.config = {"default_bitrates": {"ac4": {"stereo": 64, "surround": 256}}}
+        assert cm.get_default_bitrate("ac4", Ac4ChannelBasedChannels.STEREO) == 64
+        assert cm.get_default_bitrate("ac4", Ac4ChannelBasedChannels.SURROUND) == 256
+
+    def test_shipped_config_has_the_aac_defaults(self):
+        from deezy.config.defaults import CONF_DEFAULT
+
+        cm = ConfigManager()
+        cm.config = tomlkit.parse(CONF_DEFAULT).unwrap()
+        assert cm.config["default_bitrates"]["aac"] == {
+            "aaclc": 192,
+            "heaac": 64,
+            "heaacv2": 56,
+        }
 
 
 if __name__ == "__main__":

@@ -14,10 +14,15 @@ CONF_DEFAULT = """\
 #   --drc-line-mode     becomes     drc_line_mode
 #   --custom-dialnorm   becomes     custom_dialnorm  
 #   --lt-rt-center      becomes     lt_rt_center
+# A --no-x switch may also be given as x: dialogue_intelligence = false is
+# --no-dialogue-intelligence.
+#
+# A [global_defaults] key applies to every command that has the option. A key
+# that names no option, or a value the option refuses, is ignored with a warning.
 #
 # SECTIONS:
-# [dependencies]     - Paths to external tools (ffmpeg, dee, truehd)
-# [global_defaults]  - Default values applied to all encoding commands
+# [dependencies]     - Paths to external tools (ffmpeg, dee, truehdd, dee_shim)
+# [global_defaults]  - Default values for the options of every command
 # [default_bitrates] - Automatic bitrate selection by format and channel layout
 # [presets]          - Named command templates for common encoding scenarios
 #
@@ -33,10 +38,13 @@ CONF_DEFAULT = """\
 [dependencies]
 # Path to FFmpeg executable (leave empty for auto-detection)
 ffmpeg = ""  
-# Path to Dolby Encoding Engine (DEE) executable
+# Folder of the Dolby Encoding Engine (DEE) 6.7 tools, or the path of one of them
+# (leave empty for auto-detection)
 dee = ""     
-# Path to truehdd executable
-truehdd = "" 
+# Path to truehdd, which TrueHD Atmos sources need (leave empty for auto-detection)
+truehdd = ""
+# Path to dee_shim, optional (leave empty for auto-detection)
+dee_shim = ""
 
 [global_defaults]
 # Keep temporary files after processing
@@ -66,6 +74,10 @@ overwrite = false
 jitter_ms = 0
 # Allow automatic system sleep during encoding. By default DeeZy keeps the system awake.
 allow_sleep = false
+# How FFmpeg's audio reaches DEE for dd, ddp, ddp-bluray, ac4 and aac: "auto" pipes it on
+# Windows (a temp WAV elsewhere or with --reuse-temp-files), "always" pipes it or
+# refuses the job, "never" always writes the temp WAV.
+pipe = "auto"
 # Per-phase concurrency limits. Set to 0 to inherit the value of `max_parallel`.
 # These allow fine-grained tuning when some phases are more/less intensive.
 limit_ffmpeg = 0
@@ -75,19 +87,22 @@ limit_truehdd = 0
 parse_elementary_delay = false
 # Write logs to file by default for each job
 log_to_file = false
+# Keep each job's tool output (DEE, FFmpeg, truehdd) as <output>.log beside the output
+keep_logs = false
 # Disable progress bars by default
 no_progress_bars = false
+# Don't use dee_shim, even when it is found
+no_shim = false
 # Dynamic range compression for line mode
 drc_line_mode = "film_light"
 # Dynamic range compression for RF mode
 drc_rf_mode = "film_light"
 # Custom dialnorm value (0 = auto-detect) 
 custom_dialnorm = 0
-# metering_mode: handled per-format (DD/DDP=1770_3, Atmos=1770_4)
 # Enable dialogue intelligence
 dialogue_intelligence = true
 # Speech detection threshold percentage
-speech_threshold = 20
+speech_threshold = 15
 # Stereo downmix method
 stereo_down_mix = "loro"     
  # Lt/Rt center channel downmix level
@@ -130,7 +145,8 @@ surround = 448 # DD 5.1
 #
 # Supported codecs:
 #  - dd, ddp: support ch_1..ch_8
-#  - ac4: meaningful only for channels 6..8 (use ch_6..ch_8)
+#  - ac4: ch_1..ch_8 (2.0 below 5 channels, 5.1 from 5)
+#  - ac4-ims: meaningful only for channels 6..8 (use ch_6..ch_8)
 #
 
 # Default bitrates for Dolby Digital Plus (E-AC-3)
@@ -157,20 +173,26 @@ surroundex = 384 # DDP 7.1
 [default_bitrates.ddp-bluray]
 surroundex = 1280 # DDP Bluray 7.1
 
-# Default bitrates for Dolby Atmos
-[default_bitrates.atmos]
+# Default bitrates for Dolby Digital Plus Atmos
+[default_bitrates.ddp-atmos]
 streaming = 448 # Atmos Streaming
-bluray = 1280    # Atmos Bluray
+standard = 1152 # Atmos 7.1 as E-AC-3 (needs dee_shim)
+bluray = 1280    # Atmos Bluray (needs dee_shim)
 
-# Default bitrates for AC4
+# Default bitrates for channel-based AC-4
 [default_bitrates.ac4]
+stereo = 96     # AC-4 2.0
+surround = 192  # AC-4 5.1
+
+# Default bitrates for AC-4 immersive stereo
+[default_bitrates.ac4-ims]
 immersive_stereo = 256 # AC4 Immersive Stereo
 
-# Optional per-source defaults for AC4
+# Optional per-source defaults for AC-4 immersive stereo
 # AC4 encoding choices include 256 as a common default. AC4 is only meaningful
 # for immersive multi-channel sources (6..8) in many workflows; these are examples.
 # Uncomment to opt-in.
-#[default_source_bitrates.ac4]
+#[default_source_bitrates.ac4-ims]
 # ch_6 = 256
 # ch_6_atmos = 320
 # ch_7 = 256
@@ -178,13 +200,23 @@ immersive_stereo = 256 # AC4 Immersive Stereo
 # ch_8 = 256
 # ch_8_atmos = 320
 
+# Default bitrates for AC-4 Atmos (level 3: 256, 320, 448 or 768)
+[default_bitrates.ac4-atmos]
+atmos = 448
+
+# Default bitrates for AAC (always 2.0 out), by profile
+[default_bitrates.aac]
+aaclc = 192   # AAC-LC, 56-576
+heaac = 64    # HE-AAC, 16-143
+heaacv2 = 56  # HE-AAC v2, 14-63
+
 [presets]
 # Example presets - customize as needed
 streaming_ddp = "encode ddp --channels surround --bitrate 448"
 bluray_dd = "encode dd --channels surround --bitrate 640"
 auto_stereo_ddp = "encode ddp --channels stereo"
-streaming_atmos = "encode atmos --atmos-mode streaming"
-ac4_stereo = "encode ac4 --bitrate 256"
+streaming_atmos = "encode ddp-atmos --atmos-mode streaming"
+ac4_stereo = "encode ac4-ims --bitrate 256"
 """
 # fmt: on
 

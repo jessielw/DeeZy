@@ -17,3 +17,6 @@ class DDPPayload(StereoMixPayload):
     user_data: int = -1
     # Blu-ray secondary audio mode (2.0/5.1 at 192/256 kbps)
     bluray_secondary: bool = False
+    # code 5.1 as 5.0 and 7.1 as 7.0 (through dee_shim); where DEE keeps the
+    # LFE (Blu-ray without dee_shim, secondary audio), it is silenced
+    disable_lfe: bool = False

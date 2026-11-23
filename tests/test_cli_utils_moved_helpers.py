@@ -24,14 +24,24 @@ class DummyConfigManager:
         self.injected = name
 
 
+def fake_getter(cfg):
+    """A `get_config_manager` stand-in that records the path it was given."""
+
+    def get(config_path=None):
+        cfg.requested_path = config_path
+        return cfg
+
+    return get
+
+
 def test_apply_default_bitrate_atmos_and_channels():
-    args = argparse.Namespace(format_command="atmos", bitrate=None, atmos_mode=None)
+    args = argparse.Namespace(format_command="ddp-atmos", bitrate=None, atmos_mode=None)
 
     class Mode:
         value = "STREAMING"
 
     args.atmos_mode = Mode()
-    cfg = DummyConfigManager(bitrate_map={("atmos", "STREAMING"): 512})
+    cfg = DummyConfigManager(bitrate_map={("ddp-atmos", "STREAMING"): 512})
 
     utils.apply_default_bitrate(args, cast(Any, cfg))
     assert args.bitrate == 512
@@ -45,13 +55,24 @@ def test_apply_default_bitrate_dd_channels():
     assert args.bitrate == 192
 
 
+def test_apply_default_bitrate_leaves_bluray_secondary_alone():
+    """The plain DD+ stereo rate (128) must not replace secondary's 192 default."""
+    args = argparse.Namespace(
+        format_command="ddp", bitrate=None, channels="2.0", bluray_secondary=True
+    )
+    cfg = DummyConfigManager(bitrate_map={("ddp", "2.0"): 128})
+
+    utils.apply_default_bitrate(args, cast(Any, cfg))
+    assert args.bitrate is None
+
+
 def test_handle_preset_injection_calls_inject(monkeypatch):
     saved_argv = sys.argv[:]  # preserve
     sys.argv = ["prog", "encode", "preset", "--name", "mypreset"]
 
     called = {}
 
-    def fake_get_config_manager():
+    def fake_get_config_manager(config_path=None):
         called["created"] = True
         return DummyConfigManager()
 
@@ -77,14 +98,14 @@ def test_handle_preset_injection_uses_config_flag(monkeypatch):
     ]
 
     cfg = DummyConfigManager()
-    monkeypatch.setattr(utils, "get_config_manager", lambda: cfg)
+    monkeypatch.setattr(utils, "get_config_manager", fake_getter(cfg))
 
     try:
         utils.handle_preset_injection()
     finally:
         sys.argv = saved_argv
 
-    assert cfg.loaded_path == "custom.toml"
+    assert cfg.requested_path == "custom.toml"
     assert cfg.injected == "mypreset"
 
 
@@ -103,11 +124,11 @@ def test_sniff_config_arg(argv, expected):
 
 def test_handle_configuration_loads_user_config(monkeypatch):
     cfg = DummyConfigManager()
-    monkeypatch.setattr(utils, "get_config_manager", lambda: cfg)
+    monkeypatch.setattr(utils, "get_config_manager", fake_getter(cfg))
 
     args = argparse.Namespace(sub_command="encode", config="mine.toml")
     assert utils.handle_configuration(args) is cfg
-    assert cfg.loaded_path == "mine.toml"
+    assert cfg.requested_path == "mine.toml"
 
 
 def test_handle_file_inputs_reports_bad_path_cleanly(monkeypatch):
@@ -151,7 +172,7 @@ def test_handle_configuration_returns_none_for_config_subcommand(monkeypatch):
 
     # when not config, should return value from get_config_manager
     sentinel = object()
-    monkeypatch.setattr(utils, "get_config_manager", lambda: sentinel)
+    monkeypatch.setattr(utils, "get_config_manager", lambda config_path=None: sentinel)
     args = argparse.Namespace(sub_command="encode")
     assert utils.handle_configuration(args) is sentinel
 
@@ -159,7 +180,7 @@ def test_handle_configuration_returns_none_for_config_subcommand(monkeypatch):
 def test_handle_dependencies_normal(monkeypatch, tmp_path):
     args = argparse.Namespace(
         sub_command="encode",
-        format_command="atmos",
+        format_command="ddp-atmos",
         ffmpeg=None,
         truehdd=None,
         dee=None,
@@ -174,6 +195,9 @@ def test_handle_dependencies_normal(monkeypatch, tmp_path):
     class FakeFinder:
         def get_dependencies(self, *a, **kw):
             return Tools()
+
+        def check_dee_version(self, dee_dir):
+            return "6.7.0"
 
     monkeypatch.setattr(utils, "FindDependencies", lambda: FakeFinder())
 

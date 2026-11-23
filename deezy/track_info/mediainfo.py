@@ -8,8 +8,9 @@ if TYPE_CHECKING:
     from pymediainfo import MediaInfo, Track
 
 from deezy.enums.shared import TrackType
-from deezy.exceptions import MediaInfoError
+from deezy.exceptions import InvalidAtmosInputError, MediaInfoError
 from deezy.track_info.audio_track_info import AudioTrackInfo
+from deezy.track_info.damf import Damf, damf_header_of, is_damf, read_damf
 from deezy.track_info.track_index import TrackIndex
 from deezy.track_info.utils import (
     clean_title,
@@ -17,17 +18,37 @@ from deezy.track_info.utils import (
     strip_delay_from_file_string_and_cleanse,
 )
 
+# a [] or () pair with nothing but whitespace inside
+_EMPTY_BRACKETS = re.compile(r"\[\s*\]|\(\s*\)")
+
 
 class MediainfoParser:
-    __slots__ = ("file_input", "track_index", "mi_obj", "mi_audio_obj", "guess")
+    __slots__ = (
+        "file_input",
+        "track_index",
+        "damf",
+        "mi_obj",
+        "mi_audio_obj",
+        "guess",
+    )
 
     def __init__(self, file_input: Path, track_index: TrackIndex) -> None:
         # parse file with mediainfo
         self.file_input = file_input
         self.track_index = track_index
+        header = damf_header_of(file_input)
+        if header:
+            raise InvalidAtmosInputError(
+                f"{file_input.name} is part of a DAMF master; give its header, "
+                f"{header.name}."
+            )
+        # a DAMF master's audio is its one track
+        self.damf: Damf | None = read_damf(file_input) if is_damf(file_input) else None
         from pymediainfo import MediaInfo
 
-        self.mi_obj = MediaInfo.parse(file_input, legacy_stream_display=True)
+        self.mi_obj = MediaInfo.parse(
+            self.damf.audio if self.damf else file_input, legacy_stream_display=True
+        )
         self.mi_audio_obj = self._verify_audio_track(track_index)
         from guessit import guessit
 
@@ -50,7 +71,18 @@ class MediainfoParser:
             bit_depth=self.mi_audio_obj.bit_depth,
             thd_atmos=self._is_thd_atmos(),
             adm_atmos_wav=self._is_adm_atmos_wav(),
+            lfe=self._has_lfe(),
         )
+        if audio_info.thd_atmos:
+            audio_info.atmos_elements = self._thd_atmos_elements()
+        if self.damf:
+            # MediaInfo misreads a CAF file's length
+            audio_info.channels = self.damf.channels
+            audio_info.duration = self.damf.duration_ms
+            audio_info.sample_rate = self.damf.sample_rate
+            audio_info.bit_depth = self.damf.bit_depth
+            audio_info.recommended_free_space = self.damf.size
+            audio_info.damf_atmos = True
 
         # return object
         return audio_info
@@ -134,6 +166,37 @@ class MediainfoParser:
         if self.mi_audio_obj.commercial_name == "Dolby TrueHD with Dolby Atmos":
             return True
         return False
+
+    def _has_lfe(self) -> bool | None:
+        """
+        Whether the track has an LFE channel, from MediaInfo's channel layout
+        ('L R C Ls Rs' has none) or its channel positions; None when it gives
+        neither.
+        """
+        track = self.mi_audio_obj
+        layout = str(getattr(track, "channel_layout", None) or "").split()
+        if layout:
+            return any(name.upper().startswith("LFE") for name in layout)
+        positions = str(getattr(track, "channel_positions", None) or "")
+        if positions.strip():
+            return "LFE" in positions.upper()
+        return None
+
+    def _thd_atmos_elements(self) -> int | None:
+        """
+        The elements a TrueHD Atmos stream codes: its bed channels plus its
+        dynamic objects (an LFE bed and 15 objects are 16), or None when
+        MediaInfo doesn't say. The count follows DEE's number_of_elements, not
+        the master's; the '16-ch' MediaInfo reports as a feature is the same
+        for every stream, so it isn't a count.
+        """
+        track = self.mi_audio_obj
+        try:
+            beds = int(track.bed_channel_count)
+            objects = int(track.number_of_dynamic_objects)
+        except (AttributeError, TypeError, ValueError):
+            return None
+        return beds + objects
 
     def _is_adm_atmos_wav(self) -> bool:
         """Check if track is a ADM BWF file."""
@@ -267,7 +330,7 @@ class MediainfoParser:
             "title": str(title),
             "year": year,
             "stem": stem,
-            "stem_cleaned": stem_cleaned,
+            "stem-cleaned": stem_cleaned,
             "source": str(source),
             "lang": str(lang),
             "channels": str(channels),
@@ -288,15 +351,22 @@ class MediainfoParser:
 
         rendered = template
         for key, val in mapping.items():
-            # ignore stem if stem cleaned is used
-            if key == "stem" and mapping["stem_cleaned"]:
-                rendered.replace(f"{{{key}}}", "")
-            else:
-                rendered = rendered.replace(f"{{{key}}}", val)
+            # {stem-cleaned} stands in for {stem}
+            if key == "stem" and mapping["stem-cleaned"]:
+                val = ""
+            rendered = rendered.replace(f"{{{key}}}", val)
 
-        # sanitize filename: remove problematic characters and collapse whitespace
+        # sanitize filename: remove problematic characters
         rendered = re.sub(r"[<>:\"/\\|?*]", "_", rendered)
+        # drop the brackets a token left empty ("{title} [{lang}]" with no
+        # language), then collapse the whitespace around them
+        previous = None
+        while previous != rendered:
+            previous, rendered = rendered, _EMPTY_BRACKETS.sub("", rendered)
         rendered = re.sub(r"\s{2,}", " ", rendered).strip()
+        # a template that renders to nothing is named after the source
+        if not rendered:
+            rendered = stem
 
         return base_dir / Path(rendered + suffix)
 

@@ -11,4 +11,4 @@ Output template tokens
 
 - `{title}`, `{year}`, `{stem}`, `{stem-cleaned}`, `{source}`, `{lang}`, `{channels}`, `{worker}`, `{delay}`, `{opt-delay}`
 
-For a full CLI reference, run `deezy encode --help` or `deezy --help` locally to see up-to-date options.
+Every command's options are in the [CLI reference](cli/top-level.md), and `deezy <command> --help` prints them.

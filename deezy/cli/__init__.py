@@ -6,15 +6,13 @@ import sys
 import tempfile
 import traceback
 
-from deezy.audio_encoders.dee.ac4 import Ac4Encoder
-from deezy.audio_encoders.dee.atmos import AtmosEncoder
-from deezy.audio_encoders.dee.base import BaseDeeAudioEncoder
-from deezy.audio_encoders.dee.dd import DDEncoderDEE
-from deezy.audio_encoders.dee.ddp import DDPEncoderDEE
+from deezy.cli.bitrates import bitrate_lines
 from deezy.cli.payload_factory import PayloadBuilder
+from deezy.cli.tools_report import tool_lines, tool_rows
 from deezy.cli.utils import (
     CustomHelpFormatter,
     apply_config_defaults_to_args,
+    apply_config_option_defaults,
     apply_default_bitrate,
     clean_deezy_temp_folders,
     dialnorm_options,
@@ -31,8 +29,12 @@ from deezy.cli.utils import (
 )
 from deezy.config.defaults import get_default_config_path
 from deezy.config.manager import ConfigManager, get_config_manager
+from deezy.dee.commands import THD_ATMOS_ELEMENT_CHOICES, THD_ATMOS_ELEMENTS
+from deezy.dee.shim import MIN_SHIM_TEXT
+from deezy.dee.spec import formats
 from deezy.enums import case_insensitive_enum, enum_choices
-from deezy.enums.ac4 import Ac4EncodingProfile
+from deezy.enums.aac import AacProfile
+from deezy.enums.ac4 import Ac4ChannelBasedChannels, Ac4EncodingProfile
 from deezy.enums.atmos import AtmosMode, WarpMode
 from deezy.enums.dd import DolbyDigitalChannels
 from deezy.enums.ddp import DolbyDigitalPlusChannels
@@ -41,11 +43,16 @@ from deezy.enums.shared import (
     DeeDRC,
     LogLevel,
     LoudnessPreset,
-    MeteringMode,
+    PipeMode,
     StereoDownmix,
     TrackType,
 )
+from deezy.enums.thd import TrueHDChannels
 from deezy.exceptions import OutputExistsError
+from deezy.pipeline.encode import encode
+from deezy.pipeline.measure import measure, summary
+from deezy.pipeline.outputs import begin_run, end_run
+from deezy.pipeline.run import init_phase_limits
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.batch_results import BatchResultsManager
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
@@ -99,33 +106,57 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "input", nargs="+", help="Input file paths or directories", metavar="INPUT"
     )
 
-    # common Encode Args
-    encode_group = argparse.ArgumentParser(add_help=False)
-    encode_group.add_argument(
+    # the tools and the source track (encode and measure)
+    tools_group = argparse.ArgumentParser(add_help=False)
+    tools_group.add_argument(
         "--ffmpeg",
         type=str,
-        help="Path to FFMPEG executable.",
+        help="Path to FFmpeg.",
     )
-    encode_group.add_argument(
+    tools_group.add_argument(
         "--truehdd",
         type=str,
-        help="Path to Truehdd executable.",
+        help="Path to truehdd.",
     )
-    encode_group.add_argument(
+    tools_group.add_argument(
         "--dee",
         type=str,
-        help="Path to Dolby Encoding Engine executable.",
+        help="The folder of the DEE tools, or one of them.",
     )
-    encode_group.add_argument(
+    tools_group.add_argument(
         "--track-index",
         type=validate_track_index,
         default=TrackIndex(TrackType.AUDIO, 0),
-        help="Track to use for encoding. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).",
+        help="The source track. Supports: 'N' (audio track N), 'a:N' (audio track N), 's:N' (stream index N).",
+    )
+
+    # dee_shim (encode and measure)
+    shim_group = argparse.ArgumentParser(add_help=False)
+    shim_group.add_argument(
+        "--dee-shim",
+        type=str,
+        help=f"Path to dee_shim ({MIN_SHIM_TEXT} or newer). DeeZy needs it for "
+        "DD+ 7.1 and 7.0, ddp-atmos --atmos-mode standard and bluray, TrueHD "
+        "--drc none, and to measure 7.1. "
+        "It also runs every ddp-atmos, thd and thd-atmos encode through it, which "
+        "is faster on AMD CPUs and keeps more of the source as it is (see "
+        "--no-oamd-as-is and --no-as-is). Found beside the DEE tools, in "
+        "apps/dee_shim or on PATH when not given.",
+    )
+    shim_group.add_argument(
+        "--no-shim",
+        action="store_true",
+        help="Don't use dee_shim, even when it is found.",
+    )
+
+    # common Encode Args
+    encode_group = argparse.ArgumentParser(
+        add_help=False, parents=[tools_group, shim_group]
     )
     encode_group.add_argument(
         "--delay",
         type=str,
-        help="The delay in milliseconds or seconds. Note '--delay=' is required! (--delay=-10ms / --delay=10s).",
+        help="The delay in milliseconds, seconds or frames at a frame rate, decimals allowed. Note '--delay=' is required! (--delay=-10.5ms / --delay=1.25s / --delay=-3@23.976; the rate may also be 24000/1001, ntsc, pal, film or ntsc-film).",
     )
     # NOTE: DEPRECATED: REMOVE <= 1.4.0
     encode_group.add_argument(
@@ -251,6 +282,26 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_true",
         help=("Overwrite existing output files instead of failing."),
     )
+    encode_group.add_argument(
+        "--keep-logs",
+        action="store_true",
+        help="Writes the job's command lines and everything DEE, FFmpeg and "
+        "truehdd print to '<output>.log' beside the output, when the job "
+        "fails too. FFmpeg then runs at its info level.",
+    )
+    encode_group.add_argument(
+        "--print-commands",
+        action="store_true",
+        help="Print each FFmpeg, truehdd and DEE command line as it starts.",
+    )
+    encode_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Probe the input and print the FFmpeg, truehdd and DEE command lines "
+            "the encode would run, without running them or writing any file."
+        ),
+    )
 
     # per-phase concurrency limits
     encode_group.add_argument(
@@ -295,13 +346,8 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
 
     # DD/DDP/Atmos DRC group (limited choices)
     dd_ddp_atmos_drc_group = argparse.ArgumentParser(add_help=False)
-    dd_ddp_atmos_drc_choices = (
-        DeeDRC.FILM_STANDARD,
-        DeeDRC.FILM_LIGHT,
-        DeeDRC.MUSIC_STANDARD,
-        DeeDRC.MUSIC_LIGHT,
-        DeeDRC.SPEECH,
-    )
+    # dee_ddp_encoder and dee_ddpjoc_encoder take every profile, 'none' included
+    dd_ddp_atmos_drc_choices = tuple(DeeDRC)
     dd_ddp_atmos_drc_group.add_argument(
         "--drc-line-mode",
         type=case_insensitive_enum(DeeDRC),
@@ -330,7 +376,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     loudness_group.add_argument(
         "--no-dialogue-intelligence",
         action="store_false",
-        help="Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.",
+        help="Dialogue intelligence disabled.",
     )
     loudness_group.add_argument(
         "--loudness-preset",
@@ -341,7 +387,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help=(
             "Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, "
             "ARIB B32) instead of the manual settings. Replaces "
-            "--no-dialogue-intelligence and --speech-threshold. Split DEE encoders only."
+            "--no-dialogue-intelligence and --speech-threshold."
         ),
     )
     loudness_group.add_argument(
@@ -354,24 +400,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         ),
     )
 
-    # DD/DDP limited metering mode (excludes MODE_1770_4)
-    dd_ddp_metering_group = argparse.ArgumentParser(add_help=False)
-    dd_ddp_metering_choices = (
-        MeteringMode.MODE_1770_1,
-        MeteringMode.MODE_1770_2,
-        MeteringMode.MODE_1770_3,
-        MeteringMode.MODE_LEQA,
-    )
-    dd_ddp_metering_group.add_argument(
-        "--metering-mode",
-        type=case_insensitive_enum(MeteringMode),
-        choices=dd_ddp_metering_choices,
-        metavar=enum_choices(dd_ddp_metering_choices),
-        default=MeteringMode.MODE_1770_3,
-        help="Loudness measuring mode according to one of the broadcast standards.",
-    )
-
-    # loudness correction (split DEE encoders only; DD/DDP)
+    # loudness correction (DD/DDP)
     loudness_correction_group = argparse.ArgumentParser(add_help=False)
     loudness_correction_group.add_argument(
         "--loudness-target",
@@ -381,7 +410,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         default=None,
         help=(
             "Measure and correct the loudness to this target (LKFS) instead of only "
-            "measuring. Split DEE encoders only. Can't be combined with "
+            "measuring. Can't be combined with "
             "--custom-dialnorm."
         ),
     )
@@ -395,7 +424,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         ),
     )
 
-    # DDP options only the split DEE encoders offer
+    # DDP-only options
     ddp_split_group = argparse.ArgumentParser(add_help=False)
     ddp_split_group.add_argument(
         "--user-data",
@@ -403,26 +432,15 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         choices=range(-1, 65536),
         metavar="[-1..65535]",
         default=-1,
-        help="Optional user data ID to write into the stream (-1 for none). Split DEE encoders only.",
+        help="Optional user data ID to write into the stream (-1 for none).",
     )
     ddp_split_group.add_argument(
         "--bluray-secondary",
         action="store_true",
         help=(
-            "Encode Blu-ray secondary audio (2.0 or 5.1 at 192 or 256 kbps). "
-            "Split DEE encoders only."
+            "Encode Blu-ray secondary audio: 2.0 at 96 to 256 kbps or 5.1 at 160 to "
+            "256 kbps (default 192)."
         ),
-    )
-
-    # Atmos/AC4 full metering mode (includes MODE_1770_4)
-    atmos_ac4_metering_group = argparse.ArgumentParser(add_help=False)
-    atmos_ac4_metering_group.add_argument(
-        "--metering-mode",
-        type=case_insensitive_enum(MeteringMode),
-        choices=MeteringMode,
-        metavar=enum_choices(MeteringMode),
-        default=MeteringMode.MODE_1770_4,
-        help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
     # DD/DDP specific processing options
@@ -433,9 +451,22 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Disables low pass filter.",
     )
     dd_ddp_processing_group.add_argument(
+        "--surround-3db",
+        action="store_true",
+        dest="surround_3db",
+        default=False,
+        help=(
+            "Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). "
+            "Off by default, as in DEE."
+        ),
+    )
+    # 1.x's flag for what is now the default
+    dd_ddp_processing_group.add_argument(
         "--no-surround-3db",
         action="store_false",
-        help="Disables surround 3db attenuation.",
+        dest="surround_3db",
+        default=False,
+        help=argparse.SUPPRESS,
     )
     dd_ddp_processing_group.add_argument(
         "--no-surround-90-deg-phase-shift",
@@ -445,7 +476,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     dd_ddp_processing_group.add_argument(
         "--upmix-50-to-51",
         action="store_true",
-        help="Up-mix rare 5.0 layouts into 5.1 layouts by adding a silent LFE channel.",
+        help=(
+            "Encode a 5.0 source as 5.1 with a silent LFE channel, rather than as 5.0."
+        ),
     )
 
     # DDP BluRay processing group: same as DD/DDP processing but without the
@@ -458,9 +491,22 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Disables low pass filter.",
     )
     ddp_bluray_processing_group.add_argument(
+        "--surround-3db",
+        action="store_true",
+        dest="surround_3db",
+        default=False,
+        help=(
+            "Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). "
+            "Off by default, as in DEE."
+        ),
+    )
+    # 1.x's flag for what is now the default
+    ddp_bluray_processing_group.add_argument(
         "--no-surround-3db",
         action="store_false",
-        help="Disables surround 3db attenuation.",
+        dest="surround_3db",
+        default=False,
+        help=argparse.SUPPRESS,
     )
     ddp_bluray_processing_group.add_argument(
         "--no-surround-90-deg-phase-shift",
@@ -520,6 +566,14 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         metavar=enum_choices(DolbyDigitalChannels),
         help="The number of channels.",
     )
+    dd_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help=(
+            "Code 5.1 as 5.0, without the LFE channel. A source with no LFE "
+            "(5.0, 7.0) is coded as 5.0 anyway, unless --upmix-50-to-51."
+        ),
+    )
 
     # DDP channels group
     ddp_channels_group = argparse.ArgumentParser(add_help=False)
@@ -530,6 +584,16 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         default=DolbyDigitalPlusChannels.AUTO,
         metavar=enum_choices(DolbyDigitalPlusChannels),
         help="The number of channels.",
+    )
+    ddp_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help=(
+            "Code 5.1 as 5.0 and 7.1 as 7.0 (7.0 through dee_shim), without the "
+            "LFE channel. A source with no LFE (5.0, 7.0) is coded that way "
+            "anyway, unless --upmix-50-to-51. Blu-ray secondary audio keeps the "
+            "LFE, silenced."
+        ),
     )
 
     # DDP BluRay channels group
@@ -542,6 +606,15 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         metavar=enum_choices(DolbyDigitalPlusBlurayChannels),
         help="The number of channels.",
     )
+    ddp_bluray_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help=(
+            "Code 7.0, without the LFE channel, through dee_shim (a 7.0 source "
+            "is coded as 7.0 anyway). Without dee_shim the stream keeps the "
+            "LFE, silenced."
+        ),
+    )
 
     # atmos specific options
     atmos_options_group = argparse.ArgumentParser(add_help=False)
@@ -551,7 +624,24 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         choices=AtmosMode,
         default=AtmosMode.STREAMING,
         metavar=enum_choices(AtmosMode),
-        help="Atmos encoding mode.",
+        help="Atmos encoding mode: streaming (5.1 backbone), standard (7.1 "
+        "backbone as E-AC-3) or bluray (7.1 backbone with an AC-3 core). "
+        "standard and bluray need dee_shim.",
+    )
+    atmos_options_group.add_argument(
+        "--no-oamd-as-is",
+        action="store_true",
+        help="Lets DEE smooth the object metadata again, as it does without "
+        "dee_shim. By default dee_shim codes it as the master has it. Without "
+        "dee_shim this changes nothing.",
+    )
+    # DD+ Atmos processing (the preset parser takes the DD/DDP group's option)
+    atmos_processing_group = argparse.ArgumentParser(add_help=False)
+    atmos_processing_group.add_argument(
+        "--no-surround-90-deg-phase-shift",
+        action="store_false",
+        help="Disables the surround 90 degree phase shift DEE applies to the "
+        "backbone (needs dee_shim).",
     )
 
     # trueHDD options (shared by Atmos and AC4)
@@ -560,26 +650,14 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "--thd-warp-mode",
         type=case_insensitive_enum(WarpMode),
         choices=WarpMode,
-        default=WarpMode.NORMAL,
+        default=None,
         metavar=enum_choices(WarpMode),
-        help="Specify warp mode when not present in metadata (truehdd).",
-    )
-    truehdd_options_group.add_argument(
-        "--bed-conform",
-        action="store_true",
-        help="Enables bed conformance for Atmos content (truehd).",
+        help="The warp mode truehdd gives a TrueHD Atmos stream that has none. "
+        "Without it the stream keeps none, which DEE renders as warping.",
     )
 
     # AC4 basic options
     ac4_basic_options_group = argparse.ArgumentParser(add_help=False)
-    ac4_basic_options_group.add_argument(
-        "--ims-legacy-presentation",
-        action="store_true",
-        help=(
-            "Determines whether the Dolby AC-4 encoder inserts an additional "
-            "presentation for backward compatibility."
-        ),
-    )
     ac4_basic_options_group.add_argument(
         "--encoding-profile",
         type=case_insensitive_enum(Ac4EncodingProfile),
@@ -589,10 +667,9 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Encoding profile. For encoding music content, select ims_music.",
     )
 
-    # AC4 DRC options (full DeeDRC enum choices)
+    # AC-4 per-device DRC (AC-4 IMS and channel-based AC-4)
     ac4_drc_group = argparse.ArgumentParser(add_help=False)
     ac4_drc_args = (
-        "--ddp-drc",
         "--flat-panel-drc",
         "--home-theatre-drc",
         "--portable-headphones-drc",
@@ -605,17 +682,184 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             choices=DeeDRC,
             metavar=enum_choices(DeeDRC),
             default=DeeDRC.FILM_LIGHT,
-            help="Dynamic range compression settings for AC4.",
+            help=(
+                "Dynamic range compression settings for AC4 (channel-based AC-4 "
+                "has no 'none')."
+            ),
         )
 
-    # preset metering mode (full choices for flexibility)
-    preset_metering_group = argparse.ArgumentParser(add_help=False)
-    preset_metering_group.add_argument(
-        "--metering-mode",
-        type=case_insensitive_enum(MeteringMode),
-        choices=MeteringMode,
-        metavar=enum_choices(MeteringMode),
-        help="Loudness measuring mode according to one of the broadcast standards.",
+    # the DD+ DRC profile AC-4 IMS carries
+    ac4_ims_drc_group = argparse.ArgumentParser(add_help=False)
+    ac4_ims_drc_group.add_argument(
+        "--ddp-drc",
+        type=case_insensitive_enum(DeeDRC),
+        choices=DeeDRC,
+        metavar=enum_choices(DeeDRC),
+        default=DeeDRC.FILM_LIGHT,
+        help="Dynamic range compression settings for AC4.",
+    )
+
+    # channel-based AC-4 channels
+    ac4_channels_group = argparse.ArgumentParser(add_help=False)
+    ac4_channels_group.add_argument(
+        "--channels",
+        type=case_insensitive_enum(Ac4ChannelBasedChannels),
+        choices=Ac4ChannelBasedChannels,
+        default=Ac4ChannelBasedChannels.AUTO,
+        metavar=enum_choices(Ac4ChannelBasedChannels),
+        help=(
+            "The number of channels: 2.0 or 5.1. Auto takes 5.1 from 5 channels "
+            "or more (a 5.0 source gets a silent LFE; DEE downmixes 7.1) and 2.0 "
+            "below that."
+        ),
+    )
+    ac4_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help="Silence the LFE channel. AC-4 5.1 keeps it, silent.",
+    )
+
+    # channel-based TrueHD channels
+    thd_channels_group = argparse.ArgumentParser(add_help=False)
+    thd_channels_group.add_argument(
+        "--channels",
+        type=case_insensitive_enum(TrueHDChannels),
+        choices=TrueHDChannels,
+        default=TrueHDChannels.AUTO,
+        metavar=enum_choices(TrueHDChannels),
+        help=(
+            "The number of channels: 2.0, 5.1 or 7.1. Auto takes the smallest that "
+            "holds every source channel, filling the rest with silence."
+        ),
+    )
+    thd_channels_group.add_argument(
+        "--disable-lfe",
+        action="store_true",
+        help="Silence the LFE channel. TrueHD 5.1 and 7.1 keep it, silent.",
+    )
+    # TrueHD and TrueHD Atmos DRC and dialnorm
+    thd_options_group = argparse.ArgumentParser(add_help=False)
+    thd_options_group.add_argument(
+        "--drc",
+        type=case_insensitive_enum(DeeDRC),
+        choices=DeeDRC,
+        metavar=enum_choices(DeeDRC),
+        default=DeeDRC.FILM_LIGHT,
+        help="Dynamic range compression profile, for every presentation. none "
+        "(only the peak protection) needs dee_shim.",
+    )
+    thd_options_group.add_argument(
+        "--no-as-is",
+        action="store_true",
+        help="Keeps DEE's own processing through dee_shim. By default dee_shim "
+        "turns DEE's apodizing filter off at 96 kHz (thd), and codes an Atmos "
+        "master of 16 elements or fewer as it is (thd-atmos), so the stream "
+        "decodes sample for sample. Without dee_shim this changes nothing.",
+    )
+    thd_options_group.add_argument(
+        "--custom-dialnorm",
+        type=dialnorm_options,
+        default=0,
+        help="Custom dialnorm (0 disables custom dialnorm).",
+    )
+
+    # TrueHD Atmos options
+    thd_atmos_options_group = argparse.ArgumentParser(add_help=False)
+    thd_atmos_options_group.add_argument(
+        "--legacy-authoring",
+        action="store_true",
+        help=(
+            "Make the stream for older disc-authoring tools (DEE's legacy "
+            "authoring). The stream then carries no warp mode."
+        ),
+    )
+    thd_atmos_options_group.add_argument(
+        "--atmos-elements",
+        type=int,
+        choices=THD_ATMOS_ELEMENT_CHOICES,
+        default=THD_ATMOS_ELEMENTS,
+        help=(
+            "The elements the stream codes the master's bed and objects into "
+            "(DEE's number_of_elements). More keep more of the master's detail "
+            "and make a bigger stream; Dolby's default is 12. Through dee_shim a "
+            "master with no more elements than this decodes to it sample for "
+            "sample. Default 16."
+        ),
+    )
+
+    # AAC options
+    aac_options_group = argparse.ArgumentParser(add_help=False)
+    aac_options_group.add_argument(
+        "--aac-profile",
+        type=case_insensitive_enum(AacProfile),
+        choices=AacProfile,
+        metavar=enum_choices(AacProfile),
+        default=AacProfile.AAC_LC,
+        help=(
+            "AAC profile: aaclc (56-576 kbps, default 192), heaac (16-143, "
+            "default 64) or heaacv2 (14-63, default 56). The output is always 2.0."
+        ),
+    )
+
+    # deezy measure
+    measure_group = argparse.ArgumentParser(add_help=False)
+    measure_output = measure_group.add_mutually_exclusive_group()
+    measure_output.add_argument(
+        "--output",
+        type=str,
+        help="Save DEE's loudness manifest (JSON) to this file. One input only.",
+    )
+    measure_output.add_argument(
+        "--output-dir",
+        type=str,
+        help=(
+            "Save each input's loudness manifest (JSON) in this directory, as "
+            "<input name>.loudness.json."
+        ),
+    )
+    measure_group.add_argument(
+        "--temp-dir",
+        type=str,
+        help="Path to store temporary files to. If not specified this will automatically happen in the temp dir of the os.",
+    )
+    measure_group.add_argument(
+        "--keep-temp",
+        action="store_true",
+        help="Keeps the temp files after finishing.",
+    )
+    measure_group.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite an existing saved manifest instead of failing.",
+    )
+    measure_group.add_argument(
+        "--print-commands",
+        action="store_true",
+        help="Print each FFmpeg, truehdd and DEE command line as it starts.",
+    )
+    measure_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Probe the input and print the FFmpeg, truehdd and DEE command lines "
+            "the measurement would run, without running them or writing any file."
+        ),
+    )
+
+    # how FFmpeg's PCM reaches DEE (DD, DD+, DD+ Blu-ray, AC-4, AAC and measure)
+    pcm_transport_group = argparse.ArgumentParser(add_help=False)
+    pcm_transport_group.add_argument(
+        "--pipe",
+        type=case_insensitive_enum(PipeMode),
+        choices=PipeMode,
+        default=None,
+        metavar=enum_choices(PipeMode),
+        help=(
+            "How FFmpeg's audio reaches DEE. 'auto' (the default) pipes it straight "
+            "into DEE on Windows and writes a temp WAV elsewhere or with "
+            "--reuse-temp-files; 'always' pipes it or refuses the job; 'never' "
+            "always writes the temp WAV."
+        ),
     )
 
     # preset override channels (flexible string type)
@@ -632,9 +876,6 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "bitrate_group": bitrate_group,
         "dd_ddp_atmos_drc_group": dd_ddp_atmos_drc_group,
         "loudness_group": loudness_group,
-        "dd_ddp_metering_group": dd_ddp_metering_group,
-        "atmos_ac4_metering_group": atmos_ac4_metering_group,
-        "preset_metering_group": preset_metering_group,
         "loudness_correction_group": loudness_correction_group,
         "ddp_split_group": ddp_split_group,
         "dd_ddp_processing_group": dd_ddp_processing_group,
@@ -645,10 +886,21 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "ddp_channels_group": ddp_channels_group,
         "ddp_bluray_channels_group": ddp_bluray_channels_group,
         "atmos_options_group": atmos_options_group,
+        "atmos_processing_group": atmos_processing_group,
         "truehdd_options_group": truehdd_options_group,
         "ac4_basic_options_group": ac4_basic_options_group,
         "ac4_drc_group": ac4_drc_group,
+        "tools_group": tools_group,
+        "measure_group": measure_group,
+        "shim_group": shim_group,
+        "ac4_ims_drc_group": ac4_ims_drc_group,
+        "ac4_channels_group": ac4_channels_group,
+        "aac_options_group": aac_options_group,
+        "thd_channels_group": thd_channels_group,
+        "thd_options_group": thd_options_group,
+        "thd_atmos_options_group": thd_atmos_options_group,
         "preset_channels_group": preset_channels_group,
+        "pcm_transport_group": pcm_transport_group,
     }
 
 
@@ -666,18 +918,19 @@ def create_encode_parsers(
     ### Dolby Digital Command ###
     _encode_dd_parser = encode_subparsers.add_parser(
         "dd",
+        help="Dolby Digital (AC-3)",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["dd_ddp_metering_group"],
             argument_groups["loudness_correction_group"],
             argument_groups["dd_ddp_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["dd_channels_group"],
+            argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -689,19 +942,20 @@ def create_encode_parsers(
     ### Dolby Digital Plus Command ###
     _encode_ddp_parser = encode_subparsers.add_parser(
         "ddp",
+        help="Dolby Digital Plus (E-AC-3)",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["dd_ddp_metering_group"],
             argument_groups["loudness_correction_group"],
             argument_groups["ddp_split_group"],
             argument_groups["dd_ddp_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["ddp_channels_group"],
+            argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -713,17 +967,18 @@ def create_encode_parsers(
     ### Dolby Digital Plus BluRay Command ###
     _encode_ddp_bluray_parser = encode_subparsers.add_parser(
         "ddp-bluray",
+        help="Dolby Digital Plus for Blu-ray",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["dd_ddp_metering_group"],
             argument_groups["ddp_bluray_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["ddp_bluray_channels_group"],
+            argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -732,19 +987,20 @@ def create_encode_parsers(
         ),
     )
 
-    ### Atmos Command ###
+    ### DD+ Atmos Command ###
     _encode_atmos_parser = encode_subparsers.add_parser(
-        "atmos",
+        "ddp-atmos",
+        help="Dolby Digital Plus with Dolby Atmos (JOC)",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["atmos_ac4_metering_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["atmos_options_group"],
+            argument_groups["atmos_processing_group"],
             argument_groups["truehdd_options_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
@@ -754,17 +1010,117 @@ def create_encode_parsers(
         ),
     )
 
-    ### AC4 Command ###
-    _encode_ac4_parser = encode_subparsers.add_parser(
+    ### channel-based AC-4 Command ###
+    _encode_ac4_channel_parser = encode_subparsers.add_parser(
         "ac4",
+        help="Channel-based Dolby AC-4",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
             argument_groups["bitrate_group"],
             argument_groups["loudness_group"],
-            argument_groups["atmos_ac4_metering_group"],
-            argument_groups["ac4_basic_options_group"],
+            argument_groups["loudness_correction_group"],
             argument_groups["ac4_drc_group"],
+            argument_groups["stereo_downmix_group"],
+            argument_groups["downmix_metadata_group"],
+            argument_groups["ac4_channels_group"],
+            argument_groups["pcm_transport_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
+    ### AC-4 IMS Command ###
+    _encode_ac4_parser = encode_subparsers.add_parser(
+        "ac4-ims",
+        help="Dolby AC-4 immersive stereo (IMS)",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["bitrate_group"],
+            argument_groups["loudness_group"],
+            argument_groups["ac4_basic_options_group"],
+            argument_groups["ac4_ims_drc_group"],
+            argument_groups["ac4_drc_group"],
+            argument_groups["truehdd_options_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
+    ### AC-4 Atmos Command ###
+    _encode_ac4_atmos_parser = encode_subparsers.add_parser(
+        "ac4-atmos",
+        help="Dolby AC-4 with Dolby Atmos",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["bitrate_group"],
+            argument_groups["loudness_group"],
+            argument_groups["ac4_drc_group"],
+            argument_groups["truehdd_options_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
+    ### AAC Command ###
+    _encode_aac_parser = encode_subparsers.add_parser(
+        "aac",
+        help="AAC (AAC-LC, HE-AAC, HE-AAC v2)",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["bitrate_group"],
+            argument_groups["loudness_group"],
+            argument_groups["loudness_correction_group"],
+            argument_groups["aac_options_group"],
+            argument_groups["pcm_transport_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
+    ### TrueHD Command ###
+    _encode_thd_parser = encode_subparsers.add_parser(
+        "thd",
+        help="Dolby TrueHD",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["loudness_group"],
+            argument_groups["thd_channels_group"],
+            argument_groups["thd_options_group"],
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
+    )
+
+    ### TrueHD Atmos Command ###
+    _encode_thd_atmos_parser = encode_subparsers.add_parser(
+        "thd-atmos",
+        help="Dolby TrueHD with Dolby Atmos",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["encode_group"],
+            argument_groups["loudness_group"],
+            argument_groups["thd_options_group"],
+            argument_groups["thd_atmos_options_group"],
             argument_groups["truehdd_options_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
@@ -783,7 +1139,6 @@ def create_encode_parsers(
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["preset_metering_group"],
             argument_groups["dd_ddp_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
@@ -791,7 +1146,10 @@ def create_encode_parsers(
             argument_groups["atmos_options_group"],
             argument_groups["truehdd_options_group"],
             argument_groups["ac4_basic_options_group"],
+            argument_groups["ac4_ims_drc_group"],
             argument_groups["ac4_drc_group"],
+            argument_groups["aac_options_group"],
+            argument_groups["pcm_transport_group"],
         ),
         formatter_class=lambda prog: CustomHelpFormatter(
             prog,
@@ -828,6 +1186,29 @@ def create_other_parsers(
     # info command parser
     _info_parser = subparsers.add_parser(
         "info", parents=[argument_groups["input_group"]], help="Info management"
+    )
+
+    # measure command parser
+    _measure_parser = subparsers.add_parser(
+        "measure",
+        parents=(
+            argument_groups["input_group"],
+            argument_groups["tools_group"],
+            argument_groups["shim_group"],
+            argument_groups["measure_group"],
+            argument_groups["loudness_group"],
+            argument_groups["pcm_transport_group"],
+            argument_groups["truehdd_options_group"],
+        ),
+        help=(
+            "Measure loudness with DEE (1.0, 2.0, 5.1, 7.1 through dee_shim, and "
+            "Atmos; 3 to 5 channels as 5.1, 7 as 7.1)"
+        ),
+        formatter_class=lambda prog: CustomHelpFormatter(
+            prog,
+            width=78,
+            max_help_position=7,
+        ),
     )
 
     # config command parser
@@ -873,6 +1254,46 @@ def create_other_parsers(
     )
     list_parser.add_argument(
         "--detailed", action="store_true", help="Show detailed preset information"
+    )
+
+    # bitrate listing
+    bitrates_parser = subparsers.add_parser(
+        "bitrates",
+        help="List the data rates each format and mode takes, and the defaults",
+        description=(
+            "Lists, for each format and mode (with the option that picks it), "
+            "each layout's default data rate and every rate DEE takes for it, "
+            "in kbps. A default your config's [default_bitrates] changes is "
+            "shown with DeeZy's own; [default_source_bitrates] can still change "
+            "it per source. A layout marked 'needs dee_shim' is encoded through dee_shim."
+        ),
+    )
+    bitrates_parser.add_argument(
+        "format",
+        nargs="*",
+        help="The formats to list (default: every format): " + ", ".join(formats()),
+    )
+
+    # the tools DeeZy finds
+    tools_parser = subparsers.add_parser(
+        "tools",
+        help="List the tools DeeZy finds, where they are and their versions",
+        description=(
+            "Lists FFmpeg, truehdd, the DEE tools (and their license) and "
+            "dee_shim as an encode finds them: the paths given here or in the "
+            "config's [dependencies], else beside DeeZy (apps/...), else on "
+            "PATH. Exits with 1 when an encode couldn't run: no FFmpeg, no DEE "
+            "6.7, or a path given that doesn't work."
+        ),
+    )
+    tools_parser.add_argument("--ffmpeg", type=str, help="Path to FFmpeg.")
+    tools_parser.add_argument("--truehdd", type=str, help="Path to truehdd.")
+    tools_parser.add_argument(
+        "--dee", type=str, help="The folder of the DEE tools, or one of them."
+    )
+    tools_parser.add_argument("--dee-shim", type=str, help="Path to dee_shim.")
+    tools_parser.add_argument(
+        "--no-shim", action="store_true", help="Report dee_shim as turned off."
     )
 
     # temp management command parser
@@ -922,6 +1343,11 @@ def cli_parser() -> None:
 
     # handle configuration and dependencies
     config_manager = handle_configuration(args)
+    # the config's [global_defaults] become option defaults; parsing again
+    # keeps the command line (and a preset) ahead of them
+    if apply_config_option_defaults(parser, args, config_manager):
+        args = parser.parse_args()
+        setup_logging(args)
 
     # apply default bitrates for encoding commands
     if args.sub_command == "encode" and hasattr(args, "format_command"):
@@ -954,6 +1380,10 @@ def execute_command(
         if dependencies is None:
             exit_application("Dependencies not found for encoding.", EXIT_FAIL)
         execute_encode_command(args, file_inputs, dependencies, config_manager)
+    elif args.sub_command == "measure":
+        if dependencies is None:
+            exit_application("Dependencies not found for measuring.", EXIT_FAIL)
+        execute_measure_command(args, file_inputs, dependencies, config_manager)
     elif args.sub_command == "find":
         execute_find_command(args, file_inputs)
     elif args.sub_command == "info":
@@ -962,6 +1392,48 @@ def execute_command(
         execute_config_command(args, config_manager)
     elif args.sub_command == "temp":
         execute_temp_command(args)
+    elif args.sub_command == "bitrates":
+        execute_bitrates_command(args, config_manager)
+    elif args.sub_command == "tools":
+        execute_tools_command(args, config_manager)
+
+
+def execute_tools_command(
+    args: argparse.Namespace, config_manager: ConfigManager | None
+) -> None:
+    """Print the tools DeeZy finds; exit 1 when an encode couldn't run."""
+    config = config_manager.config if config_manager else {}
+    deps = config.get("dependencies", {})
+    rows = tool_rows(
+        WORKING_DIRECTORY,
+        ffmpeg=args.ffmpeg or deps.get("ffmpeg"),
+        truehdd=args.truehdd or deps.get("truehdd"),
+        dee=args.dee or deps.get("dee"),
+        dee_shim=args.dee_shim or deps.get("dee_shim"),
+        no_shim=args.no_shim
+        or bool(config.get("global_defaults", {}).get("no_shim", False)),
+    )
+    for line in tool_lines(rows):
+        print(line)
+    if not all(row.ok for row in rows):
+        # each problem is on its tool's line
+        sys.exit(EXIT_FAIL)
+
+
+def execute_bitrates_command(
+    args: argparse.Namespace, config_manager: ConfigManager | None
+) -> None:
+    """Print the data rates of the formats asked for (every format by default)."""
+    unknown = [name for name in args.format if name not in formats()]
+    if unknown:
+        exit_application(
+            f"No format {', '.join(unknown)}; the formats are "
+            + ", ".join(formats())
+            + ".",
+            EXIT_FAIL,
+        )
+    for line in bitrate_lines(args.format, config_manager):
+        print(line)
 
 
 def encode_single_file(
@@ -1035,26 +1507,24 @@ def encode_single_file(
         logger_manager.set_file(log_file)
 
     # build payload and run encoder
-    if args.format_command == "dd":
-        payload = PayloadBuilder.build_dd_payload(
+    builders = {
+        "dd": PayloadBuilder.build_dd_payload,
+        "ddp": PayloadBuilder.build_ddp_payload,
+        "ddp-bluray": PayloadBuilder.build_ddp_payload,
+        "ddp-atmos": PayloadBuilder.build_atmos_payload,
+        "ac4": PayloadBuilder.build_ac4_channel_payload,
+        "ac4-ims": PayloadBuilder.build_ac4_payload,
+        "ac4-atmos": PayloadBuilder.build_ac4_atmos_payload,
+        "aac": PayloadBuilder.build_aac_payload,
+        "thd": PayloadBuilder.build_thd_payload,
+        "thd-atmos": PayloadBuilder.build_thd_atmos_payload,
+    }
+    if args.format_command in builders:
+        payload = builders[args.format_command](
             args, input_file, ffmpeg_path, truehdd_path, dee_path
         )
-        result = DDEncoderDEE(payload).encode()
-    elif args.format_command in ("ddp", "ddp-bluray"):
-        payload = PayloadBuilder.build_ddp_payload(
-            args, input_file, ffmpeg_path, truehdd_path, dee_path
-        )
-        result = DDPEncoderDEE(payload).encode()
-    elif args.format_command == "atmos":
-        payload = PayloadBuilder.build_atmos_payload(
-            args, input_file, ffmpeg_path, truehdd_path, dee_path
-        )
-        result = AtmosEncoder(payload).encode()
-    elif args.format_command == "ac4":
-        payload = PayloadBuilder.build_ac4_payload(
-            args, input_file, ffmpeg_path, truehdd_path, dee_path
-        )
-        result = Ac4Encoder(payload).encode()
+        payload.dee_shim = dependencies.get("dee_shim")
+        result = encode(payload)
     elif args.format_command == "preset":
         # this should not happen since config manager converts "preset" to actual format
         raise ValueError(
@@ -1077,6 +1547,12 @@ def execute_encode_command(
     config_manager: ConfigManager | None,
 ) -> None:
     """Execute encoding commands."""
+    if getattr(args, "output", None) and len(file_inputs) > 1:
+        exit_application(
+            "--output names one input's output; for several inputs use "
+            "--output-template or --batch-output-dir.",
+            EXIT_FAIL,
+        )
     max_parallel = getattr(args, "max_parallel", 1)
     batch_output_enabled = getattr(args, "batch_summary_output", False)
 
@@ -1273,6 +1749,8 @@ def execute_encode_command(
     if file_inputs and not getattr(args, "allow_sleep", False):
         sleep_inhibitor.acquire()
 
+    # each job claims its output, so none overwrites a source or another's output
+    begin_run(file_inputs)
     try:
         if max_parallel == 1 or len(file_inputs) == 1:
             # sequential processing
@@ -1289,19 +1767,23 @@ def execute_encode_command(
                     )
 
                 try:
-                    # pass a file-specific id so encode_single_file can include it in output names
-                    file_id = f"f{i + 1}" if len(file_inputs) > 1 else "f1"
+                    # a batch's jobs get an id in their output names (f1, f2, ...)
+                    # that tells them apart; a single file needs none
+                    name_id = f"f{i + 1}" if len(file_inputs) > 1 else None
 
                     # prepare per-job args copy; encoders are authoritative for filename
                     args_for_job = copy.deepcopy(args)
 
                     input_file, result = encode_single_file(
-                        args_for_job, input_file, dependencies, None, None, file_id
+                        args_for_job, input_file, dependencies, None, None, name_id
                     )
                     # When running in output-preview mode we already emit the
                     # previewed path from the encoder; suppress the duplicate
                     # "Job successful" path line to avoid confusion.
-                    if not getattr(args, "output_preview", False):
+                    if not (
+                        getattr(args, "output_preview", False)
+                        or getattr(args, "dry_run", False)
+                    ):
                         logger.info(f"Job successful! Output file path:\n{result}")
                     successful_files.append((input_file, result))
 
@@ -1331,9 +1813,8 @@ def execute_encode_command(
                 ),
                 ThreadPoolExecutor(max_workers=max_parallel) as executor,
             ):
-                # Initialize phase semaphores and jitter in the encoder base so
-                # all encoder instances share phase limits.
-                BaseDeeAudioEncoder.init_phase_limits(
+                # the batch's jobs share these per-tool limits
+                init_phase_limits(
                     max_parallel,
                     args.jitter_ms,
                     ffmpeg_limit=ff_limit,
@@ -1393,7 +1874,10 @@ def execute_encode_command(
                         # When running in output-preview mode we already emit the
                         # previewed path from the encoder; suppress the duplicate
                         # "Job successful" path line to avoid confusion.
-                        if not getattr(args, "output_preview", False):
+                        if not (
+                            getattr(args, "output_preview", False)
+                            or getattr(args, "dry_run", False)
+                        ):
                             logger.info(f"Job successful! Output file path:\n{result}")
                         successful_files.append((input_file, result))
 
@@ -1482,6 +1966,7 @@ def execute_encode_command(
         logger.debug(traceback.format_exc())
         exit_application(f"Unexpected error: {e}", EXIT_FAIL)
     finally:
+        end_run()
         sleep_inhibitor.release()
 
 
@@ -1491,9 +1976,7 @@ def execute_config_command(
     """Execute config command."""
     # config commands need their own manager instance
     if config_manager is None:
-        config_manager = get_config_manager()
-        if args.config:
-            config_manager.load_config(args.config)
+        config_manager = get_config_manager(args.config or None)
 
     if args.config_command == "generate":
         try:
@@ -1600,6 +2083,52 @@ def execute_config_command(
 
         except Exception as e:
             exit_application(f"Failed to list presets: {e}", EXIT_FAIL)
+
+
+def execute_measure_command(
+    args: argparse.Namespace,
+    file_inputs: list[Path],
+    dependencies: dict[str, Path | None],
+    config_manager: ConfigManager | None,
+) -> None:
+    """Measure each input's loudness and print it, one input at a time."""
+    ffmpeg_path = dependencies["ffmpeg_path"]
+    dee_path = dependencies["dee_path"]
+    if ffmpeg_path is None or dee_path is None:
+        exit_application("Measuring needs FFmpeg and DEE.", EXIT_FAIL)
+    if args.output and len(file_inputs) > 1:
+        exit_application(
+            "--output saves one input's manifest; use --output-dir for several.",
+            EXIT_FAIL,
+        )
+    apply_config_defaults_to_args(args, config_manager)
+    if not args.temp_dir and config_manager is not None:
+        config_temp_dir = config_manager.get_config_default("temp_dir")
+        if config_temp_dir:
+            args.temp_dir = str(config_temp_dir)
+    init_phase_limits(max_parallel=1)
+
+    failed = []
+    for input_file in file_inputs:
+        payload = PayloadBuilder.build_measure_payload(
+            args, input_file, ffmpeg_path, dependencies["truehdd_path"], dee_path
+        )
+        payload.dee_shim = dependencies.get("dee_shim")
+        try:
+            manifest = measure(payload)
+        except Exception as e:
+            logger.error(f"Failed to measure {input_file}: {e}")
+            logger.debug(traceback.format_exc())
+            failed.append(input_file)
+            continue
+        if manifest is not None:
+            print(f"{input_file.name} (track {payload.track_index})", flush=True)
+            print("\n".join(summary(manifest)), flush=True)
+
+    if failed:
+        exit_application(
+            f"{len(failed)} of {len(file_inputs)} measurements failed.", EXIT_FAIL
+        )
 
 
 def execute_temp_command(args: argparse.Namespace) -> None:

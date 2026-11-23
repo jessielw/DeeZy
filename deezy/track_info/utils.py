@@ -1,7 +1,7 @@
 from pathlib import Path
 import re
 
-DELAY_REGEX = r"delay\s*(-?\d+(?:ms|s))"
+DELAY_REGEX = r"delay\s*([+-]?\d+(?:\.\d+)?(?:ms|s))"
 
 
 def parse_delay_from_file(media_path: Path) -> str | None:
@@ -39,7 +39,7 @@ def clean_title(s: str) -> str:
     s = re.sub(r"[\[\(][^\]\)]+[\]\)]", "", s)
 
     # remove explicit delay tokens (e.g. "DELAY 12ms", "delay-5ms")
-    s = re.sub(r"\bdelay\s*[-:]?\s*-?\d+\s*(?:ms|s)?\b", "", s, flags=re.I)
+    s = re.sub(r"\bdelay\s*[-:]?\s*[+-]?\d+(?:\.\d+)?\s*(?:ms|s)?\b", "", s, flags=re.I)
 
     # remove numeric audio channel info like 5.1, 7.1ch, 5ch; remove simple words
     # such as 'stereo' and 'mono' but keep words that can be valid titles

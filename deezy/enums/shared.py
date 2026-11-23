@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum
 import logging
 
@@ -32,32 +31,6 @@ class StereoDownmix(CaseInsensitiveEnum):
             return "ltrt-pl2"
         else:
             return self.value
-
-
-class DeeDelayModes(CaseInsensitiveEnum):
-    NEGATIVE = "start"
-    POSITIVE = "prepend_silence_duration"
-
-
-@dataclass(slots=True)
-class DeeDelay:
-    MODE: DeeDelayModes
-    DELAY: str  # DEE specific delay i.e. '0:00:00.005333'
-
-    def is_delay(self) -> bool:
-        """
-        If delay is anything other than the default Dolby compensation value return True.
-        This indicates that we're setting the delay to 0 for the container.
-        """
-        return self.DELAY != "0:00:00.005333"
-
-    def to_seconds(self) -> float:
-        """The delay as plain seconds, whichever form DEE's JSON wants it in."""
-        if self.MODE is DeeDelayModes.POSITIVE:
-            return float(self.DELAY)
-        # negative delays are kept as a clock string, i.e. '0:00:00.005333'
-        hours, minutes, seconds = self.DELAY.split(":")
-        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
 class DeeFPS(Enum):
@@ -102,7 +75,8 @@ class DeeDRC(CaseInsensitiveEnum):
     MUSIC_STANDARD = "music_standard"
     MUSIC_LIGHT = "music_light"
     SPEECH = "speech"
-    NONE = "none"  # ac4 is the only codec that supports this
+    # dee_ac4_encoder and dee_dthd_encoder reject this one
+    NONE = "none"
 
     @override
     def __str__(self):
@@ -129,30 +103,6 @@ class LoudnessPreset(CaseInsensitiveEnum):
         return str(self)
 
 
-class MeteringMode(CaseInsensitiveEnum):
-    MODE_1770_1 = "1770_1"
-    MODE_1770_2 = "1770_2"
-    MODE_1770_3 = "1770_3"
-    MODE_1770_4 = "1770_4"
-    MODE_LEQA = "leqa"
-
-    @override
-    def __str__(self) -> str:
-        return self.value.replace("_", "-")
-
-    def to_dee_cmd(self) -> str:
-        if self is MeteringMode.MODE_1770_1:
-            return "1770-1"
-        elif self is MeteringMode.MODE_1770_2:
-            return "1770-2"
-        elif self is MeteringMode.MODE_1770_3:
-            return "1770-3"
-        elif self is MeteringMode.MODE_1770_4:
-            return "1770-4"
-        else:
-            return "LeqA"
-
-
 class DDEncodingMode(CaseInsensitiveEnum):
     DD = "dd"
     DDP = "ddp"
@@ -173,6 +123,18 @@ class DDEncodingMode(CaseInsensitiveEnum):
 class TrackType(CaseInsensitiveEnum):
     AUDIO = "a"
     STREAM = "s"
+
+    @override
+    def __str__(self) -> str:
+        return self.value
+
+
+class PipeMode(CaseInsensitiveEnum):
+    """How FFmpeg's PCM reaches DEE: through a pipe, or a temp WAV file."""
+
+    AUTO = "auto"
+    ALWAYS = "always"
+    NEVER = "never"
 
     @override
     def __str__(self) -> str:
