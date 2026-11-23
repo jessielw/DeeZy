@@ -13,14 +13,22 @@ nav:
       - Overview: cli/top-level.md
       - Encode:
           - Overview: cli/encode.md
-          - Dolby Digital (DD): cli/encode-dd.md
-          - Dolby Digital Plus (DDP): cli/encode-ddp.md
-          - DDP BluRay: cli/encode-ddp-bluray.md
-          - Dolby Atmos: cli/encode-atmos.md
-          - Dolby AC-4: cli/encode-ac4.md
-          - Preset-based Encoding: cli/encode-preset.md
+          - Dolby Digital (dd): cli/encode-dd.md
+          - Dolby Digital Plus (ddp): cli/encode-ddp.md
+          - DD+ Blu-ray (ddp-bluray): cli/encode-ddp-bluray.md
+          - DD+ Atmos (ddp-atmos): cli/encode-ddp-atmos.md
+          - AC-4 (ac4): cli/encode-ac4.md
+          - AC-4 immersive stereo (ac4-ims): cli/encode-ac4-ims.md
+          - AC-4 Atmos (ac4-atmos): cli/encode-ac4-atmos.md
+          - AAC (aac): cli/encode-aac.md
+          - TrueHD (thd): cli/encode-thd.md
+          - TrueHD Atmos (thd-atmos): cli/encode-thd-atmos.md
+          - Preset (preset): cli/encode-preset.md
       - Find: cli/find.md
       - Info: cli/info.md
+      - Measure: cli/measure.md
+      - Bitrates: cli/bitrates.md
+      - Tools: cli/tools.md
       - Config: cli/config.md
       - Temp: cli/temp.md
   - Formats:

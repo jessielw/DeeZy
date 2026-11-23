@@ -110,17 +110,17 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     tools_group.add_argument(
         "--ffmpeg",
         type=str,
-        help="Path to FFMPEG executable.",
+        help="Path to FFmpeg.",
     )
     tools_group.add_argument(
         "--truehdd",
         type=str,
-        help="Path to Truehdd executable.",
+        help="Path to truehdd.",
     )
     tools_group.add_argument(
         "--dee",
         type=str,
-        help="Path to Dolby Encoding Engine executable.",
+        help="The folder of the DEE tools, or one of them.",
     )
     tools_group.add_argument(
         "--track-index",
@@ -378,7 +378,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help=(
             "Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, "
             "ARIB B32) instead of the manual settings. Replaces "
-            "--no-dialogue-intelligence and --speech-threshold. Split DEE encoders only."
+            "--no-dialogue-intelligence and --speech-threshold."
         ),
     )
     loudness_group.add_argument(
@@ -408,7 +408,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
-    # loudness correction (split DEE encoders only; DD/DDP)
+    # loudness correction (DD/DDP)
     loudness_correction_group = argparse.ArgumentParser(add_help=False)
     loudness_correction_group.add_argument(
         "--loudness-target",
@@ -418,7 +418,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         default=None,
         help=(
             "Measure and correct the loudness to this target (LKFS) instead of only "
-            "measuring. Split DEE encoders only. Can't be combined with "
+            "measuring. Can't be combined with "
             "--custom-dialnorm."
         ),
     )
@@ -432,7 +432,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         ),
     )
 
-    # DDP options only the split DEE encoders offer
+    # DDP-only options
     ddp_split_group = argparse.ArgumentParser(add_help=False)
     ddp_split_group.add_argument(
         "--user-data",
@@ -440,15 +440,14 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         choices=range(-1, 65536),
         metavar="[-1..65535]",
         default=-1,
-        help="Optional user data ID to write into the stream (-1 for none). Split DEE encoders only.",
+        help="Optional user data ID to write into the stream (-1 for none).",
     )
     ddp_split_group.add_argument(
         "--bluray-secondary",
         action="store_true",
         help=(
             "Encode Blu-ray secondary audio: 2.0 at 96 to 256 kbps or 5.1 at 160 to "
-            "256 kbps (default 192). "
-            "Split DEE encoders only."
+            "256 kbps (default 192)."
         ),
     )
 
@@ -924,6 +923,7 @@ def create_encode_parsers(
     ### Dolby Digital Command ###
     _encode_dd_parser = encode_subparsers.add_parser(
         "dd",
+        help="Dolby Digital (AC-3)",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -948,6 +948,7 @@ def create_encode_parsers(
     ### Dolby Digital Plus Command ###
     _encode_ddp_parser = encode_subparsers.add_parser(
         "ddp",
+        help="Dolby Digital Plus (E-AC-3)",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -973,6 +974,7 @@ def create_encode_parsers(
     ### Dolby Digital Plus BluRay Command ###
     _encode_ddp_bluray_parser = encode_subparsers.add_parser(
         "ddp-bluray",
+        help="Dolby Digital Plus for Blu-ray",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -996,6 +998,7 @@ def create_encode_parsers(
     ### DD+ Atmos Command ###
     _encode_atmos_parser = encode_subparsers.add_parser(
         "ddp-atmos",
+        help="Dolby Digital Plus with Dolby Atmos (JOC)",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -1019,6 +1022,7 @@ def create_encode_parsers(
     ### channel-based AC-4 Command ###
     _encode_ac4_channel_parser = encode_subparsers.add_parser(
         "ac4",
+        help="Channel-based Dolby AC-4",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -1041,6 +1045,7 @@ def create_encode_parsers(
     ### AC-4 IMS Command ###
     _encode_ac4_parser = encode_subparsers.add_parser(
         "ac4-ims",
+        help="Dolby AC-4 immersive stereo (IMS)",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -1062,6 +1067,7 @@ def create_encode_parsers(
     ### AC-4 Atmos Command ###
     _encode_ac4_atmos_parser = encode_subparsers.add_parser(
         "ac4-atmos",
+        help="Dolby AC-4 with Dolby Atmos",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -1080,6 +1086,7 @@ def create_encode_parsers(
     ### AAC Command ###
     _encode_aac_parser = encode_subparsers.add_parser(
         "aac",
+        help="AAC (AAC-LC, HE-AAC, HE-AAC v2)",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -1099,6 +1106,7 @@ def create_encode_parsers(
     ### TrueHD Command ###
     _encode_thd_parser = encode_subparsers.add_parser(
         "thd",
+        help="Dolby TrueHD",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
@@ -1116,6 +1124,7 @@ def create_encode_parsers(
     ### TrueHD Atmos Command ###
     _encode_thd_atmos_parser = encode_subparsers.add_parser(
         "thd-atmos",
+        help="Dolby TrueHD with Dolby Atmos",
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
