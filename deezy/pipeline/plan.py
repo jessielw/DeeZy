@@ -921,9 +921,10 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         resolver,
     )
 
-    auto = channels is DolbyDigitalPlusChannels.AUTO
-    if auto:
-        accepted = ddp_auto_layouts(shim_71)
+    accepted = (
+        ddp_auto_layouts(shim_71) if channels is DolbyDigitalPlusChannels.AUTO else None
+    )
+    if accepted is not None:
         if pad_50 or pad_70:
             channels = resolver(source_channels)
         else:
@@ -944,7 +945,7 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     lfe = keeps or not has_slot or wanted
     silence = keeps and has_slot and has_lfe and not wanted
     layout = lfe_label(str(channels), lfe)
-    if auto:
+    if accepted is not None:
         logger.info(f"No supplied channels, defaulting to {layout}.")
         if (
             source_channels in (7, 8)
@@ -1101,7 +1102,7 @@ def _plan_dd_render(
         logger.info("--pipe always: the master goes to DEE as it is, with no PCM.")
 
     bluray_secondary = bool(getattr(payload, "bluray_secondary", False))
-    if dd:
+    if isinstance(channels, DolbyDigitalChannels):
         dd_mode = DDEncodingMode.DD
     else:
         # refuses a secondary layout other than 2.0 or 5.1

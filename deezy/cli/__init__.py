@@ -11,6 +11,7 @@ from deezy.cli.payload_factory import PayloadBuilder
 from deezy.cli.tools_report import tool_lines, tool_rows
 from deezy.cli.utils import (
     CustomHelpFormatter,
+    ToolDependencies,
     apply_config_defaults_to_args,
     apply_config_option_defaults,
     apply_default_bitrate,
@@ -1372,7 +1373,7 @@ def cli_parser() -> None:
 def execute_command(
     args: argparse.Namespace,
     file_inputs: list[Path],
-    dependencies: dict[str, Path | None] | None,
+    dependencies: ToolDependencies | None,
     config_manager: ConfigManager | None,
 ) -> None:
     """Execute the appropriate command based on parsed arguments."""
@@ -1439,7 +1440,7 @@ def execute_bitrates_command(
 def encode_single_file(
     args: argparse.Namespace,
     input_file: Path,
-    dependencies: dict[str, Path | None],
+    dependencies: ToolDependencies,
     worker_num: int | None = None,
     short_filename: str | None = None,
     file_id: str | None = None,
@@ -1543,7 +1544,7 @@ def encode_single_file(
 def execute_encode_command(
     args: argparse.Namespace,
     file_inputs: list[Path],
-    dependencies: dict[str, Path | None],
+    dependencies: ToolDependencies,
     config_manager: ConfigManager | None,
 ) -> None:
     """Execute encoding commands."""
@@ -2088,7 +2089,7 @@ def execute_config_command(
 def execute_measure_command(
     args: argparse.Namespace,
     file_inputs: list[Path],
-    dependencies: dict[str, Path | None],
+    dependencies: ToolDependencies,
     config_manager: ConfigManager | None,
 ) -> None:
     """Measure each input's loudness and print it, one input at a time."""

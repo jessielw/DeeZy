@@ -62,15 +62,16 @@ def read_damf(header: Path) -> Damf:
             f"Cannot read the DAMF header {header}: {e}"
         ) from None
     names = {key: _header_value(text, key) for key in ("audio", "metadata")}
-    missing = [key for key, name in names.items() if not name]
-    if missing or "presentations:" not in text:
+    audio_name, metadata_name = names["audio"], names["metadata"]
+    if not audio_name or not metadata_name or "presentations:" not in text:
+        missing = [key for key, name in names.items() if not name]
         raise InvalidAtmosInputError(
             f"{header.name} is not a DAMF header: it names no "
             f"{' or '.join(missing) or 'presentation'}."
         )
     audio, metadata = (
-        header.parent / names["audio"],
-        header.parent / names["metadata"],
+        header.parent / audio_name,
+        header.parent / metadata_name,
     )
     for part in (audio, metadata):
         if not part.is_file():

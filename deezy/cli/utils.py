@@ -7,6 +7,8 @@ import tempfile
 import time
 from typing import Any
 
+from typing_extensions import NotRequired, TypedDict
+
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.dee.shim import DeeShim, resolve_shim
 from deezy.dee.tools import DependencyNotFoundError, FindDependencies
@@ -525,9 +527,16 @@ def handle_configuration(args: argparse.Namespace) -> ConfigManager | None:
     return config_manager
 
 
+class ToolDependencies(TypedDict):
+    ffmpeg_path: Path | None
+    truehdd_path: Path | None
+    dee_path: Path | None
+    dee_shim: NotRequired[DeeShim | None]
+
+
 def handle_dependencies(
     args: argparse.Namespace, config_manager: ConfigManager | None
-) -> dict[str, Path | DeeShim | None] | None:
+) -> ToolDependencies | None:
     """
     Handle tool dependencies detection.
     CLI > Config.

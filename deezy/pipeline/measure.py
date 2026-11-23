@@ -84,7 +84,7 @@ def summary(manifest: dict) -> list[str]:
     lines: list[str] = []
     for track in manifest.get("loudness_manifest", {}).get("tracks", []):
         for name, result in (track.get("channel_based_loudness") or {}).items():
-            lines += _block(LAYOUTS.get(name, name), result)
+            lines += _block(LAYOUTS.get(name, str(name)), result)
         for name, result in (track.get("atmos_loudness") or {}).items():
-            lines += _block(RENDERS.get(name, name), result)
+            lines += _block(RENDERS.get(name, str(name)), result)
     return lines
