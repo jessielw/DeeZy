@@ -103,30 +103,6 @@ class LoudnessPreset(CaseInsensitiveEnum):
         return str(self)
 
 
-class MeteringMode(CaseInsensitiveEnum):
-    MODE_1770_1 = "1770_1"
-    MODE_1770_2 = "1770_2"
-    MODE_1770_3 = "1770_3"
-    MODE_1770_4 = "1770_4"
-    MODE_LEQA = "leqa"
-
-    @override
-    def __str__(self) -> str:
-        return self.value.replace("_", "-")
-
-    def to_dee_cmd(self) -> str:
-        if self is MeteringMode.MODE_1770_1:
-            return "1770-1"
-        elif self is MeteringMode.MODE_1770_2:
-            return "1770-2"
-        elif self is MeteringMode.MODE_1770_3:
-            return "1770-3"
-        elif self is MeteringMode.MODE_1770_4:
-            return "1770-4"
-        else:
-            return "LeqA"
-
-
 class DDEncodingMode(CaseInsensitiveEnum):
     DD = "dd"
     DDP = "ddp"

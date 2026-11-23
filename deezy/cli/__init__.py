@@ -41,7 +41,6 @@ from deezy.enums.shared import (
     DeeDRC,
     LogLevel,
     LoudnessPreset,
-    MeteringMode,
     PipeMode,
     StereoDownmix,
     TrackType,
@@ -367,7 +366,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     loudness_group.add_argument(
         "--no-dialogue-intelligence",
         action="store_false",
-        help="Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.",
+        help="Dialogue intelligence disabled.",
     )
     loudness_group.add_argument(
         "--loudness-preset",
@@ -389,23 +388,6 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             "[0-100] If the percentage of speech is higher than the threshold, the encoder uses speech "
             "gating to set the dialnorm value. (Otherwise, the encoder uses level gating)."
         ),
-    )
-
-    # DD/DDP limited metering mode (excludes MODE_1770_4)
-    dd_ddp_metering_group = argparse.ArgumentParser(add_help=False)
-    dd_ddp_metering_choices = (
-        MeteringMode.MODE_1770_1,
-        MeteringMode.MODE_1770_2,
-        MeteringMode.MODE_1770_3,
-        MeteringMode.MODE_LEQA,
-    )
-    dd_ddp_metering_group.add_argument(
-        "--metering-mode",
-        type=case_insensitive_enum(MeteringMode),
-        choices=dd_ddp_metering_choices,
-        metavar=enum_choices(dd_ddp_metering_choices),
-        default=MeteringMode.MODE_1770_3,
-        help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
     # loudness correction (DD/DDP)
@@ -449,17 +431,6 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             "Encode Blu-ray secondary audio: 2.0 at 96 to 256 kbps or 5.1 at 160 to "
             "256 kbps (default 192)."
         ),
-    )
-
-    # Atmos/AC4 full metering mode (includes MODE_1770_4)
-    atmos_ac4_metering_group = argparse.ArgumentParser(add_help=False)
-    atmos_ac4_metering_group.add_argument(
-        "--metering-mode",
-        type=case_insensitive_enum(MeteringMode),
-        choices=MeteringMode,
-        metavar=enum_choices(MeteringMode),
-        default=MeteringMode.MODE_1770_4,
-        help="Loudness measuring mode according to one of the broadcast standards.",
     )
 
     # DD/DDP specific processing options
@@ -820,16 +791,6 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         ),
     )
 
-    # preset metering mode (full choices for flexibility)
-    preset_metering_group = argparse.ArgumentParser(add_help=False)
-    preset_metering_group.add_argument(
-        "--metering-mode",
-        type=case_insensitive_enum(MeteringMode),
-        choices=MeteringMode,
-        metavar=enum_choices(MeteringMode),
-        help="Loudness measuring mode according to one of the broadcast standards.",
-    )
-
     # deezy measure
     measure_group = argparse.ArgumentParser(add_help=False)
     measure_output = measure_group.add_mutually_exclusive_group()
@@ -905,9 +866,6 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "bitrate_group": bitrate_group,
         "dd_ddp_atmos_drc_group": dd_ddp_atmos_drc_group,
         "loudness_group": loudness_group,
-        "dd_ddp_metering_group": dd_ddp_metering_group,
-        "atmos_ac4_metering_group": atmos_ac4_metering_group,
-        "preset_metering_group": preset_metering_group,
         "loudness_correction_group": loudness_correction_group,
         "ddp_split_group": ddp_split_group,
         "dd_ddp_processing_group": dd_ddp_processing_group,
@@ -956,7 +914,6 @@ def create_encode_parsers(
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["dd_ddp_metering_group"],
             argument_groups["loudness_correction_group"],
             argument_groups["dd_ddp_processing_group"],
             argument_groups["stereo_downmix_group"],
@@ -981,7 +938,6 @@ def create_encode_parsers(
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["dd_ddp_metering_group"],
             argument_groups["loudness_correction_group"],
             argument_groups["ddp_split_group"],
             argument_groups["dd_ddp_processing_group"],
@@ -1007,7 +963,6 @@ def create_encode_parsers(
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["dd_ddp_metering_group"],
             argument_groups["ddp_bluray_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],
@@ -1031,7 +986,6 @@ def create_encode_parsers(
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["atmos_ac4_metering_group"],
             argument_groups["downmix_metadata_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["atmos_options_group"],
@@ -1077,7 +1031,6 @@ def create_encode_parsers(
             argument_groups["encode_group"],
             argument_groups["bitrate_group"],
             argument_groups["loudness_group"],
-            argument_groups["atmos_ac4_metering_group"],
             argument_groups["ac4_basic_options_group"],
             argument_groups["ac4_ims_drc_group"],
             argument_groups["ac4_drc_group"],
@@ -1175,7 +1128,6 @@ def create_encode_parsers(
             argument_groups["bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
-            argument_groups["preset_metering_group"],
             argument_groups["dd_ddp_processing_group"],
             argument_groups["stereo_downmix_group"],
             argument_groups["downmix_metadata_group"],

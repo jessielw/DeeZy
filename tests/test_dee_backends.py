@@ -24,7 +24,6 @@ from deezy.enums.shared import (
     DeeDRC,
     DeeFPS,
     LoudnessPreset,
-    MeteringMode,
     StereoDownmix,
 )
 from deezy.exceptions import UnsupportedDeeFeatureError
@@ -618,22 +617,6 @@ class TestSplitAC4:
         assert options.pop("drc_profile_ddp") == "speech"
         assert set(options.values()) == {"music_light"}
         assert "dialogue_intelligence=0" in option(cmd, "--loudness-management")
-
-
-def test_non_1770_4_metering_is_measured_as_1770_4(tmp_path, split_dir, files):
-    """The split encoders only measure 1770-4, so the request is overridden."""
-    payload = make_dd_payload(tmp_path, metering_mode=MeteringMode.MODE_1770_1)
-    cmd = ddp_command(
-        DeeTools(split_dir),
-        payload,
-        files,
-        downmix_mode_off=False,
-        bitrate=640,
-        fps=DeeFPS.FPS_24,
-        delay=Delay(),
-        dd_mode=DDEncodingMode.DDP,
-    )
-    assert option(cmd, "--loudness-management").startswith("measure_only:")
 
 
 @pytest.mark.parametrize(("shim", "has_71"), [(False, False), (True, True)])

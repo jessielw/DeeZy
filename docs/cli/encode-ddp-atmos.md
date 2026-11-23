@@ -29,7 +29,6 @@ usage: DeeZy encode ddp-atmos [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                               [--no-dialogue-intelligence]
                               [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                               [--speech-threshold SPEECH_THRESHOLD]
-                              [--metering-mode {1770_1,1770_2,1770_3,1770_4,leqa}]
                               [--lt-rt-center {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}]
                               [--lt-rt-surround {-1.5,-3,-4.5,-6,-inf}]
                               [--lo-ro-center {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}]
@@ -113,13 +112,11 @@ options:
   --custom-dialnorm, CUSTOM_DIALNORM
        Custom dialnorm (0 disables custom dialnorm).
   --no-dialogue-intelligence
-       Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.
+       Dialogue intelligence disabled.
   --loudness-preset, {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}
        Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, ARIB B32) instead of the manual settings. Replaces --no-dialogue-intelligence and --speech-threshold.
   --speech-threshold, SPEECH_THRESHOLD
        [0-100] If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
-  --metering-mode, {1770_1,1770_2,1770_3,1770_4,leqa}
-       Loudness measuring mode according to one of the broadcast standards.
   --lt-rt-center, {+3,+1.5,0,-1.5,-3,-4.5,-6,-inf}
        Lt/Rt center downmix level.
   --lt-rt-surround, {-1.5,-3,-4.5,-6,-inf}

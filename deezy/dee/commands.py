@@ -19,7 +19,6 @@ from deezy.enums.shared import (
     DeeDRC,
     DeeFPS,
     LoudnessPreset,
-    MeteringMode,
     StereoDownmix,
 )
 from deezy.exceptions import UnsupportedDeeFeatureError
@@ -803,12 +802,6 @@ def loudness(payload: LoudnessPayload) -> str:
     custom = int(getattr(payload, "custom_dialnorm", 0) or 0)
     if custom != 0:
         return f"skip:dialnorm={custom}"
-    # these encoders measure to ITU-R BS.1770-4 only
-    if payload.metering_mode is not MeteringMode.MODE_1770_4:
-        logger.info(
-            f"Metering mode {payload.metering_mode} is not offered by the split "
-            "DEE encoders, measuring with 1770-4."
-        )
     preset = getattr(payload, "loudness_preset", LoudnessPreset.MANUAL)
     if preset is not LoudnessPreset.MANUAL:
         # a regulation sets its own gating, so the manual options don't apply

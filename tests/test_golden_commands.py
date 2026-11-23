@@ -169,7 +169,6 @@ SCENARIOS = [
         info(6),
         MKV,
     ),
-    ("dd_metering", ["dd", "--metering-mode", "1770_1"], info(6), MKV),
     ("dd_bitrate_invalid", ["dd", "--bitrate", "500"], info(6), MKV),
     ("dd_bitrate_ok", ["dd", "--bitrate", "640"], info(6), MKV),
     ("dd_upmix_refused", ["dd", "--channels", "6"], info(2), MKV),

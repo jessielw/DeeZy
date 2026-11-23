@@ -9,7 +9,6 @@ from deezy.enums.atmos import AtmosMode
 from deezy.enums.shared import (
     DeeDRC,
     LoudnessPreset,
-    MeteringMode,
     PipeMode,
     StereoDownmix,
 )
@@ -72,14 +71,9 @@ class PayloadBuilder:
         }
 
     @classmethod
-    def _build_loudness_fields(
-        cls,
-        args: argparse.Namespace,
-        default_metering: MeteringMode = MeteringMode.MODE_1770_3,
-    ) -> dict:
+    def _build_loudness_fields(cls, args: argparse.Namespace) -> dict:
         """Build loudness fields."""
         return {
-            "metering_mode": cls.safe_get(args, "metering_mode", default_metering),
             "dialogue_intelligence": cls.safe_get(
                 args, "no_dialogue_intelligence", True
             ),
@@ -209,7 +203,7 @@ class PayloadBuilder:
                 args, file_input, ffmpeg_path, truehdd_path, dee_path
             )
         )
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
         payload_data.update(cls._build_dolby_fields(args))
         payload_data.update(cls._build_downmix_only_fields(args))
 
@@ -243,7 +237,7 @@ class PayloadBuilder:
                 args, file_input, ffmpeg_path, truehdd_path, dee_path
             )
         )
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
 
         # AC4-specific fields
         payload_data.update(
@@ -287,7 +281,7 @@ class PayloadBuilder:
             )
         )
         # dee_ac4ajoc_encoder measures to 1770-4 only
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
         payload_data.update(
             {
                 "thd_warp_mode": cls.safe_get(args, "thd_warp_mode", None),
@@ -324,7 +318,7 @@ class PayloadBuilder:
             )
         )
         # dee_aac_encoder measures to 1770-4 only, and only when it corrects
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
         payload_data.update(cls._build_loudness_correction_fields(args))
         payload_data["aac_profile"] = cls.safe_get(
             args, "aac_profile", AacProfile.AAC_LC
@@ -348,7 +342,7 @@ class PayloadBuilder:
             )
         )
         # dee_ac4_encoder measures to 1770-4 only
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
         payload_data.update(cls._build_loudness_correction_fields(args))
         payload_data.update(
             {
@@ -394,7 +388,7 @@ class PayloadBuilder:
             )
         )
         # dee_measure_loudness measures to 1770-4 only
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
         output_dir = cls.safe_get(args, "output_dir")
         payload_data.update(
             {
@@ -421,7 +415,7 @@ class PayloadBuilder:
             )
         )
         # dee_dthd_encoder measures to 1770-4 only
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
         payload_data.update(
             {
                 "channels": cls.safe_get(args, "channels"),
@@ -450,7 +444,7 @@ class PayloadBuilder:
             )
         )
         # dee_dthd_encoder measures to 1770-4 only
-        payload_data.update(cls._build_loudness_fields(args, MeteringMode.MODE_1770_4))
+        payload_data.update(cls._build_loudness_fields(args))
         payload_data.update(
             {
                 "drc": cls.safe_get(args, "drc", DeeDRC.FILM_LIGHT),

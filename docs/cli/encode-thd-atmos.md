@@ -96,7 +96,7 @@ options:
   --limit-truehdd, LIMIT_TRUEHDD
        Optional limit for concurrent truehdd processing. Defaults to --max-parallel if not set. If set higher than --max-parallel the value will be capped to --max-parallel and a warning will be emitted.
   --no-dialogue-intelligence
-       Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.
+       Dialogue intelligence disabled.
   --loudness-preset, {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}
        Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, ARIB B32) instead of the manual settings. Replaces --no-dialogue-intelligence and --speech-threshold.
   --speech-threshold, SPEECH_THRESHOLD

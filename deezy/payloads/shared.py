@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from deezy.dee.shim import DeeShim
-from deezy.enums.shared import DeeDRC, MeteringMode, PipeMode, StereoDownmix
+from deezy.enums.shared import DeeDRC, PipeMode, StereoDownmix
 from deezy.track_info.track_index import TrackIndex
 
 
@@ -41,9 +41,8 @@ class CorePayload:
 
 @dataclass(slots=True)
 class LoudnessPayload(CorePayload):
-    """Core + loudness/metering fields."""
+    """Core + loudness fields."""
 
-    metering_mode: MeteringMode
     dialogue_intelligence: bool
     speech_threshold: int
 

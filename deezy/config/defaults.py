@@ -93,7 +93,6 @@ drc_line_mode = "film_light"
 drc_rf_mode = "film_light"
 # Custom dialnorm value (0 = auto-detect) 
 custom_dialnorm = 0
-# metering_mode: handled per-format (DD/DDP=1770_3, Atmos=1770_4)
 # Enable dialogue intelligence
 dialogue_intelligence = true
 # Speech detection threshold percentage

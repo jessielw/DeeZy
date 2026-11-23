@@ -40,6 +40,24 @@ def test_each_surround_flag_sets_its_own_option(fmt):
     assert fields["surround_3db_attenuation"] is True
 
 
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["dd"],
+        ["ddp"],
+        ["ddp-bluray"],
+        ["ddp-atmos"],
+        ["ac4-ims"],
+        ["preset", "--name", "x"],
+    ],
+)
+def test_metering_mode_is_gone(argv, capsys):
+    """DEE 6.7 measures with ITU-R BS.1770-4 only, so 2.0 has no --metering-mode."""
+    with pytest.raises(SystemExit):
+        parse("encode", *argv, "--metering-mode", "1770_4", "a.wav")
+    assert "unrecognized arguments: --metering-mode" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize("fmt", ["dd", "ddp", "ddp-bluray", "ddp-atmos"])
 def test_drc_none_is_offered(fmt):
     args = parse(

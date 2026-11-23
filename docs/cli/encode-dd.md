@@ -24,7 +24,6 @@ usage: DeeZy encode dd [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                        [--no-dialogue-intelligence]
                        [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                        [--speech-threshold SPEECH_THRESHOLD]
-                       [--metering-mode {1770_1,1770_2,1770_3,leqa}]
                        [--loudness-target [-31..-8]] [--peak-limit PEAK_LIMIT]
                        [--no-low-pass-filter] [--surround-3db]
                        [--no-surround-90-deg-phase-shift] [--upmix-50-to-51]
@@ -109,13 +108,11 @@ options:
   --custom-dialnorm, CUSTOM_DIALNORM
        Custom dialnorm (0 disables custom dialnorm).
   --no-dialogue-intelligence
-       Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.
+       Dialogue intelligence disabled.
   --loudness-preset, {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}
        Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, ARIB B32) instead of the manual settings. Replaces --no-dialogue-intelligence and --speech-threshold.
   --speech-threshold, SPEECH_THRESHOLD
        [0-100] If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
-  --metering-mode, {1770_1,1770_2,1770_3,leqa}
-       Loudness measuring mode according to one of the broadcast standards.
   --loudness-target, [-31..-8]
        Measure and correct the loudness to this target (LKFS) instead of only measuring. Can't be combined with --custom-dialnorm.
   --peak-limit, PEAK_LIMIT

@@ -102,7 +102,7 @@ options:
   --bitrate, BITRATE
        The bitrate in Kbps (If too high or low for you desired layout, the bitrate will automatically be adjusted to the closest allowed bitrate).
   --no-dialogue-intelligence
-       Dialogue intelligence disabled. Option ignored for 1770-1 or LeqA metering mode.
+       Dialogue intelligence disabled.
   --loudness-preset, {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}
        Measure to a loudness regulation (ATSC A/85, EBU R128, FreeTV OP59, ARIB B32) instead of the manual settings. Replaces --no-dialogue-intelligence and --speech-threshold.
   --speech-threshold, SPEECH_THRESHOLD
