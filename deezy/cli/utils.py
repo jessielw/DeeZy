@@ -541,7 +541,7 @@ def handle_dependencies(
     Handle tool dependencies detection.
     CLI > Config.
     """
-    if args.sub_command in ("config", "temp", "bitrates", "tools"):
+    if args.sub_command not in ("encode", "measure"):
         return None
 
     deps = {}
