@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Failed DEE jobs show the tool, exit code, and diagnostic output even when DEE exits before its summary. Access-denied errors include the job's temp directory and a permissions hint for SMB/CIFS mounts.
+- Permission errors when saving a completed encode identify the final destination.
+
 ## [2.0.1] - 2026-11-24
 
 ### Fixed

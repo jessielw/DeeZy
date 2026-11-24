@@ -416,6 +416,7 @@ def run_dee(
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.custom_dialnorm,
                 log=log,
+                temp_dir=step.output.parent,
             )
         except FileNotFoundError as e:
             tool = Path(step.argv[0])
@@ -477,6 +478,7 @@ def run_pipe(
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.dee.custom_dialnorm,
                 log=log,
+                temp_dir=step.dee.output.parent,
             )
 
         try:
@@ -646,7 +648,14 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
         if log is not None:
             log.add("deezy", f"{plan.format}: {plan.source} -> {plan.output}")
         dee_output = run_steps(plan, payload, log)
-        finalize_output(dee_output, plan.output)
+        try:
+            finalize_output(dee_output, plan.output)
+        except PermissionError as e:
+            raise PermissionError(
+                f"Could not save the completed encode to '{plan.output}'. {e}\n"
+                "  Check that the account running DeeZy can read the encoded "
+                "temp file and write to the destination."
+            ) from e
         if not plan.output.is_file():
             raise OutputFileNotFoundError(f"{plan.output.name} output not found")
         return plan.output

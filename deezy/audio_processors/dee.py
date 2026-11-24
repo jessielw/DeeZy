@@ -1,9 +1,10 @@
 from collections.abc import Callable
 import logging
+from pathlib import Path
 import re
 from subprocess import PIPE, STDOUT, Popen
 
-from deezy.dee.shim import clean_env, is_shim_command, shim_failure
+from deezy.dee.shim import clean_env, is_shim_command, shim_binary, shim_failure
 from deezy.utils.logger import logger
 from deezy.utils.progress import DEEProgressHandler
 from deezy.utils.tool_log import ToolLog
@@ -15,10 +16,9 @@ _SUMMARY_START_MARKERS = (
 _SUMMARY_END_MARKERS = ("Time elapsed:", "Execution time:")
 
 
-def _parse_dee_execution_summary(output_lines: list) -> str | None:
+def _parse_dee_execution_summary(output_lines: list[str]) -> str | None:
     """Parse DEE output to extract execution summary and errors."""
     summary_start = False
-    summary_lines = []
     error_lines = []
     time_elapsed = None
 
@@ -33,22 +33,14 @@ def _parse_dee_execution_summary(output_lines: list) -> str | None:
         elif summary_start and any(marker in line for marker in _SUMMARY_END_MARKERS):
             time_elapsed = line
             break
-        elif summary_start:
-            summary_lines.append(line)
-            if line.startswith("ERROR:"):
-                error_lines.append(line)
+        elif summary_start and line.startswith("ERROR:"):
+            error_lines.append(line)
 
     # only build error message if there are actual errors in the summary
     if error_lines:
-        error_msg = "DEE execution failed:\n"
-        for error_line in error_lines:
-            error_msg += f"  {error_line}\n"
-
-        # add timing information if available
         if time_elapsed:
-            error_msg += f"  ({time_elapsed})"
-
-        return error_msg.rstrip()
+            error_lines.append(f"({time_elapsed})")
+        return "\n".join(f"  {line}" for line in error_lines)
 
     return
 
@@ -154,6 +146,64 @@ def _is_progress(line: str) -> bool:
     return _PROGRESS_BAR.fullmatch(line) is not None
 
 
+_ERROR_LINE = re.compile(r"\b(?:error|fatal):", re.IGNORECASE)
+_PERMISSION_LINE = re.compile(
+    r"\b(?:access (?:is )?denied|permission denied|operation not permitted|"
+    r"read-only file system)\b",
+    re.IGNORECASE,
+)
+_FAILURE_TAIL_LINES = 5
+
+
+def _dee_failure_message(
+    cmd: list[str], return_code: int, output_lines: list[str], temp_dir: Path | None
+) -> str:
+    tool = Path(cmd[0]).name
+    if is_shim_command(cmd):
+        if reason := shim_failure(return_code, output_lines):
+            return f"{tool} failed (exit code {return_code}).\n  {reason}"
+        if binary := shim_binary(cmd):
+            tool = f"{binary.name} via {tool}"
+
+    message = [f"DEE execution failed: {tool} (exit code {return_code})."]
+    detail = _parse_dee_execution_summary(output_lines)
+    if detail is None:
+        errors = [
+            line
+            for line in output_lines
+            if _ERROR_LINE.search(line) or _PERMISSION_LINE.search(line)
+        ]
+        tail = errors or [
+            line for line in output_lines if line and not _is_progress(line)
+        ]
+        detail = "\n".join(f"  {line}" for line in tail[-_FAILURE_TAIL_LINES:])
+
+    # An early permission error can be followed by a generic summary.
+    permission_line = next(
+        (line for line in reversed(output_lines) if _PERMISSION_LINE.search(line)),
+        None,
+    )
+    if permission_line and not _PERMISSION_LINE.search(detail):
+        detail = f"{detail}\n  {permission_line}" if detail else f"  {permission_line}"
+    if detail:
+        message.append(detail)
+
+    if permission_line:
+        message.append(
+            "  Check access to any path reported above as the account running DeeZy."
+        )
+        if temp_dir is not None:
+            message.append(
+                f"  Verify write access to the job's temp directory '{temp_dir}'."
+            )
+        message.append(
+            "  On SMB/CIFS, check the mount's ownership and permissions for that account."
+        )
+    elif not detail:
+        message.append("  Rerun with `deezy --log-level debug` for more detail.")
+    return "\n".join(message)
+
+
 def process_dee_job(
     cmd: list,
     step_info: dict | None = None,
@@ -161,6 +211,7 @@ def process_dee_job(
     custom_dialnorm: int = 0,
     on_start: Callable[[Popen], None] | None = None,
     log: ToolLog | None = None,
+    temp_dir: Path | None = None,
 ) -> bool:
     """Processes file with DEE while generating progress and enhanced error reporting.
 
@@ -173,6 +224,7 @@ def process_dee_job(
             its output is read (a pipe's writer starts from here).
         log: The job's kept log, for --keep-logs; gets every line but the
             progress percentages.
+        temp_dir: The job's temp directory, for permission diagnostics.
     """
     cmd = with_loglevel(cmd)
     logger_level = logger.getEffectiveLevel()
@@ -294,16 +346,6 @@ def process_dee_job(
                     )
 
     if return_code != 0:
-        shim_reason = shim_failure(return_code, output_lines)
-        if shim_reason and is_shim_command(cmd):
-            raise ValueError(shim_reason)
-        # parse the output for detailed error information
-        error_message = _parse_dee_execution_summary(output_lines)
-        if error_message:
-            raise ValueError(error_message)
-        else:
-            raise ValueError(
-                f"DEE execution failed with exit code {return_code}. Please re-run in debug mode."
-            )
+        raise ValueError(_dee_failure_message(cmd, return_code, output_lines, temp_dir))
 
     return True

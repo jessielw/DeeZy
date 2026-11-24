@@ -13,6 +13,7 @@ read them all.
 """
 
 import os
+from pathlib import Path
 import re
 from subprocess import PIPE, STDOUT, Popen
 import threading
@@ -158,6 +159,7 @@ def process_pipe_job(
     no_progress_bars: bool = False,
     custom_dialnorm: int = 0,
     log: ToolLog | None = None,
+    temp_dir: Path | None = None,
 ) -> int | None:
     """
     Run DEE reading the named pipe ``pipe_name``, and FFmpeg writing into it.
@@ -178,6 +180,7 @@ def process_pipe_job(
             custom_dialnorm=custom_dialnorm,
             on_start=feeder.start,
             log=log,
+            temp_dir=temp_dir,
         )
     except Exception as e:
         dee_error = e

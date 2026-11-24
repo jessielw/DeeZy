@@ -87,6 +87,40 @@ def test_an_empty_encode_is_refused(tmp_path):
     assert not output.exists()
 
 
+def test_a_save_permission_error_identifies_the_final_path(
+    tmp_path, across_volumes, monkeypatch
+):
+    dee_output = encode(tmp_path)
+    output = tmp_path / "Movie.ec3"
+    output.write_bytes(b"old")
+    plan = JobPlan(
+        format="ddp",
+        source=tmp_path / "in.mkv",
+        output=output,
+        temp_dir=dee_output.parent,
+        steps=(),
+        free_space_needed=1,
+    )
+    monkeypatch.setattr(run, "run_steps", lambda *_args: dee_output)
+
+    def access_denied(_src, dst):
+        Path(dst).write_bytes(b"\x0b")
+        raise PermissionError("Access denied")
+
+    monkeypatch.setattr(run.shutil, "copyfile", access_denied)
+    payload = generate_dummy_core_payload()
+    payload.overwrite = True
+    with pytest.raises(
+        PermissionError, match="Could not save the completed encode"
+    ) as failure:
+        run.run_plan(plan, payload)
+
+    assert str(output) in str(failure.value)
+    assert "Access denied" in str(failure.value)
+    assert output.read_bytes() == b"old"
+    assert partials(tmp_path) == []
+
+
 # --- intermediates a later --reuse-temp-files run could pick up
 
 
