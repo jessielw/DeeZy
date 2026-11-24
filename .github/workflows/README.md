@@ -24,6 +24,7 @@ This directory contains GitHub Actions workflows for automated testing, building
 - **Features**:
   - Builds PyInstaller executables for all platforms
   - Runs tests before building
+- Runs `--version` and `bitrates ddp` on the one-file executable and the bundled executable before archiving them
   - Automatically attaches binaries to GitHub releases
   - Artifacts retained for 7 days
 
@@ -33,7 +34,7 @@ This directory contains GitHub Actions workflows for automated testing, building
 - **Purpose**: Test builds without creating a release
 - **Features**:
   - Selective platform building (linux, macos, windows, or all)
-  - Tests executable functionality (`--help` command)
+- Runs the same executable checks as the release workflow
   - Short-term artifacts (1 day retention)
 
 ## Usage

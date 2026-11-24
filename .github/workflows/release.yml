@@ -84,22 +84,15 @@ jobs:
         run: |
           find pyinstaller_build -name 'libmediainfo*' | grep -q . || { echo "libmediainfo missing from bundle"; exit 1; }
 
-      - name: Verify build output
+      - name: Smoke test packaged executables
         shell: bash
+        env:
+          DEEZY_EXECUTABLE: ${{ matrix.executable }}
         run: |
-          if [ "${{ matrix.platform }}" == "windows" ]; then
-            ls -la pyinstaller_build/dist/
-            if [ ! -f "pyinstaller_build/dist/deezy.exe" ]; then
-              echo "Build failed: deezy.exe not found"
-              exit 1
-            fi
-          else
-            ls -la pyinstaller_build/dist/
-            if [ ! -f "pyinstaller_build/dist/deezy" ]; then
-              echo "Build failed: deezy executable not found"
-              exit 1
-            fi
-          fi
+          for build_dir in pyinstaller_build/dist pyinstaller_build/bundled_mode/deezy; do
+            "$build_dir/$DEEZY_EXECUTABLE" --version
+            "$build_dir/$DEEZY_EXECUTABLE" bitrates ddp
+          done
 
       - name: Create ZIP archive (Windows)
         if: matrix.platform == 'windows'

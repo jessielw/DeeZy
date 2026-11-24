@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - CI runs when tests or dependency files change and checks Python 3.10 and 3.13 on Linux.
+- Release and manual builds run `--version` and `bitrates ddp` on both packaged executables before uploading artifacts.
 
 ### Fixed
 
