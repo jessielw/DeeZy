@@ -6,9 +6,9 @@ This directory contains GitHub Actions workflows for automated testing, building
 
 ### 🧪 `test.yml` - Continuous Testing
 
-- **Triggers**: Push to main/master, Pull Requests
+- **Triggers**: Pushes and pull requests to `main` that change code, tests, dependencies, or CLI docs
 - **Purpose**: Run tests and linting across multiple Python versions and operating systems
-- **Matrix**: Python 3.11, 3.12 on Ubuntu, macOS, Windows
+- **Matrix**: Python 3.11 and 3.12 on Ubuntu, macOS, and Windows, plus Python 3.10 and 3.13 on Ubuntu
 - **Features**:
   - Runs `ruff` linting
   - Executes pytest with coverage

@@ -6,11 +6,27 @@ on:
     paths:
       - "deezy/**"
       - "cli/**"
+      - "deezy.py"
+      - "tests/**"
+      - "docs/cli/**"
+      - "scripts/cli_docs.py"
+      - "version.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/test.yml"
   pull_request:
     branches: [main]
     paths:
       - "deezy/**"
       - "cli/**"
+      - "deezy.py"
+      - "tests/**"
+      - "docs/cli/**"
+      - "scripts/cli_docs.py"
+      - "version.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/test.yml"
 
 jobs:
   test:
@@ -20,6 +36,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11", "3.12"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: ubuntu-latest
+            python-version: "3.13"
 
     steps:
       - name: Checkout code

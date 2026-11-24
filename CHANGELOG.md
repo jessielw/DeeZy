@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- CI runs when tests or dependency files change and checks Python 3.10 and 3.13 on Linux.
+
 ### Fixed
 
 - Failed DEE jobs show the tool, exit code, and diagnostic output even when DEE exits before its summary. Access-denied errors include the job's temp directory and a permissions hint for SMB/CIFS mounts.
