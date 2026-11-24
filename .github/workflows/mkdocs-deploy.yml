@@ -1,23 +1,45 @@
 name: Docs
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
   build-deploy:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.release.tag_name, '-test')
     runs-on: ubuntu-latest
+    concurrency:
+      group: docs-publish
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
-      - run: pip install mkdocs mkdocs-material
-      - run: mkdocs build
-      - name: Set up Git credentials
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Check generated CLI reference
+        run: uv run --locked --extra docs python scripts/cli_docs.py --check
+
+      - name: Publish to gh-pages
         run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-      - run: mkdocs gh-deploy --force
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          uv run --locked --extra docs mkdocs gh-deploy --strict
+
+      # A push authenticated with GITHUB_TOKEN does not trigger a Pages build.
+      - name: Request GitHub Pages build
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" --jq '.status'

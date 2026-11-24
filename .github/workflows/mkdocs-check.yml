@@ -1,0 +1,31 @@
+name: Docs build
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Check generated CLI reference
+        run: uv run --locked --extra docs python scripts/cli_docs.py --check
+
+      - name: Build MkDocs site
+        run: uv run --locked --extra docs mkdocs build --strict
