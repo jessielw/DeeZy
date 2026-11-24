@@ -49,7 +49,8 @@ deezy --log-to-file encode ddp --keep-temp --temp-dir "C:\debug" input.mkv
 - `--dry-run` probes the source and prints the FFmpeg, truehdd and DEE commands
   without running them. `--print-commands` prints them as they start.
 - `--keep-logs` writes everything the tools print to `<output>.log` beside the
-  output.
+  output. If that location is unwritable, DeeZy saves the log in its local
+  user log directory and prints the path.
 - `--keep-temp` keeps the job's temp files to look at.
 
 If it still fails, open an issue with a short reproduction and the

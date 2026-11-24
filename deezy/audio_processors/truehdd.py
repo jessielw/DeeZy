@@ -1,3 +1,4 @@
+from contextvars import copy_context
 import logging
 from pathlib import Path
 import re
@@ -214,8 +215,9 @@ def decode_truehd_to_atmos(
     with progress_handler.progress_context(step_label) as (progress, task_id):
         threads = (
             threading.Thread(
-                target=_stream_reader,
+                target=copy_context().run,
                 args=(
+                    _stream_reader,
                     "ffmpeg",
                     ffmpeg_proc.stderr,
                     ffmpeg_err_lines,
@@ -225,8 +227,9 @@ def decode_truehd_to_atmos(
                 daemon=True,
             ),
             threading.Thread(
-                target=_stream_reader,
+                target=copy_context().run,
                 args=(
+                    _stream_reader,
                     "truehdd-err",
                     truehdd_proc.stderr,
                     truehdd_err_lines,
@@ -236,8 +239,9 @@ def decode_truehd_to_atmos(
                 daemon=True,
             ),
             threading.Thread(
-                target=_stream_reader,
+                target=copy_context().run,
                 args=(
+                    _stream_reader,
                     "truehdd-out",
                     truehdd_proc.stdout,
                     truehdd_out_lines,

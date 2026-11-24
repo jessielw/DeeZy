@@ -201,7 +201,7 @@ def test_only_a_batch_puts_job_ids_in_its_names(
 ):
     seen = {}
 
-    def fake_job(_args, input_file, _deps, _worker, _short, file_id):
+    def fake_job(_args, input_file, _deps, _worker, _short, file_id, _batch_result):
         seen[input_file.name] = file_id
         return input_file, tmp_path / f"{input_file.stem}.ec3"
 

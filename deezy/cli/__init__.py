@@ -54,7 +54,7 @@ from deezy.pipeline.measure import measure, summary
 from deezy.pipeline.outputs import begin_run, check_output_directory, end_run
 from deezy.pipeline.run import init_phase_limits
 from deezy.track_info.track_index import TrackIndex
-from deezy.utils.batch_results import BatchResultsManager
+from deezy.utils.batch_results import BatchResult, BatchResultsManager
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.power import SleepInhibitor
@@ -1443,6 +1443,7 @@ def encode_single_file(
     worker_num: int | None = None,
     short_filename: str | None = None,
     file_id: str | None = None,
+    batch_result: BatchResult | None = None,
 ) -> tuple[Path, Path]:
     """
     Encode a single file and return the input file and result path.
@@ -1454,6 +1455,7 @@ def encode_single_file(
         worker_num: Worker number for parallel processing (None for single processing)
         short_filename: Short filename for worker prefix display
         file_id: Unique file identifier for output naming (prevents overwrites)
+        batch_result: Optional record for this job's saved log path
 
     Returns:
         Tuple of (input_file, result_path)
@@ -1493,7 +1495,7 @@ def encode_single_file(
             # it's fine to set on the shared args for sequential processing
             args.worker_id = file_id
 
-    # update logger to write to file if needed
+    log_file = None
     if args.log_to_file:
         # place logs in centralized logs directory
         log_name = f"{input_file.stem}"
@@ -1504,7 +1506,6 @@ def encode_single_file(
             getattr(args, "_working_dir", WORKING_DIRECTORY / "deezy_work")
         )
         log_file = work_dir_for_logs / "logs" / f"{log_name}.log"
-        logger_manager.set_file(log_file)
 
     # build payload and run encoder
     builders = {
@@ -1519,23 +1520,30 @@ def encode_single_file(
         "thd": PayloadBuilder.build_thd_payload,
         "thd-atmos": PayloadBuilder.build_thd_atmos_payload,
     }
-    if args.format_command in builders:
-        payload = builders[args.format_command](
-            args, input_file, ffmpeg_path, truehdd_path, dee_path
-        )
-        payload.dee_shim = dependencies.get("dee_shim")
-        result = encode(payload)
-    elif args.format_command == "preset":
-        # this should not happen since config manager converts "preset" to actual format
-        raise ValueError(
-            "Preset format conversion failed. This is a bug in the configuration system."
-        )
-    else:
-        raise ValueError(f"Unknown format: {args.format_command}")
+    record_log = batch_result.record_log if batch_result is not None else None
+    with logger_manager.file_log(log_file) as opened_log:
+        if opened_log is not None and record_log is not None:
+            record_log(opened_log)
+        if args.format_command in builders:
+            payload = builders[args.format_command](
+                args, input_file, ffmpeg_path, truehdd_path, dee_path
+            )
+            payload.dee_shim = dependencies.get("dee_shim")
+            result = encode(payload, on_log_saved=record_log)
+        elif args.format_command == "preset":
+            # this should not happen since config manager converts "preset" to actual format
+            raise ValueError(
+                "Preset format conversion failed. This is a bug in the configuration system."
+            )
+        else:
+            raise ValueError(f"Unknown format: {args.format_command}")
 
-    # log completion message for parallel processing
-    if worker_num is not None:
-        logger.info(f"Worker {worker_num} completed: {input_file.name} → {result.name}")
+        if worker_num is not None:
+            logger.info(
+                f"Worker {worker_num} completed: {input_file.name} → {result.name}"
+            )
+        elif not (args.output_preview or args.dry_run):
+            logger.info(f"Job successful! Output file path:\n{result}")
 
     return input_file, result
 
@@ -1581,8 +1589,6 @@ def execute_encode_command(
 
     logs_dir = work_dir / "logs"
     batch_results_dir = work_dir / "batch-results"
-    if getattr(args, "log_to_file", False):
-        logs_dir.mkdir(parents=True, exist_ok=True)
 
     # Trim old logs and batch-results based on config limits (config-only)
     # Determine trimming limits with precedence: CLI args > config defaults > None
@@ -1712,13 +1718,7 @@ def execute_encode_command(
                 # create batch result if tracking is enabled
                 batch_result = None
                 if batch_manager:
-                    file_id = f"f{i + 1}" if len(file_inputs) > 1 else "f1"
-                    # compute centralized log file path used for this input
-                    log_name = f"{input_file.stem}"
-                    log_file = work_dir / "logs" / f"{log_name}.log"
-                    batch_result = batch_manager.create_result(
-                        input_file, file_id, log_file=log_file
-                    )
+                    batch_result = batch_manager.create_result(input_file, f"f{i + 1}")
 
                 try:
                     # a batch's jobs get an id in their output names (f1, f2, ...)
@@ -1729,13 +1729,14 @@ def execute_encode_command(
                     args_for_job = copy.deepcopy(args)
 
                     input_file, result = encode_single_file(
-                        args_for_job, input_file, dependencies, None, None, name_id
+                        args_for_job,
+                        input_file,
+                        dependencies,
+                        None,
+                        None,
+                        name_id,
+                        batch_result,
                     )
-                    # When running in output-preview mode we already emit the
-                    # previewed path from the encoder; suppress the duplicate
-                    # "Job successful" path line to avoid confusion.
-                    if not preview:
-                        logger.info(f"Job successful! Output file path:\n{result}")
                     successful_files.append((input_file, result))
 
                     if batch_result:
@@ -1787,14 +1788,7 @@ def execute_encode_command(
                     # create batch result if tracking is enabled
                     batch_result = None
                     if batch_manager:
-                        # compute centralized log file path used for this input
-                        log_name = input_file.stem
-                        if worker_num is not None:
-                            log_name = f"{log_name}.worker{worker_num}"
-                        log_file = work_dir / "logs" / f"{log_name}.log"
-                        batch_result = batch_manager.create_result(
-                            input_file, file_id, log_file=log_file
-                        )
+                        batch_result = batch_manager.create_result(input_file, file_id)
 
                     # prepare per-job args copy; encoders handle final filename and
                     # overwrite decisions to ensure accuracy with mediainfo parsing.
@@ -1807,6 +1801,7 @@ def execute_encode_command(
                         worker_num,
                         short_filename,
                         file_id,
+                        batch_result,
                     )
 
                     future_to_file[future] = input_file

@@ -1,5 +1,7 @@
 """--keep-logs: a job's command lines and tool output, beside its output, when it fails too."""
 
+from dataclasses import replace
+import json
 import logging
 from pathlib import Path
 
@@ -186,6 +188,76 @@ def test_a_skipped_job_leaves_the_earlier_log_alone(tmp_path, tools):
     with pytest.raises(run.OutputExistsError):
         run.run_plan(plan, payload(keep_logs=True, overwrite=False))
     assert log_path(plan.output).read_text(encoding="utf-8") == "earlier run"
+
+
+@pytest.mark.parametrize("mode", [None, "tool", "console", "both"])
+def test_batch_reports_the_logs_each_job_actually_wrote(
+    tmp_path, tools, monkeypatch, mode
+):
+    inputs = [tmp_path / name / "in.wav" for name in ("good", "bad")]
+    work = tmp_path / "work"
+    local_logs = tmp_path / "local-logs"
+    blocked = tmp_path / "blocked"
+    blocked.touch()
+    monkeypatch.setattr(
+        run.platformdirs, "user_log_dir", lambda *_args: str(local_logs)
+    )
+
+    def make_plan(p):
+        cli.logger.error(f"Planning {p.file_input}")
+        planned = job(p.file_input.parent)
+        if p.file_input == inputs[1]:
+            return replace(planned, output=blocked / "Movie.ec3")
+        return planned
+
+    monkeypatch.setattr(encode_mod, "plan", make_plan)
+    parser = cli.create_main_parser()
+    sub = parser.add_subparsers(dest="sub_command")
+    cli.create_encode_parsers(sub, cli.create_common_argument_groups())
+    args = parser.parse_args(
+        [
+            *(["--log-to-file"] if mode in {"console", "both"} else []),
+            "encode",
+            "ddp",
+            "--batch-summary-output",
+            "--allow-sleep",
+            "--working-dir",
+            str(work),
+            "--max-parallel",
+            "2",
+            *(["--keep-logs"] if mode in {"tool", "both"} else []),
+            *map(str, inputs),
+        ]
+    )
+    dependencies = {
+        "ffmpeg_path": Path("ffmpeg"),
+        "truehdd_path": None,
+        "dee_path": tmp_path,
+    }
+    with pytest.raises(SystemExit) as exit_info:
+        cli.execute_encode_command(args, inputs, dependencies, None)
+    assert exit_info.value.code == 1
+
+    (report,) = (work / "batch-results").glob("*.json")
+    good, bad = json.loads(report.read_text(encoding="utf-8"))["results"]
+    assert (good["status"], bad["status"]) == ("success", "failed")
+    if mode in {"tool", "both"}:
+        assert Path(good["log_file"]) == log_path(Path(good["output_file"]))
+        fallback = Path(bad["log_file"])
+        assert fallback.parent == local_logs
+        assert "Could not write to output directory" in fallback.read_text(
+            encoding="utf-8"
+        )
+    elif mode == "console":
+        for row, source, unrelated in ((good, *inputs), (bad, *reversed(inputs))):
+            log = Path(row["log_file"])
+            assert log.parent == work / "logs"
+            contents = log.read_text(encoding="utf-8")
+            assert f"Planning {source}" in contents
+            assert f"Planning {unrelated}" not in contents
+    else:
+        assert good["log_file"] is None
+        assert bad["log_file"] is None
 
 
 # --- the option

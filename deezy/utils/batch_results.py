@@ -28,6 +28,10 @@ class BatchResult:
         self.error: str | None = None
         self.log_file: Path | None = log_file
 
+    def record_log(self, path: Path) -> None:
+        """Record the path of the log actually written for this job."""
+        self.log_file = path.absolute()
+
     def mark_success(self, output_file: Path):
         """Mark this result as successful."""
         self.end_time = time.time()

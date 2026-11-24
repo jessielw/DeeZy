@@ -3,7 +3,7 @@ Runs a `JobPlan`: the temp directory, the batch's process slots, temp-file
 reuse, cleanup of partial output, and the move to the destination.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
 import hashlib
@@ -625,7 +625,12 @@ def run_measure(plan: JobPlan, payload: CorePayload) -> dict:
         clean_temp(plan.temp_dir, keep_temp)
 
 
-def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
+def run_plan(
+    plan: JobPlan,
+    payload: CorePayload,
+    *,
+    on_log_saved: Callable[[Path], None] | None = None,
+) -> Path:
     """Run every step of ``plan`` and return the finished output."""
     if plan.preview:
         logger.info(f"Output preview: {plan.output}")
@@ -668,18 +673,25 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
     finally:
         clean_temp(plan.temp_dir, keep_temp)
         if log is not None:
-            save_log(log, plan.output)
+            path = save_log(log, plan.output)
+            if path is not None and on_log_saved is not None:
+                on_log_saved(path)
 
 
-def save_log(log: ToolLog, output: Path) -> None:
-    """Write a job's kept log beside its output. Never raises."""
-    path = log_path(output)
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        log.write(path)
-        logger.info(f"Log saved: {path}")
-    except OSError as e:
-        logger.warning(f"Could not save the job's log at {path}: {e}")
+def save_log(log: ToolLog, output: Path) -> Path | None:
+    """Return the path where the log was saved, with a local fallback."""
+    local_logs = Path(platformdirs.user_log_dir("deezy", "DeeZy"))
+    fallback = local_logs / f"{artifact_stem(output)}-{uuid.uuid4().hex[:12]}.log"
+    for path in (log_path(output).absolute(), fallback):
+        try:
+            Path(long_path_str(path.parent)).mkdir(parents=True, exist_ok=True)
+            log.write(path)
+        except OSError as e:
+            logger.warning(f"Could not save the job's log at {path}: {e}")
+        else:
+            logger.info(f"Log saved: {path}")
+            return path
+    return None
 
 
 def clean_temp(temp_dir: Path, keep_temp: bool) -> None:
