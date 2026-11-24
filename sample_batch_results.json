@@ -1,0 +1,48 @@
+{
+  "batch_info": {
+    "timestamp": "2025-09-19T12:00:00+00:00",
+    "command": "deezy encode ddp --working-dir \"/tmp/deezy\" --batch-summary-output --batch-output-dir \"/tmp/deezy_out\" --max-parallel 2 *.mkv",
+    "total_files": 3,
+    "successful": 1,
+    "failed": 1,
+    "skipped": 1,
+    "processing": 0,
+    "total_duration_seconds": 12.34,
+    "max_parallel": 2
+  },
+  "results": [
+    {
+      "input_file": "movie1.mkv",
+      "output_file": "/tmp/deezy_out/movie1.ec3",
+      "log_file": "/tmp/deezy/logs/movie1.log",
+      "status": "success",
+      "file_id": "f1",
+      "start_time": "2025-09-19T12:00:00+00:00",
+      "end_time": "2025-09-19T12:00:05+00:00",
+      "duration_seconds": 5.0,
+      "error": null
+    },
+    {
+      "input_file": "movie2.mkv",
+      "output_file": null,
+      "log_file": "/tmp/deezy/logs/movie2.log",
+      "status": "skipped",
+      "file_id": "f2",
+      "start_time": "2025-09-19T12:00:00+00:00",
+      "end_time": "2025-09-19T12:00:00+00:00",
+      "duration_seconds": 0.0,
+      "error": "Output already exists: /tmp/deezy_out/movie2.ec3"
+    },
+    {
+      "input_file": "movie3.mkv",
+      "output_file": null,
+      "log_file": "/tmp/deezy/logs/movie3.log",
+      "status": "failed",
+      "file_id": "f3",
+      "start_time": "2025-09-19T12:00:00+00:00",
+      "end_time": "2025-09-19T12:00:07+00:00",
+      "duration_seconds": 7.0,
+      "error": "Encoding failed: DEE returned non-zero status"
+    }
+  ]
+}
