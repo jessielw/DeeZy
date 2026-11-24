@@ -143,86 +143,36 @@ jobs:
         run: ls -R
 
       - name: Upload release assets
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name || github.event.inputs.version }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
         run: |
-          set -e  # Exit on any error
+          archives=(
+            deezy-linux-x64/deezy-linux-x64.zip
+            deezy-linux-arm64/deezy-linux-arm64.zip
+            bundle-deezy-linux-x64/bundle-deezy-linux-x64.zip
+            bundle-deezy-linux-arm64/bundle-deezy-linux-arm64.zip
+            deezy-macos-x64/deezy-macos-x64.zip
+            deezy-macos-arm64/deezy-macos-arm64.zip
+            bundle-deezy-macos-x64/bundle-deezy-macos-x64.zip
+            bundle-deezy-macos-arm64/bundle-deezy-macos-arm64.zip
+            deezy-windows-x64.exe/deezy-windows-x64.exe.zip
+            bundle-deezy-windows-x64.exe/bundle-deezy-windows-x64.exe.zip
+          )
 
-          echo "=== File sizes ==="
-          ls -lh ./*/*.zip
+          for archive in "${archives[@]}"; do
+            if [[ ! -f "$archive" || ! -s "$archive" ]]; then
+              printf 'Missing or empty release archive: %s\n' "$archive" >&2
+              exit 1
+            fi
+          done
 
-          echo "=== Uploading Linux x64 ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./deezy-linux-x64/deezy-linux-x64.zip \
-            --repo ${{ github.repository }} \
-            --clobber
-          echo "✅ Linux x64 ZIP uploaded successfully"
+          for archive in "${archives[@]}"; do
+            printf 'Uploading %s\n' "$archive"
+            gh release upload "$RELEASE_TAG" "$archive" --repo "$RELEASE_REPOSITORY" --clobber
+          done
 
-          echo "=== Uploading Linux arm64 ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./deezy-linux-arm64/deezy-linux-arm64.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: linux-arm64 zip not found or upload failed"
-          echo "✅ Linux arm64 ZIP uploaded"
-
-          echo "=== Uploading Linux x64 Bundle ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./bundle-deezy-linux-x64/bundle-deezy-linux-x64.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: linux x64 bundle not found or upload failed"
-          echo "✅ Linux x64 Bundle ZIP uploaded"
-
-          echo "=== Uploading Linux arm64 Bundle ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./bundle-deezy-linux-arm64/bundle-deezy-linux-arm64.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: linux arm64 bundle not found or upload failed"
-          echo "✅ Linux arm64 Bundle ZIP uploaded"
-
-          echo "=== Uploading macOS x64 ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./deezy-macos-x64/deezy-macos-x64.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: macos-x64 zip not found or upload failed"
-          echo "✅ macOS x64 ZIP uploaded"
-
-          echo "=== Uploading macOS arm64 ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./deezy-macos-arm64/deezy-macos-arm64.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: macos-arm64 zip not found or upload failed"
-          echo "✅ macOS arm64 ZIP uploaded"
-
-          echo "=== Uploading macOS x64 Bundle ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./bundle-deezy-macos-x64/bundle-deezy-macos-x64.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: macos x64 bundle not found or upload failed"
-          echo "✅ macOS x64 Bundle ZIP uploaded"
-
-          echo "=== Uploading macOS arm64 Bundle ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./bundle-deezy-macos-arm64/bundle-deezy-macos-arm64.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: macos arm64 bundle not found or upload failed"
-          echo "✅ macOS arm64 Bundle ZIP uploaded"
-
-          echo "=== Uploading Windows ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./deezy-windows-x64.exe/deezy-windows-x64.exe.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: windows zip not found or upload failed"
-          echo "✅ Windows ZIP uploaded"
-
-          echo "=== Uploading Windows Bundle ZIP ==="
-          gh release upload "$RELEASE_TAG" \
-            ./bundle-deezy-windows-x64.exe/bundle-deezy-windows-x64.exe.zip \
-            --repo ${{ github.repository }} \
-            --clobber || echo "Warning: windows bundle not found or upload failed"
-          echo "✅ Windows Bundle ZIP uploaded"
-
-          echo "🎉 All ZIP archives uploaded successfully!"
-
-          echo "=== Final Release Assets ==="
-          gh release view "$RELEASE_TAG" --repo ${{ github.repository }}
+          gh release view "$RELEASE_TAG" --repo "$RELEASE_REPOSITORY"
+          printf 'Uploaded %s release archives.\n' "${#archives[@]}"

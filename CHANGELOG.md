@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - When `--keep-logs` cannot write beside the output, DeeZy saves the log in its local user log directory. Batch reports list the actual saved log path, or `null` when no log was saved.
 - `deezy info` and `deezy find` work without FFmpeg or DEE installed.
 - The generated CLI reference stays consistent across supported Python versions.
+- The GitHub release job checks for all ten archives before uploading and fails if any upload fails.
 
 ## [2.0.1] - 2026-11-24
 
