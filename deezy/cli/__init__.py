@@ -912,7 +912,7 @@ def create_encode_parsers(
     # encode command parser
     encode_parser = subparsers.add_parser("encode", help="Encode management")
     encode_subparsers = encode_parser.add_subparsers(
-        dest="format_command", required=True
+        dest="format_command", required=True, metavar="AUDIO_FORMAT"
     )
 
     ### Dolby Digital Command ###
@@ -1219,7 +1219,9 @@ def create_other_parsers(
 
     # generate config subcommand
     generate_parser = config_subparsers.add_parser(
-        "generate", help="Generate configuration file"
+        "generate",
+        help="Generate configuration file",
+        formatter_class=CustomHelpFormatter,
     )
     generate_parser.add_argument(
         "-o",
