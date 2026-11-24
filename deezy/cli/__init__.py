@@ -3,7 +3,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import copy
 from pathlib import Path
 import sys
-import tempfile
 import traceback
 
 from deezy.cli.bitrates import bitrate_lines
@@ -52,17 +51,17 @@ from deezy.enums.thd import TrueHDChannels
 from deezy.exceptions import OutputExistsError
 from deezy.pipeline.encode import encode
 from deezy.pipeline.measure import measure, summary
-from deezy.pipeline.outputs import begin_run, end_run
+from deezy.pipeline.outputs import begin_run, check_output_directory, end_run
 from deezy.pipeline.run import init_phase_limits
 from deezy.track_info.track_index import TrackIndex
-from deezy.utils.batch_results import BatchResultsManager
+from deezy.utils.batch_results import BatchResult, BatchResultsManager
 from deezy.utils.exit import EXIT_FAIL, EXIT_SUCCESS, exit_application
 from deezy.utils.logger import logger, logger_manager
 from deezy.utils.power import SleepInhibitor
 from deezy.utils.progress import has_shared_progress, shared_progress_display
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 program_name = "DeeZy"
 
 
@@ -913,7 +912,7 @@ def create_encode_parsers(
     # encode command parser
     encode_parser = subparsers.add_parser("encode", help="Encode management")
     encode_subparsers = encode_parser.add_subparsers(
-        dest="format_command", required=True
+        dest="format_command", required=True, metavar="AUDIO_FORMAT"
     )
 
     ### Dolby Digital Command ###
@@ -1220,7 +1219,9 @@ def create_other_parsers(
 
     # generate config subcommand
     generate_parser = config_subparsers.add_parser(
-        "generate", help="Generate configuration file"
+        "generate",
+        help="Generate configuration file",
+        formatter_class=CustomHelpFormatter,
     )
     generate_parser.add_argument(
         "-o",
@@ -1444,6 +1445,7 @@ def encode_single_file(
     worker_num: int | None = None,
     short_filename: str | None = None,
     file_id: str | None = None,
+    batch_result: BatchResult | None = None,
 ) -> tuple[Path, Path]:
     """
     Encode a single file and return the input file and result path.
@@ -1455,6 +1457,7 @@ def encode_single_file(
         worker_num: Worker number for parallel processing (None for single processing)
         short_filename: Short filename for worker prefix display
         file_id: Unique file identifier for output naming (prevents overwrites)
+        batch_result: Optional record for this job's saved log path
 
     Returns:
         Tuple of (input_file, result_path)
@@ -1494,7 +1497,7 @@ def encode_single_file(
             # it's fine to set on the shared args for sequential processing
             args.worker_id = file_id
 
-    # update logger to write to file if needed
+    log_file = None
     if args.log_to_file:
         # place logs in centralized logs directory
         log_name = f"{input_file.stem}"
@@ -1505,7 +1508,6 @@ def encode_single_file(
             getattr(args, "_working_dir", WORKING_DIRECTORY / "deezy_work")
         )
         log_file = work_dir_for_logs / "logs" / f"{log_name}.log"
-        logger_manager.set_file(log_file)
 
     # build payload and run encoder
     builders = {
@@ -1520,23 +1522,30 @@ def encode_single_file(
         "thd": PayloadBuilder.build_thd_payload,
         "thd-atmos": PayloadBuilder.build_thd_atmos_payload,
     }
-    if args.format_command in builders:
-        payload = builders[args.format_command](
-            args, input_file, ffmpeg_path, truehdd_path, dee_path
-        )
-        payload.dee_shim = dependencies.get("dee_shim")
-        result = encode(payload)
-    elif args.format_command == "preset":
-        # this should not happen since config manager converts "preset" to actual format
-        raise ValueError(
-            "Preset format conversion failed. This is a bug in the configuration system."
-        )
-    else:
-        raise ValueError(f"Unknown format: {args.format_command}")
+    record_log = batch_result.record_log if batch_result is not None else None
+    with logger_manager.file_log(log_file) as opened_log:
+        if opened_log is not None and record_log is not None:
+            record_log(opened_log)
+        if args.format_command in builders:
+            payload = builders[args.format_command](
+                args, input_file, ffmpeg_path, truehdd_path, dee_path
+            )
+            payload.dee_shim = dependencies.get("dee_shim")
+            result = encode(payload, on_log_saved=record_log)
+        elif args.format_command == "preset":
+            # this should not happen since config manager converts "preset" to actual format
+            raise ValueError(
+                "Preset format conversion failed. This is a bug in the configuration system."
+            )
+        else:
+            raise ValueError(f"Unknown format: {args.format_command}")
 
-    # log completion message for parallel processing
-    if worker_num is not None:
-        logger.info(f"Worker {worker_num} completed: {input_file.name} → {result.name}")
+        if worker_num is not None:
+            logger.info(
+                f"Worker {worker_num} completed: {input_file.name} → {result.name}"
+            )
+        elif not (args.output_preview or args.dry_run):
+            logger.info(f"Job successful! Output file path:\n{result}")
 
     return input_file, result
 
@@ -1556,6 +1565,7 @@ def execute_encode_command(
         )
     max_parallel = getattr(args, "max_parallel", 1)
     batch_output_enabled = getattr(args, "batch_summary_output", False)
+    preview = getattr(args, "dry_run", False) or getattr(args, "output_preview", False)
 
     # get temp_dir from config if exists (CLI arg > config default > automatic)
     temp_dir_arg = getattr(args, "temp_dir", None)
@@ -1563,19 +1573,8 @@ def execute_encode_command(
     if config_manager is not None:
         config_temp_dir = config_manager.get_config_default("temp_dir")
 
-    temp_dir = None
-    if temp_dir_arg:
-        temp_dir = Path(temp_dir_arg)
-    elif config_temp_dir:
-        temp_dir = Path(config_temp_dir)
-    if temp_dir:
-        try:
-            temp_dir.mkdir(parents=True, exist_ok=True)
-            args.temp_dir = str(temp_dir)
-        except Exception as temp_dir_e:
-            logger.warning(
-                f"Failed to create temp directory at {temp_dir} ({temp_dir_e})."
-            )
+    if temp_dir := temp_dir_arg or config_temp_dir:
+        args.temp_dir = str(temp_dir)
 
     # centralized work directories: precedence CLI arg > config default > WORKING_DIRECTORY/deezy_work
     working_dir_arg = getattr(args, "working_dir", None)
@@ -1592,13 +1591,6 @@ def execute_encode_command(
 
     logs_dir = work_dir / "logs"
     batch_results_dir = work_dir / "batch-results"
-    # ensure dirs exist when needed
-    if not work_dir.exists():
-        work_dir.mkdir(parents=True, exist_ok=True)
-    if not logs_dir.exists():
-        logs_dir.mkdir(parents=True, exist_ok=True)
-    if not batch_results_dir.exists():
-        batch_results_dir.mkdir(parents=True, exist_ok=True)
 
     # Trim old logs and batch-results based on config limits (config-only)
     # Determine trimming limits with precedence: CLI args > config defaults > None
@@ -1660,8 +1652,9 @@ def execute_encode_command(
             # ignore trimming errors
             logger.debug("Failed to trim old artifacts.")
 
-    _trim_dir(logs_dir, max_logs, glob_pattern="*.log")
-    _trim_dir(batch_results_dir, max_batch_results, glob_pattern="*.json")
+    if not preview:
+        _trim_dir(logs_dir, max_logs, glob_pattern="*.log")
+        _trim_dir(batch_results_dir, max_batch_results, glob_pattern="*.json")
 
     # store computed work_dir on args so encode_single_file can find it
     args._working_dir = str(work_dir)
@@ -1695,7 +1688,6 @@ def execute_encode_command(
 
     # if the user provided a batch-output-dir, prepare it early (fail fast / create dir)
     batch_out_arg = getattr(args, "batch_output_dir", None)
-    batch_out_dir: Path | None = None
     # If the user didn't provide a CLI batch_output_dir but the config has one,
     # use the config value so encoders and payloads see the same default.
     if batch_output_enabled and not batch_out_arg and config_manager is not None:
@@ -1709,45 +1701,14 @@ def execute_encode_command(
             # ignore config lookup errors and proceed without batch output dir
             batch_out_arg = None
 
-    if batch_output_enabled and batch_out_arg:
-        # Fail fast: if the user asked for a batch output directory, ensure it exists
-        # and is writable. If we cannot prepare it, stop immediately instead of
-        # continuing and surprising the user later.
-        batch_out_dir = Path(batch_out_arg)
+    if not preview and batch_output_enabled and batch_out_arg:
         try:
-            batch_out_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            logger.error(f"Could not prepare batch output dir '{batch_out_arg}': {e}")
-            exit_application(
-                f"Could not prepare batch output dir '{batch_out_arg}': {e}", EXIT_FAIL
-            )
-
-        # verify the path is a directory
-        if not batch_out_dir.exists() or not batch_out_dir.is_dir():
-            logger.error(f"Batch output path '{batch_out_dir}' is not a directory.")
-            exit_application(
-                f"Batch output path '{batch_out_dir}' is not a directory.", EXIT_FAIL
-            )
-
-        # quick writability test: create and remove a small temp file in the dir
-        try:
-            tf = tempfile.NamedTemporaryFile(
-                prefix=".deezy_write_test_", dir=str(batch_out_dir), delete=False
-            )
-            try:
-                tf.write(b"deezetest")
-                tf.flush()
-            finally:
-                tf.close()
-            Path(tf.name).unlink()
-        except Exception as e:
-            logger.error(f"Batch output dir '{batch_out_dir}' is not writable: {e}")
-            exit_application(
-                f"Batch output dir '{batch_out_dir}' is not writable: {e}", EXIT_FAIL
-            )
+            check_output_directory(Path(batch_out_arg))
+        except OSError as e:
+            exit_application(str(e), EXIT_FAIL)
 
     sleep_inhibitor = SleepInhibitor()
-    if file_inputs and not getattr(args, "allow_sleep", False):
+    if not preview and file_inputs and not getattr(args, "allow_sleep", False):
         sleep_inhibitor.acquire()
 
     # each job claims its output, so none overwrites a source or another's output
@@ -1759,13 +1720,7 @@ def execute_encode_command(
                 # create batch result if tracking is enabled
                 batch_result = None
                 if batch_manager:
-                    file_id = f"f{i + 1}" if len(file_inputs) > 1 else "f1"
-                    # compute centralized log file path used for this input
-                    log_name = f"{input_file.stem}"
-                    log_file = work_dir / "logs" / f"{log_name}.log"
-                    batch_result = batch_manager.create_result(
-                        input_file, file_id, log_file=log_file
-                    )
+                    batch_result = batch_manager.create_result(input_file, f"f{i + 1}")
 
                 try:
                     # a batch's jobs get an id in their output names (f1, f2, ...)
@@ -1776,16 +1731,14 @@ def execute_encode_command(
                     args_for_job = copy.deepcopy(args)
 
                     input_file, result = encode_single_file(
-                        args_for_job, input_file, dependencies, None, None, name_id
+                        args_for_job,
+                        input_file,
+                        dependencies,
+                        None,
+                        None,
+                        name_id,
+                        batch_result,
                     )
-                    # When running in output-preview mode we already emit the
-                    # previewed path from the encoder; suppress the duplicate
-                    # "Job successful" path line to avoid confusion.
-                    if not (
-                        getattr(args, "output_preview", False)
-                        or getattr(args, "dry_run", False)
-                    ):
-                        logger.info(f"Job successful! Output file path:\n{result}")
                     successful_files.append((input_file, result))
 
                     if batch_result:
@@ -1837,14 +1790,7 @@ def execute_encode_command(
                     # create batch result if tracking is enabled
                     batch_result = None
                     if batch_manager:
-                        # compute centralized log file path used for this input
-                        log_name = input_file.stem
-                        if worker_num is not None:
-                            log_name = f"{log_name}.worker{worker_num}"
-                        log_file = work_dir / "logs" / f"{log_name}.log"
-                        batch_result = batch_manager.create_result(
-                            input_file, file_id, log_file=log_file
-                        )
+                        batch_result = batch_manager.create_result(input_file, file_id)
 
                     # prepare per-job args copy; encoders handle final filename and
                     # overwrite decisions to ensure accuracy with mediainfo parsing.
@@ -1857,6 +1803,7 @@ def execute_encode_command(
                         worker_num,
                         short_filename,
                         file_id,
+                        batch_result,
                     )
 
                     future_to_file[future] = input_file
@@ -1875,10 +1822,7 @@ def execute_encode_command(
                         # When running in output-preview mode we already emit the
                         # previewed path from the encoder; suppress the duplicate
                         # "Job successful" path line to avoid confusion.
-                        if not (
-                            getattr(args, "output_preview", False)
-                            or getattr(args, "dry_run", False)
-                        ):
+                        if not preview:
                             logger.info(f"Job successful! Output file path:\n{result}")
                         successful_files.append((input_file, result))
 

@@ -4,9 +4,11 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 import os
 from pathlib import Path
+import tempfile
 import threading
 
 from deezy.exceptions import OutputCollisionError
+from deezy.utils.paths import MAX_DEE_PATH, long_path_str
 
 _lock = threading.Lock()
 # while a run is open: output key -> the source whose job writes it
@@ -58,6 +60,18 @@ def _same_file(a: Path, b: Path) -> bool:
         return os.path.samefile(a, b)
     except OSError:
         return False
+
+
+def check_output_directory(directory: Path) -> None:
+    """Create the output directory and check that the current user can write to it."""
+    # Leave room for the temporary name when choosing the Windows path form.
+    path = long_path_str(directory.absolute(), limit=MAX_DEE_PATH - 32)
+    try:
+        Path(path).mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=path, prefix=".deezy-") as probe:
+            probe.write(b"deezy")
+    except OSError as e:
+        raise OSError(f"Could not write to output directory '{directory}'. {e}") from e
 
 
 def check_output(output: Path, source: Path) -> None:

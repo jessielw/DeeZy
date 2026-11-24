@@ -59,7 +59,7 @@ def test_truehdd_line_pipes_ffmpeg_into_truehdd(tmp_path):
     )
     extract, decode = step_line(step).split(" | ")
     assert "0:a:1" in extract
-    assert extract.endswith("-f truehd - -v quiet -stats")
+    assert extract.endswith("-f truehd - -v error -stats")
     assert "--warp-mode loro" in decode
     assert decode.endswith(" -")
 

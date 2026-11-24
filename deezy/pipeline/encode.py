@@ -1,5 +1,6 @@
 """One encode: probe the source, plan the job, run the plan."""
 
+from collections.abc import Callable
 import os
 from pathlib import Path
 import sys
@@ -66,7 +67,9 @@ def plan(payload: CorePayload) -> JobPlan:
     return plan_job(payload, *probe(payload, "t"))
 
 
-def encode(payload: CorePayload) -> Path:
+def encode(
+    payload: CorePayload, *, on_log_saved: Callable[[Path], None] | None = None
+) -> Path:
     """
     Encode one source track and return the output path.
 
@@ -85,4 +88,4 @@ def encode(payload: CorePayload) -> Path:
                 "It exists already, so without --overwrite the job would be skipped."
             )
         return job.output
-    return run_plan(job, payload)
+    return run_plan(job, payload, on_log_saved=on_log_saved)

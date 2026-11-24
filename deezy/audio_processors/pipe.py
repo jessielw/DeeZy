@@ -12,7 +12,9 @@ FFmpeg reports how many bytes it wrote, so a caller can also tell whether DEE
 read them all.
 """
 
+from contextvars import copy_context
 import os
+from pathlib import Path
 import re
 from subprocess import PIPE, STDOUT, Popen
 import threading
@@ -63,7 +65,9 @@ class _Feeder:
         self.killed_dee = False
         self.error: BaseException | None = None
         self._stop = threading.Event()
-        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread = threading.Thread(
+            target=copy_context().run, args=(self._run,), daemon=True
+        )
 
     def start(self, dee: Popen) -> None:
         """Wait on a new thread for ``dee`` to open its pipe, then run FFmpeg."""
@@ -158,6 +162,7 @@ def process_pipe_job(
     no_progress_bars: bool = False,
     custom_dialnorm: int = 0,
     log: ToolLog | None = None,
+    temp_dir: Path | None = None,
 ) -> int | None:
     """
     Run DEE reading the named pipe ``pipe_name``, and FFmpeg writing into it.
@@ -178,6 +183,7 @@ def process_pipe_job(
             custom_dialnorm=custom_dialnorm,
             on_start=feeder.start,
             log=log,
+            temp_dir=temp_dir,
         )
     except Exception as e:
         dee_error = e

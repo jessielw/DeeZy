@@ -177,6 +177,17 @@ def test_handle_configuration_returns_none_for_config_subcommand(monkeypatch):
     assert utils.handle_configuration(args) is sentinel
 
 
+@pytest.mark.parametrize("command", ["find", "info"])
+def test_find_and_info_do_not_resolve_encoder_dependencies(monkeypatch, command):
+    def unexpected_finder():
+        pytest.fail(f"{command} tried to find encoder tools")
+
+    monkeypatch.setattr(utils, "FindDependencies", unexpected_finder)
+    assert (
+        utils.handle_dependencies(argparse.Namespace(sub_command=command), None) is None
+    )
+
+
 def test_handle_dependencies_normal(monkeypatch, tmp_path):
     args = argparse.Namespace(
         sub_command="encode",

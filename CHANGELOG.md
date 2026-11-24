@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-11-24
+
+### Changed
+
+- CI runs when tests or dependency files change and checks Python 3.10 and 3.13 on Linux.
+- Release and manual builds run `--version` and `bitrates ddp` on both packaged executables before uploading artifacts.
+- The PyPI workflow installs the built wheel in a clean environment and runs `--version` and `bitrates ddp` before publishing.
+- The bug report template asks for the failing command, DeeZy version, tool report, and kept encode log.
+
+### Fixed
+
+- Failed DEE jobs show the tool, exit code, and diagnostic output even when DEE exits before its summary. Access-denied errors include the job's temp directory and a permissions hint for SMB/CIFS mounts.
+- Permission errors when saving a completed encode identify the final destination.
+- DeeZy checks that the output directory is writable before starting an encode.
+- Encode dry runs and output previews skip temp and output setup, log cleanup, and sleep inhibition. Explicitly requested logs and batch reports are still written.
+- TrueHD Atmos extraction shows FFmpeg errors at the default log level and reports both tools' exit codes and diagnostics when FFmpeg and truehdd both fail.
+- When `--keep-logs` cannot write beside the output, DeeZy saves the log in its local user log directory. Batch reports list the actual saved log path, or `null` when no log was saved.
+- `deezy info` and `deezy find` work without FFmpeg or DEE installed.
+- The generated CLI reference stays consistent across supported Python versions.
+- The GitHub release job checks for all ten archives before uploading and fails if any upload fails.
+
 ## [2.0.1] - 2026-11-24
 
 ### Fixed

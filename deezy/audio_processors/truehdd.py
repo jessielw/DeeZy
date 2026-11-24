@@ -1,3 +1,4 @@
+from contextvars import copy_context
 import logging
 from pathlib import Path
 import re
@@ -33,7 +34,7 @@ def truehd_extract_command(
     # even in debug, or with the job's log kept, FFmpeg's file info would only
     # be noise here
     verbose = keep_logs or logger.getEffectiveLevel() == logging.DEBUG
-    level = "warning" if verbose else "quiet"
+    level = "warning" if verbose else "error"
     return [
         str(ffmpeg_path),
         "-hide_banner",
@@ -185,54 +186,15 @@ def decode_truehd_to_atmos(
                         # unboundedly and buried the real error in the message
                         continue
 
-                if log is not None and not _FFMPEG_STATS.match(line):
+                if prefix == "ffmpeg" and _FFMPEG_STATS.match(line):
+                    continue
+                if log is not None:
                     log.add("truehdd" if prefix.startswith("truehdd") else prefix, line)
 
-                # filter out ffmpeg metadata spam even in debug mode
-                if prefix == "ffmpeg":
-                    # suppress common metadata lines that clutter output
-                    if any(
-                        keyword in line
-                        for keyword in [
-                            "Input #",
-                            "Metadata:",
-                            "Duration:",
-                            "Stream #",
-                            "  ",
-                            "Output #",
-                            "Stream mapping:",
-                            "Press [q]",
-                            "configuration:",
-                            "built with",
-                            "libav",
-                            "encoder",
-                        ]
-                    ):
-                        continue
-                    # only log important ffmpeg lines (errors, warnings)
-                    if any(
-                        keyword in line
-                        for keyword in [
-                            "error",
-                            "Error",
-                            "ERROR",
-                            "warning",
-                            "Warning",
-                            "WARNING",
-                        ]
-                    ):
-                        logger.debug(f"[{prefix}] {line}")
-                        sink.append(line)
-                        del sink[:-MAX_CAPTURED_LINES]
-                        continue
-
-                # non-ffmpeg streams: always keep the line so a non-zero exit can
-                # be explained without asking the user to re-run in debug mode
-                if prefix != "ffmpeg":
-                    if logger_level == logging.DEBUG:
-                        logger.debug(f"[{prefix}] {line}")
-                    sink.append(line)
-                    del sink[:-MAX_CAPTURED_LINES]
+                if logger_level == logging.DEBUG:
+                    logger.debug(f"[{prefix}] {line}")
+                sink.append(line)
+                del sink[:-MAX_CAPTURED_LINES]
 
             # ensure 100% completion
             if prefix == "ffmpeg" and last_percent < 100.0 and duration:
@@ -253,8 +215,9 @@ def decode_truehd_to_atmos(
     with progress_handler.progress_context(step_label) as (progress, task_id):
         threads = (
             threading.Thread(
-                target=_stream_reader,
+                target=copy_context().run,
                 args=(
+                    _stream_reader,
                     "ffmpeg",
                     ffmpeg_proc.stderr,
                     ffmpeg_err_lines,
@@ -264,8 +227,9 @@ def decode_truehd_to_atmos(
                 daemon=True,
             ),
             threading.Thread(
-                target=_stream_reader,
+                target=copy_context().run,
                 args=(
+                    _stream_reader,
                     "truehdd-err",
                     truehdd_proc.stderr,
                     truehdd_err_lines,
@@ -275,8 +239,9 @@ def decode_truehd_to_atmos(
                 daemon=True,
             ),
             threading.Thread(
-                target=_stream_reader,
+                target=copy_context().run,
                 args=(
+                    _stream_reader,
                     "truehdd-out",
                     truehdd_proc.stdout,
                     truehdd_out_lines,
@@ -299,19 +264,20 @@ def decode_truehd_to_atmos(
         for t in threads:
             t.join(timeout=STREAM_DRAIN_TIMEOUT)
 
-    ffmpeg_err = "\n".join(ffmpeg_err_lines)
-    truehdd_err = "\n".join(truehdd_err_lines)
-    truehdd_out = "\n".join(truehdd_out_lines)
-
-    if ffmpeg_return != 0:
-        raise RuntimeError(
-            f"ffmpeg (pipe) failed extracting TrueHD: {ffmpeg_err.strip()}"
-        )
-
-    if truehdd_return != 0:
-        raise RuntimeError(
-            f"truehdd decode (pipe) failed: {(truehdd_err or truehdd_out).strip()}"
-        )
+    failures = []
+    for stage, return_code, lines in (
+        ("FFmpeg failed extracting TrueHD", ffmpeg_return, ffmpeg_err_lines),
+        (
+            "truehdd failed decoding TrueHD",
+            truehdd_return,
+            truehdd_err_lines or truehdd_out_lines,
+        ),
+    ):
+        if return_code != 0:
+            failures.append(f"{stage} (exit code {return_code}).")
+            failures.extend(f"  {line}" for line in lines)
+    if failures:
+        raise RuntimeError("\n".join(failures))
 
     # find generated atmos file (dee will get all 3 we only need to pass the main atmos file)
     main_atmos_file = output_dir / f"{BASE_ATMOS_FILE_NAME}.atmos"

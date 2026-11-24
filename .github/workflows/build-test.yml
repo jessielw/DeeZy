@@ -87,27 +87,16 @@ jobs:
         run: |
           find pyinstaller_build -name 'libmediainfo*' | grep -q . || { echo "libmediainfo missing from bundle"; exit 1; }
 
-      - name: Test executable Onefile
+      - name: Smoke test packaged executables
         if: steps.should_build.outputs.should_build == 'true'
         shell: bash
+        env:
+          DEEZY_EXECUTABLE: ${{ matrix.executable }}
         run: |
-          cd pyinstaller_build/dist/
-          if [ "${{ matrix.platform }}" == "windows" ]; then
-            ./deezy.exe --help
-          else
-            ./deezy --help
-          fi
-
-      - name: Test executable Onedir
-        if: steps.should_build.outputs.should_build == 'true'
-        shell: bash
-        run: |
-          cd pyinstaller_build/bundled_mode/deezy/
-          if [ "${{ matrix.platform }}" == "windows" ]; then
-            ./deezy.exe --help
-          else
-            ./deezy --help
-          fi
+          for build_dir in pyinstaller_build/dist pyinstaller_build/bundled_mode/deezy; do
+            "$build_dir/$DEEZY_EXECUTABLE" --version
+            "$build_dir/$DEEZY_EXECUTABLE" bitrates ddp
+          done
 
       - name: Create test ZIP archive (Windows)
         if: steps.should_build.outputs.should_build == 'true' && matrix.platform == 'windows'

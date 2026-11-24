@@ -1,5 +1,8 @@
 """The DEE step: a failed run leaves no partial encode and returns its slot."""
 
+from pathlib import Path
+import sys
+
 import pytest
 
 from deezy.pipeline import run
@@ -36,6 +39,32 @@ def test_a_failed_run_deletes_its_partial_output(tmp_path, monkeypatch):
         run.run_dee(DeeStep(("dee_ddp_encoder",), partial), no_progress_bars=True)
     assert not partial.exists()
     assert free_slots() == LIMIT
+
+
+@pytest.mark.parametrize("summary", [False, True])
+def test_a_dee_permission_failure_shows_the_reported_path_and_temp_dir(
+    tmp_path, summary
+):
+    diagnostic = 'Access denied opening "/share/audio.wav".'
+    lines = [diagnostic] + ["INFO: Shutting down."] * 10 + ["[==>   ] 10 %"]
+    if summary:
+        lines += ["---- Summary of errors and warnings ----", "ERROR: Encode failed."]
+    output = "\n".join(lines)
+    script = f"import sys; print({output!r}, file=sys.stderr); sys.exit(2)"
+    step = DeeStep(
+        (sys.executable, "-c", script, "--loglevel", "info"), tmp_path / "job.ec3"
+    )
+
+    with pytest.raises(ValueError) as failure:
+        run.run_dee(step, no_progress_bars=True)
+
+    message = str(failure.value)
+    assert f"{Path(sys.executable).name} (exit code 2)" in message
+    assert diagnostic in message
+    assert str(tmp_path) in message
+    assert "SMB/CIFS" in message
+    assert "Shutting down" not in message
+    assert "[==>" not in message
 
 
 def test_a_good_run_keeps_its_output(tmp_path, monkeypatch):

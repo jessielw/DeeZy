@@ -4575,7 +4575,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -4637,7 +4637,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -4701,7 +4701,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -4763,7 +4763,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -4867,7 +4867,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -4935,7 +4935,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -5000,7 +5000,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -5062,7 +5062,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -5124,7 +5124,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -5186,7 +5186,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10106,7 +10106,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10174,7 +10174,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10244,7 +10244,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10312,7 +10312,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10538,7 +10538,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10609,7 +10609,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10677,7 +10677,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10824,7 +10824,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -10972,7 +10972,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11040,7 +11040,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11108,7 +11108,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11218,7 +11218,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11292,7 +11292,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11356,7 +11356,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11562,7 +11562,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11626,7 +11626,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11725,7 +11725,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11861,7 +11861,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11925,7 +11925,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -11989,7 +11989,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -12091,7 +12091,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -13849,7 +13849,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -13903,7 +13903,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -14291,7 +14291,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -14437,7 +14437,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -14548,7 +14548,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -14618,7 +14618,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -14688,7 +14688,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -14758,7 +14758,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -14831,7 +14831,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -14901,7 +14901,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -15156,7 +15156,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -15883,7 +15883,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -15955,7 +15955,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -16031,7 +16031,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -16103,7 +16103,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -16269,7 +16269,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -16341,7 +16341,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -19977,7 +19977,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -21611,7 +21611,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [
@@ -21673,7 +21673,7 @@
       "truehd",
       "-",
       "-v",
-      "quiet",
+      "error",
       "-stats"
      ],
      [

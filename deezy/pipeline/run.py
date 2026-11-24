@@ -3,7 +3,7 @@ Runs a `JobPlan`: the temp directory, the batch's process slots, temp-file
 reuse, cleanup of partial output, and the move to the destination.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
 import hashlib
@@ -34,6 +34,7 @@ from deezy.exceptions import (
     PathTooLongError,
 )
 from deezy.payloads.shared import CorePayload
+from deezy.pipeline.outputs import check_output_directory
 from deezy.pipeline.plan import (
     MEASURE,
     DeeStep,
@@ -416,6 +417,7 @@ def run_dee(
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.custom_dialnorm,
                 log=log,
+                temp_dir=step.output.parent,
             )
         except FileNotFoundError as e:
             tool = Path(step.argv[0])
@@ -477,6 +479,7 @@ def run_pipe(
                 no_progress_bars=no_progress_bars,
                 custom_dialnorm=step.dee.custom_dialnorm,
                 log=log,
+                temp_dir=step.dee.output.parent,
             )
 
         try:
@@ -622,7 +625,12 @@ def run_measure(plan: JobPlan, payload: CorePayload) -> dict:
         clean_temp(plan.temp_dir, keep_temp)
 
 
-def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
+def run_plan(
+    plan: JobPlan,
+    payload: CorePayload,
+    *,
+    on_log_saved: Callable[[Path], None] | None = None,
+) -> Path:
     """Run every step of ``plan`` and return the finished output."""
     if plan.preview:
         logger.info(f"Output preview: {plan.output}")
@@ -630,10 +638,7 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
 
     keep_temp = bool(getattr(payload, "keep_temp", False))
     log = ToolLog() if getattr(payload, "keep_logs", False) else None
-    plan.temp_dir.mkdir(parents=True, exist_ok=True)
     try:
-        logger.debug(f"Temp directory {plan.temp_dir}.")
-        check_disk_space(plan.source, plan.temp_dir, plan.free_space_needed)
         if plan.output.exists():
             if not payload.overwrite:
                 # a skipped job keeps the log of the run that wrote its output
@@ -645,8 +650,19 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
 
         if log is not None:
             log.add("deezy", f"{plan.format}: {plan.source} -> {plan.output}")
+        check_output_directory(plan.output.parent)
+        plan.temp_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Temp directory {plan.temp_dir}.")
+        check_disk_space(plan.source, plan.temp_dir, plan.free_space_needed)
         dee_output = run_steps(plan, payload, log)
-        finalize_output(dee_output, plan.output)
+        try:
+            finalize_output(dee_output, plan.output)
+        except PermissionError as e:
+            raise PermissionError(
+                f"Could not save the completed encode to '{plan.output}'. {e}\n"
+                "  Check that the account running DeeZy can read the encoded "
+                "temp file and write to the destination."
+            ) from e
         if not plan.output.is_file():
             raise OutputFileNotFoundError(f"{plan.output.name} output not found")
         return plan.output
@@ -657,18 +673,25 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
     finally:
         clean_temp(plan.temp_dir, keep_temp)
         if log is not None:
-            save_log(log, plan.output)
+            path = save_log(log, plan.output)
+            if path is not None and on_log_saved is not None:
+                on_log_saved(path)
 
 
-def save_log(log: ToolLog, output: Path) -> None:
-    """Write a job's kept log beside its output. Never raises."""
-    path = log_path(output)
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        log.write(path)
-        logger.info(f"Log saved: {path}")
-    except OSError as e:
-        logger.warning(f"Could not save the job's log at {path}: {e}")
+def save_log(log: ToolLog, output: Path) -> Path | None:
+    """Return the path where the log was saved, with a local fallback."""
+    local_logs = Path(platformdirs.user_log_dir("deezy", "DeeZy"))
+    fallback = local_logs / f"{artifact_stem(output)}-{uuid.uuid4().hex[:12]}.log"
+    for path in (log_path(output).absolute(), fallback):
+        try:
+            Path(long_path_str(path.parent)).mkdir(parents=True, exist_ok=True)
+            log.write(path)
+        except OSError as e:
+            logger.warning(f"Could not save the job's log at {path}: {e}")
+        else:
+            logger.info(f"Log saved: {path}")
+            return path
+    return None
 
 
 def clean_temp(temp_dir: Path, keep_temp: bool) -> None:

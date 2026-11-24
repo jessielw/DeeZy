@@ -25,11 +25,9 @@ usage: DeeZy config generate [-h] [-o OUTPUT] [--overwrite] [--from-args]
 
 options:
   -h, --help            show this help message and exit
-  -o OUTPUT, --output OUTPUT
-                        Output path for config file (default: auto-detect)
+  -o, --output, OUTPUT  Output path for config file (default: auto-detect)
   --overwrite           Overwrite existing config file
-  --from-args           Generate config from current CLI arguments (use with
-                        encode command)
+  --from-args           Generate config from current CLI arguments (use with encode command)
 ```
 
 ## deezy config info
