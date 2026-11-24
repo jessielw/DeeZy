@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Permission errors when saving a completed encode identify the final destination.
 - DeeZy checks that the output directory is writable before starting an encode.
 - Encode dry runs and output previews skip temp and output setup, log cleanup, and sleep inhibition. Explicitly requested logs and batch reports are still written.
+- TrueHD Atmos extraction shows FFmpeg errors at the default log level and reports both tools' exit codes and diagnostics when FFmpeg and truehdd both fail.
 
 ## [2.0.1] - 2026-11-24
 

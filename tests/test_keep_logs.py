@@ -58,7 +58,7 @@ def test_the_truehd_extract_runs_at_warning_while_its_log_is_kept(info_level):
         )
         return cmd[cmd.index("-v") + 1]
 
-    assert (level(False), level(True)) == ("quiet", "warning")
+    assert (level(False), level(True)) == ("error", "warning")
 
 
 @pytest.mark.parametrize(

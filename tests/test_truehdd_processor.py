@@ -79,7 +79,7 @@ def test_truehdd_failure_falls_back_to_stdout(tmp_path, patch_popen):
     assert "decode aborted" in str(exc.value)
 
 
-def test_ffmpeg_failure_takes_precedence(tmp_path, patch_popen):
+def test_ffmpeg_failure_is_reported_when_truehdd_succeeds(tmp_path, patch_popen):
     ffmpeg_proc = FakeProc(stderr="Error opening input file\n", returncode=1)
     truehdd_proc = FakeProc(returncode=0)
     patch_popen(ffmpeg_proc, truehdd_proc)
@@ -88,6 +88,21 @@ def test_ffmpeg_failure_takes_precedence(tmp_path, patch_popen):
         run_decode(tmp_path)
 
     assert "Error opening input file" in str(exc.value)
+
+
+def test_a_broken_pipe_does_not_hide_the_truehdd_error(tmp_path, patch_popen):
+    ffmpeg_proc = FakeProc(stderr="Broken pipe\n", returncode=1)
+    truehdd_proc = FakeProc(stderr="Unsupported bitstream\n", returncode=3)
+    patch_popen(ffmpeg_proc, truehdd_proc)
+
+    with pytest.raises(RuntimeError) as exc:
+        run_decode(tmp_path)
+
+    message = str(exc.value)
+    assert "FFmpeg failed extracting TrueHD (exit code 1)" in message
+    assert "Broken pipe" in message
+    assert "truehdd failed decoding TrueHD (exit code 3)" in message
+    assert "Unsupported bitstream" in message
 
 
 def test_captured_output_is_bounded(tmp_path, patch_popen):
