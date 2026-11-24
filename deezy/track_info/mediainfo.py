@@ -58,16 +58,23 @@ class MediainfoParser:
         """
         Returns an AudioTrackInfo object with metadata for the audio track at the specified index in the input file.
         """
-        # initiate AudioTrackInfo class
+        counts = self._channel_counts(self.mi_audio_obj)
+        dtsx_bed_71 = (
+            self.mi_audio_obj.format == "DTS"
+            and "X" in (self.mi_audio_obj.format_additionalfeatures or "").split()
+            and 8 in counts
+            and max(counts) in (8, 12)
+        )
         audio_info = AudioTrackInfo(
             mi_track=self.mi_audio_obj,
-            channels=self.get_channels(self.mi_audio_obj),
+            channels=8 if dtsx_bed_71 else max(counts),
+            dtsx_bed_71=dtsx_bed_71,
             delay_relative_to_video=self._detect_relative_delay(self.mi_audio_obj),
             fps=self._get_fps(),
             audio_only=False,
             recommended_free_space=self._recommended_free_space(),
             duration=self._get_duration(),
-            sample_rate=self.mi_audio_obj.sampling_rate,
+            sample_rate=self._sample_rate(self.mi_audio_obj),
             bit_depth=self.mi_audio_obj.bit_depth,
             thd_atmos=self._is_thd_atmos(),
             adm_atmos_wav=self._is_adm_atmos_wav(),
@@ -463,35 +470,36 @@ class MediainfoParser:
         return language.alpha3 if language else None
 
     @staticmethod
+    def _sample_rate(track: Track) -> int | None:
+        """First reported layer rate in Hz. Older DTS:X reports leave the object layer blank."""
+        for value in (track.sampling_rate, *(track.other_sampling_rate or ())):
+            for layer in str(value).split("/"):
+                match = re.fullmatch(
+                    r"(\d+(?:\.\d+)?)(k?hz)?", "".join(layer.lower().split())
+                )
+                if match:
+                    rate = float(match[1]) * (1000 if match[2] == "khz" else 1)
+                    if rate.is_integer() and rate > 0:
+                        return int(rate)
+        return None
+
+    @staticmethod
+    def _channel_counts(track: Track) -> set[int]:
+        """Counts for the presentations and core reported on this track."""
+        values = (
+            track.channel_s,
+            *(track.other_channel_s or ()),
+            track.channel_s__original,
+        )
+        counts = {int(n) for value in values for n in re.findall(r"\d+", str(value))}
+        if not counts:
+            raise MediaInfoError("MediaInfo did not report an audio channel count.")
+        return counts
+
+    @staticmethod
     def get_channels(mi_audio_obj: Track) -> int:
-        """
-        Get the number of audio channels for the specified track.
-
-        The added complexity for 'check_other' is to ensure we get a report
-        of the highest potential channel count.
-
-        Returns:
-            The number of audio channels as an integer.
-        """
-        if isinstance(mi_audio_obj.channel_s, int):
-            base_channels = mi_audio_obj.channel_s
-        else:
-            base_channels = max(
-                int(x) for x in re.findall(r"\d+", str(mi_audio_obj.channel_s)) if x
-            )
-        check_other = re.search(r"\d+", str(mi_audio_obj.other_channel_s[0]))
-        check_other_2 = str(mi_audio_obj.channel_s__original)
-
-        # create a list of values to find the maximum
-        values = [base_channels]
-
-        if check_other:
-            values.append(int(check_other.group()))
-
-        if check_other_2.isdigit():
-            values.append(int(check_other_2))
-
-        return max(values)
+        """Highest reported channel count for the source info display."""
+        return max(MediainfoParser._channel_counts(mi_audio_obj))
 
     @staticmethod
     def _detect_relative_delay(mi_audio_obj: Track) -> int:

@@ -47,6 +47,15 @@ def test_capture_skips_blank_lines():
     assert sink == []
 
 
+def test_progress_records_do_not_hide_filter_errors():
+    sink = []
+    _capture(sink, "Failed to configure output pad")
+    for _ in range(MAX_CAPTURED_LINES):
+        _capture(sink, "out_time=N/A")
+        _capture(sink, "total_size=0")
+    assert sink == ["Failed to configure output pad"]
+
+
 def test_success_returns_true():
     assert process_ffmpeg_job(
         fake_ffmpeg_cmd(3, 0), steps=False, duration=None, no_progress_bars=True

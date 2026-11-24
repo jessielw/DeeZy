@@ -493,8 +493,15 @@ def ffmpeg_argv(
     track_index: TrackIndex,
     filters: list[str],
     transport: Transport,
+    *,
+    dtsx_bed_71: bool = False,
 ) -> tuple[str, ...]:
     """FFmpeg decoding the track to 32-bit PCM for DEE. AC-3 DRC is off."""
+    stream = (
+        f"a:{track_index.index}"
+        if track_index.track_type is TrackType.AUDIO
+        else str(track_index.index)
+    )
     return (
         str(ffmpeg),
         "-y",
@@ -503,12 +510,11 @@ def ffmpeg_argv(
         "-hide_banner",
         # the processor puts the verbosity level after this
         "-v",
+        *([f"-downmix:{stream}", "7.1"] if dtsx_bed_71 else []),
         "-i",
         str(Path(file_input)),
         "-map",
-        f"0:a:{track_index.index}"
-        if track_index.track_type is TrackType.AUDIO
-        else f"0:{track_index.index}",
+        f"0:{stream}",
         "-c",
         transport.ffmpeg_codec,
         *filters,
@@ -544,6 +550,7 @@ def _pcm_steps(
         payload.track_index,
         filters,
         transport,
+        dtsx_bed_71=info.dtsx_bed_71,
     )
     if isinstance(transport, NamedPipe):
         return (PipeStep(argv, dee, transport, duration=info.duration),)
@@ -1393,6 +1400,7 @@ def _plan_ac4_ims(
             payload.track_index,
             filters,
             wav,
+            dtsx_bed_71=info.dtsx_bed_71,
         )
         steps.append(
             FfmpegStep(argv, wav.path, str(CodecFormat.AC4_IMS), info.duration)

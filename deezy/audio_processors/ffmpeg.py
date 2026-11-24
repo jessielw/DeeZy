@@ -9,16 +9,27 @@ from deezy.utils.tool_log import ToolLog
 # FFMPEG only ever explains a failure in the output it already streamed past, so
 # a bounded tail of it is kept to put a reason in the raised error
 MAX_CAPTURED_LINES = 50
+_PROGRESS_KEYS = {
+    "bitrate",
+    "total_size",
+    "out_time_us",
+    "out_time_ms",
+    "out_time",
+    "dup_frames",
+    "drop_frames",
+    "speed",
+    "progress",
+}
 
 
 def ffmpeg_loglevel(keep_logs: bool = False) -> str:
     """
     The level that goes after a planned FFmpeg command's ``-v``: info in
-    debug mode or when the job's log is kept, else quiet.
+    debug mode or when the job's log is kept, else errors only.
     """
     if keep_logs or logger.getEffectiveLevel() == logging.DEBUG:
         return "info"
-    return "quiet"
+    return "error"
 
 
 def with_loglevel(cmd: list, keep_logs: bool = False) -> list:
@@ -102,17 +113,18 @@ def _process_with_progress_bar(
                     logger.debug(line)
                     _capture(sink, line, log)
 
-        # ensure completion
-        handler.ensure_completion(last_percent, step_label, progress, task_id)
+        if proc.wait() == 0:
+            handler.ensure_completion(last_percent, step_label, progress, task_id)
 
 
 def _capture(sink: list, line: str, log: ToolLog | None = None) -> None:
     """Keep a bounded tail of FFMPEG output for error reporting, and log it."""
     if line:
-        sink.append(line)
-        del sink[:-MAX_CAPTURED_LINES]
         if log is not None:
             log.add("ffmpeg", line)
+        if line.partition("=")[0] not in _PROGRESS_KEYS:
+            sink.append(line)
+            del sink[:-MAX_CAPTURED_LINES]
 
 
 def _process_with_spinner(
@@ -141,7 +153,8 @@ def _process_with_spinner(
                     _capture(sink, line, log)
 
         # show completion message
-        console.print(f"✓ {step_label} completed")
+        if proc.wait() == 0:
+            console.print(f"✓ {step_label} completed")
     else:
         # simple text output for non-interactive environments
         logger.info(f"{step_label} processing...")
@@ -152,7 +165,8 @@ def _process_with_spinner(
                 logger.debug(line)
                 _capture(sink, line, log)
 
-        logger.info(f"{step_label} completed")
+        if proc.wait() == 0:
+            logger.info(f"{step_label} completed")
 
 
 def process_ffmpeg_job(
