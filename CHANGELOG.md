@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - CI runs when tests or dependency files change and checks Python 3.10 and 3.13 on Linux.
 - Release and manual builds run `--version` and `bitrates ddp` on both packaged executables before uploading artifacts.
+- The PyPI workflow installs the built wheel in a clean environment and runs `--version` and `bitrates ddp` before publishing.
 - The bug report template asks for the failing command, DeeZy version, tool report, and kept encode log.
 
 ### Fixed

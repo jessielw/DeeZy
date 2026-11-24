@@ -50,5 +50,23 @@ jobs:
       - name: Build package
         run: . .venv/bin/activate && uv build
 
+      - name: Smoke test built wheel
+        shell: bash
+        run: |
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if (( ${#wheels[@]} != 1 )); then
+            echo "Expected exactly one DeeZy wheel in dist/." >&2
+            exit 1
+          fi
+          wheel="$PWD/${wheels[0]}"
+          smoke_dir=$(mktemp -d)
+          cd "$smoke_dir"
+          unset PYTHONPATH
+          uv venv --python 3.11 .venv
+          uv pip install --python .venv/bin/python "$wheel"
+          .venv/bin/deezy --version
+          .venv/bin/deezy bitrates ddp
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
