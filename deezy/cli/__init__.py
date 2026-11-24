@@ -61,7 +61,7 @@ from deezy.utils.power import SleepInhibitor
 from deezy.utils.progress import has_shared_progress, shared_progress_display
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 program_name = "DeeZy"
 
 
