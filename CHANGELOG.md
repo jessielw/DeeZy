@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Failed DEE jobs show the tool, exit code, and diagnostic output even when DEE exits before its summary. Access-denied errors include the job's temp directory and a permissions hint for SMB/CIFS mounts.
 - Permission errors when saving a completed encode identify the final destination.
 - DeeZy checks that the output directory is writable before starting an encode.
+- Encode dry runs and output previews skip temp and output setup, log cleanup, and sleep inhibition. Explicitly requested logs and batch reports are still written.
 
 ## [2.0.1] - 2026-11-24
 

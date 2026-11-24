@@ -162,6 +162,32 @@ def test_output_with_several_inputs_is_refused_before_any_job(tmp_path, monkeypa
         )
 
 
+@pytest.mark.parametrize("mode", ["dry_run", "output_preview"])
+def test_a_preview_does_not_create_or_trim_work_files(tmp_path, monkeypatch, mode):
+    old_log = tmp_path / "logs" / "old.log"
+    old_log.parent.mkdir()
+    old_log.touch()
+    temp_dir = tmp_path / "temp"
+    args = encode_args(
+        tmp_path, allow_sleep=False, temp_dir=str(temp_dir), max_logs=0, **{mode: True}
+    )
+
+    def acquire(_self):
+        pytest.fail("A preview requested a sleep inhibitor")
+
+    monkeypatch.setattr(cli.SleepInhibitor, "acquire", acquire)
+    monkeypatch.setattr(
+        cli,
+        "encode_single_file",
+        lambda *_args: (tmp_path / "in.wav", tmp_path / "out.ec3"),
+    )
+    cli.execute_encode_command(args, [tmp_path / "in.wav"], {}, None)
+
+    assert old_log.is_file()
+    assert not (tmp_path / "batch-results").exists()
+    assert not temp_dir.exists()
+
+
 @pytest.mark.parametrize(
     ("inputs", "max_parallel", "ids"),
     [

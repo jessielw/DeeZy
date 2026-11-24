@@ -1555,6 +1555,7 @@ def execute_encode_command(
         )
     max_parallel = getattr(args, "max_parallel", 1)
     batch_output_enabled = getattr(args, "batch_summary_output", False)
+    preview = getattr(args, "dry_run", False) or getattr(args, "output_preview", False)
 
     # get temp_dir from config if exists (CLI arg > config default > automatic)
     temp_dir_arg = getattr(args, "temp_dir", None)
@@ -1562,19 +1563,8 @@ def execute_encode_command(
     if config_manager is not None:
         config_temp_dir = config_manager.get_config_default("temp_dir")
 
-    temp_dir = None
-    if temp_dir_arg:
-        temp_dir = Path(temp_dir_arg)
-    elif config_temp_dir:
-        temp_dir = Path(config_temp_dir)
-    if temp_dir:
-        try:
-            temp_dir.mkdir(parents=True, exist_ok=True)
-            args.temp_dir = str(temp_dir)
-        except Exception as temp_dir_e:
-            logger.warning(
-                f"Failed to create temp directory at {temp_dir} ({temp_dir_e})."
-            )
+    if temp_dir := temp_dir_arg or config_temp_dir:
+        args.temp_dir = str(temp_dir)
 
     # centralized work directories: precedence CLI arg > config default > WORKING_DIRECTORY/deezy_work
     working_dir_arg = getattr(args, "working_dir", None)
@@ -1591,13 +1581,8 @@ def execute_encode_command(
 
     logs_dir = work_dir / "logs"
     batch_results_dir = work_dir / "batch-results"
-    # ensure dirs exist when needed
-    if not work_dir.exists():
-        work_dir.mkdir(parents=True, exist_ok=True)
-    if not logs_dir.exists():
+    if getattr(args, "log_to_file", False):
         logs_dir.mkdir(parents=True, exist_ok=True)
-    if not batch_results_dir.exists():
-        batch_results_dir.mkdir(parents=True, exist_ok=True)
 
     # Trim old logs and batch-results based on config limits (config-only)
     # Determine trimming limits with precedence: CLI args > config defaults > None
@@ -1659,8 +1644,9 @@ def execute_encode_command(
             # ignore trimming errors
             logger.debug("Failed to trim old artifacts.")
 
-    _trim_dir(logs_dir, max_logs, glob_pattern="*.log")
-    _trim_dir(batch_results_dir, max_batch_results, glob_pattern="*.json")
+    if not preview:
+        _trim_dir(logs_dir, max_logs, glob_pattern="*.log")
+        _trim_dir(batch_results_dir, max_batch_results, glob_pattern="*.json")
 
     # store computed work_dir on args so encode_single_file can find it
     args._working_dir = str(work_dir)
@@ -1707,14 +1693,14 @@ def execute_encode_command(
             # ignore config lookup errors and proceed without batch output dir
             batch_out_arg = None
 
-    if batch_output_enabled and batch_out_arg:
+    if not preview and batch_output_enabled and batch_out_arg:
         try:
             check_output_directory(Path(batch_out_arg))
         except OSError as e:
             exit_application(str(e), EXIT_FAIL)
 
     sleep_inhibitor = SleepInhibitor()
-    if file_inputs and not getattr(args, "allow_sleep", False):
+    if not preview and file_inputs and not getattr(args, "allow_sleep", False):
         sleep_inhibitor.acquire()
 
     # each job claims its output, so none overwrites a source or another's output
@@ -1748,10 +1734,7 @@ def execute_encode_command(
                     # When running in output-preview mode we already emit the
                     # previewed path from the encoder; suppress the duplicate
                     # "Job successful" path line to avoid confusion.
-                    if not (
-                        getattr(args, "output_preview", False)
-                        or getattr(args, "dry_run", False)
-                    ):
+                    if not preview:
                         logger.info(f"Job successful! Output file path:\n{result}")
                     successful_files.append((input_file, result))
 
@@ -1842,10 +1825,7 @@ def execute_encode_command(
                         # When running in output-preview mode we already emit the
                         # previewed path from the encoder; suppress the duplicate
                         # "Job successful" path line to avoid confusion.
-                        if not (
-                            getattr(args, "output_preview", False)
-                            or getattr(args, "dry_run", False)
-                        ):
+                        if not preview:
                             logger.info(f"Job successful! Output file path:\n{result}")
                         successful_files.append((input_file, result))
 
