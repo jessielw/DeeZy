@@ -43,7 +43,7 @@ def job(tmp_path: Path, *steps) -> JobPlan:
 def test_ffmpeg_line_has_its_log_level_and_no_progress_options(tmp_path):
     line = step_line(ffmpeg_step(tmp_path))
     assert line == shell_line(
-        ["ffmpeg", "-y", "-v", "quiet", "-i", "in put.mkv", str(tmp_path / "job.wav")]
+        ["ffmpeg", "-y", "-v", "error", "-i", "in put.mkv", str(tmp_path / "job.wav")]
     )
 
 

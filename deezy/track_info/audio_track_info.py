@@ -26,6 +26,8 @@ class AudioTrackInfo:
     atmos_elements: int | None = None
     # whether the track has an LFE channel, when MediaInfo gives its layout
     lfe: bool | None = None
+    # Decode the embedded DTS-HD MA 7.1 bed for channel-based encoders.
+    dtsx_bed_71: bool = False
 
     @property
     def atmos_master(self) -> bool:

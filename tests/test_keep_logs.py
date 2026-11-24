@@ -47,7 +47,7 @@ def test_the_log_goes_beside_the_output_and_is_named_after_it(tmp_path):
 
 def test_ffmpeg_runs_at_info_while_its_log_is_kept(info_level):
     cmd = ["ffmpeg", "-v", "-i", "in.wav"]
-    assert ffmpeg.with_loglevel(cmd) == ["ffmpeg", "-v", "quiet", "-i", "in.wav"]
+    assert ffmpeg.with_loglevel(cmd) == ["ffmpeg", "-v", "error", "-i", "in.wav"]
     assert ffmpeg.with_loglevel(cmd, keep_logs=True)[2] == "info"
 
 

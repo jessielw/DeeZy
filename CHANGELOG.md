@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-11-24
+
+### Fixed
+
+- DeeZy now reads the first valid sample rate across the layers MediaInfo reports for an audio track. This avoids unnecessary resampling of 48 kHz DTS:X tracks when the object layer has a blank rate, which could cause FFmpeg to exit with code 234 on builds without libsoxr.
+- Channel-based encodes now use the embedded DTS-HD MA 7.1 bed when MediaInfo identifies it in a DTS:X track. This prevents newer FFmpeg decoders from sending 12 channels to DEE when DeeZy expects eight.
+- FFmpeg failures now show the error in the normal job log. DeeZy only marks the FFmpeg step complete after it exits successfully.
+
 ## [2.0.0] - 2026-11-24
 
 DeeZy 2.0 runs only the DEE 6.7 command-line tools. Commands, presets and configs from 1.x may need changes; the [migration guide](docs/migration.md) lists them.
