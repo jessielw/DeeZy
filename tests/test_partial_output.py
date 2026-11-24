@@ -121,6 +121,24 @@ def test_a_save_permission_error_identifies_the_final_path(
     assert partials(tmp_path) == []
 
 
+def test_an_unwritable_output_directory_fails_before_the_encode(tmp_path, monkeypatch):
+    blocked = tmp_path / "blocked"
+    blocked.touch()
+    plan = JobPlan(
+        "ddp", tmp_path / "in.mkv", blocked / "out.ec3", tmp_path / "job", ()
+    )
+
+    def unexpected_encode(*_args):
+        pytest.fail("An encode started with an unusable output directory")
+
+    monkeypatch.setattr(run, "run_steps", unexpected_encode)
+    with pytest.raises(OSError, match="Could not write to output directory") as failure:
+        run.run_plan(plan, generate_dummy_core_payload())
+
+    assert str(blocked) in str(failure.value)
+    assert not plan.temp_dir.exists()
+
+
 # --- intermediates a later --reuse-temp-files run could pick up
 
 

@@ -3,7 +3,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import copy
 from pathlib import Path
 import sys
-import tempfile
 import traceback
 
 from deezy.cli.bitrates import bitrate_lines
@@ -52,7 +51,7 @@ from deezy.enums.thd import TrueHDChannels
 from deezy.exceptions import OutputExistsError
 from deezy.pipeline.encode import encode
 from deezy.pipeline.measure import measure, summary
-from deezy.pipeline.outputs import begin_run, end_run
+from deezy.pipeline.outputs import begin_run, check_output_directory, end_run
 from deezy.pipeline.run import init_phase_limits
 from deezy.track_info.track_index import TrackIndex
 from deezy.utils.batch_results import BatchResultsManager
@@ -1695,7 +1694,6 @@ def execute_encode_command(
 
     # if the user provided a batch-output-dir, prepare it early (fail fast / create dir)
     batch_out_arg = getattr(args, "batch_output_dir", None)
-    batch_out_dir: Path | None = None
     # If the user didn't provide a CLI batch_output_dir but the config has one,
     # use the config value so encoders and payloads see the same default.
     if batch_output_enabled and not batch_out_arg and config_manager is not None:
@@ -1710,41 +1708,10 @@ def execute_encode_command(
             batch_out_arg = None
 
     if batch_output_enabled and batch_out_arg:
-        # Fail fast: if the user asked for a batch output directory, ensure it exists
-        # and is writable. If we cannot prepare it, stop immediately instead of
-        # continuing and surprising the user later.
-        batch_out_dir = Path(batch_out_arg)
         try:
-            batch_out_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            logger.error(f"Could not prepare batch output dir '{batch_out_arg}': {e}")
-            exit_application(
-                f"Could not prepare batch output dir '{batch_out_arg}': {e}", EXIT_FAIL
-            )
-
-        # verify the path is a directory
-        if not batch_out_dir.exists() or not batch_out_dir.is_dir():
-            logger.error(f"Batch output path '{batch_out_dir}' is not a directory.")
-            exit_application(
-                f"Batch output path '{batch_out_dir}' is not a directory.", EXIT_FAIL
-            )
-
-        # quick writability test: create and remove a small temp file in the dir
-        try:
-            tf = tempfile.NamedTemporaryFile(
-                prefix=".deezy_write_test_", dir=str(batch_out_dir), delete=False
-            )
-            try:
-                tf.write(b"deezetest")
-                tf.flush()
-            finally:
-                tf.close()
-            Path(tf.name).unlink()
-        except Exception as e:
-            logger.error(f"Batch output dir '{batch_out_dir}' is not writable: {e}")
-            exit_application(
-                f"Batch output dir '{batch_out_dir}' is not writable: {e}", EXIT_FAIL
-            )
+            check_output_directory(Path(batch_out_arg))
+        except OSError as e:
+            exit_application(str(e), EXIT_FAIL)
 
     sleep_inhibitor = SleepInhibitor()
     if file_inputs and not getattr(args, "allow_sleep", False):

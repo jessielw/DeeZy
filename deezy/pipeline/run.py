@@ -34,6 +34,7 @@ from deezy.exceptions import (
     PathTooLongError,
 )
 from deezy.payloads.shared import CorePayload
+from deezy.pipeline.outputs import check_output_directory
 from deezy.pipeline.plan import (
     MEASURE,
     DeeStep,
@@ -632,10 +633,7 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
 
     keep_temp = bool(getattr(payload, "keep_temp", False))
     log = ToolLog() if getattr(payload, "keep_logs", False) else None
-    plan.temp_dir.mkdir(parents=True, exist_ok=True)
     try:
-        logger.debug(f"Temp directory {plan.temp_dir}.")
-        check_disk_space(plan.source, plan.temp_dir, plan.free_space_needed)
         if plan.output.exists():
             if not payload.overwrite:
                 # a skipped job keeps the log of the run that wrote its output
@@ -647,6 +645,10 @@ def run_plan(plan: JobPlan, payload: CorePayload) -> Path:
 
         if log is not None:
             log.add("deezy", f"{plan.format}: {plan.source} -> {plan.output}")
+        check_output_directory(plan.output.parent)
+        plan.temp_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Temp directory {plan.temp_dir}.")
+        check_disk_space(plan.source, plan.temp_dir, plan.free_space_needed)
         dee_output = run_steps(plan, payload, log)
         try:
             finalize_output(dee_output, plan.output)
