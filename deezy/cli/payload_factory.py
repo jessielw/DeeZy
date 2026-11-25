@@ -422,6 +422,7 @@ class PayloadBuilder:
                 "drc": cls.safe_get(args, "drc", DeeDRC.FILM_LIGHT),
                 "custom_dialnorm": int(cls.safe_get(args, "custom_dialnorm", 0)),
                 "as_is": not cls.safe_get(args, "no_as_is", False),
+                "surround_3db_attenuation": cls.safe_get(args, "surround_3db", False),
                 "disable_lfe": bool(cls.safe_get(args, "disable_lfe", False)),
             }
         )

@@ -19,6 +19,7 @@ class TrueHDPayload(LoudnessPayload):
     as_is: bool = True
     # TrueHD keeps the LFE channel, silenced
     disable_lfe: bool = False
+    surround_3db_attenuation: bool = False
 
 
 @dataclass(slots=True)

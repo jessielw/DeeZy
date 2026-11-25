@@ -33,14 +33,18 @@ ddp-atmos --atmos-mode streaming (default)
   atmos default 448: 384, 448, 576, 640, 768, 1024
 ddp-atmos --atmos-mode bluray
   atmos default 1280, needs dee_shim: 1152, 1280, 1408, 1512, 1536, 1664
+        R0:R1 (dee_shim): AC-3 core 224, 256, 320, 384, 448, 512, 576, 640, dependent 32-1024 kbps
 ddp-atmos --atmos-mode standard
   atmos default 1152, needs dee_shim: 448-2048
+        R0:R1 (dee_shim): E-AC-3 core 32-1024, dependent 32-1024 kbps
 ```
 
 <!-- END generated -->
 
 DEE fails some `standard` streams below about 432 kbps, depending on the
-content, so DeeZy takes 448 kbps and up.
+content, so DeeZy starts at 448 kbps when you request a single total.
+With an explicit split, the encoder also needs enough room in the dependent
+substream for the master's JOC metadata.
 
 ## Through dee_shim
 

@@ -8,8 +8,9 @@ import sys
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.dee.tools import find_license
 from deezy.payloads.shared import CorePayload
+from deezy.pipeline.decode_cache import decode_directory
 from deezy.pipeline.outputs import check_output
-from deezy.pipeline.plan import JobPlan, PlanContext, plan_job
+from deezy.pipeline.plan import AtmosInputPayload, JobPlan, PlanContext, plan_job
 from deezy.pipeline.run import check_input_file, run_plan, temp_dir_path
 from deezy.pipeline.show import command_lines
 from deezy.track_info.audio_track_info import AudioTrackInfo
@@ -52,7 +53,24 @@ def probe(payload: CorePayload, label: str) -> tuple[AudioTrackInfo, PlanContext
         track_label=f"{label}{payload.track_index.index}",
         keep_temp=payload.keep_temp,
     )
+    kept_decode = None
+    if (
+        payload.keep_temp
+        and info.thd_atmos
+        and isinstance(payload, AtmosInputPayload)
+        and payload.truehdd_path is not None
+    ):
+        kept_decode = decode_directory(
+            temp_dir,
+            file_input,
+            payload.track_index,
+            payload.thd_warp_mode,
+            payload.ffmpeg_path,
+            payload.truehdd_path,
+            reuse=payload.reuse_temp_files,
+        )
     ctx = PlanContext(
+        kept_decode=kept_decode,
         namer=namer,
         temp_dir=temp_dir,
         license=find_license(Path(payload.dee_path)),

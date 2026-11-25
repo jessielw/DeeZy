@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from deezy.bitrate import Bitrate
 from deezy.dee.shim import DeeShim
 from deezy.enums.shared import DeeDRC, PipeMode, StereoDownmix
 from deezy.track_info.track_index import TrackIndex
@@ -16,7 +17,7 @@ class CorePayload:
     dee_path: Path
     file_input: Path
     track_index: TrackIndex
-    bitrate: int | None
+    bitrate: Bitrate | None
     temp_dir: Path | None
     delay: str | None
     keep_temp: bool

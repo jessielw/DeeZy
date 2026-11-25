@@ -3,6 +3,12 @@
 from collections.abc import Iterable, Sequence
 import textwrap
 
+from deezy.bitrate import (
+    AC3_CORE_RATES,
+    InvalidBitrateError,
+    SubstreamBitrate,
+    split_core,
+)
 from deezy.config.manager import ConfigManager
 from deezy.dee.spec import formats
 from deezy.payloads.shared import ChannelBitrates
@@ -67,12 +73,14 @@ def _default_text(
     if config is not None and key is not None:
         try:
             configured = config.get_default_bitrate(fmt, key)
+        except InvalidBitrateError:
+            raise
         except Exception:
             configured = None
     builtin = rates.default
     if not configured or configured == builtin:
         return f"default {builtin}"
-    if rates.is_valid_bitrate(configured):
+    if isinstance(configured, SubstreamBitrate) or rates.is_valid_bitrate(configured):
         return f"default {configured} (config; DeeZy's is {builtin})"
     # as when encoding: a rate DEE doesn't take becomes the closest one it does
     nearest = rates.get_closest_bitrate(configured)
@@ -122,4 +130,14 @@ def bitrate_lines(
                         break_on_hyphens=False,
                     )
                 )
+                core = split_core(name, config_key(name, mode_name, layout_name) or "")
+                if core:
+                    first = (
+                        ", ".join(map(str, AC3_CORE_RATES))
+                        if core == "AC-3"
+                        else "32-1024"
+                    )
+                    lines.append(
+                        f"        R0:R1 (dee_shim): {core} core {first}, dependent 32-1024 kbps"
+                    )
     return lines

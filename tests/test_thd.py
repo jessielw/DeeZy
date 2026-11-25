@@ -89,3 +89,19 @@ def test_the_payload_takes_the_truehd_options(parser):
     assert payload.channels is TrueHDChannels.SURROUND
     assert payload.drc is DeeDRC.MUSIC_LIGHT
     assert payload.custom_dialnorm == -27
+
+
+@pytest.mark.parametrize(
+    ("flags", "enabled"),
+    [
+        ([], False),
+        (["--surround-3db"], True),
+        (["--surround-3db", "--no-surround-3db"], False),
+    ],
+)
+def test_surround_attenuation_is_opt_in(parser, flags, enabled):
+    args = parser.parse_args(["encode", "thd", *flags, "x.wav"])
+    payload = cli.PayloadBuilder.build_thd_payload(
+        args, Path("x.wav"), Path("ffmpeg"), None, Path("dee")
+    )
+    assert payload.surround_3db_attenuation is enabled

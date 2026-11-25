@@ -55,7 +55,6 @@ def test_truehdd_line_pipes_ffmpeg_into_truehdd(tmp_path):
         truehdd=Path("truehdd"),
         warp_mode=WarpMode.LORO,
         output_dir=tmp_path,
-        reuse_id="ddp-atmos",
     )
     extract, decode = step_line(step).split(" | ")
     assert "0:a:1" in extract

@@ -22,7 +22,7 @@ usage: DeeZy encode ddp-atmos [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD]
                               [--dry-run] [--limit-ffmpeg LIMIT_FFMPEG]
                               [--limit-dee LIMIT_DEE]
                               [--limit-truehdd LIMIT_TRUEHDD]
-                              [--bitrate BITRATE]
+                              [--bitrate KBPS|R0:R1]
                               [--drc-line-mode {film_standard,film_light,music_standard,music_light,speech,none}]
                               [--drc-rf-mode {film_standard,film_light,music_standard,music_light,speech,none}]
                               [--custom-dialnorm CUSTOM_DIALNORM]
@@ -70,7 +70,7 @@ options:
   --output, OUTPUT
        The output file path. If not specified we will attempt to automatically add Delay/Language string to output file name.
   --output-template, OUTPUT_TEMPLATE
-       Optional lightweight template to control auto-generated output filenames. Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay}.
+       Optional lightweight template to control auto-generated output filenames. Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay},{format},{track},{bitrate},{bitrate-split}.
   --output-preview
        When set, render and show template-based filenames but do not write outputs. Useful to validate templates before running batch jobs.
   --max-parallel, MAX_PARALLEL
@@ -103,8 +103,8 @@ options:
        Optional limit for concurrent DEE processing. Defaults to --max-parallel if not set. If set higher than --max-parallel the value will be capped to --max-parallel and a warning will be emitted.
   --limit-truehdd, LIMIT_TRUEHDD
        Optional limit for concurrent truehdd processing. Defaults to --max-parallel if not set. If set higher than --max-parallel the value will be capped to --max-parallel and a warning will be emitted.
-  --bitrate, BITRATE
-       The bitrate in Kbps (If too high or low for you desired layout, the bitrate will automatically be adjusted to the closest allowed bitrate).
+  --bitrate, KBPS|R0:R1
+       Total bitrate in kbps (adjusted to a supported rate), or exact core and dependent rates as R0:R1 for two-substream DD+ output (requires dee_shim).
   --drc-line-mode, {film_standard,film_light,music_standard,music_light,speech,none}
        Dynamic range compression settings.
   --drc-rf-mode, {film_standard,film_light,music_standard,music_light,speech,none}
@@ -151,6 +151,12 @@ deezy encode ddp-atmos movie.mkv
 
 ```bash
 deezy encode ddp-atmos --atmos-mode bluray movie.mkv
+```
+
+- Set the independent stream to 1024 kbps and the dependent stream to 512 kbps.
+
+```bash
+deezy encode ddp-atmos --atmos-mode standard --bitrate 1024:512 input.mkv
 ```
 
 - Encode a DAMF master:

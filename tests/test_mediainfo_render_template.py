@@ -5,6 +5,7 @@ from typing import cast
 from pymediainfo import Track
 import pytest
 
+from deezy.bitrate import SubstreamBitrate
 from deezy.track_info.mediainfo import MediainfoParser
 from deezy.track_info.track_index import TrackIndex
 
@@ -300,3 +301,22 @@ def test_a_template_that_renders_to_nothing_takes_the_source_name(tmp_path: Path
 def test_stem_cleaned_is_filled_in_and_stands_in_for_stem(tmp_path: Path):
     name = render(tmp_path, "{stem-cleaned}{stem} [{lang}]", "Some.Movie [eng].mkv")
     assert name == "Some Movie.ec3"
+
+
+@pytest.mark.parametrize(
+    ("rate", "expected"),
+    [(SubstreamBitrate(1024, 512), "1536 [1024-512]"), (1280, "1280"), (None, "")],
+)
+def test_encode_tokens(tmp_path, rate, expected):
+    parser = make_parser(tmp_path, "movie.mkv", {"other_language": None}, {})
+    parser.track_index = TrackIndex.stream(3)
+    out = parser.render_output_template(
+        "{format}.{track} {bitrate} [{bitrate-split}]",
+        ".ec3",
+        "7.1",
+        True,
+        0,
+        output_format="ddp-atmos",
+        bitrate=rate,
+    )
+    assert out.stem == f"ddp-atmos.3 {expected}".strip()

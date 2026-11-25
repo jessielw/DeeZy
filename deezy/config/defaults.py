@@ -60,7 +60,7 @@ batch_summary_output = false
 # When set, encoded outputs will be placed into this directory
 batch_output_dir = ""
 # Default output filename template. Leave empty to use automatic naming.
-# Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay}
+# Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},{worker},{delay},{opt-delay},{format},{track},{bitrate},{bitrate-split}
 output_template = ""
 # Default maximum parallel jobs for batch processing
 max_parallel = 1
@@ -149,6 +149,9 @@ surround = 448 # DD 5.1
 #  - ac4-ims: meaningful only for channels 6..8 (use ch_6..ch_8)
 #
 
+# With dee_shim, surroundex under ddp or ddp-bluray and standard or bluray
+# under ddp-atmos also accept a quoted "core:dependent" pair in kbps.
+# For example, set ddp-atmos standard = "1024:512".
 # Default bitrates for Dolby Digital Plus (E-AC-3)
 [default_bitrates.ddp]
 mono = 64        # DDP 1.0

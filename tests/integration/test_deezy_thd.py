@@ -209,3 +209,18 @@ def test_the_atmos_sample_encodes_as_71(thd_tools, work, parser, config):
     out = encode(thd_tools, work, parser, config, [], thd_tools.atmos_sample)
     track = mediainfo(out)
     assert int(track["channel_s"]) == 8
+
+
+@pytest.mark.parametrize("channels", [2, 6, 8])
+def test_surround_attenuation(thd_tools, work, parser, config, channels):
+    src = noise(work, channels)
+    output = encode(thd_tools, work, parser, config, ["--surround-3db"], src)
+    pcm = decode(thd_tools, output)
+    ref = decode(thd_tools, src)
+    for channel in range(channels):
+        if channel < 4:
+            assert pcm.channel(channel) == ref.channel(channel)
+        else:
+            assert pcm.peak(channel)[1] / ref.peak(channel)[1] == pytest.approx(
+                10 ** (-3 / 20), abs=0.002
+            )

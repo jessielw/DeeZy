@@ -8,11 +8,17 @@ Example
 deezy encode ddp --output-template "{title}_{year}_{stem}_{channels}_{delay}" input.mkv
 ```
 
-Supported tokens: `{title}`, `{year}`, `{stem}`, `{stem-cleaned}`, `{source}`, `{lang}`, `{channels}`, `{worker}`, `{delay}`, `{opt-delay}`
+Supported tokens: `{title}`, `{year}`, `{stem}`, `{stem-cleaned}`, `{source}`, `{lang}`, `{channels}`, `{worker}`, `{delay}`, `{opt-delay}`, `{format}`, `{track}`, `{bitrate}`, `{bitrate-split}`
 
 _`opt-delay` will return nothing if delay is equal to 0._
 
 Use `--output-preview` to render a template without running the job.
+
+`{format}` is the encode subcommand, such as `ddp-atmos`. `{track}` is the
+zero-based index from the selected audio or stream selector. `{bitrate}` is
+the resolved total in kbps and is empty for lossless formats.
+For a split of `1024:512`, `{bitrate}` gives `1536` and `{bitrate-split}`
+gives `1024-512`. The split token is empty for a single total.
 
 ## `{stem}` token
 

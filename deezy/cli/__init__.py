@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import traceback
 
+from deezy.bitrate import Bitrate, InvalidBitrateError, parse_bitrate
 from deezy.cli.bitrates import bitrate_lines
 from deezy.cli.payload_factory import PayloadBuilder
 from deezy.cli.tools_report import tool_lines, tool_rows
@@ -61,8 +62,15 @@ from deezy.utils.power import SleepInhibitor
 from deezy.utils.progress import has_shared_progress, shared_progress_display
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "2.0.2"
+__version__ = "2.0.3"
 program_name = "DeeZy"
+
+
+def _ddp_bitrate(value: str) -> Bitrate:
+    try:
+        return parse_bitrate(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
 def create_main_parser() -> argparse.ArgumentParser:
@@ -96,6 +104,27 @@ def create_main_parser() -> argparse.ArgumentParser:
         help="Disables progress bars on level INFO (disabled for DEBUG or higher).",
     )
     return parser
+
+
+def _add_surround_attenuation(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--surround-3db",
+        action="store_true",
+        dest="surround_3db",
+        default=False,
+        help=(
+            "Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). "
+            "Off by default, as in DEE."
+        ),
+    )
+    # 1.x's flag for what is now the default
+    parser.add_argument(
+        "--no-surround-3db",
+        action="store_false",
+        dest="surround_3db",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
 
 
 def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
@@ -199,7 +228,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help=(
             "Optional lightweight template to control auto-generated output filenames. "
             "Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},"
-            "{worker},{delay},{opt-delay}."
+            "{worker},{delay},{opt-delay},{format},{track},{bitrate},{bitrate-split}."
         ),
     )
     encode_group.add_argument(
@@ -344,6 +373,15 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         ),
     )
 
+    ddp_bitrate_group = argparse.ArgumentParser(add_help=False)
+    ddp_bitrate_group.add_argument(
+        "--bitrate",
+        type=_ddp_bitrate,
+        metavar="KBPS|R0:R1",
+        help="Total bitrate in kbps (adjusted to a supported rate), or exact core and dependent rates "
+        "as R0:R1 for two-substream DD+ output (requires dee_shim).",
+    )
+
     # DD/DDP/Atmos DRC group (limited choices)
     dd_ddp_atmos_drc_group = argparse.ArgumentParser(add_help=False)
     # dee_ddp_encoder and dee_ddpjoc_encoder take every profile, 'none' included
@@ -450,24 +488,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_false",
         help="Disables low pass filter.",
     )
-    dd_ddp_processing_group.add_argument(
-        "--surround-3db",
-        action="store_true",
-        dest="surround_3db",
-        default=False,
-        help=(
-            "Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). "
-            "Off by default, as in DEE."
-        ),
-    )
-    # 1.x's flag for what is now the default
-    dd_ddp_processing_group.add_argument(
-        "--no-surround-3db",
-        action="store_false",
-        dest="surround_3db",
-        default=False,
-        help=argparse.SUPPRESS,
-    )
+    _add_surround_attenuation(dd_ddp_processing_group)
     dd_ddp_processing_group.add_argument(
         "--no-surround-90-deg-phase-shift",
         action="store_false",
@@ -490,24 +511,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_false",
         help="Disables low pass filter.",
     )
-    ddp_bluray_processing_group.add_argument(
-        "--surround-3db",
-        action="store_true",
-        dest="surround_3db",
-        default=False,
-        help=(
-            "Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). "
-            "Off by default, as in DEE."
-        ),
-    )
-    # 1.x's flag for what is now the default
-    ddp_bluray_processing_group.add_argument(
-        "--no-surround-3db",
-        action="store_false",
-        dest="surround_3db",
-        default=False,
-        help=argparse.SUPPRESS,
-    )
+    _add_surround_attenuation(ddp_bluray_processing_group)
     ddp_bluray_processing_group.add_argument(
         "--no-surround-90-deg-phase-shift",
         action="store_false",
@@ -737,6 +741,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_true",
         help="Silence the LFE channel. TrueHD 5.1 and 7.1 keep it, silent.",
     )
+    _add_surround_attenuation(thd_channels_group)
     # TrueHD and TrueHD Atmos DRC and dialnorm
     thd_options_group = argparse.ArgumentParser(add_help=False)
     thd_options_group.add_argument(
@@ -874,6 +879,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "input_group": input_group,
         "encode_group": encode_group,
         "bitrate_group": bitrate_group,
+        "ddp_bitrate_group": ddp_bitrate_group,
         "dd_ddp_atmos_drc_group": dd_ddp_atmos_drc_group,
         "loudness_group": loudness_group,
         "loudness_correction_group": loudness_correction_group,
@@ -946,7 +952,7 @@ def create_encode_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
-            argument_groups["bitrate_group"],
+            argument_groups["ddp_bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["loudness_correction_group"],
@@ -971,7 +977,7 @@ def create_encode_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
-            argument_groups["bitrate_group"],
+            argument_groups["ddp_bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["ddp_bluray_processing_group"],
@@ -994,7 +1000,7 @@ def create_encode_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
-            argument_groups["bitrate_group"],
+            argument_groups["ddp_bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["downmix_metadata_group"],
@@ -1136,7 +1142,7 @@ def create_encode_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
-            argument_groups["bitrate_group"],
+            argument_groups["ddp_bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["dd_ddp_processing_group"],
@@ -1434,8 +1440,11 @@ def execute_bitrates_command(
             + ".",
             EXIT_FAIL,
         )
-    for line in bitrate_lines(args.format, config_manager):
-        print(line)
+    try:
+        for line in bitrate_lines(args.format, config_manager):
+            print(line)
+    except InvalidBitrateError as exc:
+        exit_application(str(exc), EXIT_FAIL)
 
 
 def encode_single_file(

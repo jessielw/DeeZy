@@ -34,6 +34,11 @@ from deezy.exceptions import (
     PathTooLongError,
 )
 from deezy.payloads.shared import CorePayload
+from deezy.pipeline.decode_cache import (
+    complete_decode,
+    damf_files,
+    mark_decode_complete,
+)
 from deezy.pipeline.outputs import check_output_directory
 from deezy.pipeline.plan import (
     MEASURE,
@@ -266,15 +271,6 @@ def discard(*paths: Path) -> None:
             logger.debug(f"Could not delete the partial file {path}.")
 
 
-def damf_files(atmos: Path) -> tuple[Path, Path, Path]:
-    """A DAMF's three files: the .atmos header, its audio and its metadata."""
-    return (
-        atmos,
-        atmos.with_name(f"{atmos.name}.audio"),
-        atmos.with_name(f"{atmos.name}.metadata"),
-    )
-
-
 def announce(step: Step, print_commands: bool, log: ToolLog | None = None) -> None:
     """
     Print the step's command line (``--print-commands``) as it starts, and
@@ -335,7 +331,6 @@ def run_ffmpeg(
 
 def run_truehdd(
     step: TruehddStep,
-    plan: JobPlan,
     payload: CorePayload,
     log: ToolLog | None = None,
     step_info: dict | None = None,
@@ -344,15 +339,17 @@ def run_truehdd(
     Decode the TrueHD Atmos stream to a DAMF, or reuse an earlier decode. A
     failed or interrupted decode deletes its cut-off DAMF, as in `run_ffmpeg`.
     """
-    meta = metadata_path(plan.temp_dir, plan.output)
-    reuse = bool(getattr(payload, "reuse_temp_files", False))
     jitter()
     with slot("truehdd"):
-        if reuse and check_reuse_signature(
-            meta, step.reuse_id, step.signature, step.output.name, plan.temp_dir
+        if (
+            step.cache_decode
+            and payload.reuse_temp_files
+            and complete_decode(step.output_dir)
         ):
             logger.info("Reusing decoded atmos from temp folder")
             return
+        if step.cache_decode:
+            step.output_dir.mkdir(parents=True, exist_ok=True)
         announce(step, payload.print_commands, log)
         try:
             decode_truehd_to_atmos(
@@ -367,6 +364,8 @@ def run_truehdd(
                 no_progress_bars=payload.no_progress_bars,
                 log=log,
             )
+            if step.cache_decode:
+                mark_decode_complete(step.output_dir)
         except BaseException:
             discard(*damf_files(step.output))
             raise
@@ -374,10 +373,6 @@ def run_truehdd(
             logger.info(
                 "The TrueHD Atmos stream has no warp mode, so DEE renders it as "
                 "warping, its default. Use --thd-warp-mode to choose another."
-            )
-        if reuse:
-            write_signature_metadata(
-                meta, step.reuse_id, step.signature, step.output.name, plan.source
             )
 
 
@@ -573,7 +568,7 @@ def run_steps(plan: JobPlan, payload: CorePayload, log: ToolLog | None = None) -
             logger.debug(f"ffmpeg_cmd={list(step.argv)}.")
             run_ffmpeg(step, plan, payload, log, label)
         elif isinstance(step, TruehddStep):
-            run_truehdd(step, plan, payload, log, label)
+            run_truehdd(step, payload, log, label)
         elif isinstance(step, PipeStep):
             logger.debug(f"dee_cmd={list(step.dee.argv)}.")
             logger.debug(f"ffmpeg_cmd={list(step.ffmpeg_argv)}.")
