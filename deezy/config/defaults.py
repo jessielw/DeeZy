@@ -149,6 +149,9 @@ surround = 448 # DD 5.1
 #  - ac4-ims: meaningful only for channels 6..8 (use ch_6..ch_8)
 #
 
+# With dee_shim, surroundex under ddp or ddp-bluray and standard or bluray
+# under ddp-atmos also accept a quoted "core:dependent" pair in kbps.
+# For example, set ddp-atmos standard = "1024:512".
 # Default bitrates for Dolby Digital Plus (E-AC-3)
 [default_bitrates.ddp]
 mono = 64        # DDP 1.0

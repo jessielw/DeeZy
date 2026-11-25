@@ -4,6 +4,7 @@ from typing import Any
 
 import oslex2
 
+from deezy.bitrate import Bitrate, InvalidBitrateError, SubstreamBitrate, split_core
 from deezy.config.defaults import CONF_DEFAULT, get_default_config_path
 from deezy.enums.codec_format import CodecFormat
 from deezy.utils.exit import EXIT_FAIL, exit_application
@@ -188,7 +189,7 @@ class ConfigManager:
 
     def get_default_bitrate(
         self, format_command: str | CodecFormat, channels_or_mode: Any = None
-    ) -> int | None:
+    ) -> Bitrate | None:
         """Get default bitrate for a format and channel/mode configuration."""
         # convert enum to string if needed
         format_str = (
@@ -207,10 +208,8 @@ class ConfigManager:
         # profile (aaclc/heaac/heaacv2)
         if format_str in ("ddp-atmos", "aac") and channels_or_mode:
             key = getattr(channels_or_mode, "value", channels_or_mode)
-            return format_bitrates.get(str(key).lower())
-
-        # for DD/DDP, use channel configuration
-        if channels_or_mode:
+            channels_str = str(key).lower()
+        elif channels_or_mode:
             # map channel enums to config keys
             if hasattr(channels_or_mode, "name"):
                 # use the enum name (AUTO, STEREO, SURROUND, etc.) converted to lowercase
@@ -219,11 +218,21 @@ class ConfigManager:
                 channels_str = str(channels_or_mode.value).lower()
             else:
                 channels_str = str(channels_or_mode).lower()
-
-            return format_bitrates.get(channels_str)
-
-        # no specific mode/channels provided, return None
-        return None
+        else:
+            return None
+        value = format_bitrates.get(channels_str)
+        if isinstance(value, str):
+            option = f"[default_bitrates.{format_str}] {channels_str}"
+            core = split_core(format_str, channels_str)
+            if core is None:
+                raise InvalidBitrateError(f"{option} requires an integer bitrate.")
+            try:
+                pair = SubstreamBitrate.parse(value)
+                pair.check_core(bluray=core == "AC-3")
+                return pair
+            except ValueError as exc:
+                raise InvalidBitrateError(f"{option} = {value!r}: {exc}") from exc
+        return value
 
     def generate_config(
         self, output_path: Path | None = None, overwrite: bool = False

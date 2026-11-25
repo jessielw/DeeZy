@@ -782,6 +782,12 @@ PIPE_SCENARIOS = [
 # others don't (the CLI hands the shim it found to the payload)
 WITH_SHIM = ["--dee-shim", str(SHIM)]
 SHIM_SCENARIOS = [
+    (
+        "shim_atmos_standard_split",
+        ["ddp-atmos", *WITH_SHIM, "--atmos-mode", "standard", "--bitrate", "1024:512"],
+        info(8, thd=True),
+        MKV,
+    ),
     ("shim_atmos_thd", ["ddp-atmos", *WITH_SHIM], info(8, thd=True), MKV),
     ("shim_atmos_damf", ["ddp-atmos", *WITH_SHIM], D16, DAMF),
     (
@@ -1285,3 +1291,62 @@ def test_planned_commands_match_golden(
     golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
     sid = request.node.callspec.id
     assert planned(parser, config, args, probed, source, pipe_name) == golden[sid]
+
+
+@pytest.mark.parametrize(
+    ("args", "source_channels", "error"),
+    [
+        (["ddp-atmos", *WITH_SHIM], 8, "two output substreams"),
+        (["ddp", *WITH_SHIM], 6, "two output substreams"),
+        (["ddp", *WITH_SHIM, "--channels", "6"], 8, "two output substreams"),
+        (["ddp", *WITH_SHIM, "--bluray-secondary"], 6, "two output substreams"),
+        (["ddp", "--no-shim"], 8, "needs dee_shim"),
+        (["ddp-bluray", "--no-shim"], 8, "needs dee_shim"),
+        (["ddp-bluray", *WITH_SHIM], 8, "AC-3 core takes"),
+    ],
+)
+def test_split_bitrate_refusals(parser, config, args, source_channels, error):
+    result = planned(
+        parser,
+        config,
+        [*args, "--bitrate", "1024:512"],
+        info(source_channels, thd=args[0] == "ddp-atmos"),
+        MKV,
+    )
+    assert error in result["error"]
+
+
+@pytest.mark.parametrize(
+    ("fmt", "options", "key", "pair"),
+    [
+        ("ddp", [], "surroundex", "768:448"),
+        ("ddp-bluray", [], "surroundex", "448:768"),
+        ("ddp-atmos", ["--atmos-mode", "standard"], "standard", "1024:512"),
+        ("ddp-atmos", ["--atmos-mode", "bluray"], "bluray", "448:768"),
+    ],
+)
+def test_configured_split_reaches_the_shim(parser, config, fmt, options, key, pair):
+    config.config["default_bitrates"][fmt][key] = pair
+    args = [fmt, *options, *WITH_SHIM]
+    track = info(8, thd=fmt == "ddp-atmos")
+    argv = planned(parser, config, args, track, MKV)["steps"][-1]["dee"]
+    assert argv[argv.index("--bitrate") + 1] == pair
+    assert "--data-rate" not in argv
+    override = planned(parser, config, [*args, "--bitrate", "1280"], track, MKV)[
+        "steps"
+    ][-1]["dee"]
+    assert "--bitrate" not in override
+    assert override[override.index("--data-rate") + 1] == "1280"
+
+
+def test_auto_ddp_source_default_precedes_split_output_default(parser, config):
+    config.config["default_bitrates"]["ddp"]["surroundex"] = "768:448"
+    config.config["default_source_bitrates"] = {"ddp": {"ch_8": 1024}}
+    args = ["ddp", *WITH_SHIM]
+    argv = planned(parser, config, args, info(8), MKV)["steps"][-1]["dee"]
+    assert "--bitrate" not in argv
+    assert argv[argv.index("--data-rate") + 1] == "1024"
+
+    config.config["default_source_bitrates"]["ddp"]["ch_8"] = "768:448"
+    error = planned(parser, config, args, info(8), MKV)["error"]
+    assert "[default_source_bitrates.ddp] ch_8 requires an integer" in error

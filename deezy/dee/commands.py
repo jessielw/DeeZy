@@ -9,6 +9,7 @@ Nothing here touches the disk.
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from deezy.bitrate import Bitrate, SubstreamBitrate
 from deezy.dee.shim import MIN_SHIM_TEXT, DeeShim
 from deezy.dee.tools import dee_tool
 from deezy.delay import Delay
@@ -108,7 +109,7 @@ def ddp_command(
     files: DeeFiles,
     *,
     downmix_mode_off: bool,
-    bitrate: int,
+    bitrate: Bitrate,
     fps: DeeFPS,
     delay: Delay,
     dd_mode: DDEncodingMode,
@@ -123,6 +124,12 @@ def ddp_command(
     7.0 through dee_shim. DEE's Blu-ray secondary mode keeps the LFE whatever
     lfe_on says, so it is not asked.
     """
+    split_args = _split_args(
+        tools,
+        bitrate,
+        extended=dd_mode in (DDEncodingMode.DDP71, DDEncodingMode.BLURAY),
+        bluray=dd_mode is DDEncodingMode.BLURAY,
+    )
     check_dd_options(payload, dd_mode, shim=tools.shim is not None)
     encoder = {
         "drc_profile_line": payload.drc_line_mode.to_dee_cmd(),
@@ -179,16 +186,17 @@ def ddp_command(
         # the layout keeps -e ddp and its options, and the shim checks
         # --data-rate against its 7.1 list (7.0 takes the same rates)
         return _through_shim(
-            tools, argv, *(DDP_71_SHIM_ARGS if lfe else DDP_70_SHIM_ARGS)
+            tools, argv, *(DDP_71_SHIM_ARGS if lfe else DDP_70_SHIM_ARGS), *split_args
         )
-    if is_bluray and not lfe:
+    if is_bluray and (not lfe or split_args):
         if tools.shim is None:
             raise UnsupportedDeeFeatureError(
                 f"Dolby Digital Plus Blu-ray 7.0 needs {NEEDS_SHIM}; "
                 "DEE alone codes 7.1 only."
             )
         # the layout keeps -e bluray and its options
-        return _through_shim(tools, argv, *BLURAY_70_SHIM_ARGS)
+        layout = ("--layout", "7.1") if lfe else BLURAY_70_SHIM_ARGS
+        return _through_shim(tools, argv, *layout, *split_args)
     return argv
 
 
@@ -197,7 +205,7 @@ def ddpjoc_command(
     payload: AtmosPayload,
     files: DeeFiles,
     *,
-    bitrate: int,
+    bitrate: Bitrate,
     fps: DeeFPS,
     delay: Delay,
 ) -> list[str]:
@@ -233,7 +241,33 @@ def ddpjoc_command(
     # the shim names DEE's mode in -e itself (bluray for both 7.1 layouts,
     # ddpjoc once it is given any option in streaming) and checks --data-rate
     # against the layout's list
-    return _through_shim(tools, argv, *ddpjoc_shim_args(payload))
+    split_args = _split_args(
+        tools,
+        bitrate,
+        extended=payload.atmos_mode in DDPJOC_SHIM_LAYOUTS,
+        bluray=payload.atmos_mode is AtmosMode.BLURAY,
+    )
+    return _through_shim(tools, argv, *ddpjoc_shim_args(payload), *split_args)
+
+
+def _split_args(
+    tools: DeeTools, bitrate: Bitrate, *, extended: bool, bluray: bool
+) -> tuple[str, ...]:
+    if not isinstance(bitrate, SubstreamBitrate):
+        return ()
+    if tools.shim is None:
+        raise UnsupportedDeeFeatureError(
+            f"--bitrate {bitrate} needs {NEEDS_SHIM} and two output substreams. "
+            "Give its path with --dee-shim for DD+ 7.0/7.1 or DD+ Atmos standard/bluray, "
+            "or give one total bitrate."
+        )
+    if not extended:
+        raise UnsupportedDeeFeatureError(
+            f"--bitrate {bitrate} requires two output substreams. Use DD+ 7.0/7.1 "
+            "or DD+ Atmos standard/bluray, or give one total bitrate."
+        )
+    bitrate.check_core(bluray=bluray)
+    return ("--bitrate", str(bitrate))
 
 
 def ddpjoc_shim_args(payload: AtmosPayload) -> tuple[str, ...]:
@@ -726,7 +760,7 @@ def _common_args(
     files: DeeFiles,
     *,
     input_format: str | None,
-    bitrate: int,
+    bitrate: Bitrate,
     fps: DeeFPS,
     delay: Delay,
     payload: LoudnessPayload,
@@ -763,8 +797,7 @@ def _common_args(
         "--timecode-frame-rate",
         fps.to_dee_cmd(),
         *delay.dee_args(),
-        "--data-rate",
-        str(bitrate),
+        *(["--data-rate", str(bitrate)] if isinstance(bitrate, int) else []),
         "--loudness-management",
         loudness_arg or loudness(payload),
     ]

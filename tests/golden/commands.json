@@ -14271,6 +14271,76 @@
    }
   ]
  },
+ "shim_atmos_standard_split": {
+  "output": "/out/in [7.1] s0 r0 wNone.ec3",
+  "preview": false,
+  "steps": [
+   {
+    "truehdd": [
+     [
+      "/tools/ffmpeg",
+      "-hide_banner",
+      "-y",
+      "-i",
+      "/media/in.mkv",
+      "-map",
+      "0:a:0",
+      "-c",
+      "copy",
+      "-f",
+      "truehd",
+      "-",
+      "-v",
+      "error",
+      "-stats"
+     ],
+     [
+      "/tools/truehdd",
+      "--progress",
+      "decode",
+      "--output-path",
+      "/temp/job/atmos_meta",
+      "-"
+     ]
+    ]
+   },
+   {
+    "dee": [
+     "/tools/dee_shim",
+     "ddpjoc_encoder",
+     "--layout",
+     "7.1/eac3",
+     "--oamd-as-is",
+     "on",
+     "--bitrate",
+     "1024:512",
+     "--binary",
+     "/tools/dee/dee_ddpjoc_encoder",
+     "--",
+     "--loglevel",
+     "info",
+     "--progress",
+     "1",
+     "--overwrite",
+     "1",
+     "--input-format",
+     "atmos_mezz",
+     "-i",
+     "/temp/job/atmos_meta.atmos",
+     "-o",
+     "/temp/job/in71s0r0wNone_c3c70509f7a4111e.ec3",
+     "--timecode-frame-rate",
+     "23.976",
+     "--start",
+     "0.005333",
+     "--loudness-management",
+     "measure_only:preset=manual:dialogue_intelligence=1:speech_threshold=15",
+     "-e",
+     "preferred_downmix_mode=loro:loro_cmix=-3:loro_smix=-3:ltrt_cmix=-3:ltrt_smix=-3:drc_profile_line=film_light:drc_profile_rf=film_light"
+    ]
+   }
+  ]
+ },
  "shim_atmos_thd": {
   "output": "/out/in [5.1] s0 r0 wNone.ec3",
   "preview": false,

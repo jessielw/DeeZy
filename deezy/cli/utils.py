@@ -9,6 +9,7 @@ from typing import Any
 
 from typing_extensions import NotRequired, TypedDict
 
+from deezy.bitrate import InvalidBitrateError
 from deezy.config.manager import ConfigManager, get_config_manager
 from deezy.dee.shim import DeeShim, resolve_shim
 from deezy.dee.tools import DependencyNotFoundError, FindDependencies
@@ -474,6 +475,8 @@ def apply_default_bitrate(
                 default_bitrate = config_manager.get_default_bitrate(
                     args.format_command, channels_or_mode
                 )
+            except InvalidBitrateError as exc:
+                exit_application(str(exc), EXIT_FAIL)
             except Exception:
                 default_bitrate = None
 

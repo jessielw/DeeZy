@@ -173,7 +173,7 @@ def encode(
 ):
     """DeeZy's plan for ``fmt``, run with or without dee_shim."""
     tag = f"{src.parent.name}_{src.stem}_{fmt}_{'shim' if shim else 'plain'}_"
-    tag += "_".join(args)
+    tag += "_".join(args).replace(":", "_")
     tag += "_pipe" if pipe else ""
     out = work / "shim_out" / f"{tag.replace('-', '').replace('=', '')}{SUFFIX[fmt]}"
     transport = ["--pipe", "always" if pipe else "never"] if fmt == "ddp" else []
@@ -618,3 +618,54 @@ def test_truehd_silences_the_lfe_and_keeps_every_other_channel(
     assert out.frames == ref.frames
     assert not any(out.channel(3))
     assert all(out.channel(c) == ref.channel(c) for c in (0, 1, 2, 4, 5))
+
+
+@pytest.mark.parametrize(
+    ("fmt", "args", "pair", "ac3_core"),
+    [
+        ("ddp-atmos", ["--atmos-mode", "standard"], (1024, 512), False),
+        ("ddp-atmos", ["--atmos-mode", "bluray"], (448, 768), True),
+        ("ddp", [], (768, 512), False),
+        ("ddp", ["--disable-lfe"], (768, 512), False),
+        ("ddp-bluray", [], (448, 768), True),
+        ("ddp-bluray", ["--disable-lfe"], (448, 768), True),
+    ],
+)
+def test_split_bitrates_in_encoded_frames(
+    shim, work, parser, config, dee_shim, master, impulse71, fmt, args, pair, ac3_core
+):
+    src = master if fmt == "ddp-atmos" else impulse71
+    output = encode(
+        shim,
+        work,
+        parser,
+        config,
+        fmt,
+        [*args, "--bitrate", f"{pair[0]}:{pair[1]}"],
+        src,
+        dee_shim,
+    )
+    data = output.read_bytes()
+    offset = 0
+    frames = 0
+    while offset < len(data):
+        for stream, rate in enumerate(pair):
+            frame = data[offset : offset + 6]
+            assert frame[:2] == b"\x0b\x77"
+            if stream == 0 and ac3_core:
+                assert frame[5] >> 3 <= 10
+                assert frame[4] >> 6 == 0  # 48 kHz
+                # AC-3 frmsizecod, two codes per rate
+                assert frame[4] & 63 in (30, 31)  # 448 kbps
+                size = 4 * 448
+            else:
+                assert frame[5] >> 3 == 16
+                assert frame[2] >> 6 == stream
+                assert frame[4] >> 4 == 3  # 48 kHz, six blocks
+                size = 2 * (1 + (int.from_bytes(frame[2:4], "big") & 2047))
+            # A 1536-sample frame at 48 kHz uses four bytes per kbps.
+            assert size == 4 * rate
+            offset += size
+        frames += 1
+    assert offset == len(data)
+    assert frames > 1

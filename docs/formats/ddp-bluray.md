@@ -25,6 +25,7 @@ an Atmos master: DEE's Blu-ray mode doesn't take one. Use [ddp](ddp.md) or
 ```text {.scrollable-code-block}
 ddp-bluray
   7.1   default 1280: 768, 1024, 1280, 1536, 1664
+        R0:R1 (dee_shim): AC-3 core 224, 256, 320, 384, 448, 512, 576, 640, dependent 32-1024 kbps
 ddp --bluray-secondary (Blu-ray secondary audio)
   2.0   default 192: 96, 128, 160, 192, 224, 256
   5.1   default 192: 160, 192, 224, 256

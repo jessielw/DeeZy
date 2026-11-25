@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import traceback
 
+from deezy.bitrate import Bitrate, InvalidBitrateError, parse_bitrate
 from deezy.cli.bitrates import bitrate_lines
 from deezy.cli.payload_factory import PayloadBuilder
 from deezy.cli.tools_report import tool_lines, tool_rows
@@ -63,6 +64,13 @@ from deezy.utils.utils import WORKING_DIRECTORY
 
 __version__ = "2.0.2"
 program_name = "DeeZy"
+
+
+def _ddp_bitrate(value: str) -> Bitrate:
+    try:
+        return parse_bitrate(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
 def create_main_parser() -> argparse.ArgumentParser:
@@ -342,6 +350,15 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
             "The bitrate in Kbps (If too high or low for you desired layout, "
             "the bitrate will automatically be adjusted to the closest allowed bitrate)."
         ),
+    )
+
+    ddp_bitrate_group = argparse.ArgumentParser(add_help=False)
+    ddp_bitrate_group.add_argument(
+        "--bitrate",
+        type=_ddp_bitrate,
+        metavar="KBPS|R0:R1",
+        help="Total bitrate in kbps (adjusted to a supported rate), or exact core and dependent rates "
+        "as R0:R1 for two-substream DD+ output (requires dee_shim).",
     )
 
     # DD/DDP/Atmos DRC group (limited choices)
@@ -874,6 +891,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         "input_group": input_group,
         "encode_group": encode_group,
         "bitrate_group": bitrate_group,
+        "ddp_bitrate_group": ddp_bitrate_group,
         "dd_ddp_atmos_drc_group": dd_ddp_atmos_drc_group,
         "loudness_group": loudness_group,
         "loudness_correction_group": loudness_correction_group,
@@ -946,7 +964,7 @@ def create_encode_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
-            argument_groups["bitrate_group"],
+            argument_groups["ddp_bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["loudness_correction_group"],
@@ -971,7 +989,7 @@ def create_encode_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
-            argument_groups["bitrate_group"],
+            argument_groups["ddp_bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["ddp_bluray_processing_group"],
@@ -994,7 +1012,7 @@ def create_encode_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
-            argument_groups["bitrate_group"],
+            argument_groups["ddp_bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["downmix_metadata_group"],
@@ -1136,7 +1154,7 @@ def create_encode_parsers(
         parents=(
             argument_groups["input_group"],
             argument_groups["encode_group"],
-            argument_groups["bitrate_group"],
+            argument_groups["ddp_bitrate_group"],
             argument_groups["dd_ddp_atmos_drc_group"],
             argument_groups["loudness_group"],
             argument_groups["dd_ddp_processing_group"],
@@ -1434,8 +1452,11 @@ def execute_bitrates_command(
             + ".",
             EXIT_FAIL,
         )
-    for line in bitrate_lines(args.format, config_manager):
-        print(line)
+    try:
+        for line in bitrate_lines(args.format, config_manager):
+            print(line)
+    except InvalidBitrateError as exc:
+        exit_application(str(exc), EXIT_FAIL)
 
 
 def encode_single_file(

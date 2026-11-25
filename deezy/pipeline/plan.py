@@ -12,6 +12,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol
 
+from deezy.bitrate import Bitrate, InvalidBitrateError, SubstreamBitrate, total_bitrate
 from deezy.config.manager import ConfigManager
 from deezy.dee.commands import (
     THD_APODISED_RATE,
@@ -328,19 +329,21 @@ def get_fps(fps: str | float | int | None) -> DeeFPS:
 def resolve_bitrate(
     config: ConfigManager | None,
     format_command: CodecFormat,
-    payload_bitrate: int | None,
+    payload_bitrate: Bitrate | None,
     payload_channels: Any,
     info: AudioTrackInfo,
     bitrate_obj: ChannelBitrates,
     source_audio_channels: int,
     auto_enum_value: Any,
     channel_resolver: Callable[[int], Any],
-) -> int:
+) -> Bitrate:
     """
     The data rate: the requested one, else the configured default for the
     source's or the output's layout, else DeeZy's default. A rate DEE doesn't
     take becomes the closest one it does.
     """
+    if isinstance(payload_bitrate, SubstreamBitrate):
+        return payload_bitrate
     if payload_bitrate:
         if not bitrate_obj.is_valid_bitrate(payload_bitrate):
             fixed = bitrate_obj.get_closest_bitrate(payload_bitrate)
@@ -371,9 +374,13 @@ def resolve_bitrate(
                 config_bitrate = config.get_default_bitrate(
                     format_command, target_channels
                 )
+    except InvalidBitrateError:
+        raise
     except Exception:
         logger.debug("Configured bitrate lookup failed; using the encoder default.")
 
+    if isinstance(config_bitrate, SubstreamBitrate):
+        return config_bitrate
     if config_bitrate is not None:
         if bitrate_obj.is_valid_bitrate(config_bitrate):
             logger.debug(
@@ -410,9 +417,15 @@ def source_bitrate_from_config(
             bitrate = fmt_conf.get(f"{key}_atmos")
         if bitrate is None:
             bitrate = fmt_conf.get(key)
-        if bitrate is None or bitrate <= 0:
+        if isinstance(bitrate, str) and ":" in bitrate:
+            raise InvalidBitrateError(
+                f"[default_source_bitrates.{fmt}] {key} requires an integer bitrate."
+            )
+        if not isinstance(bitrate, int) or bitrate <= 0:
             return None
         return bitrate
+    except InvalidBitrateError:
+        raise
     except Exception as e:
         logger.debug(f"Failed to get source bitrate from config: {e}")
         return None
@@ -833,7 +846,7 @@ def ddp_channel_resolver(
     return DolbyDigitalPlusChannels.SURROUNDEX
 
 
-def secondary_bitrate(requested: int | None, layout: str) -> int:
+def secondary_bitrate(requested: Bitrate | None, layout: str) -> int:
     """
     The Blu-ray secondary audio rate: the requested one if DEE takes it for
     ``layout`` ('2.0' or '5.1'), else the next allowed one up. DeeZy's default
@@ -842,6 +855,7 @@ def secondary_bitrate(requested: int | None, layout: str) -> int:
     rates = get_format("ddp-bluray").rates(layout, mode="bluray_secondary")
     if requested is None:
         return rates.default
+    requested = total_bitrate(requested)
     if rates.is_valid_bitrate(requested):
         return requested
     closest = rates.get_closest_bitrate(requested)
@@ -1275,7 +1289,7 @@ def _plan_ac4(
         if channels is Ac4ChannelBasedChannels.AUTO
         else channels.get_bitrate_obj()
     )
-    bitrate = resolve_bitrate(
+    requested = resolve_bitrate(
         ctx.config,
         CodecFormat.AC4,
         payload.bitrate,
@@ -1286,6 +1300,7 @@ def _plan_ac4(
         Ac4ChannelBasedChannels.AUTO,
         ac4_channel_resolver,
     )
+    bitrate = total_bitrate(requested)
 
     if channels is Ac4ChannelBasedChannels.AUTO:
         channels = ac4_channel_resolver(source_channels)
@@ -1364,7 +1379,7 @@ def _plan_ac4_ims(
             "AC-4 needs a source of at least 6 channels or TrueHD Atmos (the track "
             f"has {info.channels})."
         )
-    bitrate = resolve_bitrate(
+    requested = resolve_bitrate(
         ctx.config,
         CodecFormat.AC4_IMS,
         payload.bitrate,
@@ -1375,6 +1390,7 @@ def _plan_ac4_ims(
         None,
         lambda _source: Ac4Channels.IMMERSIVE_STEREO,
     )
+    bitrate = total_bitrate(requested)
 
     delay = get_delay(payload).compensated(compensation(spec))
     fps = get_fps(info.fps)
@@ -1444,7 +1460,7 @@ def _plan_ac4_atmos(
             "ac4-atmos encodes TrueHD Atmos or an Atmos master (DAMF or ADM BWF). "
             "Encode channel-based audio with 'ac4'."
         )
-    bitrate = resolve_bitrate(
+    requested = resolve_bitrate(
         ctx.config,
         CodecFormat.AC4_ATMOS,
         payload.bitrate,
@@ -1455,6 +1471,7 @@ def _plan_ac4_atmos(
         None,
         lambda _source: AC4_ATMOS,
     )
+    bitrate = total_bitrate(requested)
 
     delay = get_delay(payload).compensated(compensation(spec))
     fps = get_fps(info.fps)
@@ -1493,7 +1510,7 @@ def _plan_aac(payload: AacPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     spec = get_format("aac")
     profile = payload.aac_profile
     source_channels = info.channels
-    bitrate = resolve_bitrate(
+    requested = resolve_bitrate(
         ctx.config,
         CodecFormat.AAC,
         payload.bitrate,
@@ -1504,6 +1521,7 @@ def _plan_aac(payload: AacPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
         None,
         lambda _source: profile,
     )
+    bitrate = total_bitrate(requested)
 
     delay = get_delay(payload)
     fps = get_fps(info.fps)
