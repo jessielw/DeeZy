@@ -106,6 +106,27 @@ def create_main_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _add_surround_attenuation(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--surround-3db",
+        action="store_true",
+        dest="surround_3db",
+        default=False,
+        help=(
+            "Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). "
+            "Off by default, as in DEE."
+        ),
+    )
+    # 1.x's flag for what is now the default
+    parser.add_argument(
+        "--no-surround-3db",
+        action="store_false",
+        dest="surround_3db",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
+
+
 def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
     """Create reusable argument groups."""
     # input files argument group
@@ -467,24 +488,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_false",
         help="Disables low pass filter.",
     )
-    dd_ddp_processing_group.add_argument(
-        "--surround-3db",
-        action="store_true",
-        dest="surround_3db",
-        default=False,
-        help=(
-            "Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). "
-            "Off by default, as in DEE."
-        ),
-    )
-    # 1.x's flag for what is now the default
-    dd_ddp_processing_group.add_argument(
-        "--no-surround-3db",
-        action="store_false",
-        dest="surround_3db",
-        default=False,
-        help=argparse.SUPPRESS,
-    )
+    _add_surround_attenuation(dd_ddp_processing_group)
     dd_ddp_processing_group.add_argument(
         "--no-surround-90-deg-phase-shift",
         action="store_false",
@@ -507,24 +511,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_false",
         help="Disables low pass filter.",
     )
-    ddp_bluray_processing_group.add_argument(
-        "--surround-3db",
-        action="store_true",
-        dest="surround_3db",
-        default=False,
-        help=(
-            "Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). "
-            "Off by default, as in DEE."
-        ),
-    )
-    # 1.x's flag for what is now the default
-    ddp_bluray_processing_group.add_argument(
-        "--no-surround-3db",
-        action="store_false",
-        dest="surround_3db",
-        default=False,
-        help=argparse.SUPPRESS,
-    )
+    _add_surround_attenuation(ddp_bluray_processing_group)
     ddp_bluray_processing_group.add_argument(
         "--no-surround-90-deg-phase-shift",
         action="store_false",
@@ -754,6 +741,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         action="store_true",
         help="Silence the LFE channel. TrueHD 5.1 and 7.1 keep it, silent.",
     )
+    _add_surround_attenuation(thd_channels_group)
     # TrueHD and TrueHD Atmos DRC and dialnorm
     thd_options_group = argparse.ArgumentParser(add_help=False)
     thd_options_group.add_argument(

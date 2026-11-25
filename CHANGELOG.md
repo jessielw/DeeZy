@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Channel-based TrueHD accepts `--surround-3db` to lower the surround channels of a 5.1 or 7.1 encode by 3 dB.
 - Reuse a kept TrueHD Atmos decode across DD+ Atmos, TrueHD Atmos, AC-4 Atmos and AC-4 IMS encodes of the same source track with matching decode settings.
 - Output templates accept `{format}`, `{track}`, `{bitrate}` (resolved total kbps), and `{bitrate-split}` (for example, `1024-512`).
 - Set exact DD+ substream rates with `--bitrate R0:R1` for 7.0/7.1 DD+ and standard or Blu-ray DD+ Atmos through dee_shim. Presets and per-output bitrate defaults accept the same split.

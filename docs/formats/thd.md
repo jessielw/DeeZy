@@ -18,6 +18,9 @@ source gets a silent LFE, as does `--disable-lfe`.
 DEE encodes 48 or 96 kHz: a source above 48 kHz is encoded at 96 kHz, any other
 at 48 kHz.
 
+`--surround-3db` lowers surround channels by 3 dB when the selected output
+is 5.1 or 7.1. It is off by default. Stereo has no surround channels.
+
 ## Loudness and DRC
 
 DEE measures the loudness and writes the measured dialnorm; `--custom-dialnorm`

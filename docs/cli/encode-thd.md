@@ -22,6 +22,7 @@ usage: DeeZy encode thd [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                         [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                         [--speech-threshold SPEECH_THRESHOLD]
                         [--channels {0,2,6,8}] [--disable-lfe]
+                        [--surround-3db]
                         [--drc {film_standard,film_light,music_standard,music_light,speech,none}]
                         [--no-as-is] [--custom-dialnorm CUSTOM_DIALNORM]
                         INPUT [INPUT ...]
@@ -99,6 +100,8 @@ options:
        The number of channels: 2.0, 5.1 or 7.1. Auto takes the smallest that holds every source channel, filling the rest with silence.
   --disable-lfe
        Silence the LFE channel. TrueHD 5.1 and 7.1 keep it, silent.
+  --surround-3db
+       Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). Off by default, as in DEE.
   --drc, {film_standard,film_light,music_standard,music_light,speech,none}
        Dynamic range compression profile, for every presentation. none (only the peak protection) needs dee_shim.
   --no-as-is

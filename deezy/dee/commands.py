@@ -662,6 +662,9 @@ def thd_command(
         payload,
         files,
         top=payload.channels.to_dee_cmd(),
+        top_options={"surround_3dB_attenuation": "1"}
+        if payload.surround_3db_attenuation and top in (6, 8)
+        else None,
         input_format="wav",
         downmixes=tuple(f"{channels}ch" for channels in (6, 2) if channels < top),
         fps=fps,
