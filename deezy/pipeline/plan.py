@@ -108,17 +108,12 @@ class TruehddStep:
     # None: truehdd passes no warp mode
     warp_mode: WarpMode | None
     output_dir: Path
-    reuse_id: str
+    cache_decode: bool = False
     duration: float | None = None
 
     @property
     def output(self) -> Path:
         return self.output_dir / "atmos_meta.atmos"
-
-    @property
-    def signature(self) -> str:
-        warp = self.warp_mode.to_truehdd_cmd() if self.warp_mode else "none"
-        return f"truehdd:{warp}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,6 +190,7 @@ class PlanContext:
     config: ConfigManager | None = None
     # the job's named pipe, on a platform where DeeZy can pipe PCM into DEE
     pipe_name: str | None = None
+    kept_decode: Path | None = None
 
 
 def plan_job(payload: CorePayload, info: AudioTrackInfo, ctx: PlanContext) -> JobPlan:
@@ -647,7 +643,6 @@ def _truehdd_step(
     payload: AtmosInputPayload,
     info: AudioTrackInfo,
     ctx: PlanContext,
-    reuse_id: str,
 ) -> TruehddStep:
     if not payload.truehdd_path:
         raise DependencyNotFoundError(
@@ -660,8 +655,8 @@ def _truehdd_step(
         ffmpeg=payload.ffmpeg_path,
         truehdd=payload.truehdd_path,
         warp_mode=payload.thd_warp_mode,
-        output_dir=ctx.temp_dir,
-        reuse_id=reuse_id,
+        output_dir=ctx.kept_decode or ctx.temp_dir,
+        cache_decode=ctx.kept_decode is not None,
         duration=info.duration,
     )
 
@@ -1197,11 +1192,10 @@ def _atmos_input(
     payload: AtmosInputPayload,
     info: AudioTrackInfo,
     ctx: PlanContext,
-    reuse_id: str,
 ) -> tuple[TruehddStep | None, Path | None]:
     """The truehdd step and the DAMF it writes, or the master as it is."""
     if info.thd_atmos:
-        step = _truehdd_step(payload, info, ctx, reuse_id)
+        step = _truehdd_step(payload, info, ctx)
         return step, step.output
     if info.atmos_master:
         kind = "DAMF" if info.damf_atmos else "ADM BWF"
@@ -1248,7 +1242,7 @@ def _plan_ddp_atmos(
         bitrate,
     )
 
-    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.DDP_ATMOS))
+    truehdd, dee_input = _atmos_input(payload, info, ctx)
     if dee_input is None:
         raise InvalidAtmosInputError("Cannot process input, not a valid Atmos format")
 
@@ -1411,7 +1405,7 @@ def _plan_ac4_ims(
     fps = get_fps(info.fps)
     output, preview = _output(payload, info, ctx, spec, "AC-4", "2.0", delay, bitrate)
 
-    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.AC4_IMS))
+    truehdd, dee_input = _atmos_input(payload, info, ctx)
     steps: list[Step] = [truehdd] if truehdd else []
     if dee_input is None:
         # channel-based input, at least 6 channels (checked above). It keeps
@@ -1492,7 +1486,7 @@ def _plan_ac4_atmos(
     fps = get_fps(info.fps)
     output, preview = _output(payload, info, ctx, spec, "AC-4", "Atmos", delay, bitrate)
 
-    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.AC4_ATMOS))
+    truehdd, dee_input = _atmos_input(payload, info, ctx)
     if dee_input is None:
         raise InvalidAtmosInputError("Cannot process input, not a valid Atmos format")
 
@@ -1767,7 +1761,7 @@ def _plan_thd_atmos(
     # named by its largest channel-based presentation
     output, preview = _output(payload, info, ctx, spec, "TrueHD", "7.1", delay)
 
-    truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.THD_ATMOS))
+    truehdd, dee_input = _atmos_input(payload, info, ctx)
     if dee_input is None:
         raise InvalidAtmosInputError("Cannot process input, not a valid Atmos format")
 
@@ -1835,7 +1829,7 @@ def plan_measure(
         logger.info(
             "Measuring the Atmos program: DEE reports its binaural and 5.1 renders."
         )
-        truehdd, dee_input = _atmos_input(payload, info, ctx, MEASURE)
+        truehdd, dee_input = _atmos_input(payload, info, ctx)
         if dee_input is None:
             raise InvalidAtmosInputError(
                 "Cannot process input, not a valid Atmos format"

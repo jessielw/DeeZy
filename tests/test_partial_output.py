@@ -190,14 +190,6 @@ def test_a_stopped_decode_deletes_its_damf_and_nothing_else(
         truehdd=Path("truehdd"),
         warp_mode=WarpMode.NORMAL,
         output_dir=tmp_path,
-        reuse_id="thd-atmos",
-    )
-    plan = JobPlan(
-        format="thd-atmos",
-        source=step.file_input,
-        output=tmp_path / "out.thd",
-        temp_dir=tmp_path,
-        steps=(step,),
     )
     other = tmp_path / "keep.wav"
     other.write_bytes(b"RIFF")
@@ -209,7 +201,7 @@ def test_a_stopped_decode_deletes_its_damf_and_nothing_else(
 
     monkeypatch.setattr(run, "decode_truehd_to_atmos", cut_off)
     with pytest.raises(stop):
-        run.run_truehdd(step, plan, generate_dummy_core_payload())
+        run.run_truehdd(step, generate_dummy_core_payload())
     assert [p.exists() for p in run.damf_files(step.output)] == [False] * 3
     assert other.exists()
 

@@ -56,3 +56,9 @@ Deezy creates per-job temporary directories under the configured temp base. By d
 runs of the same file/track won't collide and can be removed automatically. When `--keep-temp`
 is enabled, Deezy uses a stable per-track directory (useful for inspection or caching) but
 this directory may be shared between runs of the same track and is not automatically removed.
+
+For TrueHD Atmos sources, `--keep-temp` retains the decoded master.
+Use `--reuse-temp-files` on a later encode with the same temp base to reuse it
+across output formats or filenames. The source file, track selector, warp mode,
+FFmpeg and truehdd must match. DeeZy checks all three DAMF components before
+reuse. Masters kept by older versions are decoded once to record this information.
