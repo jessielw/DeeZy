@@ -15,11 +15,19 @@ takes the smallest layout that holds every source channel and fills the rest
 with silence: a mono source becomes full-level dual mono, and a 5.0 or 7.0
 source gets a silent LFE, as does `--disable-lfe`.
 
+Use `--layout 5.1.2` to preserve a source with side surrounds and front heights.
+It requires [dee_shim](../dee-shim.md) and accepts `--channels 0` (auto) or `8`.
+The stream carries a 5.1.2 presentation plus 5.1 and stereo downmixes.
+
+```bash
+deezy encode thd --layout 5.1.2 input.wav
+```
+
 DEE encodes 48 or 96 kHz: a source above 48 kHz is encoded at 96 kHz, any other
 at 48 kHz.
 
-`--surround-3db` lowers surround channels by 3 dB when the selected output
-is 5.1 or 7.1. It is off by default. Stereo has no surround channels.
+`--surround-3db` lowers surround channels by 3 dB on multichannel encodes.
+It is off by default.
 
 ## Loudness and DRC
 

@@ -560,8 +560,13 @@ def check_thd_options(
 ) -> None:
     """
     Refuse what dee_dthd_encoder takes no value for. ``shim`` is whether
-    DeeZy has dee_shim, which adds DRC 'none'.
+    DeeZy has dee_shim, which adds alternate layouts and DRC 'none'.
     """
+    if isinstance(payload, TrueHDPayload) and payload.layout and not shim:
+        raise UnsupportedDeeFeatureError(
+            f"TrueHD --layout {payload.layout} needs {NEEDS_SHIM}. "
+            "Give its path with --dee-shim if it isn't found automatically."
+        )
     if payload.drc is DeeDRC.NONE and not shim:
         raise UnsupportedDeeFeatureError(
             f"TrueHD DRC 'none' needs {NEEDS_SHIM}; DeeZy didn't "
@@ -657,6 +662,9 @@ def thd_command(
     """
     top = payload.channels.value
     apodise_off = sample_rate == THD_APODISED_RATE and payload.as_is
+    shim_args = ("--layout", payload.layout) if payload.layout else ()
+    if apodise_off:
+        shim_args += ("--apodise", "off")
     return _dthd_command(
         tools,
         payload,
@@ -669,7 +677,7 @@ def thd_command(
         downmixes=tuple(f"{channels}ch" for channels in (6, 2) if channels < top),
         fps=fps,
         delay=delay,
-        shim_args=("--apodise", "off") if apodise_off else (),
+        shim_args=shim_args,
     )
 
 

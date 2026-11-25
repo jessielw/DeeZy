@@ -15,6 +15,7 @@ include it.
 | `--bitrate R0:R1` for two-substream DD+ or DD+ Atmos | refused |
 | `ddp-atmos --no-surround-90-deg-phase-shift` | refused |
 | `thd` or `thd-atmos` with `--drc none` | refused |
+| `thd --layout 5.1.2` | refused |
 | `deezy measure` of a 7.1 or 7-channel source | refused |
 
 ## What runs through it

@@ -424,6 +424,7 @@ class PayloadBuilder:
                 "as_is": not cls.safe_get(args, "no_as_is", False),
                 "surround_3db_attenuation": cls.safe_get(args, "surround_3db", False),
                 "disable_lfe": bool(cls.safe_get(args, "disable_lfe", False)),
+                "layout": cls.safe_get(args, "layout"),
             }
         )
         return TrueHDPayload(**payload_data)

@@ -265,7 +265,7 @@ def lfe_label(channels: str, lfe: bool) -> str:
 _LFE_FOURTH = {5: "4.1", 6: "5.1", 7: "6.1", 8: "7.1"}
 
 
-def _silent_lfe(mix: str | None, channels: int) -> str:
+def _silent_lfe(mix: str | None, channels: int, *, layout: str | None = None) -> str:
     """
     ``mix`` followed by a pan that silences the LFE, the 4th of ``channels``,
     and keeps every other channel as it is.
@@ -278,7 +278,7 @@ def _silent_lfe(mix: str | None, channels: int) -> str:
     gains = "|".join(
         f"c{i}=0*c{i}" if i == 3 else f"c{i}=c{i}" for i in range(channels)
     )
-    silence = f"pan={_LFE_FOURTH[channels]}|{gains}"
+    silence = f"pan={layout or _LFE_FOURTH[channels]}|{gains}"
     return f"{mix},{silence}" if mix else silence
 
 
@@ -1581,6 +1581,8 @@ _MONO_TO_STEREO = "pan=stereo|c0=c0|c1=c0"
 _PAD_TO_51 = "aformat=channel_layouts=5.1|5.1(side)"
 _PAD_TO_71 = "aformat=channel_layouts=7.1"
 THD_SAMPLE_RATES = (48000, 96000)
+_THD_512_MEDIAINFO_SPEAKERS = {"l", "r", "c", "lfe", "ls", "rs", "tfl", "tfr"}
+_THD_512_PCM_LAYOUT = "FL+FR+FC+LFE+SL+SR+TFL+TFR"
 
 
 def thd_channel_resolver(source_channels: int) -> TrueHDChannels:
@@ -1625,7 +1627,21 @@ def _plan_thd(
     source_channels = info.channels
     fits = thd_channel_resolver(source_channels)
     channels = payload.channels
-    if channels is TrueHDChannels.AUTO:
+    if payload.layout:
+        if channels not in (TrueHDChannels.AUTO, TrueHDChannels.SURROUNDEX):
+            raise ChannelMixError("TrueHD --layout 5.1.2 requires --channels 0 or 8.")
+        source_layout = getattr(info.mi_track, "channel_layout", None) or ""
+        if (
+            source_channels != 8
+            or set(source_layout.lower().split()) != _THD_512_MEDIAINFO_SPEAKERS
+        ):
+            raise ChannelMixError(
+                "TrueHD --layout 5.1.2 requires a source with side surrounds "
+                "and front heights (L R C LFE Ls Rs Tfl Tfr). "
+                f"Detected layout: {source_layout or 'unknown'}."
+            )
+        channels = TrueHDChannels.SURROUNDEX
+    elif channels is TrueHDChannels.AUTO:
         channels = fits
         logger.info(f"No supplied channels, defaulting to {channels}.")
     elif channels.value > fits.value:
@@ -1655,20 +1671,31 @@ def _plan_thd(
 
     delay = get_delay(payload).compensated(compensation(spec))
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "TrueHD", str(channels), delay)
+    layout = payload.layout or str(channels)
+    output, preview = _output(payload, info, ctx, spec, "TrueHD", layout, delay)
 
     # dee_dthd_encoder reads WAV only
     wav = WavFile(ctx.temp_dir / f"{artifact_stem(output)}.{CodecFormat.THD}.wav")
-    mix, down_mix = _thd_mix(source_channels, channels)
+    if payload.layout:
+        # Match decoded speakers by name and give DEE its 5.1.2 slot order.
+        mapping = "|".join(
+            f"{speaker}-{speaker}" for speaker in _THD_512_PCM_LAYOUT.split("+")
+        )
+        mix = f"channelmap={mapping}:channel_layout={_THD_512_PCM_LAYOUT}"
+        down_mix = None
+    else:
+        mix, down_mix = _thd_mix(source_channels, channels)
     has_slot = channels is not TrueHDChannels.STEREO
-    has_lfe = source_lfe(info)
+    has_lfe = bool(payload.layout) or source_lfe(info)
     # a source with fewer channels is already said to get silent ones
-    _log_lfe(payload.disable_lfe, has_slot, True, str(channels))
+    _log_lfe(payload.disable_lfe, has_slot, True, layout)
     if payload.disable_lfe and has_slot and has_lfe:
-        logger.info(f"TrueHD {channels} keeps its LFE channel, so it is silent.")
+        logger.info(f"TrueHD {layout} keeps its LFE channel, so it is silent.")
         # after the mix the channels are the layout's; before a downmix, the source's
         mix = _silent_lfe(
-            mix, source_channels if down_mix or not mix else channels.value
+            mix,
+            source_channels if down_mix or not mix else channels.value,
+            layout=_THD_512_PCM_LAYOUT if payload.layout else None,
         )
     filters = _filter_args(mix, info.sample_rate != rate, rate)
     if down_mix:
