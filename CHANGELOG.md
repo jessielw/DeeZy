@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Output templates accept `{format}`, `{track}`, `{bitrate}` (resolved total kbps), and `{bitrate-split}` (for example, `1024-512`).
 - Set exact DD+ substream rates with `--bitrate R0:R1` for 7.0/7.1 DD+ and standard or Blu-ray DD+ Atmos through dee_shim. Presets and per-output bitrate defaults accept the same split.
 
 ## [2.0.2] - 2026-11-24

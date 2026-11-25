@@ -177,6 +177,9 @@ class OutputNamer(Protocol):
         delay_was_stripped: bool,
         delay_relative_to_video: int,
         worker_id: str | None = None,
+        *,
+        output_format: str = "",
+        bitrate: Bitrate | None = None,
     ) -> Path: ...
 
 
@@ -439,6 +442,7 @@ def _output(
     label: str,
     channels: str,
     delay: Delay,
+    bitrate: Bitrate | None = None,
 ) -> tuple[Path, bool]:
     """The output path, and whether only a preview of it was asked for."""
     if payload.file_output:
@@ -452,6 +456,8 @@ def _output(
     elif payload.output_template:
         output = ctx.namer.render_output_template(
             template=str(payload.output_template),
+            output_format=spec.name,
+            bitrate=bitrate,
             suffix=spec.extension,
             output_channels=channels,
             delay_was_stripped=delay.is_delay(),
@@ -745,7 +751,7 @@ def _plan_dd(payload: DDPayload, info: AudioTrackInfo, ctx: PlanContext) -> JobP
 
     delay = get_delay(payload)
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "DD", layout, delay)
+    output, preview = _output(payload, info, ctx, spec, "DD", layout, delay, bitrate)
 
     # DEE takes the source's own layout, not the AUTO choice made from it
     dee_allowed_input = source_channels in DEE_INPUT_CHANNELS
@@ -993,7 +999,11 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
 
     delay = get_delay(payload)
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "DDP", layout, delay)
+    # refuses a secondary layout other than 2.0 or 5.1
+    dd_mode = _ddp_mode(channels, payload.bluray_secondary)
+    if payload.bluray_secondary:
+        bitrate = secondary_bitrate(payload.bitrate, str(channels))
+    output, preview = _output(payload, info, ctx, spec, "DDP", layout, delay, bitrate)
 
     # DEE takes the source's own layout, not the AUTO choice made from it
     dee_allowed_input = source_channels in DEE_INPUT_CHANNELS
@@ -1037,10 +1047,6 @@ def _plan_ddp(payload: DDPPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
     if ffmpeg_down_mix and not pans:
         filters += ["-ac", f"{ffmpeg_down_mix}"]
 
-    # refuses a secondary layout other than 2.0 or 5.1
-    dd_mode = _ddp_mode(channels, payload.bluray_secondary)
-    if payload.bluray_secondary:
-        bitrate = secondary_bitrate(payload.bitrate, str(channels))
     files = _dee_files(ctx, transport, output)
     dee_argv = ddp_command(
         _tools(payload, ctx),
@@ -1156,7 +1162,7 @@ def _plan_dd_render(
     delay = get_delay(payload)
     fps = get_fps(info.fps)
     label = "DD" if dd else "DDP"
-    output, preview = _output(payload, info, ctx, spec, label, layout, delay)
+    output, preview = _output(payload, info, ctx, spec, label, layout, delay, bitrate)
     delay = _compensate(delay, spec, MASTER_RENDER_CHANNELS, channels.value)
 
     files = replace(
@@ -1232,7 +1238,14 @@ def _plan_ddp_atmos(
     delay = get_delay(payload).compensated(compensation(spec))
     fps = get_fps(info.fps)
     output, preview = _output(
-        payload, info, ctx, spec, "DDP", payload.atmos_mode.get_str_channels(), delay
+        payload,
+        info,
+        ctx,
+        spec,
+        "DDP",
+        payload.atmos_mode.get_str_channels(),
+        delay,
+        bitrate,
     )
 
     truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.DDP_ATMOS))
@@ -1318,7 +1331,9 @@ def _plan_ac4(
 
     delay = get_delay(payload)
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "AC-4", str(channels), delay)
+    output, preview = _output(
+        payload, info, ctx, spec, "AC-4", str(channels), delay, bitrate
+    )
 
     ffmpeg_down_mix = None if source_channels in AC4_INPUT_CHANNELS else channels.value
     dee_input_channels = ffmpeg_down_mix or source_channels
@@ -1394,7 +1409,7 @@ def _plan_ac4_ims(
 
     delay = get_delay(payload).compensated(compensation(spec))
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "AC-4", "2.0", delay)
+    output, preview = _output(payload, info, ctx, spec, "AC-4", "2.0", delay, bitrate)
 
     truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.AC4_IMS))
     steps: list[Step] = [truehdd] if truehdd else []
@@ -1475,7 +1490,7 @@ def _plan_ac4_atmos(
 
     delay = get_delay(payload).compensated(compensation(spec))
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "AC-4", "Atmos", delay)
+    output, preview = _output(payload, info, ctx, spec, "AC-4", "Atmos", delay, bitrate)
 
     truehdd, dee_input = _atmos_input(payload, info, ctx, str(CodecFormat.AC4_ATMOS))
     if dee_input is None:
@@ -1525,7 +1540,7 @@ def _plan_aac(payload: AacPayload, info: AudioTrackInfo, ctx: PlanContext) -> Jo
 
     delay = get_delay(payload)
     fps = get_fps(info.fps)
-    output, preview = _output(payload, info, ctx, spec, "AAC", "2.0", delay)
+    output, preview = _output(payload, info, ctx, spec, "AAC", "2.0", delay, bitrate)
 
     # dee_aac_encoder takes 1.0, 2.0, 5.1 and 7.1 and always encodes 2.0;
     # FFmpeg downmixes any other layout to 2.0 first

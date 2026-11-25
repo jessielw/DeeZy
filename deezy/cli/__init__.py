@@ -207,7 +207,7 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         help=(
             "Optional lightweight template to control auto-generated output filenames. "
             "Supported tokens: {title},{year},{stem},{stem-cleaned},{source},{lang},{channels},"
-            "{worker},{delay},{opt-delay}."
+            "{worker},{delay},{opt-delay},{format},{track},{bitrate},{bitrate-split}."
         ),
     )
     encode_group.add_argument(

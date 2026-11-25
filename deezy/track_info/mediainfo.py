@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pymediainfo import MediaInfo, Track
 
+from deezy.bitrate import Bitrate, SubstreamBitrate
 from deezy.enums.shared import TrackType
 from deezy.exceptions import InvalidAtmosInputError, MediaInfoError
 from deezy.track_info.audio_track_info import AudioTrackInfo
@@ -304,12 +305,15 @@ class MediainfoParser:
         delay_was_stripped: bool,
         delay_relative_to_video: int,
         worker_id: str | None = None,
+        *,
+        output_format: str = "",
+        bitrate: Bitrate | None = None,
     ) -> Path:
         """
         Render an output filename from a lightweight template using available metadata.
 
         Supported tokens: {title}, {year}, {stem}, {stem-cleaned}, {source}, {lang}, {channels}, {worker},
-        {delay}, and {opt-delay}.
+        {delay}, {opt-delay}, {track}, {format}, {bitrate}, and {bitrate-split}.
 
         The method is intentionally small and forgiving: missing tokens are replaced with
         empty strings and values are sanitized for filesystem use. This does not replace the
@@ -333,7 +337,15 @@ class MediainfoParser:
         # delay
         delay = self._delay_detection(delay_was_stripped, delay_relative_to_video)
 
+        split = ""
+        if isinstance(bitrate, SubstreamBitrate):
+            split = f"{bitrate.independent}-{bitrate.dependent}"
+            bitrate = bitrate.independent + bitrate.dependent
         mapping = {
+            "track": str(self.track_index.index),
+            "format": output_format,
+            "bitrate": str(bitrate) if bitrate is not None else "",
+            "bitrate-split": split,
             "title": str(title),
             "year": year,
             "stem": stem,

@@ -1144,6 +1144,9 @@ class FakeNamer:
         delay_was_stripped,
         delay_relative_to_video,
         worker_id=None,
+        *,
+        output_format="",
+        bitrate=None,
     ) -> Path:
         return (
             OUT / f"T {template} [{output_channels}] s{int(delay_was_stripped)}{suffix}"
