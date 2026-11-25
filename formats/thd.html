@@ -1760,10 +1760,15 @@ on <a href="../cli/encode-thd.html">deezy encode thd</a>.</p>
 takes the smallest layout that holds every source channel and fills the rest
 with silence: a mono source becomes full-level dual mono, and a 5.0 or 7.0
 source gets a silent LFE, as does <code>--disable-lfe</code>.</p>
+<p>Use <code>--layout 5.1.2</code> to preserve a source with side surrounds and front heights.
+It requires <a href="../dee-shim.html">dee_shim</a> and accepts <code>--channels 0</code> (auto) or <code>8</code>.
+The stream carries a 5.1.2 presentation plus 5.1 and stereo downmixes.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>deezy<span class="w"> </span>encode<span class="w"> </span>thd<span class="w"> </span>--layout<span class="w"> </span><span class="m">5</span>.1.2<span class="w"> </span>input.wav
+</span></code></pre></div>
 <p>DEE encodes 48 or 96 kHz: a source above 48 kHz is encoded at 96 kHz, any other
 at 48 kHz.</p>
-<p><code>--surround-3db</code> lowers surround channels by 3 dB when the selected output
-is 5.1 or 7.1. It is off by default. Stereo has no surround channels.</p>
+<p><code>--surround-3db</code> lowers surround channels by 3 dB on multichannel encodes.
+It is off by default.</p>
 <h2 id="loudness-and-drc">Loudness and DRC</h2>
 <p>DEE measures the loudness and writes the measured dialnorm; <code>--custom-dialnorm</code>
 writes a set one, and <code>--loudness-preset</code> works as for

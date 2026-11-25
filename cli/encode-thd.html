@@ -1735,8 +1735,8 @@
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                        [--no-dialogue-intelligence]
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                        [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                        [--speech-threshold SPEECH_THRESHOLD]
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                        [--channels {0,2,6,8}] [--disable-lfe]
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                        [--surround-3db]
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                        [--channels {0,2,6,8}] [--layout {5.1.2}]
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                        [--disable-lfe] [--surround-3db]
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                        [--drc {film_standard,film_light,music_standard,music_light,speech,none}]
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                        [--no-as-is] [--custom-dialnorm CUSTOM_DIALNORM]
 </span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                        INPUT [INPUT ...]
@@ -1812,29 +1812,36 @@
 </span><span id="__span-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a>       [0-100] If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
 </span><span id="__span-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92" href="#__codelineno-0-92"></a>  --channels, {0,2,6,8}
 </span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93" href="#__codelineno-0-93"></a>       The number of channels: 2.0, 5.1 or 7.1. Auto takes the smallest that holds every source channel, filling the rest with silence.
-</span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a>  --disable-lfe
-</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a>       Silence the LFE channel. TrueHD 5.1 and 7.1 keep it, silent.
-</span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96" href="#__codelineno-0-96"></a>  --surround-3db
-</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97" href="#__codelineno-0-97"></a>       Lowers the surround channels by 3 dB (DEE&#39;s surround_3dB_attenuation). Off by default, as in DEE.
-</span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98" href="#__codelineno-0-98"></a>  --drc, {film_standard,film_light,music_standard,music_light,speech,none}
-</span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99" href="#__codelineno-0-99"></a>       Dynamic range compression profile, for every presentation. none (only the peak protection) needs dee_shim.
-</span><span id="__span-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100" href="#__codelineno-0-100"></a>  --no-as-is
-</span><span id="__span-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101" href="#__codelineno-0-101"></a>       Keeps DEE&#39;s own processing through dee_shim. By default dee_shim turns DEE&#39;s apodizing filter off at 96 kHz (thd), and codes an Atmos master of 16 elements or fewer as it is (thd-atmos), so the stream decodes sample for sample. Without dee_shim this changes nothing.
-</span><span id="__span-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a>  --custom-dialnorm, CUSTOM_DIALNORM
-</span><span id="__span-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a>       Custom dialnorm (0 disables custom dialnorm).
+</span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a>  --layout, {5.1.2}
+</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a>       Preserve a 5.1.2 source with side surrounds and front heights (requires dee_shim). Use with automatic or 8 channels.
+</span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96" href="#__codelineno-0-96"></a>  --disable-lfe
+</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97" href="#__codelineno-0-97"></a>       Silence the LFE channel while keeping it in the TrueHD layout.
+</span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98" href="#__codelineno-0-98"></a>  --surround-3db
+</span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99" href="#__codelineno-0-99"></a>       Lowers the surround channels by 3 dB (DEE&#39;s surround_3dB_attenuation). Off by default, as in DEE.
+</span><span id="__span-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100" href="#__codelineno-0-100"></a>  --drc, {film_standard,film_light,music_standard,music_light,speech,none}
+</span><span id="__span-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101" href="#__codelineno-0-101"></a>       Dynamic range compression profile, for every presentation. none (only the peak protection) needs dee_shim.
+</span><span id="__span-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a>  --no-as-is
+</span><span id="__span-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a>       Keeps DEE&#39;s own processing through dee_shim. By default dee_shim turns DEE&#39;s apodizing filter off at 96 kHz (thd), and codes an Atmos master of 16 elements or fewer as it is (thd-atmos), so the stream decodes sample for sample. Without dee_shim this changes nothing.
+</span><span id="__span-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a>  --custom-dialnorm, CUSTOM_DIALNORM
+</span><span id="__span-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a>       Custom dialnorm (0 disables custom dialnorm).
 </span></code></pre></div>
 <!-- END generated -->
 
 <h2 id="examples">Examples</h2>
 <ul>
-<li>Encode the source's layout:</li>
+<li>Encode with automatic channel selection:</li>
 </ul>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>deezy<span class="w"> </span>encode<span class="w"> </span>thd<span class="w"> </span>movie.mkv
 </span></code></pre></div>
 <ul>
+<li>Preserve 5.1.2 with side surrounds and front heights (needs dee_shim):</li>
+</ul>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>deezy<span class="w"> </span>encode<span class="w"> </span>thd<span class="w"> </span>--layout<span class="w"> </span><span class="m">5</span>.1.2<span class="w"> </span>input.wav
+</span></code></pre></div>
+<ul>
 <li>7.1 with no dynamic range compression (needs dee_shim):</li>
 </ul>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>deezy<span class="w"> </span>encode<span class="w"> </span>thd<span class="w"> </span>--channels<span class="w"> </span><span class="m">8</span><span class="w"> </span>--drc<span class="w"> </span>none<span class="w"> </span>movie.mkv
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>deezy<span class="w"> </span>encode<span class="w"> </span>thd<span class="w"> </span>--channels<span class="w"> </span><span class="m">8</span><span class="w"> </span>--drc<span class="w"> </span>none<span class="w"> </span>movie.mkv
 </span></code></pre></div>
 
 
