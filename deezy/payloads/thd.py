@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 
 from deezy.enums.atmos import WarpMode
 from deezy.enums.shared import DeeDRC, LoudnessPreset
@@ -20,6 +21,7 @@ class TrueHDPayload(LoudnessPayload):
     # TrueHD keeps the LFE channel, silenced
     disable_lfe: bool = False
     surround_3db_attenuation: bool = False
+    layout: Literal["5.1.2"] | None = None
 
 
 @dataclass(slots=True)

@@ -55,6 +55,7 @@ from .harness import (
     noise_samples,
     noise_wav,
     run as run_tool,
+    staggered_wav,
     synthetic_damf,
 )
 
@@ -244,6 +245,39 @@ def test_thd_through_the_shim_is_byte_identical(
     plain = encode(shim, work, parser, config, "thd", args, src, None)
     shimmed = encode(shim, work, parser, config, "thd", args, src, dee_shim)
     assert md5(shimmed) == md5(plain)
+
+
+@pytest.mark.parametrize("disable_lfe", [False, True])
+def test_truehd_preserves_5_1_2_speaker_positions(
+    shim, work, parser, config, dee_shim, disable_lfe
+):
+    # Tag eight distinct channels as 5.1.2 in canonical WAV order.
+    raw = staggered_wav(work / "thd_512_impulses.wav", 8)
+    src = work / "thd_512_input.wav"
+    result = run_tool(
+        [
+            shim.ffmpeg, "-v", "error", "-y", "-i", raw, "-af",
+            "channelmap=channel_layout=FL+FR+FC+LFE+SL+SR+TFL+TFR",
+            "-c:a", "pcm_s24le", src,
+        ]
+    )  # fmt: skip
+    assert result.ok, result.out
+
+    args = ["--layout", "5.1.2"]
+    if disable_lfe:
+        args += ["--channels", "8", "--disable-lfe"]
+    encoded = encode(shim, work, parser, config, "thd", args, src, dee_shim)
+    assert mediainfo(encoded)["channel_layout"] == "L R C LFE Ls Rs Tfl Tfr"
+
+    ref = decode(shim, src)
+    pcm = decode(shim, encoded)
+    assert (pcm.channels, pcm.frames) == (8, ref.frames)
+    for channel in range(8):
+        samples = pcm.channel(channel)
+        if disable_lfe and channel == 3:
+            assert not any(samples)
+        else:
+            assert samples == ref.channel(channel), f"channel {channel}"
 
 
 # --- DD+ Atmos options only the shim has

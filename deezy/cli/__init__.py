@@ -62,7 +62,7 @@ from deezy.utils.power import SleepInhibitor
 from deezy.utils.progress import has_shared_progress, shared_progress_display
 from deezy.utils.utils import WORKING_DIRECTORY
 
-__version__ = "2.0.3"
+__version__ = "2.0.4"
 program_name = "DeeZy"
 
 
@@ -737,9 +737,17 @@ def create_common_argument_groups() -> dict[str, argparse.ArgumentParser]:
         ),
     )
     thd_channels_group.add_argument(
+        "--layout",
+        choices=("5.1.2",),
+        help=(
+            "Preserve a 5.1.2 source with side surrounds and front heights "
+            "(requires dee_shim). Use with automatic or 8 channels."
+        ),
+    )
+    thd_channels_group.add_argument(
         "--disable-lfe",
         action="store_true",
-        help="Silence the LFE channel. TrueHD 5.1 and 7.1 keep it, silent.",
+        help="Silence the LFE channel while keeping it in the TrueHD layout.",
     )
     _add_surround_attenuation(thd_channels_group)
     # TrueHD and TrueHD Atmos DRC and dialnorm

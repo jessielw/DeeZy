@@ -21,8 +21,8 @@ usage: DeeZy encode thd [-h] [--ffmpeg FFMPEG] [--truehdd TRUEHDD] [--dee DEE]
                         [--no-dialogue-intelligence]
                         [--loudness-preset {manual,atsc_a85,ebu_r128,freetv_op59,arib_b32}]
                         [--speech-threshold SPEECH_THRESHOLD]
-                        [--channels {0,2,6,8}] [--disable-lfe]
-                        [--surround-3db]
+                        [--channels {0,2,6,8}] [--layout {5.1.2}]
+                        [--disable-lfe] [--surround-3db]
                         [--drc {film_standard,film_light,music_standard,music_light,speech,none}]
                         [--no-as-is] [--custom-dialnorm CUSTOM_DIALNORM]
                         INPUT [INPUT ...]
@@ -98,8 +98,10 @@ options:
        [0-100] If the percentage of speech is higher than the threshold, the encoder uses speech gating to set the dialnorm value. (Otherwise, the encoder uses level gating).
   --channels, {0,2,6,8}
        The number of channels: 2.0, 5.1 or 7.1. Auto takes the smallest that holds every source channel, filling the rest with silence.
+  --layout, {5.1.2}
+       Preserve a 5.1.2 source with side surrounds and front heights (requires dee_shim). Use with automatic or 8 channels.
   --disable-lfe
-       Silence the LFE channel. TrueHD 5.1 and 7.1 keep it, silent.
+       Silence the LFE channel while keeping it in the TrueHD layout.
   --surround-3db
        Lowers the surround channels by 3 dB (DEE's surround_3dB_attenuation). Off by default, as in DEE.
   --drc, {film_standard,film_light,music_standard,music_light,speech,none}
@@ -114,10 +116,16 @@ options:
 
 ## Examples
 
-- Encode the source's layout:
+- Encode with automatic channel selection:
 
 ```bash
 deezy encode thd movie.mkv
+```
+
+- Preserve 5.1.2 with side surrounds and front heights (needs dee_shim):
+
+```bash
+deezy encode thd --layout 5.1.2 input.wav
 ```
 
 - 7.1 with no dynamic range compression (needs dee_shim):
